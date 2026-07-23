@@ -51,8 +51,9 @@ Do not rewrite the historical fixed-schedule fidelity report in this slice.
   runs each grouped supervisor and triager in one frozen activation set.
 - The missing path delayed remediation from moment 2 to moment 4, while speed
   pressure retained one exact denial before confirmed closure.
-- Live run `run_11a699e00d2e` completed with five moments, six agent calls, five
-  narrator calls, and fully observed cost of $0.058196875.
+- Live run `run_a03565bddd17` completed with five moments, six agent calls, five
+  narrator calls, and fully observed cost of $0.05908625. Its outcome and UI
+  ordinals agree: remediation at moment 2 and closure at moment 4.
 - Full `llm_client` trace inspection confirmed that the simultaneous supervisor
   and triager calls received different delivered observations at the same
   logical time without either seeing the other's proposal. The third narrator
