@@ -1,6 +1,6 @@
 # Slice 6: Reversible Multiscale Graph
 
-**Status: In progress — 2026-07-23.**
+**Status: Complete — 2026-07-23.**
 
 ## Frame
 
@@ -45,20 +45,49 @@ must show whether an operator can explain a coarse event by stepping down once.
 
 ## Concern Register
 
-- C027 invariant: an analytical boundary must remain absent from active specs,
+- C027 passed: an analytical boundary remains absent from active specs,
   action actors/owners, mechanisms, effects, and state patches.
-- C028 invariant: every aggregate value and trace occurrence must identify the
+- C028 passed: every aggregate value and trace occurrence identifies the
   exact member/route/event evidence from which it was derived.
-- C029 open product readout: determine whether exact-first or coarse-first makes
-  the scale transition easier to understand; use browser inspection, not a
-  guessed preference.
-- C030 open architecture: current analyst snapshots contain entities,
-  representations, and mechanisms but omit ports and carriers. Count all
-  authored members while showing only selectable analyst-safe members.
-- C031 open UI: current cards plus route pills do not form a spatial connected
-  graph. Add explicit SVG connections without importing a graph framework.
+- C029 resolved: retain exact-first. Browser inspection showed the selected
+  event and information token immediately, while one visible boundary control
+  provides an optional system-level view without initially hiding evidence.
+- C030 resolved: aggregate membership includes authored ports/carriers and
+  temporally derived representations; the graph exposes analyst-safe selectable
+  members and separately reports nonselectable membership.
+- C031 resolved: one dependency-free SVG layer connects concrete routes,
+  declared mechanism input bindings, information carriers, and representation
+  lineage. Relation kinds remain visually distinct.
 - C032 deferred: overlapping and nested analytical boundaries need explicit
   composition semantics before support.
 - C033 deferred: quantitative causal-emergence/coarse-graining measures require
   a later research instrument, not guessed metrics in this slice.
 
+## Audit and Evidence
+
+- Python 3.12 and macOS Python 3.14 both pass strict typing and 27 tests.
+- The adversarial projection gate proves boundary non-execution, per-revision
+  membership, disjoint concrete-route classification, exact trace linkage,
+  information arrival over time, and protected badge redaction.
+- Headless Chrome opened retained run `run_85b83fdc2565`, rendered 16 exact
+  nodes with connected routes/bindings/information relations, collapsed the
+  equipment-room boundary to 4 visible nodes, preserved event and revision,
+  inspected loss and exact identifiers, expanded once, and reopened the run.
+- Visual review found the first graph disconnected mechanisms and information
+  from their declared bindings. The accepted repair projects input bindings,
+  information carrier ownership, and representation lineage without changing
+  canonical execution.
+- Exact-first won the readout check. The aggregate remains opt-in, explicitly
+  reports 13 hidden selectable components, 4 internal concrete routes, 4
+  summarized state facts, and 2 summarized information tokens at the inspected
+  revision.
+- Empty/older documents fall back to exact mode; SVG resize, hostile-text
+  escaping, temporal endpoint filtering, retained-run reopen, dependency
+  integrity, and clean-diff checks pass.
+
+## Cleanup
+
+The discarded intermediate retained samples were moved to recoverable server
+trash. The final Mac sample is zero-cost, the private identity allowlist and
+0700/0600 storage controls remain in place, and live LLM execution remains
+disabled.

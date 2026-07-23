@@ -40,7 +40,8 @@ referents.
 ## Borrow Versus Build
 
 Borrow the existing analytical-boundary contract, event focus identities,
-event-time analyst snapshots, and concrete route declarations. Build a small
+event-time analyst snapshots, concrete route declarations, mechanism input
+bindings, carrier ownership, and representation lineage. Build a small
 server-side coarse projection and dependency-free SVG rendering because the
 required behavior is one reversible grouping operation; a graph framework or
 general ontology reasoner would add more hidden behavior than value here.
@@ -55,4 +56,3 @@ This decision does not infer new boundaries, overlapping-boundary semantics,
 causal emergence metrics, or organization-level agency. A future requirement
 for overlapping/nested boundaries must supersede this ADR with explicit
 composition rules.
-
