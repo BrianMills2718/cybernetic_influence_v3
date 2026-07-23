@@ -46,7 +46,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     graph_styles = api.get("/assets/graph-canvas.css")
     assert graph_script.status_code == 200
     assert graph_styles.status_code == 200
-    assert len(graph_script.content) > 500_000
+    assert len(graph_script.content) > 250_000
     assert b".react-flow" in graph_styles.content
 
 

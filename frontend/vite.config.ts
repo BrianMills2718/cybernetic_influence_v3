@@ -4,6 +4,9 @@ import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
   build: {
     outDir: fileURLToPath(new URL('../web', import.meta.url)),
     emptyOutDir: false,
