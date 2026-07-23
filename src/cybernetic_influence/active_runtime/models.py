@@ -1,6 +1,6 @@
 """Strict records for the non-default pluggable active-system runtime.
 
-The active runtime composes one ``causal-core.v1`` session.  These records own
+The active runtime composes one ``causal-core.v2`` session.  These records own
 only scheduling, bounded cognition inputs, private state, protected execution
 evidence, spend, and aggregate recovery; causal state and mechanics remain in
 the causal core.

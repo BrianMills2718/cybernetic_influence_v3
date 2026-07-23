@@ -35,10 +35,13 @@ from cybernetic_influence.causal_core.models import (
     MechanismSpec,
     ObservationDraft,
     ObservationRecord,
+    PlacementChange,
+    PlacementState,
     PortState,
     RepresentationDraft,
     RepresentationToken,
     RouteKind,
+    SpatialLinkState,
     StatePatch,
     VarianceSource,
     canonical_record_digest,
@@ -87,7 +90,7 @@ class CausalLimits:
 
 
 class MechanismContext:
-    """One exact handler's trigger and defensive declared-fact projection."""
+    """One exact handler's trigger and defensive declared-state projection."""
 
     def __init__(
         self,
@@ -95,6 +98,8 @@ class MechanismContext:
         mechanism: MechanismSpec,
         allowed_facts: Mapping[str, FactState],
         allowed_representations: Mapping[str, RepresentationToken],
+        allowed_placements: Mapping[str, PlacementState],
+        allowed_spatial_links: Mapping[str, SpatialLinkState],
         effect: EffectEnvelope,
         target_port: PortState,
         representation: RepresentationToken | None,
@@ -117,6 +122,14 @@ class MechanismContext:
             representation_id: representation.model_copy(deep=True)
             for representation_id, representation in allowed_representations.items()
         }
+        self._allowed_placements = {
+            entity_id: placement.model_copy(deep=True)
+            for entity_id, placement in allowed_placements.items()
+        }
+        self._allowed_spatial_links = {
+            spatial_link_id: spatial_link.model_copy(deep=True)
+            for spatial_link_id, spatial_link in allowed_spatial_links.items()
+        }
 
     def read(self, fact_id: str) -> JsonValue:
         """Return one declared fact or reject the undeclared read."""
@@ -138,12 +151,34 @@ class MechanismContext:
             )
         return representation.model_copy(deep=True)
 
+    def read_placement(self, entity_id: str) -> PlacementState:
+        """Return one declared current placement or reject a global lookup."""
+        placement = self._allowed_placements.get(entity_id)
+        if placement is None:
+            raise StateAccessViolation(
+                f"mechanism {self.mechanism.mechanism_id!r} attempted "
+                f"undeclared placement read of {entity_id!r}"
+            )
+        return placement.model_copy(deep=True)
+
+    def read_spatial_link(self, spatial_link_id: str) -> SpatialLinkState:
+        """Return one declared topological link without inferring access."""
+        spatial_link = self._allowed_spatial_links.get(spatial_link_id)
+        if spatial_link is None:
+            raise StateAccessViolation(
+                f"mechanism {self.mechanism.mechanism_id!r} attempted "
+                f"undeclared spatial-link read of {spatial_link_id!r}"
+            )
+        return spatial_link.model_copy(deep=True)
+
     def defensive_copy(self) -> "MechanismContext":
         """Return fresh checker input isolated from handler/checker mutation."""
         return MechanismContext(
             mechanism=self.mechanism,
             allowed_facts=self._allowed_facts,
             allowed_representations=self._allowed_representations,
+            allowed_placements=self._allowed_placements,
+            allowed_spatial_links=self._allowed_spatial_links,
             effect=self.effect,
             target_port=self.target_port,
             representation=self.representation,
@@ -331,8 +366,8 @@ class CausalSession:
             return CausalCheckpoint.model_validate(
                 _with_record_digest(
                     {
-                        "runtime_contract": "causal-core.v1",
-                        "schema_version": 1,
+                        "runtime_contract": "causal-core.v2",
+                        "schema_version": 2,
                         "scenario_id": self._scenario.scenario_id,
                         "scenario_fingerprint": scenario_fingerprint(
                             self._scenario
@@ -436,8 +471,8 @@ class CausalSession:
                 result = CausalRunResult.model_validate(
                     _with_record_digest(
                         {
-                            "runtime_contract": "causal-core.v1",
-                            "schema_version": 1,
+                            "runtime_contract": "causal-core.v2",
+                            "schema_version": 2,
                             "run_id": self._run_id,
                             "scenario_id": self._scenario.scenario_id,
                             "scenario_fingerprint": scenario_fingerprint(
@@ -670,6 +705,14 @@ class CausalSession:
                 representation_id: self._state.representations[representation_id]
                 for representation_id in mechanism.read_representation_ids
             },
+            allowed_placements={
+                entity_id: self._state.placements[entity_id]
+                for entity_id in mechanism.read_placement_entity_ids
+            },
+            allowed_spatial_links={
+                spatial_link_id: self._state.spatial_links[spatial_link_id]
+                for spatial_link_id in mechanism.read_spatial_link_ids
+            },
             effect=effect,
             target_port=target_port,
             representation=(
@@ -694,6 +737,14 @@ class CausalSession:
             allowed_representations={
                 representation_id: self._state.representations[representation_id]
                 for representation_id in mechanism.read_representation_ids
+            },
+            allowed_placements={
+                entity_id: self._state.placements[entity_id]
+                for entity_id in mechanism.read_placement_entity_ids
+            },
+            allowed_spatial_links={
+                spatial_link_id: self._state.spatial_links[spatial_link_id]
+                for spatial_link_id in mechanism.read_spatial_link_ids
             },
             effect=effect,
             target_port=target_port,
@@ -724,6 +775,10 @@ class CausalSession:
             representation_id=effect.representation_id,
             read_fact_ids=list(mechanism.read_fact_ids),
             read_representation_ids=list(mechanism.read_representation_ids),
+            read_placement_entity_ids=list(
+                mechanism.read_placement_entity_ids
+            ),
+            read_spatial_link_ids=list(mechanism.read_spatial_link_ids),
             invariants=invariants,
         )
         patch, new_state = self._build_patch(
@@ -804,6 +859,63 @@ class CausalSession:
             )
         for update in outcome.updates:
             self._state.fact(update.fact_id)
+
+        placement_entity_ids = [
+            update.entity_id for update in outcome.placement_updates
+        ]
+        if len(placement_entity_ids) != len(set(placement_entity_ids)):
+            raise MechanismContractError(
+                f"{mechanism.mechanism_id}: duplicate placement updates"
+            )
+        undeclared_placement_updates = (
+            set(placement_entity_ids)
+            - set(mechanism.write_placement_entity_ids)
+        )
+        if undeclared_placement_updates:
+            raise MechanismContractError(
+                f"{mechanism.mechanism_id}: undeclared placement writes "
+                f"{sorted(undeclared_placement_updates)!r}"
+            )
+        for placement_update in outcome.placement_updates:
+            placement = self._state.placements.get(placement_update.entity_id)
+            if placement is None:
+                raise MechanismContractError(
+                    f"{mechanism.mechanism_id}: unknown placement entity "
+                    f"{placement_update.entity_id!r}"
+                )
+            if placement.place_id == placement_update.destination_place_id:
+                raise MechanismContractError(
+                    f"{mechanism.mechanism_id}: placement update is a no-op for "
+                    f"{placement_update.entity_id!r}"
+                )
+            if placement_update.destination_place_id not in self._state.places:
+                raise MechanismContractError(
+                    f"{mechanism.mechanism_id}: unknown placement destination "
+                    f"{placement_update.destination_place_id!r}"
+                )
+            if (
+                placement_update.via_spatial_link_id
+                not in mechanism.read_spatial_link_ids
+            ):
+                raise MechanismContractError(
+                    f"{mechanism.mechanism_id}: undeclared spatial link "
+                    f"{placement_update.via_spatial_link_id!r}"
+                )
+            spatial_link = self._state.spatial_links[
+                placement_update.via_spatial_link_id
+            ]
+            if {
+                placement.place_id,
+                placement_update.destination_place_id,
+            } != {
+                spatial_link.endpoint_a_place_id,
+                spatial_link.endpoint_b_place_id,
+            }:
+                raise MechanismContractError(
+                    f"{mechanism.mechanism_id}: placement update does not cross "
+                    "the declared spatial link "
+                    f"{placement_update.via_spatial_link_id!r}"
+                )
 
         representation_ids = [
             draft.representation_id for draft in outcome.representations
@@ -1003,6 +1115,23 @@ class CausalSession:
                 )
             fact.value = deepcopy(update.value)
 
+        placement_changes: list[PlacementChange] = []
+        for placement_update in outcome.placement_updates:
+            placement = after.placements[placement_update.entity_id]
+            before_place_id = placement.place_id
+            if before_place_id != placement_update.destination_place_id:
+                placement_changes.append(
+                    PlacementChange(
+                        entity_id=placement_update.entity_id,
+                        before_place_id=before_place_id,
+                        after_place_id=placement_update.destination_place_id,
+                        via_spatial_link_id=(
+                            placement_update.via_spatial_link_id
+                        ),
+                    )
+                )
+            placement.place_id = placement_update.destination_place_id
+
         carrier_changes: list[CarrierRevisionChange] = []
         representations: list[RepresentationToken] = []
         for draft in outcome.representations:
@@ -1063,6 +1192,7 @@ class CausalSession:
             before_digest=before_digest,
             after_digest=state_digest(validated_after),
             fact_changes=changes,
+            placement_changes=placement_changes,
             carrier_changes=carrier_changes,
             representations_added=representations,
             observations_added=observations,

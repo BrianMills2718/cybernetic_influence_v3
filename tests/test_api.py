@@ -26,7 +26,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     api = client(tmp_path)
     config = api.get("/api/config")
     assert config.status_code == 200
-    assert config.json()["version"] == "0.7.0"
+    assert config.json()["version"] == "0.8.0"
     assert config.json()["build_commit"] == "development"
     assert config.json()["profiles"] == ["position_context", "procedural_control"]
     assert set(config.json()["scenarios"]) == {
@@ -143,6 +143,84 @@ def test_physical_access_arms_are_distinct_and_cross_scenario_arms_fail(
         ).status_code
         == 422
     )
+
+
+def test_physical_world_topology_is_temporal_and_non_normative(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+    authorized = api.post(
+        "/api/runs",
+        json={
+            "scenario": "physical_access",
+            "arm_id": "authorized_access",
+            "execution": "scripted",
+        },
+    ).json()
+    world = authorized["world"]
+    assert {place["id"] for place in world["places"]} == {
+        "maintenance_facility",
+        "hallway",
+        "equipment_room",
+    }
+    assert world["links"] == [
+        {
+            "id": "equipment_room_threshold",
+            "kind": "controlled_doorway",
+            "label": "Equipment Room Threshold",
+            "description": (
+                "Topological adjacency across the controlled equipment-room "
+                "threshold; it does not assert permission or operability."
+            ),
+            "endpoint_a_place_id": "hallway",
+            "endpoint_b_place_id": "equipment_room",
+            "substrate_entity_ids": ["secure_door"],
+            "does_not_imply_traversability": True,
+        }
+    ]
+    initial_placements = {
+        item["entity_id"]: item["place_id"]
+        for item in world["snapshots"]["0"]["placements"]
+    }
+    assert initial_placements["technician"] == "hallway"
+    final_revision = str(authorized["timeline"][-1]["state_revision"])
+    final_placements = {
+        item["entity_id"]: item["place_id"]
+        for item in world["snapshots"][final_revision]["placements"]
+    }
+    assert final_placements["technician"] == "equipment_room"
+    crossing_commit = next(
+        event
+        for event in authorized["timeline"]
+        if event["kind"] == "state_committed"
+        and "equipment_room_threshold" in event["spatial_link_ids"]
+    )
+    assert {
+        "technician",
+        "hallway",
+        "equipment_room",
+    } <= set(crossing_commit["spatial_focus_ids"])
+
+    denied = api.post(
+        "/api/runs",
+        json={
+            "scenario": "physical_access",
+            "arm_id": "authorization_absent",
+            "execution": "scripted",
+        },
+    ).json()
+    assert {
+        item["place_id"]
+        for snapshot in denied["world"]["snapshots"].values()
+        for item in snapshot["placements"]
+        if item["entity_id"] == "technician"
+    } == {"hallway"}
+
+    service = api.post(
+        "/api/runs",
+        json={"scenario": "service_desk", "execution": "scripted"},
+    ).json()
+    assert service["world"] is None
 
 
 def test_live_run_requires_explicit_authorization(tmp_path: Path) -> None:

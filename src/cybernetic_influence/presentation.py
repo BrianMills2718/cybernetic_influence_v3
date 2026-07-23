@@ -73,7 +73,7 @@ def build_analyst_document(
     }
     nodes = snapshots[str(final_state.revision)]
     edges = analyst_edges(final_state)
-    timeline = analyst_timeline(result)
+    timeline = analyst_timeline(result, temporal_states)
     boundaries = analyst_boundaries(
         analytical_boundaries,
         temporal_states,
@@ -81,6 +81,7 @@ def build_analyst_document(
         timeline,
     )
     traces = analyst_traces(result)
+    world = analyst_world(temporal_states)
     return {
         "run_id": result.run_id,
         "created_at": created_at,
@@ -98,6 +99,7 @@ def build_analyst_document(
             "steps": [event for event in timeline if event["kind"] == "action_attempted"],
         },
         "outcome": dict(outcome),
+        "world": world,
         "nodes": nodes,
         "snapshots": snapshots,
         "edges": edges,
@@ -116,6 +118,69 @@ def analyst_snapshots(
     return {
         revision: analyst_nodes(state)
         for revision, state in _temporal_states(initial_state, events).items()
+    }
+
+
+def analyst_world(
+    temporal_states: Mapping[str, CausalState],
+) -> dict[str, object] | None:
+    """Project exact topological places and event-revision placements."""
+    if not temporal_states:
+        return None
+    final_state = list(temporal_states.values())[-1]
+    if not final_state.places:
+        return None
+    places = [
+        {
+            "id": place.place_id,
+            "kind": place.place_kind,
+            "label": _label(place.place_id),
+            "description": place.description,
+            "parent_place_id": place.parent_place_id,
+        }
+        for place in sorted(
+            final_state.places.values(),
+            key=lambda item: item.place_id,
+        )
+    ]
+    links = [
+        {
+            "id": link.spatial_link_id,
+            "kind": link.link_kind,
+            "label": _label(link.spatial_link_id),
+            "description": link.description,
+            "endpoint_a_place_id": link.endpoint_a_place_id,
+            "endpoint_b_place_id": link.endpoint_b_place_id,
+            "substrate_entity_ids": list(link.substrate_entity_ids),
+            "does_not_imply_traversability": True,
+        }
+        for link in sorted(
+            final_state.spatial_links.values(),
+            key=lambda item: item.spatial_link_id,
+        )
+    ]
+    snapshots = {
+        revision: {
+            "placements": [
+                {
+                    "entity_id": placement.entity_id,
+                    "place_id": placement.place_id,
+                }
+                for placement in sorted(
+                    state.placements.values(),
+                    key=lambda item: item.entity_id,
+                )
+            ],
+            "unplaced_entity_ids": sorted(
+                set(state.entities) - set(state.placements)
+            ),
+        }
+        for revision, state in temporal_states.items()
+    }
+    return {
+        "places": places,
+        "links": links,
+        "snapshots": snapshots,
     }
 
 
@@ -400,7 +465,10 @@ def analyst_event(event: CausalEvent) -> dict[str, object]:
     return projected
 
 
-def analyst_timeline(result: ActiveRuntimeResult) -> list[dict[str, object]]:
+def analyst_timeline(
+    result: ActiveRuntimeResult,
+    temporal_states: Mapping[str, CausalState],
+) -> list[dict[str, object]]:
     """Link each event to exact temporal, activation, entity, and route identities."""
     state = result.core_result.final_state
     node_ids = {str(node["id"]) for node in analyst_nodes(state)}
@@ -417,12 +485,23 @@ def analyst_timeline(result: ActiveRuntimeResult) -> list[dict[str, object]]:
     timeline: list[dict[str, object]] = []
     for event in result.core_result.events:
         exact = event.model_dump(mode="json")
+        event_state = temporal_states[str(event.state_revision)]
         focus_ids: set[str] = set()
         focus_edges: set[str] = set()
+        spatial_focus_ids: set[str] = set()
+        spatial_link_ids: set[str] = set()
         for field in ("actor_entity_id", "mechanism_id", "representation_id"):
             value = exact.get(field)
             if isinstance(value, str) and value in node_ids:
                 focus_ids.add(value)
+        if (
+            event.actor_entity_id is not None
+            and event.actor_entity_id in event_state.placements
+        ):
+            spatial_focus_ids.add(event.actor_entity_id)
+            spatial_focus_ids.add(
+                event_state.placements[event.actor_entity_id].place_id
+            )
         for representation_id in exact.get("read_representation_ids", []):
             if isinstance(representation_id, str) and representation_id in node_ids:
                 focus_ids.add(representation_id)
@@ -445,11 +524,44 @@ def analyst_timeline(result: ActiveRuntimeResult) -> list[dict[str, object]]:
                     owner = fact_id.partition(".")[0] if isinstance(fact_id, str) else None
                     if owner in node_ids:
                         focus_ids.add(owner)
+            for change in patch.get("placement_changes", []):
+                if isinstance(change, dict):
+                    for field in (
+                        "entity_id",
+                        "before_place_id",
+                        "after_place_id",
+                    ):
+                        value = change.get(field)
+                        if isinstance(value, str):
+                            spatial_focus_ids.add(value)
+                    spatial_link_id = change.get("via_spatial_link_id")
+                    if isinstance(spatial_link_id, str):
+                        spatial_link_ids.add(spatial_link_id)
             for observation in patch.get("observations_added", []):
                 if isinstance(observation, dict):
                     target = observation.get("target_entity_id")
                     if isinstance(target, str) and target in node_ids:
                         focus_ids.add(target)
+        for entity_id in exact.get("read_placement_entity_ids", []):
+            if isinstance(entity_id, str):
+                spatial_focus_ids.add(entity_id)
+                placement = event_state.placements.get(entity_id)
+                if placement is not None:
+                    spatial_focus_ids.add(placement.place_id)
+        for spatial_link_id in exact.get("read_spatial_link_ids", []):
+            if isinstance(spatial_link_id, str):
+                spatial_link_ids.add(spatial_link_id)
+                spatial_link = state.spatial_links.get(spatial_link_id)
+                if spatial_link is not None:
+                    spatial_focus_ids.add(
+                        spatial_link.endpoint_a_place_id
+                    )
+                    spatial_focus_ids.add(
+                        spatial_link.endpoint_b_place_id
+                    )
+                    spatial_focus_ids.update(
+                        spatial_link.substrate_entity_ids
+                    )
         activation, person = event_activation.get(event.event_id, (None, None))
         timeline.append(
             {
@@ -463,6 +575,8 @@ def analyst_timeline(result: ActiveRuntimeResult) -> list[dict[str, object]]:
                 "person": person,
                 "focus_ids": sorted(focus_ids),
                 "focus_edges": sorted(focus_edges),
+                "spatial_focus_ids": sorted(spatial_focus_ids),
+                "spatial_link_ids": sorted(spatial_link_ids),
             }
         )
     return timeline

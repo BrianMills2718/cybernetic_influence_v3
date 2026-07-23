@@ -16,6 +16,8 @@ The simulator currently includes:
   conditions;
 - a physical-access scenario that keeps credential proof, policy
   authorization, latch operability, crossing, and sensor feedback distinct;
+- authoritative topological places, entity placements, and concrete spatial
+  links whose existence never implies permission or successful traversal;
 - personal-disposition plus remembered-position cognition;
 - an explicit procedural control profile;
 - zero-cost scripted reference runs;
@@ -23,6 +25,8 @@ The simulator currently includes:
 - human narrative synchronized to an exact causal timeline;
 - a pannable, zoomable, selectable causal graph of people, information, world
   objects, mechanisms, and concrete declared routes;
+- a synchronized world-topology graph with place containers, event-time
+  occupants, pathway substrates, and one-click return to exact causal flow;
 - reversible execution-inert aggregate views with explicit information-loss
   counts, expanded composite hulls, and one-step return to exact evidence at
   the same revision;

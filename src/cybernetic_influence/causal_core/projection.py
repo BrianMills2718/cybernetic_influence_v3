@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
@@ -30,6 +30,7 @@ class GraphNode(BaseModel):
     node_kind: Literal[
         "entity",
         "container",
+        "place",
         "port",
         "mechanism",
         "carrier",
@@ -59,6 +60,8 @@ class GraphEdge(BaseModel):
         "carries",
         "derived_from",
         "located_in",
+        "within",
+        "spatially_connected",
         "derived_member",
     ]
     label: str = Field(min_length=1)
@@ -87,9 +90,9 @@ class CausalGraphArtifact(BaseModel):
 
     model_config = _FORBID
 
-    artifact_contract: Literal["causal-graph.v1"] = "causal-graph.v1"
-    schema_version: Literal[1] = 1
-    source_runtime_contract: Literal["causal-core.v1"] = "causal-core.v1"
+    artifact_contract: Literal["causal-graph.v2"] = "causal-graph.v2"
+    schema_version: Literal[2] = 2
+    source_runtime_contract: Literal["causal-core.v2"] = "causal-core.v2"
     scenario_id: str = Field(min_length=1)
     run_id: str = Field(min_length=1)
     source_scenario_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -121,9 +124,9 @@ class CausalPrefixGraphArtifact(BaseModel):
 
     model_config = _FORBID
 
-    artifact_contract: Literal["causal-graph-prefix.v1"] = "causal-graph-prefix.v1"
-    schema_version: Literal[1] = 1
-    source_runtime_contract: Literal["causal-core.v1"] = "causal-core.v1"
+    artifact_contract: Literal["causal-graph-prefix.v2"] = "causal-graph-prefix.v2"
+    schema_version: Literal[2] = 2
+    source_runtime_contract: Literal["causal-core.v2"] = "causal-core.v2"
     scenario_id: str = Field(min_length=1)
     run_id: str = Field(min_length=1)
     source_checkpoint_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -365,6 +368,72 @@ def _project_graph_components(
                 )
             )
 
+    for place in sorted(state.places.values(), key=lambda item: item.place_id):
+        nodes.append(
+            GraphNode(
+                node_id=_node("place", place.place_id),
+                node_kind="place",
+                label=place.place_id,
+                properties={
+                    "place_kind": place.place_kind,
+                    "description": place.description,
+                    "parent_place_id": place.parent_place_id,
+                },
+            )
+        )
+        if place.parent_place_id is not None:
+            edges.append(
+                GraphEdge(
+                    edge_id=f"within:{place.place_id}:{place.parent_place_id}",
+                    source_node_id=_node("place", place.place_id),
+                    target_node_id=_node("place", place.parent_place_id),
+                    edge_kind="within",
+                    label="within",
+                )
+            )
+
+    for placement in sorted(
+        state.placements.values(), key=lambda item: item.entity_id
+    ):
+        edges.append(
+            GraphEdge(
+                edge_id=f"entity_location:{placement.entity_id}",
+                source_node_id=_node("entity", placement.entity_id),
+                target_node_id=_node("place", placement.place_id),
+                edge_kind="located_in",
+                label="located in",
+            )
+        )
+
+    for spatial_link in sorted(
+        state.spatial_links.values(),
+        key=lambda item: item.spatial_link_id,
+    ):
+        edges.append(
+            GraphEdge(
+                edge_id=f"spatial_link:{spatial_link.spatial_link_id}",
+                source_node_id=_node(
+                    "place", spatial_link.endpoint_a_place_id
+                ),
+                target_node_id=_node(
+                    "place", spatial_link.endpoint_b_place_id
+                ),
+                edge_kind="spatially_connected",
+                label="topologically connected",
+                properties={
+                    "spatial_link_id": spatial_link.spatial_link_id,
+                    "link_kind": spatial_link.link_kind,
+                    "substrate_entity_ids": cast(
+                        JsonValue,
+                        list(spatial_link.substrate_entity_ids),
+                    ),
+                    "directed": False,
+                    "does_not_imply_traversability": True,
+                    "description": spatial_link.description,
+                },
+            )
+        )
+
     for port in sorted(state.ports.values(), key=lambda item: item.port_id):
         nodes.append(
             GraphNode(
@@ -412,7 +481,16 @@ def _project_graph_components(
             "read_representation_ids": _json_string_list(
                 mechanism.read_representation_ids
             ),
+            "read_placement_entity_ids": _json_string_list(
+                mechanism.read_placement_entity_ids
+            ),
+            "read_spatial_link_ids": _json_string_list(
+                mechanism.read_spatial_link_ids
+            ),
             "write_fact_ids": _json_string_list(mechanism.write_fact_ids),
+            "write_placement_entity_ids": _json_string_list(
+                mechanism.write_placement_entity_ids
+            ),
             "write_carrier_ids": _json_string_list(mechanism.write_carrier_ids),
             "observation_target_ids": _json_string_list(
                 mechanism.observation_target_ids
@@ -583,10 +661,14 @@ def _project_graph_components(
             item.entity_id: _node("entity", item.entity_id)
             for item in state.entities.values()
         },
-        **{
-            item.container_id: _node("container", item.container_id)
-            for item in state.containers.values()
-        },
+            **{
+                item.container_id: _node("container", item.container_id)
+                for item in state.containers.values()
+            },
+            **{
+                item.place_id: _node("place", item.place_id)
+                for item in state.places.values()
+            },
         **{item.port_id: _node("port", item.port_id) for item in state.ports.values()},
         **{
             item.mechanism_id: _node("mechanism", item.mechanism_id)
@@ -681,6 +763,13 @@ def _project_occurrence(event: CausalEvent, state: CausalState) -> GraphOccurren
             edge_refs.add(
                 f"reads_representation:{mechanism_id}:{representation_id}"
             )
+        for entity_id in mechanism.read_placement_entity_ids:
+            refs.add(_node("entity", entity_id))
+        for spatial_link_id in mechanism.read_spatial_link_ids:
+            spatial_link = state.spatial_links[spatial_link_id]
+            refs.add(_node("place", spatial_link.endpoint_a_place_id))
+            refs.add(_node("place", spatial_link.endpoint_b_place_id))
+            edge_refs.add(f"spatial_link:{spatial_link_id}")
 
     if event.actor_entity_id is not None:
         refs.add(_node("entity", event.actor_entity_id))
@@ -706,6 +795,14 @@ def _project_occurrence(event: CausalEvent, state: CausalState) -> GraphOccurren
         for change in event.patch.fact_changes:
             entity_id = change.fact_id.split(".", maxsplit=1)[0]
             refs.add(_node("entity", entity_id))
+        for placement_change in event.patch.placement_changes:
+            refs.add(_node("entity", placement_change.entity_id))
+            refs.add(_node("place", placement_change.before_place_id))
+            refs.add(_node("place", placement_change.after_place_id))
+            edge_refs.add(
+                f"spatial_link:{placement_change.via_spatial_link_id}"
+            )
+            edge_refs.add(f"entity_location:{placement_change.entity_id}")
         for carrier_change in event.patch.carrier_changes:
             add_carrier(carrier_change.carrier_id)
         for representation in event.patch.representations_added:

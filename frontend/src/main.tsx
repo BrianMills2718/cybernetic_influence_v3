@@ -33,6 +33,27 @@ interface AnalystEdge {
   enabled: boolean
   description: string
   routeIds: string[]
+  substrateEntityIds?: string[]
+}
+
+interface PlaceView {
+  id: string
+  kind: string
+  label: string
+  description: string
+  parentPlaceId: string | null
+}
+
+interface PlacementView {
+  entityId: string
+  placeId: string
+}
+
+interface WorldView {
+  places: PlaceView[]
+  links: AnalystEdge[]
+  placements: PlacementView[]
+  unplacedEntityIds: string[]
 }
 
 interface BoundaryView {
@@ -51,6 +72,8 @@ interface EventView {
   state_revision: number
   focus_ids: string[]
   focus_edges: string[]
+  spatial_focus_ids?: string[]
+  spatial_link_ids?: string[]
   boundary_ids?: string[]
 }
 
@@ -59,12 +82,15 @@ interface CanvasOptions {
   edges: AnalystEdge[]
   event: EventView | null
   boundary: BoundaryView | null
+  world: WorldView | null
+  viewMode: 'world' | 'causal'
   collapsedBoundaryId: string | null
   selectedNodeId: string | null
   selectedEdgeId: string | null
   onSelectNode: (nodeId: string) => void
   onSelectEdge: (edge: AnalystEdge) => void
   onToggleBoundary: (boundaryId: string) => void
+  onSetViewMode: (viewMode: 'world' | 'causal') => void
 }
 
 interface CanvasNodeData {
@@ -72,6 +98,7 @@ interface CanvasNodeData {
   active: boolean
   aggregateMode?: 'expanded' | 'collapsed'
   memberCount?: number
+  placeMode?: 'root' | 'place'
 }
 
 interface CanvasEdgeData {
@@ -80,6 +107,8 @@ interface CanvasEdgeData {
 
 const NODE_WIDTH = 194
 const NODE_HEIGHT = 92
+const WORLD_NODE_WIDTH = 152
+const WORLD_NODE_HEIGHT = 78
 const roots = new WeakMap<Element, Root>()
 
 function relationLabel(kind: string): string {
@@ -88,6 +117,7 @@ function relationLabel(kind: string): string {
     mechanism_binding: 'input',
     information_location: 'carried',
     information_lineage: 'derived',
+    spatial_link: 'adjacent via',
   }[kind] ?? kind.replaceAll('_', ' ')
 }
 
@@ -97,6 +127,7 @@ function relationColor(kind: string): string {
     mechanism_binding: '#e8a84d',
     information_location: '#ef79b7',
     information_lineage: '#c36fa1',
+    spatial_link: '#83d6c0',
   }[kind] ?? '#71849a'
 }
 
@@ -106,6 +137,7 @@ function nodeColor(node: Node<CanvasNodeData>): string {
     information: '#ef79b7',
     mechanism: '#e8a84d',
     analytical_boundary: '#b891ff',
+    place: '#83d6c0',
   }[node.data.raw.kind] ?? '#57b49d'
 }
 
@@ -144,15 +176,25 @@ function toCanvasEdge(
   selected: boolean,
 ): Edge<CanvasEdgeData> {
   const focusedRoute = item.routeIds.some((id) => event?.focus_edges.includes(id))
+  const focusedSpatialLink = item.kind === 'spatial_link'
+    && Boolean(event?.spatial_link_ids?.includes(item.id))
   const focusedEndpoints = Boolean(
-    event?.focus_ids.includes(item.source) && event.focus_ids.includes(item.target),
+    (
+      event?.focus_ids.includes(item.source)
+      && event.focus_ids.includes(item.target)
+    ) || (
+      event?.spatial_focus_ids?.includes(item.source)
+      && event.spatial_focus_ids.includes(item.target)
+    ),
   )
-  const active = focusedRoute || focusedEndpoints
+  const active = focusedRoute || focusedSpatialLink || focusedEndpoints
   return {
     id: item.id,
     source: item.source,
     target: item.target,
-    label: relationLabel(item.kind),
+    label: item.kind === 'spatial_link' && item.substrateEntityIds?.length
+      ? `${relationLabel(item.kind)} ${item.substrateEntityIds.join(', ')}`
+      : relationLabel(item.kind),
     type: 'smoothstep',
     animated: active,
     data: { raw: item },
@@ -165,7 +207,9 @@ function toCanvasEdge(
       stroke: active ? '#ffffff' : relationColor(item.kind),
       strokeWidth: active || selected ? 3 : 1.6,
       opacity: item.enabled ? 0.9 : 0.3,
-      strokeDasharray: item.kind === 'mechanism_binding'
+      strokeDasharray: item.kind === 'spatial_link'
+        ? '10 5'
+        : item.kind === 'mechanism_binding'
         ? '6 4'
         : item.kind === 'information_lineage' ? '3 4' : undefined,
     },
@@ -302,10 +346,169 @@ function expandedBoundaryLayout(
   return [hullNode, ...memberPositions, ...positionedExternal]
 }
 
+function placeNode(
+  place: PlaceView,
+  options: {
+    position: { x: number; y: number }
+    width: number
+    height: number
+    parentNode?: string
+    active: boolean
+    selected: boolean
+  },
+): Node<CanvasNodeData> {
+  const { position, width, height, parentNode, active, selected } = options
+  return {
+    id: place.id,
+    position,
+    parentNode,
+    data: {
+      raw: {
+        id: place.id,
+        kind: 'place',
+        label: place.label,
+        description: place.description,
+        state: {
+          place_kind: place.kind,
+          parent_place_id: place.parentPlaceId,
+        },
+      },
+      active,
+      placeMode: parentNode ? 'place' : 'root',
+    },
+    className: [
+      'cy-place-group',
+      parentNode ? 'cy-place-group--leaf' : 'cy-place-group--root',
+      active ? 'cy-place-group--active' : '',
+      selected ? 'cy-place-group--selected' : '',
+    ].filter(Boolean).join(' '),
+    draggable: false,
+    selectable: true,
+    style: {
+      width,
+      height,
+      zIndex: parentNode ? -1 : -2,
+    },
+  }
+}
+
+function buildWorldGraph(options: CanvasOptions): {
+  nodes: Node<CanvasNodeData>[]
+  edges: Edge<CanvasEdgeData>[]
+} {
+  const world = options.world
+  if (!world) return { nodes: [], edges: [] }
+  const eventFocus = new Set(options.event?.spatial_focus_ids ?? [])
+  const placeById = new Map(world.places.map((place) => [place.id, place]))
+  const roots = world.places.filter((place) => place.parentPlaceId === null)
+  const nodes: Node<CanvasNodeData>[] = []
+  let rootOffset = 30
+
+  roots.forEach((root) => {
+    const children = world.places.filter(
+      (place) => place.parentPlaceId === root.id,
+    )
+    const width = Math.max(800, 90 + Math.max(1, children.length) * 360)
+    const height = 560
+    nodes.push(placeNode(root, {
+      position: { x: rootOffset, y: 30 },
+      width,
+      height,
+      active: eventFocus.has(root.id),
+      selected: options.selectedNodeId === root.id,
+    }))
+    children.forEach((place, index) => {
+      nodes.push(placeNode(place, {
+        position: { x: 46 + index * 350, y: 110 },
+        width: 314,
+        height: 390,
+        parentNode: root.id,
+        active: eventFocus.has(place.id),
+        selected: options.selectedNodeId === place.id,
+      }))
+    })
+    rootOffset += width + 100
+  })
+
+  const currentNodes = new Map(options.nodes.map((node) => [node.id, node]))
+  const occupants = new Map<string, PlacementView[]>()
+  world.placements.forEach((placement) => {
+    const list = occupants.get(placement.placeId) ?? []
+    list.push(placement)
+    occupants.set(placement.placeId, list)
+  })
+  occupants.forEach((placements, placeId) => {
+    if (!placeById.has(placeId)) return
+    placements
+      .sort((left, right) => left.entityId.localeCompare(right.entityId))
+      .forEach((placement, index) => {
+        const raw = currentNodes.get(placement.entityId)
+        if (!raw) return
+        const node = toCanvasNode(
+          raw,
+          eventFocus.has(raw.id),
+          options.selectedNodeId === raw.id,
+        )
+        nodes.push({
+          ...node,
+          parentNode: placeId,
+          extent: 'parent',
+          position: {
+            x: 18 + (index % 2) * 148,
+            y: 88 + Math.floor(index / 2) * 92,
+          },
+          style: {
+            ...node.style,
+            width: WORLD_NODE_WIDTH,
+            height: WORLD_NODE_HEIGHT,
+          },
+        })
+      })
+  })
+
+  const linkSubstrates = new Set(
+    world.links.flatMap((link) => link.substrateEntityIds ?? []),
+  )
+  const unplaced = world.unplacedEntityIds.filter(
+    (entityId) => !linkSubstrates.has(entityId) && currentNodes.has(entityId),
+  )
+  unplaced.forEach((entityId, index) => {
+    const raw = currentNodes.get(entityId)
+    if (!raw) return
+    const node = toCanvasNode(
+      raw,
+      eventFocus.has(entityId),
+      options.selectedNodeId === entityId,
+    )
+    nodes.push({
+      ...node,
+      position: {
+        x: rootOffset + 30,
+        y: 110 + index * (WORLD_NODE_HEIGHT + 30),
+      },
+      style: {
+        ...node.style,
+        width: WORLD_NODE_WIDTH,
+        height: WORLD_NODE_HEIGHT,
+      },
+    })
+  })
+
+  return {
+    nodes,
+    edges: world.links.map((link) => toCanvasEdge(
+      link,
+      options.event,
+      options.selectedEdgeId === link.id,
+    )),
+  }
+}
+
 function buildGraph(options: CanvasOptions): {
   nodes: Node<CanvasNodeData>[]
   edges: Edge<CanvasEdgeData>[]
 } {
+  if (options.viewMode === 'world') return buildWorldGraph(options)
   const event = options.event
   const activeIds = new Set(event?.focus_ids ?? [])
   const canvasNodes = options.nodes.map((item) => {
@@ -336,6 +539,15 @@ function buildGraph(options: CanvasOptions): {
 }
 
 function NodeLabel({ data }: { data: CanvasNodeData }) {
+  if (data.placeMode) {
+    return (
+      <div className="cy-place-label">
+        <span>{data.placeMode === 'root' ? 'spatial frame' : 'place'}</span>
+        <strong>{data.raw.label}</strong>
+        <small>{data.raw.description}</small>
+      </div>
+    )
+  }
   if (data.aggregateMode === 'expanded') {
     return (
       <div className="cy-boundary-label">
@@ -372,6 +584,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
   const initialized = useNodesInitialized()
   const { fitView } = useReactFlow()
   const layoutKey = [
+    options.viewMode,
     options.collapsedBoundaryId ?? 'exact',
     ...graph.nodes.map((node) => node.id),
     ...graph.edges.map((edge) => edge.id),
@@ -396,18 +609,43 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
     ?? options.nodes.find((node) => node.id === boundaryId)?.label
     ?? 'analytical composite'
   const collapsed = options.collapsedBoundaryId !== null
+  const worldMode = options.viewMode === 'world'
   return (
     <section className="cy-graph-shell">
       <div className="cy-graph-bar">
         <span>
-          <strong>{collapsed ? 'Collapsed composite' : 'Expanded exact network'}</strong>
+          <strong>
+            {worldMode
+              ? 'World topology'
+              : collapsed ? 'Collapsed composite' : 'Expanded exact network'}
+          </strong>
           {' · '}revision {options.event?.state_revision ?? 'final'}
         </span>
-        {boundaryId && (
+        <div className="cy-graph-actions">
+          {options.world && (
+            <div className="cy-view-tabs" aria-label="Graph projection">
+              <button
+                className={worldMode ? 'active' : ''}
+                aria-pressed={worldMode}
+                onClick={() => options.onSetViewMode('world')}
+              >
+                World topology
+              </button>
+              <button
+                className={!worldMode ? 'active' : ''}
+                aria-pressed={!worldMode}
+                onClick={() => options.onSetViewMode('causal')}
+              >
+                Causal flow
+              </button>
+            </div>
+          )}
+          {!worldMode && boundaryId && (
           <button onClick={() => options.onToggleBoundary(boundaryId)}>
             {collapsed ? 'Expand' : 'Collapse'} {boundaryLabel}
           </button>
-        )}
+          )}
+        </div>
       </div>
       <div className="cy-graph-canvas">
         <ReactFlow

@@ -7,6 +7,7 @@ let current = null
 let selectedEventIndex = 0
 let selectedPerson = null
 let selectedScale = 'exact'
+let selectedGraphView = 'causal'
 let selectedNodeId = null
 let selectedEdgeId = null
 let scenarioCatalog = {}
@@ -119,6 +120,38 @@ function selectedBoundary() {
 function boundarySnapshot(boundary = selectedBoundary()) {
   const event = current?.timeline?.[selectedEventIndex]
   return boundary?.snapshots?.[String(event?.state_revision)] || null
+}
+
+function worldProjection() {
+  const world = current?.world
+  const event = current?.timeline?.[selectedEventIndex]
+  if (!world || !event) return null
+  const snapshot = world.snapshots?.[String(event.state_revision)]
+  if (!snapshot) return null
+  return {
+    places:(world.places || []).map((place) => ({
+      id:place.id,
+      kind:place.kind,
+      label:place.label,
+      description:place.description,
+      parentPlaceId:place.parent_place_id,
+    })),
+    links:(world.links || []).map((link) => ({
+      id:link.id,
+      kind:'spatial_link',
+      source:link.endpoint_a_place_id,
+      target:link.endpoint_b_place_id,
+      enabled:true,
+      description:link.description,
+      routeIds:[],
+      substrateEntityIds:link.substrate_entity_ids || [],
+    })),
+    placements:(snapshot.placements || []).map((placement) => ({
+      entityId:placement.entity_id,
+      placeId:placement.place_id,
+    })),
+    unplacedEntityIds:snapshot.unplaced_entity_ids || [],
+  }
 }
 
 function graphProjection() {
@@ -265,6 +298,23 @@ function showNode(nodeId) {
   selectedEdgeId = null
   renderGraph()
   const event = current?.timeline?.[selectedEventIndex]
+  const world = worldProjection()
+  const place = world?.places?.find((candidate) => candidate.id === nodeId)
+  if (place) {
+    const occupants = world.placements
+      .filter((placement) => placement.placeId === nodeId)
+      .map((placement) => placement.entityId)
+    $('#inspector').innerHTML = `
+      <span class="eyebrow">Place · revision ${html(event?.state_revision)}</span>
+      <h2>${html(place.label)}</h2>
+      <p>${html(place.description)}</p>
+      <dl class="aggregate-facts">
+        <div><dt>Place kind</dt><dd>${html(place.kind)}</dd></div>
+        <div><dt>Immediate occupants</dt><dd>${html(occupants.length)}</dd></div>
+      </dl>
+      <pre>${html(JSON.stringify({parent_place_id:place.parentPlaceId, occupant_entity_ids:occupants}, null, 2))}</pre>`
+    return
+  }
   const node = nodesAtSelectedEvent().find((candidate) => candidate.id === nodeId)
   const finalNode = current?.nodes?.find((candidate) => candidate.id === nodeId)
   document.querySelectorAll('.node').forEach((button) => button.classList.toggle('selected', button.dataset.nodeId === nodeId))
@@ -275,10 +325,14 @@ function showNode(nodeId) {
       <p>This entity or representation did not yet exist at state revision ${html(event?.state_revision)}.</p>`
     return
   }
+  const placement = world?.placements?.find(
+    (candidate) => candidate.entityId === nodeId,
+  )
   $('#inspector').innerHTML = `
     <span class="eyebrow">${html(node.kind)} · revision ${html(event?.state_revision)}</span>
     <h2>${html(node.label)}</h2>
     <p>${html(node.description)}</p>
+    ${placement ? `<p><strong>Located in:</strong> ${html(placement.placeId.replaceAll('_',' '))}</p>` : ''}
     <pre>${html(JSON.stringify(node.state, null, 2))}</pre>`
 }
 
@@ -286,6 +340,18 @@ function showEdge(edge) {
   selectedNodeId = null
   selectedEdgeId = edge.id
   renderGraph()
+  if (edge.kind === 'spatial_link') {
+    $('#inspector').innerHTML = `
+      <span class="eyebrow">Topological connection · does not imply traversability</span>
+      <h2>${html(edge.source.replaceAll('_',' '))} ↔ ${html(edge.target.replaceAll('_',' '))}</h2>
+      <p>${html(edge.description)}</p>
+      <dl class="aggregate-facts">
+        <div><dt>Link</dt><dd>${html(edge.id)}</dd></div>
+        <div><dt>Concrete substrates</dt><dd>${html(edge.substrateEntityIds?.length || 0)}</dd></div>
+      </dl>
+      <pre>${html(JSON.stringify({spatial_link_id:edge.id, substrate_entity_ids:edge.substrateEntityIds || []}, null, 2))}</pre>`
+    return
+  }
   $('#inspector').innerHTML = `
     <span class="eyebrow">${html(edge.kind.replaceAll('_',' '))}</span>
     <h2>${html(edge.source.replaceAll('_',' '))} → ${html(edge.target.replaceAll('_',' '))}</h2>
@@ -390,6 +456,8 @@ function renderGraph() {
       nodes:projection.nodes,
       edges:projection.edges,
       event:current?.timeline?.[selectedEventIndex] || null,
+      world:worldProjection(),
+      viewMode:selectedGraphView,
       boundary:authoredBoundary && snapshot ? {
         id:authoredBoundary.id,
         label:authoredBoundary.label,
@@ -411,6 +479,12 @@ function renderGraph() {
         selectedEdgeId = null
         renderScaleControls()
         selectEvent(selectedEventIndex)
+      },
+      onSetViewMode:(viewMode) => {
+        selectedGraphView = viewMode
+        selectedNodeId = null
+        selectedEdgeId = null
+        renderGraph()
       },
     })
     return
@@ -457,14 +531,27 @@ function selectEvent(index) {
   renderScaleControls()
   renderGraph()
 
-  const focusedNodes = graphProjection().nodes.filter((node) =>
-    event.focus_ids.includes(node.id)
-    || (node.kind === 'analytical_boundary' && event.boundary_ids?.includes(node.id))
-  )
+  const world = worldProjection()
+  const worldNodes = selectedGraphView === 'world' && world
+    ? [
+        ...world.places.map((place) => ({...place, kind:'place'})),
+        ...nodesAtSelectedEvent().filter((node) =>
+          event.spatial_focus_ids?.includes(node.id)
+        ),
+      ].filter((node) => event.spatial_focus_ids?.includes(node.id))
+    : []
+  const focusedNodes = selectedGraphView === 'world'
+    ? worldNodes
+    : graphProjection().nodes.filter((node) =>
+        event.focus_ids.includes(node.id)
+        || (node.kind === 'analytical_boundary' && event.boundary_ids?.includes(node.id))
+      )
   $('#inspector').innerHTML = focusedNodes.length
-    ? `<span class="eyebrow">Focused by selected event</span><h2>${focusedNodes.length} participating ${focusedNodes.length === 1 ? 'entity' : 'entities'}</h2>
+    ? `<span class="eyebrow">${selectedGraphView === 'world' ? 'Spatial evidence' : 'Focused by selected event'}</span><h2>${focusedNodes.length} participating ${focusedNodes.length === 1 ? 'referent' : 'referents'}</h2>
        <div class="focus-list">${focusedNodes.map((node) => `<button data-node-id="${html(node.id)}">${html(node.kind)} · ${html(node.label)}</button>`).join('')}</div>`
-    : '<p class="muted">This event does not directly identify a retained world entity.</p>'
+    : selectedGraphView === 'world' && event.spatial_link_ids?.length
+      ? `<span class="eyebrow">Spatial evidence</span><h2>${html(event.spatial_link_ids.length)} topological link</h2><p>The selected event read or changed state across ${html(event.spatial_link_ids.join(', '))}.</p>`
+      : '<p class="muted">This event does not directly identify a retained world entity.</p>'
   document.querySelectorAll('.focus-list button').forEach((button) => {
     button.onclick = () => showNode(button.dataset.nodeId)
   })
@@ -506,6 +593,7 @@ function render(run) {
   selectedEventIndex = 0
   selectedPerson = null
   selectedScale = 'exact'
+  selectedGraphView = current.world ? 'world' : 'causal'
   selectedNodeId = null
   selectedEdgeId = null
   if (scenarioCatalog[current.scenario]) {

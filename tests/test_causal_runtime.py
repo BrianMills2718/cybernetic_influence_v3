@@ -7,9 +7,18 @@ import json
 import pytest
 
 from cybernetic_influence.active_runtime.llm import render_llm_prompts
-from cybernetic_influence.causal_core.engine import CausalSession
+from cybernetic_influence.causal_core.engine import (
+    CausalSession,
+    ExactMechanismBinding,
+    MechanismContractError,
+)
 from cybernetic_influence.causal_core.fixtures import authentication_fixture
-from cybernetic_influence.causal_core.models import ActionAttempt
+from cybernetic_influence.causal_core.models import (
+    ActionAttempt,
+    CausalState,
+    MechanismOutcome,
+    PlacementDraft,
+)
 from cybernetic_influence.causal_core.projection import project_graph
 from cybernetic_influence.causal_core.replay import replay_committed_trajectory
 from cybernetic_influence.scenarios.physical_access import (
@@ -28,6 +37,37 @@ from cybernetic_influence.scenarios.service_desk import (
     service_desk_personas,
     service_desk_scripted_bindings,
 )
+
+
+def _crossing_attempt_after_badge(
+    session: CausalSession,
+    *,
+    action_prefix: str,
+) -> ActionAttempt:
+    """Advance through badge presentation and return the resulting crossing attempt."""
+    session.advance(
+        ActionAttempt(
+            action_id=f"{action_prefix}_badge",
+            actor_entity_id="technician",
+            output_port_id="technician_badge_out",
+            representation_id="technician_badge",
+            public_summary="Technician presented a badge.",
+        )
+    )
+    access_observation = next(
+        observation
+        for observation in session.state.observations.values()
+        if observation.via_port_id == "technician_access_result_in"
+    )
+    return ActionAttempt(
+        action_id=f"{action_prefix}_crossing",
+        actor_entity_id="technician",
+        output_port_id="technician_cross_out",
+        representation_id=access_observation.representation_id,
+        payload=CrossingRequest().model_dump(mode="json"),
+        logical_time=1,
+        public_summary="Technician attempted crossing.",
+    )
 
 
 def test_exact_authentication_accepts_equality_and_rejects_inequality() -> None:
@@ -106,6 +146,146 @@ def test_physical_access_separates_policy_and_physical_capability() -> None:
     assert readouts["latch_jammed"].entered is False
 
 
+def test_physical_crossing_commits_one_replayable_spatial_change() -> None:
+    fixture = physical_access_fixture(physical_access_arm_configurations()[0])
+    result = run_physical_access(
+        fixture,
+        physical_access_scripted_bindings(fixture),
+        run_id="physical_spatial_change_gate",
+    )
+    placement_changes = [
+        change
+        for event in result.core_result.events
+        if event.patch is not None
+        for change in event.patch.placement_changes
+    ]
+    assert [
+        (
+            change.entity_id,
+            change.before_place_id,
+            change.after_place_id,
+            change.via_spatial_link_id,
+        )
+        for change in placement_changes
+    ] == [
+        (
+            "technician",
+            "hallway",
+            "equipment_room",
+            "equipment_room_threshold",
+        )
+    ]
+    assert (
+        result.core_result.final_state.placements["technician"].place_id
+        == "equipment_room"
+    )
+    assert (
+        replay_committed_trajectory(fixture.scenario, result.core_result)
+        == result.core_result.final_state
+    )
+
+    for arm in physical_access_arm_configurations()[1:]:
+        denied_fixture = physical_access_fixture(arm)
+        denied = run_physical_access(
+            denied_fixture,
+            physical_access_scripted_bindings(denied_fixture),
+            run_id=f"physical_no_spatial_change_{arm.arm_id}",
+        )
+        assert (
+            denied.core_result.final_state.placements["technician"].place_id
+            == "hallway"
+        )
+        assert not any(
+            event.patch is not None and event.patch.placement_changes
+            for event in denied.core_result.events
+        )
+
+
+def test_spatial_contract_rejects_cycles_and_unknown_links() -> None:
+    fixture = physical_access_fixture(physical_access_arm_configurations()[0])
+    cyclic_state = fixture.scenario.initial_state.model_copy(deep=True)
+    cyclic_state.places["maintenance_facility"].parent_place_id = "hallway"
+    with pytest.raises(ValueError, match="containment contains a cycle"):
+        CausalState.model_validate(cyclic_state.model_dump(mode="json"))
+
+    unknown_link_state = fixture.scenario.initial_state.model_copy(deep=True)
+    unknown_link_state.mechanisms[
+        "exact_threshold_crossing"
+    ].read_spatial_link_ids.append("missing_threshold")
+    with pytest.raises(ValueError, match="unknown readable spatial links"):
+        CausalState.model_validate(unknown_link_state.model_dump(mode="json"))
+
+
+@pytest.mark.parametrize(
+    ("destination_place_id", "spatial_link_id", "error"),
+    [
+        ("equipment_room", "undeclared_link", "undeclared spatial link"),
+        (
+            "maintenance_facility",
+            "equipment_room_threshold",
+            "does not cross the declared spatial link",
+        ),
+    ],
+)
+def test_spatial_contract_rejects_forged_crossing_geometry(
+    destination_place_id: str,
+    spatial_link_id: str,
+    error: str,
+) -> None:
+    fixture = physical_access_fixture(physical_access_arm_configurations()[0])
+    original = fixture.exact_bindings["exact_threshold_crossing"]
+    bindings = dict(fixture.exact_bindings)
+    bindings["exact_threshold_crossing"] = ExactMechanismBinding(
+        implementation_id=original.implementation_id,
+        handler=lambda context: MechanismOutcome(
+            outcome_code="forged_crossing",
+            placement_updates=[
+                PlacementDraft(
+                    entity_id="technician",
+                    destination_place_id=destination_place_id,
+                    via_spatial_link_id=spatial_link_id,
+                )
+            ],
+        ),
+        invariant_checkers=original.invariant_checkers,
+    )
+    session = CausalSession(
+        fixture.scenario,
+        bindings,
+        run_id=f"forged_spatial_geometry_{spatial_link_id}",
+    )
+    crossing_attempt = _crossing_attempt_after_badge(
+        session,
+        action_prefix=f"forged_{spatial_link_id}",
+    )
+    with pytest.raises(MechanismContractError, match=error):
+        session.advance(crossing_attempt)
+    assert session.state.placements["technician"].place_id == "hallway"
+
+
+def test_spatial_contract_rejects_undeclared_placement_write() -> None:
+    fixture = physical_access_fixture(physical_access_arm_configurations()[0])
+    scenario = fixture.scenario.model_copy(deep=True)
+    scenario.initial_state.mechanisms[
+        "exact_threshold_crossing"
+    ].write_placement_entity_ids = []
+    session = CausalSession(
+        scenario,
+        fixture.exact_bindings,
+        run_id="undeclared_placement_write_gate",
+    )
+    crossing_attempt = _crossing_attempt_after_badge(
+        session,
+        action_prefix="undeclared_placement_write",
+    )
+    with pytest.raises(
+        MechanismContractError,
+        match="undeclared placement writes",
+    ):
+        session.advance(crossing_attempt)
+    assert session.state.placements["technician"].place_id == "hallway"
+
+
 def test_policy_is_a_declared_representation_read_and_badge_stays_out_of_prompt() -> None:
     fixture = physical_access_fixture(physical_access_arm_configurations()[0])
     result = run_physical_access(
@@ -180,7 +360,7 @@ def test_crossing_attempt_cannot_turn_policy_denial_into_physical_entry() -> Non
             public_summary="Technician attempted crossing after denial.",
         )
     )
-    assert session.state.fact("technician.location").value == "hallway"
+    assert session.state.placements["technician"].place_id == "hallway"
     assert any(
         "crossing_denied" in event.summary
         for event in session.events

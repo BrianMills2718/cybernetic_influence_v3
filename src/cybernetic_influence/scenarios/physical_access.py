@@ -41,9 +41,13 @@ from cybernetic_influence.causal_core.models import (
     MechanismOutcome,
     MechanismSpec,
     ObservationDraft,
+    PlacementDraft,
+    PlacementState,
+    PlaceState,
     PortState,
     RepresentationDraft,
     RepresentationToken,
+    SpatialLinkState,
     representation_digest,
 )
 
@@ -124,7 +128,7 @@ class AccessResult(_StrictModel):
 
 
 class CrossingRequest(_StrictModel):
-    target_location: Literal["equipment_room"] = "equipment_room"
+    target_place_id: Literal["equipment_room"] = "equipment_room"
 
 
 class EntryResult(_StrictModel):
@@ -201,6 +205,9 @@ def physical_access_fixture(
     badge = BadgePresentation(candidate=badge_candidate)
     state = CausalState(
         entities=_entities(selected),
+        places=_places(),
+        placements=_placements(),
+        spatial_links=_spatial_links(),
         ports=_ports(),
         connections=_connections(),
         mechanisms=_mechanisms(),
@@ -336,7 +343,7 @@ def build_physical_access_readout(
     result: ActiveRuntimeResult,
 ) -> PhysicalAccessReadout:
     state = result.core_result.final_state
-    location = str(state.fact("technician.location").value)
+    location = state.placements["technician"].place_id
     return PhysicalAccessReadout(
         final_location=location,
         authentication=str(
@@ -388,17 +395,11 @@ def _entities(
             entity_id="technician",
             entity_kind="person",
             description="Person assigned to inspect pump_7.",
-            attributes={"location": FactState(value="hallway")},
         ),
         "pump_7": EntityState(
             entity_id="pump_7",
             entity_kind="equipment",
             description="Non-agentic pump inside the equipment room.",
-        ),
-        "equipment_room": EntityState(
-            entity_id="equipment_room",
-            entity_kind="physical_space",
-            description="Physical room containing pump_7.",
         ),
         "secure_door": EntityState(
             entity_id="secure_door",
@@ -440,6 +441,69 @@ def _entities(
             entity_kind="person",
             description="Person who authored the access-policy copy.",
         ),
+    }
+
+
+def _places() -> dict[str, PlaceState]:
+    return {
+        "maintenance_facility": PlaceState(
+            place_id="maintenance_facility",
+            place_kind="facility",
+            description="Facility containing the controlled maintenance area.",
+        ),
+        "hallway": PlaceState(
+            place_id="hallway",
+            place_kind="corridor",
+            description="Hallway outside the controlled equipment room.",
+            parent_place_id="maintenance_facility",
+        ),
+        "equipment_room": PlaceState(
+            place_id="equipment_room",
+            place_kind="room",
+            description="Controlled room containing pump_7.",
+            parent_place_id="maintenance_facility",
+        ),
+    }
+
+
+def _placements() -> dict[str, PlacementState]:
+    return {
+        "technician": PlacementState(
+            entity_id="technician",
+            place_id="hallway",
+        ),
+        "pump_7": PlacementState(
+            entity_id="pump_7",
+            place_id="equipment_room",
+        ),
+        "credential_authority": PlacementState(
+            entity_id="credential_authority",
+            place_id="hallway",
+        ),
+        "access_controller": PlacementState(
+            entity_id="access_controller",
+            place_id="hallway",
+        ),
+        "written_access_policy": PlacementState(
+            entity_id="written_access_policy",
+            place_id="hallway",
+        ),
+    }
+
+
+def _spatial_links() -> dict[str, SpatialLinkState]:
+    return {
+        "equipment_room_threshold": SpatialLinkState(
+            spatial_link_id="equipment_room_threshold",
+            endpoint_a_place_id="hallway",
+            endpoint_b_place_id="equipment_room",
+            link_kind="controlled_doorway",
+            substrate_entity_ids=["secure_door"],
+            description=(
+                "Topological adjacency across the controlled equipment-room "
+                "threshold; it does not assert permission or operability."
+            ),
+        )
     }
 
 
@@ -623,13 +687,14 @@ def _mechanisms() -> dict[str, MechanismSpec]:
             description="Change location only across an open physical boundary.",
             input_port_ids=["door_crossing_in"],
             output_port_ids=["entry_result_out"],
-            read_fact_ids=["secure_door.lock_state", "technician.location"],
-            write_fact_ids=["technician.location"],
+            read_fact_ids=["secure_door.lock_state"],
+            read_placement_entity_ids=["technician"],
+            read_spatial_link_ids=["equipment_room_threshold"],
+            write_placement_entity_ids=["technician"],
             write_carrier_ids=["entry_result_buffer"],
             substrate_refs=[
                 "technician",
                 "secure_door",
-                "equipment_room",
                 "entry_result_buffer",
             ],
             invariant_ids=["crossing_valid"],
@@ -896,11 +961,13 @@ def _exact_latch(context: MechanismContext) -> MechanismOutcome:
 def _exact_crossing(context: MechanismContext) -> MechanismOutcome:
     access = _parse_trigger(context, ACCESS_RESULT_ENCODING, AccessResult)
     request = CrossingRequest.model_validate(context.effect.payload)
+    placement = context.read_placement("technician")
+    spatial_link = context.read_spatial_link("equipment_room_threshold")
     entered = (
         access.status == "access_granted"
         and context.read("secure_door.lock_state") == "unlocked"
-        and context.read("technician.location") == "hallway"
-        and request.target_location == "equipment_room"
+        and placement.place_id == spatial_link.endpoint_a_place_id
+        and request.target_place_id == spatial_link.endpoint_b_place_id
     )
     status: Literal["entered", "crossing_denied"] = (
         "entered" if entered else "crossing_denied"
@@ -909,8 +976,14 @@ def _exact_crossing(context: MechanismContext) -> MechanismOutcome:
     representation_id = f"entry_result_{context.route_event_id}"
     return MechanismOutcome(
         outcome_code=status,
-        updates=(
-            [FactUpdate(fact_id="technician.location", value="equipment_room")]
+        placement_updates=(
+            [
+                PlacementDraft(
+                    entity_id="technician",
+                    destination_place_id="equipment_room",
+                    via_spatial_link_id="equipment_room_threshold",
+                )
+            ]
             if entered
             else []
         ),
@@ -1066,16 +1139,30 @@ def _crossing_valid(
     expected_entered = (
         access.status == "access_granted"
         and context.read("secure_door.lock_state") == "unlocked"
-        and context.read("technician.location") == "hallway"
+        and context.read_placement("technician").place_id == "hallway"
+        and context.read_spatial_link("equipment_room_threshold").endpoint_b_place_id
+        == "equipment_room"
     )
-    updates = {item.fact_id: item.value for item in outcome.updates}
+    placement_updates = {
+        item.entity_id: (
+            item.destination_place_id,
+            item.via_spatial_link_id,
+        )
+        for item in outcome.placement_updates
+    }
     return (
         outcome.outcome_code
         == ("entered" if expected_entered else "crossing_denied")
         and (
-            updates == {"technician.location": "equipment_room"}
+            placement_updates
+            == {
+                "technician": (
+                    "equipment_room",
+                    "equipment_room_threshold",
+                )
+            }
             if expected_entered
-            else not updates
+            else not placement_updates
         )
         and len(outcome.representations) == 1
         and len(outcome.effects) == 1
@@ -1257,6 +1344,8 @@ def _boundary_members(state: CausalState) -> list[str]:
             "technician",
             "pump_7",
             "equipment_room",
+            "hallway",
+            "maintenance_facility",
             "secure_door",
             "written_access_policy",
             *state.ports,

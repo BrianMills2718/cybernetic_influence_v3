@@ -14,8 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
-RUNTIME_CONTRACT = "causal-core.v1"
-SCHEMA_VERSION = 1
+RUNTIME_CONTRACT = "causal-core.v2"
+SCHEMA_VERSION = 2
 
 _FORBID = ConfigDict(extra="forbid", strict=True)
 _ID_PATTERN = r"^[a-z][a-z0-9_]*$"
@@ -68,11 +68,46 @@ class EntityState(_StrictModel):
 
 
 class ContainerState(_StrictModel):
-    """Concrete physical or logical co-location used for local routing."""
+    """Authored typed-broadcast locus; not authoritative spatial location."""
 
     container_id: str = Field(pattern=_ID_PATTERN)
     description: str = Field(min_length=1)
     member_entity_ids: list[str] = Field(default_factory=list)
+
+
+class PlaceState(_StrictModel):
+    """One spatial locus in an acyclic topological containment hierarchy."""
+
+    place_id: str = Field(pattern=_ID_PATTERN)
+    place_kind: str = Field(pattern=_ID_PATTERN)
+    description: str = Field(min_length=1)
+    parent_place_id: str | None = Field(default=None, pattern=_ID_PATTERN)
+
+
+class PlacementState(_StrictModel):
+    """The current immediate place of one concrete entity."""
+
+    entity_id: str = Field(pattern=_ID_PATTERN)
+    place_id: str = Field(pattern=_ID_PATTERN)
+
+
+class SpatialLinkState(_StrictModel):
+    """Topological adjacency whose existence does not imply traversability."""
+
+    spatial_link_id: str = Field(pattern=_ID_PATTERN)
+    endpoint_a_place_id: str = Field(pattern=_ID_PATTERN)
+    endpoint_b_place_id: str = Field(pattern=_ID_PATTERN)
+    link_kind: str = Field(pattern=_ID_PATTERN)
+    substrate_entity_ids: list[str] = Field(default_factory=list)
+    description: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_link(self) -> "SpatialLinkState":
+        """Require two distinct endpoints and nonduplicated substrates."""
+        if self.endpoint_a_place_id == self.endpoint_b_place_id:
+            raise ValueError("spatial link endpoints must be distinct")
+        _require_unique(self.substrate_entity_ids, "spatial link substrates")
+        return self
 
 
 class PortState(_StrictModel):
@@ -118,7 +153,10 @@ class MechanismSpec(_StrictModel):
     output_port_ids: list[str] = Field(default_factory=list)
     read_fact_ids: list[str] = Field(default_factory=list)
     read_representation_ids: list[str] = Field(default_factory=list)
+    read_placement_entity_ids: list[str] = Field(default_factory=list)
+    read_spatial_link_ids: list[str] = Field(default_factory=list)
     write_fact_ids: list[str] = Field(default_factory=list)
+    write_placement_entity_ids: list[str] = Field(default_factory=list)
     write_carrier_ids: list[str] = Field(default_factory=list)
     observation_target_ids: list[str] = Field(default_factory=list)
     substrate_refs: list[str] = Field(min_length=1)
@@ -133,7 +171,10 @@ class MechanismSpec(_StrictModel):
             ("output_port_ids", self.output_port_ids),
             ("read_fact_ids", self.read_fact_ids),
             ("read_representation_ids", self.read_representation_ids),
+            ("read_placement_entity_ids", self.read_placement_entity_ids),
+            ("read_spatial_link_ids", self.read_spatial_link_ids),
             ("write_fact_ids", self.write_fact_ids),
+            ("write_placement_entity_ids", self.write_placement_entity_ids),
             ("write_carrier_ids", self.write_carrier_ids),
             ("observation_target_ids", self.observation_target_ids),
             ("substrate_refs", self.substrate_refs),
@@ -143,6 +184,13 @@ class MechanismSpec(_StrictModel):
                 raise ValueError(f"{self.mechanism_id}: duplicate {label}")
         for fact_id in [*self.read_fact_ids, *self.write_fact_ids]:
             _split_fact_id(fact_id)
+        if not set(self.write_placement_entity_ids).issubset(
+            self.read_placement_entity_ids
+        ):
+            raise ValueError(
+                f"{self.mechanism_id}: placement writes require declared "
+                "placement reads"
+            )
         return self
 
 
@@ -205,6 +253,9 @@ class CausalState(_StrictModel):
     logical_time: int = Field(default=0, ge=0)
     entities: dict[str, EntityState]
     containers: dict[str, ContainerState] = Field(default_factory=dict)
+    places: dict[str, PlaceState] = Field(default_factory=dict)
+    placements: dict[str, PlacementState] = Field(default_factory=dict)
+    spatial_links: dict[str, SpatialLinkState] = Field(default_factory=dict)
     ports: dict[str, PortState]
     connections: dict[str, ConnectionState] = Field(default_factory=dict)
     mechanisms: dict[str, MechanismSpec]
@@ -218,6 +269,13 @@ class CausalState(_StrictModel):
         """Reject duplicate truths and every dangling runtime reference."""
         _keys_match(self.entities, "entity_id", "entities")
         _keys_match(self.containers, "container_id", "containers")
+        _keys_match(self.places, "place_id", "places")
+        _keys_match(self.placements, "entity_id", "placements")
+        _keys_match(
+            self.spatial_links,
+            "spatial_link_id",
+            "spatial_links",
+        )
         _keys_match(self.ports, "port_id", "ports")
         _keys_match(self.connections, "connection_id", "connections")
         _keys_match(self.mechanisms, "mechanism_id", "mechanisms")
@@ -231,6 +289,8 @@ class CausalState(_StrictModel):
             {
                 "entities": set(self.entities),
                 "containers": set(self.containers),
+                "places": set(self.places),
+                "spatial_links": set(self.spatial_links),
                 "ports": set(self.ports),
                 "connections": set(self.connections),
                 "mechanisms": set(self.mechanisms),
@@ -243,7 +303,39 @@ class CausalState(_StrictModel):
         mechanism_ids = set(self.mechanisms)
         owner_refs = entity_ids | mechanism_ids
         container_ids = set(self.containers)
+        place_ids = set(self.places)
+        spatial_link_ids = set(self.spatial_links)
         port_ids = set(self.ports)
+
+        _validate_place_tree(self.places)
+        for placement in self.placements.values():
+            if placement.entity_id not in entity_ids:
+                raise ValueError(
+                    f"placement has unknown entity {placement.entity_id!r}"
+                )
+            if placement.place_id not in place_ids:
+                raise ValueError(
+                    f"placement for {placement.entity_id!r} has unknown place "
+                    f"{placement.place_id!r}"
+                )
+        for spatial_link in self.spatial_links.values():
+            unknown_endpoints = {
+                spatial_link.endpoint_a_place_id,
+                spatial_link.endpoint_b_place_id,
+            } - place_ids
+            if unknown_endpoints:
+                raise ValueError(
+                    f"spatial link {spatial_link.spatial_link_id!r} has unknown "
+                    f"endpoints {sorted(unknown_endpoints)!r}"
+                )
+            unknown_substrates = (
+                set(spatial_link.substrate_entity_ids) - entity_ids
+            )
+            if unknown_substrates:
+                raise ValueError(
+                    f"spatial link {spatial_link.spatial_link_id!r} has unknown "
+                    f"substrates {sorted(unknown_substrates)!r}"
+                )
 
         for container in self.containers.values():
             _require_unique(container.member_entity_ids, "container members")
@@ -312,6 +404,30 @@ class CausalState(_StrictModel):
                     f"mechanism {mechanism.mechanism_id!r} has unknown readable "
                     "representations "
                     f"{sorted(unknown_read_representations)!r}"
+                )
+            unknown_read_placements = (
+                set(mechanism.read_placement_entity_ids) - set(self.placements)
+            )
+            if unknown_read_placements:
+                raise ValueError(
+                    f"mechanism {mechanism.mechanism_id!r} has unknown readable "
+                    f"placements {sorted(unknown_read_placements)!r}"
+                )
+            unknown_read_spatial_links = (
+                set(mechanism.read_spatial_link_ids) - spatial_link_ids
+            )
+            if unknown_read_spatial_links:
+                raise ValueError(
+                    f"mechanism {mechanism.mechanism_id!r} has unknown readable "
+                    f"spatial links {sorted(unknown_read_spatial_links)!r}"
+                )
+            unknown_write_placements = (
+                set(mechanism.write_placement_entity_ids) - set(self.placements)
+            )
+            if unknown_write_placements:
+                raise ValueError(
+                    f"mechanism {mechanism.mechanism_id!r} has unknown writable "
+                    f"placements {sorted(unknown_write_placements)!r}"
                 )
             unknown_targets = set(mechanism.observation_target_ids) - entity_ids
             if unknown_targets:
@@ -480,8 +596,8 @@ class AnalyticalBoundary(_StrictModel):
 class CausalScenario(_StrictModel):
     """Versioned authored initial world without embedded action scripts."""
 
-    runtime_contract: Literal["causal-core.v1"] = "causal-core.v1"
-    schema_version: Literal[1] = 1
+    runtime_contract: Literal["causal-core.v2"] = "causal-core.v2"
+    schema_version: Literal[2] = 2
     scenario_id: str = Field(pattern=_ID_PATTERN)
     description: str = Field(min_length=1)
     initial_state: CausalState
@@ -500,12 +616,17 @@ class CausalScenario(_StrictModel):
         node_refs = (
             set(self.initial_state.entities)
             | set(self.initial_state.containers)
+            | set(self.initial_state.places)
             | set(self.initial_state.ports)
             | set(self.initial_state.mechanisms)
             | set(self.initial_state.carriers)
             | set(self.initial_state.representations)
         )
-        runtime_refs = node_refs | set(self.initial_state.connections)
+        runtime_refs = (
+            node_refs
+            | set(self.initial_state.connections)
+            | set(self.initial_state.spatial_links)
+        )
         collisions = set(boundary_ids) & runtime_refs
         if collisions:
             raise ValueError(
@@ -564,6 +685,14 @@ class FactUpdate(_StrictModel):
     value: JsonValue
 
 
+class PlacementDraft(_StrictModel):
+    """Mechanism-proposed movement across one declared topological link."""
+
+    entity_id: str = Field(pattern=_ID_PATTERN)
+    destination_place_id: str = Field(pattern=_ID_PATTERN)
+    via_spatial_link_id: str = Field(pattern=_ID_PATTERN)
+
+
 class ObservationDraft(_StrictModel):
     """Mechanism-proposed agent-visible delivery."""
 
@@ -610,6 +739,7 @@ class MechanismOutcome(_StrictModel):
 
     outcome_code: str = Field(pattern=_ID_PATTERN)
     updates: list[FactUpdate] = Field(default_factory=list)
+    placement_updates: list[PlacementDraft] = Field(default_factory=list)
     representations: list[RepresentationDraft] = Field(default_factory=list)
     effects: list[EffectDraft] = Field(default_factory=list)
     observations: list[ObservationDraft] = Field(default_factory=list)
@@ -628,6 +758,22 @@ class FactChange(_StrictModel):
         """Keep no-op assignments out of the causal change record."""
         if _canonical_json(self.before) == _canonical_json(self.after):
             raise ValueError("fact change must alter the canonical JSON value")
+        return self
+
+
+class PlacementChange(_StrictModel):
+    """Replayable before/after location plus the concrete mediating link."""
+
+    entity_id: str = Field(pattern=_ID_PATTERN)
+    before_place_id: str = Field(pattern=_ID_PATTERN)
+    after_place_id: str = Field(pattern=_ID_PATTERN)
+    via_spatial_link_id: str = Field(pattern=_ID_PATTERN)
+
+    @model_validator(mode="after")
+    def validate_actual_change(self) -> "PlacementChange":
+        """Keep no-op movements out of committed causal evidence."""
+        if self.before_place_id == self.after_place_id:
+            raise ValueError("placement change must alter the immediate place")
         return self
 
 
@@ -656,6 +802,7 @@ class StatePatch(_StrictModel):
     before_digest: str = Field(pattern=_DIGEST_PATTERN)
     after_digest: str = Field(pattern=_DIGEST_PATTERN)
     fact_changes: list[FactChange] = Field(default_factory=list)
+    placement_changes: list[PlacementChange] = Field(default_factory=list)
     carrier_changes: list[CarrierRevisionChange] = Field(default_factory=list)
     representations_added: list[RepresentationToken] = Field(default_factory=list)
     observations_added: list[ObservationRecord] = Field(default_factory=list)
@@ -668,12 +815,16 @@ class StatePatch(_StrictModel):
         if self.after_logical_time < self.before_logical_time:
             raise ValueError("state patch logical time may not regress")
         fact_ids = [item.fact_id for item in self.fact_changes]
+        placement_entity_ids = [
+            item.entity_id for item in self.placement_changes
+        ]
         carrier_ids = [item.carrier_id for item in self.carrier_changes]
         representation_ids = [
             item.representation_id for item in self.representations_added
         ]
         observation_ids = [item.observation_id for item in self.observations_added]
         _require_unique(fact_ids, "patch fact ids")
+        _require_unique(placement_entity_ids, "patch placement entity ids")
         _require_unique(carrier_ids, "patch carrier ids")
         _require_unique(representation_ids, "patch representation ids")
         _require_unique(observation_ids, "patch observation ids")
@@ -699,8 +850,8 @@ class StatePatch(_StrictModel):
 class CausalEvent(_StrictModel):
     """One versioned, human-readable, causally linked execution occurrence."""
 
-    runtime_contract: Literal["causal-core.v1"] = "causal-core.v1"
-    schema_version: Literal[1] = 1
+    runtime_contract: Literal["causal-core.v2"] = "causal-core.v2"
+    schema_version: Literal[2] = 2
     run_id: str = Field(pattern=_ID_PATTERN)
     event_id: str = Field(pattern=r"^event_[0-9]{6}$")
     sequence: int = Field(ge=0)
@@ -723,6 +874,8 @@ class CausalEvent(_StrictModel):
     observation_id: str | None = Field(default=None, pattern=_ID_PATTERN)
     read_fact_ids: list[str] = Field(default_factory=list)
     read_representation_ids: list[str] = Field(default_factory=list)
+    read_placement_entity_ids: list[str] = Field(default_factory=list)
+    read_spatial_link_ids: list[str] = Field(default_factory=list)
     invariants: list[InvariantResult] = Field(default_factory=list)
     patch: StatePatch | None = None
     details: dict[str, JsonValue] = Field(default_factory=dict)
@@ -812,8 +965,8 @@ class CausalStep(_StrictModel):
 class CausalCheckpoint(_StrictModel):
     """Complete quiescent continuation record for one nonterminal session."""
 
-    runtime_contract: Literal["causal-core.v1"] = "causal-core.v1"
-    schema_version: Literal[1] = 1
+    runtime_contract: Literal["causal-core.v2"] = "causal-core.v2"
+    schema_version: Literal[2] = 2
     scenario_id: str = Field(pattern=_ID_PATTERN)
     scenario_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
     scenario_execution_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
@@ -881,8 +1034,8 @@ class CausalCheckpoint(_StrictModel):
 class CausalRunResult(_StrictModel):
     """One completed exact trajectory and its self-validating canonical state."""
 
-    runtime_contract: Literal["causal-core.v1"] = "causal-core.v1"
-    schema_version: Literal[1] = 1
+    runtime_contract: Literal["causal-core.v2"] = "causal-core.v2"
+    schema_version: Literal[2] = 2
     run_id: str = Field(pattern=_ID_PATTERN)
     scenario_id: str = Field(pattern=_ID_PATTERN)
     scenario_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
@@ -1040,6 +1193,38 @@ def _require_disjoint_ids(collections: Mapping[str, set[str]]) -> None:
                     f"{collection_name}"
                 )
             owners[identifier] = collection_name
+
+
+def _validate_place_tree(places: Mapping[str, PlaceState]) -> None:
+    """Reject unknown parents and containment cycles."""
+    place_ids = set(places)
+    for place in places.values():
+        if (
+            place.parent_place_id is not None
+            and place.parent_place_id not in place_ids
+        ):
+            raise ValueError(
+                f"place {place.place_id!r} has unknown parent "
+                f"{place.parent_place_id!r}"
+            )
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(place_id: str) -> None:
+        if place_id in visited:
+            return
+        if place_id in visiting:
+            raise ValueError("place containment contains a cycle")
+        visiting.add(place_id)
+        parent_id = places[place_id].parent_place_id
+        if parent_id is not None:
+            visit(parent_id)
+        visiting.remove(place_id)
+        visited.add(place_id)
+
+    for place_id in places:
+        visit(place_id)
 
 
 def _validate_representation_lineage(
@@ -1328,6 +1513,17 @@ def _validate_event_references(
                     raise ValueError(
                         "mechanism event has the wrong representation-read surface"
                     )
+                if (
+                    event.read_placement_entity_ids
+                    != mechanism.read_placement_entity_ids
+                ):
+                    raise ValueError(
+                        "mechanism event has the wrong placement-read surface"
+                    )
+                if event.read_spatial_link_ids != mechanism.read_spatial_link_ids:
+                    raise ValueError(
+                        "mechanism event has the wrong spatial-link-read surface"
+                    )
                 invariant_ids = [item.invariant_id for item in event.invariants]
                 if set(invariant_ids) != set(mechanism.invariant_ids) or not all(
                     item.passed for item in event.invariants
@@ -1407,6 +1603,22 @@ def _validate_event_references(
                 f"event {event.event_id!r} reads unknown representations "
                 f"{sorted(unknown_read_representations)!r}"
             )
+        unknown_read_placements = (
+            set(event.read_placement_entity_ids) - set(state.placements)
+        )
+        if unknown_read_placements:
+            raise ValueError(
+                f"event {event.event_id!r} reads unknown placements "
+                f"{sorted(unknown_read_placements)!r}"
+            )
+        unknown_read_spatial_links = (
+            set(event.read_spatial_link_ids) - set(state.spatial_links)
+        )
+        if unknown_read_spatial_links:
+            raise ValueError(
+                f"event {event.event_id!r} reads unknown spatial links "
+                f"{sorted(unknown_read_spatial_links)!r}"
+            )
         if event.patch is not None:
             assert event.mechanism_id is not None
             mechanism = state.mechanisms[event.mechanism_id]
@@ -1416,6 +1628,21 @@ def _validate_event_references(
                     raise ValueError("commit patch exceeds mechanism write authority")
                 if change.visibility != fact.visibility:
                     raise ValueError("commit patch fact visibility disagrees with state")
+            for placement_change in event.patch.placement_changes:
+                if (
+                    placement_change.entity_id
+                    not in mechanism.write_placement_entity_ids
+                ):
+                    raise ValueError(
+                        "commit patch exceeds placement write authority"
+                    )
+                if (
+                    placement_change.via_spatial_link_id
+                    not in mechanism.read_spatial_link_ids
+                ):
+                    raise ValueError(
+                        "commit patch uses an undeclared spatial link"
+                    )
             for carrier_change in event.patch.carrier_changes:
                 if carrier_change.carrier_id not in mechanism.write_carrier_ids:
                     raise ValueError("commit patch exceeds carrier write authority")
@@ -1435,17 +1662,34 @@ def _validate_state_evidence(
     delivered: dict[str, CausalEvent] = {}
     added_representations: dict[str, RepresentationToken] = {}
     carrier_revision: dict[str, int] = {}
+    placement_after: dict[str, str] = {}
     for event in events:
         if event.event_kind == "state_committed":
             assert event.patch is not None
-            for change in event.patch.carrier_changes:
-                expected_before = carrier_revision.get(change.carrier_id)
+            for placement_change in event.patch.placement_changes:
+                expected_place = placement_after.get(
+                    placement_change.entity_id
+                )
                 if (
-                    expected_before is not None
-                    and change.before_revision != expected_before
+                    expected_place is not None
+                    and placement_change.before_place_id != expected_place
+                ):
+                    raise ValueError("placement patches are not contiguous")
+                placement_after[placement_change.entity_id] = (
+                    placement_change.after_place_id
+                )
+            for carrier_change in event.patch.carrier_changes:
+                expected_revision = carrier_revision.get(
+                    carrier_change.carrier_id
+                )
+                if (
+                    expected_revision is not None
+                    and carrier_change.before_revision != expected_revision
                 ):
                     raise ValueError("carrier patch revisions are not contiguous")
-                carrier_revision[change.carrier_id] = change.after_revision
+                carrier_revision[carrier_change.carrier_id] = (
+                    carrier_change.after_revision
+                )
             for representation in event.patch.representations_added:
                 if representation.representation_id in added_representations:
                     raise ValueError("representation is added by multiple patches")
@@ -1489,6 +1733,9 @@ def _validate_state_evidence(
     for carrier_id, last_revision in carrier_revision.items():
         if state.carriers[carrier_id].revision != last_revision:
             raise ValueError("patched carrier revision disagrees with canonical state")
+    for entity_id, last_place_id in placement_after.items():
+        if state.placements[entity_id].place_id != last_place_id:
+            raise ValueError("patched placement disagrees with canonical state")
 
 
 def _validate_metrics(

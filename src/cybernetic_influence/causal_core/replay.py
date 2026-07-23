@@ -44,6 +44,36 @@ def apply_state_patch(
             raise ReplayError(f"patch before value mismatch for {change.fact_id!r}")
         fact.value = deepcopy(change.after)
 
+    for placement_change in patch.placement_changes:
+        placement = current.placements.get(placement_change.entity_id)
+        if placement is None:
+            raise ReplayError(
+                "patch has unknown placement entity "
+                f"{placement_change.entity_id!r}"
+            )
+        if placement.place_id != placement_change.before_place_id:
+            raise ReplayError(
+                "patch before placement mismatch for "
+                f"{placement_change.entity_id!r}"
+            )
+        spatial_link = current.spatial_links.get(
+            placement_change.via_spatial_link_id
+        )
+        if spatial_link is None:
+            raise ReplayError(
+                f"patch has unknown spatial link "
+                f"{placement_change.via_spatial_link_id!r}"
+            )
+        if {
+            placement_change.before_place_id,
+            placement_change.after_place_id,
+        } != {
+            spatial_link.endpoint_a_place_id,
+            spatial_link.endpoint_b_place_id,
+        }:
+            raise ReplayError("patch placement disagrees with its spatial link")
+        placement.place_id = placement_change.after_place_id
+
     for carrier_change in patch.carrier_changes:
         carrier = current.carriers.get(carrier_change.carrier_id)
         if carrier is None:

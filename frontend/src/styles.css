@@ -25,6 +25,31 @@
   padding: 5px 9px;
 }
 
+.cy-graph-actions,
+.cy-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cy-view-tabs {
+  padding: 3px;
+  border: 1px solid #34465b;
+  border-radius: 8px;
+  background: #101823;
+}
+
+.cy-view-tabs button {
+  border: 0;
+  background: transparent;
+  color: #9baabd;
+}
+
+.cy-view-tabs button.active {
+  background: #dce9f7;
+  color: #0b1017;
+}
+
 .cy-graph-canvas {
   min-width: 0;
   min-height: 630px;
@@ -69,6 +94,55 @@
 .cy-flow-node--analytical_boundary {
   border: 2px dashed #b891ff;
   background: #2a2040f2;
+}
+
+.react-flow__node.cy-place-group {
+  border: 1px solid #426a6a;
+  border-radius: 18px;
+  background: rgba(33, 77, 75, .08);
+  box-shadow: inset 0 0 0 1px rgba(131, 214, 192, .08);
+}
+
+.react-flow__node.cy-place-group--leaf {
+  border-style: dashed;
+  background: rgba(24, 55, 59, .28);
+}
+
+.react-flow__node.cy-place-group--active {
+  border-color: #fff;
+  box-shadow: inset 0 0 0 1px #fff, 0 0 22px rgba(255, 255, 255, .13);
+}
+
+.react-flow__node.cy-place-group--selected {
+  outline: 3px solid #54a8ff;
+}
+
+.cy-place-label {
+  position: absolute;
+  top: 13px;
+  left: 15px;
+  display: grid;
+  gap: 3px;
+  max-width: calc(100% - 30px);
+  text-align: left;
+}
+
+.cy-place-label span,
+.cy-place-label small {
+  color: #8fb9b1;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.cy-place-label span {
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cy-place-label strong {
+  color: #e8eef7;
+  font-size: 14px;
 }
 
 .react-flow__node.cy-flow-node-wrap--active .cy-flow-node {
@@ -141,4 +215,6 @@
   .cy-graph-shell { min-height: 540px; }
   .cy-graph-canvas { min-height: 490px; }
   .cy-graph-bar { align-items: stretch; flex-direction: column; }
+  .cy-graph-actions { align-items: stretch; flex-direction: column; }
+  .cy-view-tabs button { flex: 1; }
 }
