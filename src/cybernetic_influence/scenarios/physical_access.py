@@ -51,7 +51,7 @@ from cybernetic_influence.causal_core.models import (
     representation_digest,
 )
 
-PHYSICAL_ACCESS_MODEL = "gpt-5.6-terra"
+PHYSICAL_ACCESS_MODEL = "openrouter/openai/gpt-5.6-terra"
 PHYSICAL_ACCESS_REASONING_EFFORT = "medium"
 PHYSICAL_ACCESS_TASK = "cybernetic_influence_v3_physical_access_step"
 PHYSICAL_ACCESS_BOUNDARY_ID = "equipment_access_view"

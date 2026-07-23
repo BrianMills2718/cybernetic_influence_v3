@@ -49,7 +49,7 @@ from cybernetic_influence.causal_core.models import (
 )
 
 SERVICE_DESK_BOUNDARY_ID = "service_desk_view"
-SERVICE_DESK_MODEL = "gpt-5.6-terra"
+SERVICE_DESK_MODEL = "openrouter/openai/gpt-5.6-terra"
 SERVICE_DESK_REASONING_EFFORT = "max"
 SERVICE_DESK_SCAFFOLD_REASONING_EFFORT = "medium"
 SERVICE_DESK_TASK = "cybernetic_influence_v3_service_desk_step"
