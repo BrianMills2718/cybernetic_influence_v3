@@ -385,7 +385,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
   useEffect(() => {
     if (!initialized) return
     const frame = window.requestAnimationFrame(() => {
-      void fitView({ padding: 0.12, duration: 280 })
+      void fitView({ padding: 0.12, duration: 280, maxZoom: 1.35 })
       setEdges(graph.edges.map((edge) => ({ ...edge })))
     })
     return () => window.cancelAnimationFrame(frame)
@@ -427,7 +427,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
             if (raw) options.onSelectEdge(raw)
           }}
           fitView
-          fitViewOptions={{ padding: 0.12 }}
+          fitViewOptions={{ padding: 0.12, maxZoom: 1.35 }}
           minZoom={0.08}
           maxZoom={2.2}
           nodesDraggable
