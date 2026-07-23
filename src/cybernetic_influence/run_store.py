@@ -23,6 +23,10 @@ class RunNotFoundError(FileNotFoundError):
     """Raised when a valid run ID has no retained document."""
 
 
+class RunCorruptError(ValueError):
+    """Raised when retained bytes disagree with the requested evidence identity."""
+
+
 class RunStore:
     """Persist one complete JSON document per run using atomic replacement."""
 
@@ -30,6 +34,13 @@ class RunStore:
         self.root = root
         self.trash_root = root / ".trash"
         self.root.mkdir(parents=True, exist_ok=True)
+        self.root.chmod(0o700)
+        for path in self.root.glob("run_*.json"):
+            path.chmod(0o600)
+        if self.trash_root.exists():
+            self.trash_root.chmod(0o700)
+            for path in self.trash_root.glob("*.json"):
+                path.chmod(0o600)
 
     def save(self, document: Mapping[str, object]) -> dict[str, object]:
         """Atomically retain a run document and return the stored form."""
@@ -44,7 +55,8 @@ class RunStore:
         temporary = self.root / f".{run_id}.{uuid4().hex}.tmp"
         encoded = json.dumps(stored, ensure_ascii=False, indent=2, sort_keys=True)
         try:
-            with temporary.open("w", encoding="utf-8") as handle:
+            with temporary.open("x", encoding="utf-8") as handle:
+                temporary.chmod(0o600)
                 handle.write(encoded)
                 handle.write("\n")
                 handle.flush()
@@ -60,7 +72,10 @@ class RunStore:
         path = self._path(run_id)
         if not path.is_file():
             raise RunNotFoundError(run_id)
-        return self._read(path)
+        try:
+            return self._read(path)
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError, TypeError) as error:
+            raise RunCorruptError(run_id) from error
 
     def list_runs(self) -> tuple[list[dict[str, object]], list[str]]:
         """Return newest-first summaries and names of unreadable documents."""
@@ -81,8 +96,10 @@ class RunStore:
         if not source.is_file():
             raise RunNotFoundError(run_id)
         self.trash_root.mkdir(parents=True, exist_ok=True)
+        self.trash_root.chmod(0o700)
         destination = self.trash_root / f"{run_id}.{uuid4().hex}.json"
         os.replace(source, destination)
+        destination.chmod(0o600)
         self._sync_directory(self.root)
         self._sync_directory(self.trash_root)
         return destination
@@ -121,6 +138,8 @@ class RunStore:
         run_id = document.get("run_id")
         if not isinstance(run_id, str) or RUN_ID_PATTERN.fullmatch(run_id) is None:
             raise ValueError("run document has an invalid run ID")
+        if path.stem != run_id:
+            raise ValueError("run document identity does not match its filename")
         return document
 
     @staticmethod

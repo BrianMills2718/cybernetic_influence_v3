@@ -1,12 +1,18 @@
 """End-to-end gates for the clean walking simulator."""
 
 from pathlib import Path
+from threading import Event, Thread
+from typing import Any
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from cybernetic_influence.api import create_app
 from cybernetic_influence.run_store import RunStore
+from cybernetic_influence.scenarios.service_desk import (
+    run_service_desk as original_run_service_desk,
+    service_desk_scripted_bindings,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,11 +26,13 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     api = client(tmp_path)
     config = api.get("/api/config")
     assert config.status_code == 200
-    assert config.json()["version"] == "0.3.0"
+    assert config.json()["version"] == "0.4.0"
     assert config.json()["build_commit"] == "development"
     assert config.json()["profiles"] == ["position_context", "procedural_control"]
     page = api.get("/")
     assert page.status_code == 200
+    assert page.headers["content-security-policy"].startswith("default-src 'self'")
+    assert page.headers["x-content-type-options"] == "nosniff"
     assert "What happened" in page.text
     assert "V2 Inspect" not in page.text
     assert "Step through what changed" in page.text
@@ -52,6 +60,7 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
     }
     assert any(node["id"] == "incident_17" for node in body["nodes"])
     assert body["events"]
+    assert body["snapshots"]
     assert [event["sequence"] for event in body["timeline"]] == list(range(len(body["timeline"])))
     assert len({event["event_id"] for event in body["timeline"]}) == len(body["timeline"])
     attempted = next(event for event in body["timeline"] if event["kind"] == "action_attempted")
@@ -71,7 +80,7 @@ def test_interventions_produce_distinct_grounded_accounts(tmp_path: Path) -> Non
         "/api/runs",
         json={"arm_id": "speed_priority", "execution": "scripted"},
     ).json()
-    assert "alternate route" in missing["story"]["summary"]
+    assert "direct report path was unavailable" in missing["story"]["summary"]
     assert "denied" in speed["story"]["summary"]
     assert missing["outcome"]["remediation_activation"] > speed["outcome"]["remediation_activation"]
 
@@ -129,3 +138,69 @@ def test_failed_run_is_retained_for_inspection(tmp_path: Path) -> None:
     retained = api.get(f"/api/runs/{history[0]['run_id']}").json()
     assert retained["status"] == "failed"
     assert "RuntimeError" in retained["error"]
+
+
+def test_optional_tailscale_identity_allowlist_guards_run_evidence(
+    tmp_path: Path,
+) -> None:
+    with patch.dict(
+        "os.environ",
+        {"CYBERNETIC_INFLUENCE_ALLOWED_TAILSCALE_USERS": "brian@example.com"},
+    ):
+        api = client(tmp_path)
+        assert api.get("/api/config").json()["access_restricted"] is True
+        assert api.get("/api/runs").status_code == 403
+        assert (
+            api.get(
+                "/api/runs",
+                headers={"Tailscale-User-Login": "other@example.com"},
+            ).status_code
+            == 403
+        )
+        allowed = api.get(
+            "/api/runs",
+            headers={"Tailscale-User-Login": "Brian@Example.com"},
+        )
+        assert allowed.status_code == 200
+
+
+def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
+    entered = Event()
+    release = Event()
+
+    def slow_run(*args: Any, **kwargs: Any) -> Any:
+        entered.set()
+        assert release.wait(timeout=5)
+        return original_run_service_desk(*args, **kwargs)
+
+    def scripted_native(fixture: Any, *, trace_id_prefix: str) -> Any:
+        del trace_id_prefix
+        return service_desk_scripted_bindings(fixture)
+
+    first_response: list[object] = []
+    with (
+        patch.dict("os.environ", {"CYBERNETIC_INFLUENCE_LIVE": "1"}),
+        patch(
+            "cybernetic_influence.api.service_desk_native_bindings",
+            side_effect=scripted_native,
+        ),
+        patch("cybernetic_influence.api.run_service_desk", side_effect=slow_run),
+    ):
+        api = client(tmp_path)
+
+        def first_request() -> None:
+            first_response.append(
+                api.post("/api/runs", json={"execution": "live"})
+            )
+
+        thread = Thread(target=first_request)
+        thread.start()
+        assert entered.wait(timeout=5)
+        second = api.post("/api/runs", json={"execution": "live"})
+        assert second.status_code == 409
+        assert "already active" in second.json()["detail"]
+        release.set()
+        thread.join(timeout=10)
+
+    assert len(first_response) == 1
+    assert getattr(first_response[0], "status_code") == 200

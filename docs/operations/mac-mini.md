@@ -45,13 +45,15 @@ On the Mac:
 cd ~/code/cybernetic_influence_v3
 git fetch /tmp/cybernetic-influence-v3.bundle main
 git merge --ff-only FETCH_HEAD
-.venv/bin/python -m pip install -e '.[dev]'
+.venv/bin/python -m pip install -r requirements-dev.lock
+.venv/bin/python -m pip install -e . --no-deps
 .venv/bin/python -m mypy
 .venv/bin/python -m pytest -q
 ```
 
 Render the LaunchAgent template with the new commit in
-`__BUILD_COMMIT__`, validate it with `plutil -lint`, then use:
+`__BUILD_COMMIT__` and the approved Tailscale login in
+`__ALLOWED_TAILSCALE_USERS__`, validate it with `plutil -lint`, then use:
 
 ```bash
 launchctl bootout "gui/$(id -u)/com.cybernetic-influence.v3"

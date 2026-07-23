@@ -19,6 +19,8 @@
   <string>__PROJECT_ROOT__</string>
   <key>EnvironmentVariables</key>
   <dict>
+    <key>CYBERNETIC_INFLUENCE_ALLOWED_TAILSCALE_USERS</key>
+    <string>__ALLOWED_TAILSCALE_USERS__</string>
     <key>CYBERNETIC_INFLUENCE_BUILD_COMMIT</key>
     <string>__BUILD_COMMIT__</string>
     <key>CYBERNETIC_INFLUENCE_RUNS_DIR</key>
@@ -28,6 +30,8 @@
   </dict>
   <key>RunAtLoad</key>
   <true/>
+  <key>Umask</key>
+  <integer>63</integer>
   <key>KeepAlive</key>
   <true/>
   <key>ThrottleInterval</key>

@@ -77,10 +77,26 @@ async function openRetained(runId) {
   window.history.replaceState({}, '', url)
 }
 
-function showNode(node) {
-  document.querySelectorAll('.node').forEach((button) => button.classList.toggle('selected', button.dataset.nodeId === node.id))
+function nodesAtSelectedEvent() {
+  const event = current?.timeline?.[selectedEventIndex]
+  if (!event) return current?.nodes || []
+  return current.snapshots?.[String(event.state_revision)] || []
+}
+
+function showNode(nodeId) {
+  const event = current?.timeline?.[selectedEventIndex]
+  const node = nodesAtSelectedEvent().find((candidate) => candidate.id === nodeId)
+  const finalNode = current?.nodes?.find((candidate) => candidate.id === nodeId)
+  document.querySelectorAll('.node').forEach((button) => button.classList.toggle('selected', button.dataset.nodeId === nodeId))
+  if (!node) {
+    $('#inspector').innerHTML = `
+      <span class="eyebrow">Not present at selected event</span>
+      <h2>${html(finalNode?.label || nodeId)}</h2>
+      <p>This entity or representation did not yet exist at state revision ${html(event?.state_revision)}.</p>`
+    return
+  }
   $('#inspector').innerHTML = `
-    <span class="eyebrow">${html(node.kind)}</span>
+    <span class="eyebrow">${html(node.kind)} · revision ${html(event?.state_revision)}</span>
     <h2>${html(node.label)}</h2>
     <p>${html(node.description)}</p>
     <pre>${html(JSON.stringify(node.state, null, 2))}</pre>`
@@ -92,8 +108,7 @@ function showTrace(person) {
   const selectedEvent = current?.timeline?.[selectedEventIndex]
   const entries = (current?.traces || []).filter((entry) => entry.person === person)
   $('#trace').innerHTML = entries.map((entry) => {
-    const matches = selectedEvent && entry.logical_time === selectedEvent.logical_time
-      && (!selectedEvent.person || selectedEvent.person === person)
+    const matches = selectedEvent?.activation === entry.activation
     return `
       <article class="trace-step ${matches ? 'event-match' : ''}">
         <strong>${html(entry.activation)} · time ${html(entry.logical_time)} · ${html(entry.status)}</strong>
@@ -116,21 +131,23 @@ function selectEvent(index) {
   $('#previous-event').disabled = selectedEventIndex === 0
   $('#next-event').disabled = selectedEventIndex === current.timeline.length - 1
   $('#event-detail').innerHTML = `
-    <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>time ${html(event.logical_time)}</span></div>
+    <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>time ${html(event.logical_time)}</span><span>revision ${html(event.state_revision)}</span>${event.activation ? `<span>${html(event.activation)}</span>` : ''}</div>
     <h3>${html(event.summary)}</h3>
     <small>${html(event.event_id)}</small>`
   document.querySelectorAll('.timeline-marker').forEach((marker) => marker.classList.toggle('active', Number(marker.dataset.index) === selectedEventIndex))
   document.querySelectorAll('.story-event').forEach((button) => button.classList.toggle('active', button.dataset.eventId === event.event_id))
   document.querySelectorAll('.node').forEach((button) => button.classList.toggle('event-focus', event.focus_ids.includes(button.dataset.nodeId)))
   document.querySelectorAll('.route').forEach((route) => route.classList.toggle('event-focus', event.focus_edges.includes(route.dataset.edgeId)))
+  const presentIds = new Set(nodesAtSelectedEvent().map((node) => node.id))
+  document.querySelectorAll('.node').forEach((button) => button.classList.toggle('not-present', !presentIds.has(button.dataset.nodeId)))
 
-  const focusedNodes = current.nodes.filter((node) => event.focus_ids.includes(node.id))
+  const focusedNodes = nodesAtSelectedEvent().filter((node) => event.focus_ids.includes(node.id))
   $('#inspector').innerHTML = focusedNodes.length
     ? `<span class="eyebrow">Focused by selected event</span><h2>${focusedNodes.length} participating ${focusedNodes.length === 1 ? 'entity' : 'entities'}</h2>
        <div class="focus-list">${focusedNodes.map((node) => `<button data-node-id="${html(node.id)}">${html(node.kind)} · ${html(node.label)}</button>`).join('')}</div>`
     : '<p class="muted">This event does not directly identify a retained world entity.</p>'
   document.querySelectorAll('.focus-list button').forEach((button) => {
-    button.onclick = () => showNode(current.nodes.find((node) => node.id === button.dataset.nodeId))
+    button.onclick = () => showNode(button.dataset.nodeId)
   })
 
   if (event.person) showTrace(event.person)
@@ -162,7 +179,7 @@ function renderTimeline(run) {
 
 function render(run) {
   current = {
-    nodes: [], edges: [], timeline: [], traces: [], events: [],
+    nodes: [], snapshots: {}, edges: [], timeline: [], traces: [], events: [],
     story: {headline: run.status, summary: run.error || 'No final account was retained.', steps: []},
     model_calls: 0, cost: 0,
     ...run,
@@ -199,7 +216,7 @@ function render(run) {
     button.dataset.kind = node.kind
     button.dataset.nodeId = node.id
     button.innerHTML = `<span>${html(node.kind)}</span><strong>${html(node.label)}</strong><small>${html(node.description)}</small>`
-    button.onclick = () => showNode(node)
+    button.onclick = () => showNode(node.id)
     $('#graph').append(button)
   })
   const people = [...new Set(current.traces.map((entry) => entry.person))]

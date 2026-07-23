@@ -19,6 +19,9 @@ The service-desk scenario supports:
 - live LLM runs behind `CYBERNETIC_INFLUENCE_LIVE=1`;
 - human narrative synchronized to an exact causal timeline;
 - event-focused information routes, world nodes, and person traces;
+- event-revision snapshots rather than final-state leakage into earlier events;
+- analyst-safe evidence that redacts mechanism-only values and protected
+  representation content;
 - retained run history that survives refreshes and server restarts;
 - recoverable deletion and visible failed/interrupted records.
 
@@ -44,7 +47,21 @@ make serve HOST=0.0.0.0 PORT=8620
 ```
 
 Binding a network interface does not add authentication. Use private-network
-access rather than exposing this development server publicly.
+access rather than exposing this development server publicly. When Tailscale
+Serve fronts the app, restrict run endpoints to one or more injected logins:
+
+```bash
+export CYBERNETIC_INFLUENCE_ALLOWED_TAILSCALE_USERS="operator@example.com"
+```
+
+The comma-separated allowlist is optional for a local-only process. The Mac
+development host enables it. Live execution also requires
+`CYBERNETIC_INFLUENCE_LIVE=1`; the Mac host deliberately leaves live execution
+off.
+
+`requirements-dev.lock` pins the accepted application and test environment.
+The shared `llm_client` checkout remains a separately versioned optional
+integration because scripted reference runs do not require a provider.
 
 ## Lineage
 
