@@ -105,6 +105,11 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                         {
                             "id": arm.arm_id,
                             "label": arm.arm_id.replace("_", " "),
+                            "description": {
+                                "baseline": "Normal conditions: the direct customer-report route is available.",
+                                "no_direct_path": "The direct customer-report route is absent; people must find another grounded route.",
+                                "speed_priority": "The direct route is available, while the supervisor also perceives pressure to close quickly.",
+                            }[arm.arm_id],
                         }
                         for arm in service_desk_arm_configurations()
                     ],
@@ -116,6 +121,11 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                         {
                             "id": arm.arm_id,
                             "label": arm.arm_id.replace("_", " "),
+                            "description": {
+                                "authorized_access": "The credential is recognized, policy authorizes entry, and the door latch can operate.",
+                                "authorization_absent": "The credential is recognized, but the stored policy does not authorize entry.",
+                                "latch_jammed": "The credential and policy pass, but the physical latch cannot release.",
+                            }[arm.arm_id],
                         }
                         for arm in physical_access_arm_configurations()
                     ],

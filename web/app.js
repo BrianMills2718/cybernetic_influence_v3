@@ -30,19 +30,14 @@ async function loadConfig() {
   $('#cost-details').textContent =
     `${config.model} · ${config.reasoning_effort} reasoning · up to ${config.maximum_live_calls} calls · $${config.maximum_live_cost.toFixed(2)} cap. Scripted reference runs cost $0.`
   $('#live').disabled = !config.live_authorized
+  $('#live').checked = config.live_authorized
+  $('#run').textContent = config.live_authorized ? 'Play live simulation' : 'Play reference simulation'
   if (!config.live_authorized) $('#live').parentElement.title = 'Start the server with CYBERNETIC_INFLUENCE_LIVE=1 to enable live agents.'
 }
 
 function configureScenario(scenarioId) {
   const selected = scenarioCatalog[scenarioId]
   if (!selected) return
-  const profileLabels = {
-    position_context:'Personal dispositions + remembered position',
-    procedural_control:'Explicit procedural instructions',
-  }
-  $('#profile').innerHTML = selected.profiles.map((profile) =>
-    `<option value="${html(profile)}">${html(profileLabels[profile] || profile.replaceAll('_',' '))}</option>`
-  ).join('')
   $('#arm').innerHTML = selected.arms.map((arm) =>
     `<option value="${html(arm.id)}">${html(arm.label)}</option>`
   ).join('')
@@ -50,6 +45,13 @@ function configureScenario(scenarioId) {
   $('#scenario-description').textContent = scenarioId === 'physical_access'
     ? 'Separate credential proof, policy authorization, latch operation, physical crossing, and observed feedback.'
     : 'Run people, information, records, connections, and exact mechanisms together.'
+  describeCondition()
+}
+
+function describeCondition() {
+  const scenario = scenarioCatalog[$('#scenario').value]
+  const arm = scenario?.arms.find((item) => item.id === $('#arm').value)
+  $('#arm-help').textContent = arm?.description || 'Choose the concrete condition you want the simulation to test.'
 }
 
 async function loadHistory() {
@@ -526,6 +528,7 @@ function selectEvent(index) {
     <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>time ${html(event.logical_time)}</span><span>revision ${html(event.state_revision)}</span>${event.activation ? `<span>${html(event.activation)}</span>` : ''}</div>
     <h3>${html(event.summary)}</h3>
     <small>${html(event.event_id)}</small>`
+  renderStepAccount(event)
   document.querySelectorAll('.timeline-marker').forEach((marker) => marker.classList.toggle('active', Number(marker.dataset.index) === selectedEventIndex))
   document.querySelectorAll('.story-event').forEach((button) => button.classList.toggle('active', button.dataset.eventId === event.event_id))
   renderScaleControls()
@@ -558,6 +561,33 @@ function selectEvent(index) {
 
   if (event.person) showTrace(event.person)
   else if (selectedPerson) showTrace(selectedPerson)
+}
+
+function renderStepAccount(event) {
+  const trace = event.person && event.activation
+    ? current.traces.find((entry) => entry.person === event.person && entry.activation === event.activation)
+    : null
+  const person = event.person?.replaceAll('_', ' ')
+  const title = {
+    action_attempted:'A person chose an action',
+    mechanism_executed:'An exact mechanism evaluated it',
+    effect_routed:'An effect moved along a declared route',
+    observation_delivered:'Someone received an observation',
+    state_committed:'The world state changed',
+  }[event.kind] || event.kind.replaceAll('_', ' ')
+  $('#step-account-title').textContent = title
+  if (trace?.orientation && current.execution === 'live') {
+    const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The active person'
+    $('#step-account-body').textContent = `${name} read the situation as: “${trace.orientation}” ${event.summary}`
+    $('#step-account-source').textContent = 'This account uses the live agent’s own LLM-generated orientation, paired with the exact recorded event.'
+  } else if (trace?.orientation) {
+    const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The active person'
+    $('#step-account-body').textContent = `${name} acted from available observations and remembered context. ${event.summary}`
+    $('#step-account-source').textContent = 'This is a zero-cost reference account derived from the exact scripted trace, not a live LLM narration.'
+  } else {
+    $('#step-account-body').textContent = event.summary
+    $('#step-account-source').textContent = 'This is an exact mechanism or delivery event, so it has no separate agent narration.'
+  }
 }
 
 function renderTimeline(run) {
@@ -599,12 +629,10 @@ function render(run) {
   if (scenarioCatalog[current.scenario]) {
     $('#scenario').value = current.scenario
     configureScenario(current.scenario)
-    if ([...$('#profile').options].some((option) => option.value === current.profile)) {
-      $('#profile').value = current.profile
-    }
     if ([...$('#arm').options].some((option) => option.value === current.arm)) {
       $('#arm').value = current.arm
     }
+    describeCondition()
   }
   $('#result').hidden = false
   $('#result-status').textContent = `${current.status} · ${String(current.scenario || '').replaceAll('_',' ')} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
@@ -640,6 +668,10 @@ $('#event-slider').oninput = (event) => selectEvent(Number(event.target.value))
 $('#previous-event').onclick = () => selectEvent(selectedEventIndex - 1)
 $('#next-event').onclick = () => selectEvent(selectedEventIndex + 1)
 $('#scenario').onchange = (event) => configureScenario(event.target.value)
+$('#arm').onchange = describeCondition
+$('#live').onchange = () => {
+  $('#run').textContent = $('#live').checked ? 'Play live simulation' : 'Play reference simulation'
+}
 
 $('#run').onclick = async () => {
   $('#run').disabled = true
@@ -650,7 +682,7 @@ $('#run').onclick = async () => {
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         scenario:$('#scenario').value,
-        cognition_profile:$('#profile').value,
+        cognition_profile:'position_context',
         arm_id:$('#arm').value,
         execution:$('#live').checked ? 'live' : 'scripted',
       }),

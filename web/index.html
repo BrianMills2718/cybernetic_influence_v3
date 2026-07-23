@@ -16,46 +16,38 @@
   <main>
     <section class="run-card">
       <div>
-        <span class="eyebrow">New simulation</span>
+        <span class="eyebrow">Choose and play</span>
         <h2 id="scenario-title">Service desk</h2>
         <p id="scenario-description">Run people, information, records, connections, and exact mechanisms together.</p>
       </div>
       <label>Scenario
         <select id="scenario"></select>
       </label>
-      <label>Agent cognition
-        <select id="profile"></select>
-      </label>
-      <label>World condition
+      <label>Scenario condition
         <select id="arm"></select>
+        <small id="arm-help">Choose the condition you want to test.</small>
       </label>
-      <label class="live"><input id="live" type="checkbox"> Use live LLM agents</label>
-      <button id="run">Run simulation</button>
-      <details><summary>Model and maximum cost</summary><p id="cost-details">Loading…</p></details>
-    </section>
-
-    <section class="history-card">
-      <div>
-        <span class="eyebrow">Retained evidence</span>
-        <h2>Recent runs</h2>
-      </div>
-      <p id="history-empty" class="muted">No retained runs yet.</p>
-      <div id="history" class="history"></div>
-      <p id="storage-warning" class="warning" hidden></p>
+      <label class="live"><input id="live" type="checkbox"> Use live LLM agents <small id="live-help">People reason from their own memory, position, and delivered observations.</small></label>
+      <button id="run">Play simulation</button>
+      <details><summary>Model, cost, and simulation assumptions</summary><p id="cost-details">Loading…</p><p>People are modeled with remembered positions and dispositions. The scenario condition changes the world or institutional mechanism; it is not an instruction placed in a person's mind.</p></details>
     </section>
 
     <section id="result" hidden>
       <div class="status-line"><strong id="result-status"></strong><span id="result-cost"></span></div>
-      <section class="story">
-        <span class="eyebrow">What happened</span>
-        <h2 id="story-headline"></h2>
-        <p id="story-summary"></p>
-        <ol id="story-steps"></ol>
+      <section id="map-section" class="map-section">
+        <span class="eyebrow">People · information · objects · mechanisms</span>
+        <h2>Simulation map</h2>
+        <p class="muted">For physical scenarios, start with places and occupants in <strong>World topology</strong>. Switch to <strong>Causal flow</strong> to see the exact information and mechanism route at the same moment. Select a node or edge for its retained state.</p>
+        <div class="workspace">
+          <div id="graph" class="graph" aria-label="Connected causal graph"></div>
+          <aside id="inspector"><p class="muted">Select a node.</p></aside>
+        </div>
       </section>
 
       <section class="timeline-panel">
         <span class="eyebrow">Causal time</span>
-        <h2>Step through what changed</h2>
+        <h2>Choose a moment</h2>
+        <p class="muted">The map, account, and inspector stay synchronized with this selected causal step.</p>
         <div class="timeline-controls">
           <button id="previous-event" aria-label="Previous event">←</button>
           <input id="event-slider" type="range" min="0" value="0" aria-label="Selected causal event">
@@ -63,22 +55,30 @@
           <span id="event-count"></span>
         </div>
         <div id="timeline-track" class="timeline-track"></div>
+      </section>
+
+      <section class="step-account">
+        <span class="eyebrow">What happened at this step</span>
+        <h2 id="step-account-title"></h2>
+        <p id="step-account-body"></p>
+        <p id="step-account-source" class="muted"></p>
         <article id="event-detail" class="event-detail"></article>
       </section>
 
-      <section>
-        <span class="eyebrow">People · information · objects · mechanisms</span>
-        <h2>How it flowed</h2>
-        <p class="muted">The selected event highlights its participating entities and concrete route. Change scale without leaving that exact event, or select any node for its retained state.</p>
+      <section class="story">
+        <span class="eyebrow">Run outcome</span>
+        <h2 id="story-headline"></h2>
+        <p id="story-summary"></p>
+        <ol id="story-steps"></ol>
+      </section>
+
+      <section class="flow-controls">
+        <span class="eyebrow">Map detail</span>
         <div class="scale-toolbar">
           <div id="scale-tabs" class="tabs" aria-label="Graph scale"></div>
           <p id="scale-loss" class="scale-loss"></p>
         </div>
         <div id="routes" class="routes" aria-label="Declared information routes"></div>
-        <div class="workspace">
-          <div id="graph" class="graph" aria-label="Connected causal graph"></div>
-          <aside id="inspector"><p class="muted">Select a node.</p></aside>
-        </div>
       </section>
 
       <section>
@@ -93,6 +93,13 @@
         <pre id="raw"></pre>
       </details>
     </section>
+
+    <details class="history-card">
+      <summary><span class="eyebrow">Retained evidence</span><strong> Recent runs</strong></summary>
+      <p id="history-empty" class="muted">No retained runs yet.</p>
+      <div id="history" class="history"></div>
+      <p id="storage-warning" class="warning" hidden></p>
+    </details>
   </main>
   <script src="/assets/graph-canvas.js"></script>
   <script src="/assets/app.js"></script>

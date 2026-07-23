@@ -35,15 +35,19 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "service_desk",
         "physical_access",
     }
+    assert config.json()["scenarios"]["physical_access"]["arms"][0]["description"]
     page = api.get("/")
     assert page.status_code == 200
     assert page.headers["content-security-policy"].startswith("default-src 'self'")
     assert page.headers["x-content-type-options"] == "nosniff"
-    assert "What happened" in page.text
+    assert "Scenario condition" in page.text
+    assert "Simulation map" in page.text
+    assert "What happened at this step" in page.text
+    assert "Play simulation" in page.text
     assert "/assets/graph-canvas.js" in page.text
     assert "/assets/graph-canvas.css" in page.text
     assert "V2 Inspect" not in page.text
-    assert "Step through what changed" in page.text
+    assert "Choose a moment" in page.text
     graph_script = api.get("/assets/graph-canvas.js")
     graph_styles = api.get("/assets/graph-canvas.css")
     assert graph_script.status_code == 200
