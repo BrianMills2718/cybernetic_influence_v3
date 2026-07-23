@@ -1,6 +1,6 @@
 # Slice 5: Physical Access Generalization
 
-**Status: In progress — 2026-07-23.**
+**Status: Complete — 2026-07-23.**
 
 ## Frame
 
@@ -78,16 +78,59 @@ enough to test the new causal distinctions.
 
 ## Concern Register
 
-- C021 open: the current analyst-document builder has service-desk naming
-  around otherwise general projection helpers. Extract only the seam exercised
-  by the second scenario.
-- C022 open: the current API and UI assume one scenario and one arm vocabulary.
-  Add a closed two-scenario catalog, not a plugin framework.
-- C023 adversarial invariant: a valid credential must not imply authorization,
-  and authorization must not imply physical operability or entry.
-- C024 adversarial invariant: protected badge/verifier content and hashes must
-  not cross retained/API/browser boundaries.
-- C025 exploratory: the human account must make the denial layer apparent
-  without requiring raw-event inspection.
+- C021 resolved: one common analyst-document seam now serves both scenarios;
+  scenario outcome/readout logic remains local.
+- C022 resolved: the API and UI use a closed two-scenario catalog with no plugin
+  or authoring framework.
+- C023 verified invariant: matched arms and a forced-crossing adversarial test
+  separate authentication, authorization, latch operability, and entry.
+- C024 verified invariant: badge/verifier canaries, content, and hashes remain
+  absent from prompts, retained documents, API responses, causal graph
+  projections, and browser DOM.
+- C025 passed: browser inspection distinguishes policy denial from physical
+  latch failure in the headline and two-sentence account.
 - C026 deferred: multiscale aggregate visualization remains a later vertical
   slice after two grounded scenarios prove the reusable node/route semantics.
+
+## Audit Result
+
+The accepted 0.5 environment passes strict typing across 23 source files and 25
+tests under both Python 3.12 and Mac Python 3.14. The pinned dependencies are
+consistent and have no known published vulnerabilities.
+
+The three zero-cost reference arms produce:
+
+- authorized access: 30 events, seven temporal snapshots, and a committed
+  hallway-to-equipment-room crossing;
+- authorization absent: 20 events, five snapshots, successful authentication,
+  policy denial, a locked latch, and no crossing;
+- latch jammed: 20 events, five snapshots, successful authentication and
+  authorization, physical actuation failure, and no crossing.
+
+A forged badge cannot inherit policy authorization. A forced crossing after
+policy denial remains in the hallway. Removing the mechanism's bound policy
+representation makes scenario validation fail rather than causing a global
+lookup or silent default.
+
+The Mac Mini runs exact commit `dc64041` with live execution disabled and the
+Tailscale identity allowlist enabled. All three retained samples reopened
+unchanged after a forced service restart. A tailnet browser reopened the
+jammed-latch sample with synchronized scenario controls, narrative, timeline,
+nodes, routes, and person trace. Private file modes and unrelated Tailscale
+routes remained unchanged.
+
+## Next Slice Direction
+
+Add the first execution-inert multiscale graph view over grounded scenario
+members:
+
+- render analytical boundaries as expandable aggregate nodes;
+- derive aggregate inputs, outputs, state summaries, and event traces only from
+  member evidence;
+- let the operator move between the coarse boundary and exact people,
+  information, objects, interfaces, and mechanisms;
+- make information lost by the coarse view explicit;
+- never schedule or execute an organization/boundary as an actor.
+
+This should be a visual and evidentiary vertical slice over the existing
+scenarios, not a new ontology registry or organization-agent framework.
