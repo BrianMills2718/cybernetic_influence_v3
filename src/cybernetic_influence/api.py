@@ -19,6 +19,10 @@ from cybernetic_influence.presentation import (
     build_analyst_document,
     build_service_desk_analyst_document,
 )
+from cybernetic_influence.narration import (
+    narrate_live_turns,
+    reference_narration,
+)
 from cybernetic_influence.run_store import (
     InvalidRunIdError,
     RunCorruptError,
@@ -138,8 +142,8 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             "live_authorized": os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1",
             "access_restricted": bool(_allowed_tailscale_users()),
             "scripted_cost": 0.0,
-            "maximum_live_calls": 9,
-            "maximum_live_cost": 0.45,
+            "maximum_live_calls": 18,
+            "maximum_live_cost": 0.63,
         }
 
     @app.get("/api/runs")
@@ -301,7 +305,12 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 )
             else:
                 raise RuntimeError("validated request has no scenario arm")
-            return runs.save(document)
+            narrated = _attach_narration(
+                document,
+                live=live,
+                run_id=run_id,
+            )
+            return runs.save(narrated)
         except Exception as error:
             failed = {
                 **initial,
@@ -341,3 +350,39 @@ def _require_access(request: Request) -> None:
 
 
 app = create_app()
+
+
+def _attach_narration(
+    document: dict[str, object], *, live: bool, run_id: str
+) -> dict[str, object]:
+    """Add costed sequential LLM narration without changing causal evidence."""
+    narrated = dict(document)
+    narration = (
+        narrate_live_turns(
+            narrated,
+            model=SERVICE_DESK_MODEL,
+            trace_id_prefix=run_id,
+        )
+        if live
+        else reference_narration()
+    )
+    agent_calls = _nonnegative_int(narrated.get("model_calls"))
+    agent_cost = _nonnegative_float(narrated.get("cost"))
+    narration_calls = _nonnegative_int(narration.get("model_calls"))
+    narration_cost = _nonnegative_float(narration.get("cost"))
+    narrated["agent_model_calls"] = agent_calls
+    narrated["narration_model_calls"] = narration_calls
+    narrated["model_calls"] = agent_calls + narration_calls
+    narrated["agent_cost"] = agent_cost
+    narrated["narration_cost"] = narration_cost
+    narrated["cost"] = agent_cost + narration_cost
+    narrated["narration"] = narration
+    return narrated
+
+
+def _nonnegative_int(value: object) -> int:
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+
+
+def _nonnegative_float(value: object) -> float:
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0 else 0.0

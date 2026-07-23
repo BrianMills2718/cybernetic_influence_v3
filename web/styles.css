@@ -68,6 +68,15 @@ summary { cursor:pointer; font-weight:700; }
 .step-account > p { max-width:90ch; font-size:17px; line-height:1.6; }
 .step-account > .muted { font-size:12px; }
 .step-account .event-detail { margin-top:16px; }
+.turn-narratives { padding:22px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
+.turn-narratives h2 { margin:7px 0; }
+.turn-narratives > .muted { max-width:86ch; }
+#turn-narratives { display:grid; gap:10px; }
+.turn-narrative { display:grid; gap:7px; padding:14px 16px; border-left:4px solid #487ca7; border-radius:8px; background:var(--surface2); text-align:left; font-weight:500; }
+.turn-narrative span { color:#b9d7f5; font-size:12px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.turn-narrative p { margin:0; line-height:1.5; }
+.turn-narrative small { color:var(--muted); }
+.turn-narrative.active { border-color:#fff; background:#203b56; }
 .flow-controls { padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
 .scale-toolbar .tabs { margin:0; }
 .canvas-replaced { display:none !important; }

@@ -575,6 +575,7 @@ function selectEvent(index) {
 }
 
 function renderStepAccount(event) {
+  const narration = current.narration?.turns?.find((turn) => turn.activation === event.activation)
   const trace = event.person && event.activation
     ? current.traces.find((entry) => entry.person === event.person && entry.activation === event.activation)
     : null
@@ -586,19 +587,52 @@ function renderStepAccount(event) {
     observation_delivered:'Someone received an observation',
     state_committed:'The world state changed',
   }[event.kind] || event.kind.replaceAll('_', ' ')
-  $('#step-account-title').textContent = title
-  if (trace?.orientation && current.execution === 'live') {
+  if (narration) {
+    $('#step-account-title').textContent = `Turn ${narration.turn} · ${String(narration.person || 'system').replaceAll('_', ' ')}`
+    $('#step-account-body').textContent = narration.narrative
+    $('#step-account-source').textContent = `Live LLM narrator · grounded in ${narration.source_event_ids.join(', ')}. It received this turn’s trace and the earlier turn narratives.`
+  } else if (trace?.orientation && current.execution === 'live') {
+    $('#step-account-title').textContent = title
     const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The active person'
     $('#step-account-body').textContent = `${name} read the situation as: “${trace.orientation}” ${event.summary}`
-    $('#step-account-source').textContent = 'This account uses the live agent’s own LLM-generated orientation, paired with the exact recorded event.'
+    $('#step-account-source').textContent = current.narration?.status === 'unavailable'
+      ? 'The live narrator was unavailable, so this is the acting agent’s own LLM orientation paired with the exact recorded event.'
+      : 'This run predates turn-by-turn narration, so this is the acting agent’s own LLM orientation paired with the exact recorded event.'
   } else if (trace?.orientation) {
+    $('#step-account-title').textContent = title
     const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The active person'
     $('#step-account-body').textContent = `${name} acted from available observations and remembered context. ${event.summary}`
     $('#step-account-source').textContent = 'This is a zero-cost reference account derived from the exact scripted trace, not a live LLM narration.'
   } else {
+    $('#step-account-title').textContent = title
     $('#step-account-body').textContent = event.summary
     $('#step-account-source').textContent = 'This is an exact mechanism or delivery event, so it has no separate agent narration.'
   }
+  document.querySelectorAll('.turn-narrative').forEach((card) => {
+    card.classList.toggle('active', card.dataset.activation === event.activation)
+  })
+}
+
+function renderTurnNarratives() {
+  const narration = current.narration || {}
+  const container = $('#turn-narratives')
+  if (narration.status === 'completed' && narration.turns?.length) {
+    container.innerHTML = narration.turns.map((turn) => `
+      <button class="turn-narrative" data-activation="${html(turn.activation)}">
+        <span>Turn ${html(turn.turn)} · ${html(String(turn.person).replaceAll('_',' '))}</span>
+        <p>${html(turn.narrative)}</p>
+        <small>${html((turn.source_event_ids || []).join(' · '))}</small>
+      </button>`).join('')
+    document.querySelectorAll('.turn-narrative').forEach((button) => {
+      button.onclick = () => {
+        const index = current.timeline.findIndex((event) => event.activation === button.dataset.activation)
+        if (index >= 0) selectEvent(index)
+      }
+    })
+    return
+  }
+  const reason = narration.reason || 'No turn narration was retained for this run.'
+  container.innerHTML = `<p class="muted">${html(reason)}</p>`
 }
 
 function renderTimeline(run) {
@@ -628,6 +662,7 @@ function render(run) {
   current = {
     nodes: [], snapshots: {}, edges: [], boundaries: [], timeline: [], traces: [], events: [],
     story: {headline: run.status, summary: run.error || 'No final account was retained.', steps: []},
+    narration: {status:'not_requested', turns:[]},
     model_calls: 0, cost: 0,
     ...run,
   }
@@ -648,7 +683,7 @@ function render(run) {
   $('#result').hidden = false
   renderProjectionControls()
   $('#result-status').textContent = `${current.status} · ${String(current.scenario || '').replaceAll('_',' ')} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
-  $('#result-cost').textContent = `${current.model_calls} model calls · $${Number(current.cost).toFixed(6)} · ${current.run_id}`
+  $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator) · $${Number(current.cost).toFixed(6)} · ${current.run_id}`
   $('#story-headline').textContent = current.story.headline
   $('#story-summary').textContent = current.story.summary
   $('#story-steps').innerHTML = ''
@@ -666,6 +701,7 @@ function render(run) {
     $('#story-steps').append(item)
   })
   renderScaleControls()
+  renderTurnNarratives()
   const people = [...new Set(current.traces.map((entry) => entry.person))]
   $('#trace-tabs').innerHTML = people.map((person) => `<button data-person="${html(person)}">${html(person.replaceAll('_',' '))}</button>`).join('')
   document.querySelectorAll('#trace-tabs button').forEach((button) => button.onclick = () => showTrace(button.dataset.person))

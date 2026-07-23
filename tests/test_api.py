@@ -44,7 +44,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Simulation map" in page.text
     assert "Spatial layout" in page.text
     assert "Causal flow" in page.text
-    assert "What happened at this step" in page.text
+    assert "Narrative for the selected turn" in page.text
+    assert "Turn-by-turn narrative" in page.text
     assert "Play simulation" in page.text
     assert "/assets/graph-canvas.js" in page.text
     assert "/assets/graph-canvas.css" in page.text
@@ -72,6 +73,8 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
     assert body["status"] == "completed"
     assert body["model_calls"] == 0
     assert body["cost"] == 0
+    assert body["narration"]["status"] == "not_requested"
+    assert body["narration_model_calls"] == 0
     assert body["story"]["summary"]
     assert {entry["person"] for entry in body["traces"]} == {
         "triager",
@@ -331,6 +334,16 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
             side_effect=scripted_native,
         ),
         patch("cybernetic_influence.api.run_service_desk", side_effect=slow_run),
+        patch(
+            "cybernetic_influence.api.narrate_live_turns",
+            return_value={
+                "status": "completed",
+                "model_calls": 0,
+                "cost": 0.0,
+                "turns": [],
+                "calls": [],
+            },
+        ),
     ):
         api = client(tmp_path)
 
