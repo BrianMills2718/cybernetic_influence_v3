@@ -7,6 +7,8 @@ let current = null
 let selectedEventIndex = 0
 let selectedPerson = null
 let selectedScale = 'exact'
+let selectedNodeId = null
+let selectedEdgeId = null
 let scenarioCatalog = {}
 
 async function request(url, options = {}) {
@@ -208,6 +210,9 @@ function showBoundary(boundaryId) {
   const snapshot = boundarySnapshot(boundary)
   const event = current?.timeline?.[selectedEventIndex]
   if (!boundary || !snapshot) return
+  selectedNodeId = boundaryId
+  selectedEdgeId = null
+  renderGraph()
   document.querySelectorAll('.node').forEach((button) => button.classList.toggle('selected', button.dataset.nodeId === boundaryId))
   const linked = boundary.trace_event_ids.filter((eventId) =>
     current.timeline.findIndex((item) => item.event_id === eventId) <= selectedEventIndex
@@ -255,6 +260,9 @@ function showNode(nodeId) {
     showBoundary(nodeId)
     return
   }
+  selectedNodeId = nodeId
+  selectedEdgeId = null
+  renderGraph()
   const event = current?.timeline?.[selectedEventIndex]
   const node = nodesAtSelectedEvent().find((candidate) => candidate.id === nodeId)
   const finalNode = current?.nodes?.find((candidate) => candidate.id === nodeId)
@@ -271,6 +279,21 @@ function showNode(nodeId) {
     <h2>${html(node.label)}</h2>
     <p>${html(node.description)}</p>
     <pre>${html(JSON.stringify(node.state, null, 2))}</pre>`
+}
+
+function showEdge(edge) {
+  selectedNodeId = null
+  selectedEdgeId = edge.id
+  renderGraph()
+  $('#inspector').innerHTML = `
+    <span class="eyebrow">${html(edge.kind.replaceAll('_',' '))}</span>
+    <h2>${html(edge.source.replaceAll('_',' '))} → ${html(edge.target.replaceAll('_',' '))}</h2>
+    <p>${html(edge.description)}</p>
+    <dl class="aggregate-facts">
+      <div><dt>Enabled</dt><dd>${html(edge.enabled)}</dd></div>
+      <div><dt>Exact route evidence</dt><dd>${html(edge.routeIds.length)}</dd></div>
+    </dl>
+    <pre>${html(JSON.stringify({id:edge.id, exact_route_ids:edge.routeIds}, null, 2))}</pre>`
 }
 
 function showTrace(person) {
@@ -355,6 +378,42 @@ function renderGraph() {
         : edge.routeIds.length > 1 ? `<small>${edge.routeIds.length} exact routes</small>` : ''}
     </span>`).join('') || '<span class="muted">No external route is visible at this scale.</span>'
   const graph = $('#graph')
+  if (window.CyberneticGraph) {
+    graph.classList.add('react-canvas-host')
+    const authoredBoundary = selectedScale === 'exact'
+      ? (current.boundaries || [])[0] || null
+      : null
+    const snapshot = boundarySnapshot(authoredBoundary)
+    window.CyberneticGraph.render(graph, {
+      nodes:projection.nodes,
+      edges:projection.edges,
+      event:current?.timeline?.[selectedEventIndex] || null,
+      boundary:authoredBoundary && snapshot ? {
+        id:authoredBoundary.id,
+        label:authoredBoundary.label,
+        description:authoredBoundary.description,
+        executor:false,
+        memberIds:snapshot.member_ids,
+        hiddenFacts:snapshot.hidden_fact_count,
+        hiddenInformation:snapshot.hidden_information_count,
+        internalRoutes:snapshot.internal_route_ids.length,
+      } : null,
+      collapsedBoundaryId:selectedScale === 'exact' ? null : selectedScale,
+      selectedNodeId,
+      selectedEdgeId,
+      onSelectNode:(nodeId) => showNode(nodeId),
+      onSelectEdge:(edge) => showEdge(edge),
+      onToggleBoundary:(boundaryId) => {
+        selectedScale = selectedScale === 'exact' ? boundaryId : 'exact'
+        selectedNodeId = null
+        selectedEdgeId = null
+        renderScaleControls()
+        selectEvent(selectedEventIndex)
+      },
+    })
+    return
+  }
+  graph.classList.remove('react-canvas-host')
   graph.innerHTML = '<svg class="graph-lines" aria-hidden="true"></svg>'
   flowOrderedNodes(projection.nodes).forEach((node) => {
     const button = document.createElement('button')
@@ -445,6 +504,8 @@ function render(run) {
   selectedEventIndex = 0
   selectedPerson = null
   selectedScale = 'exact'
+  selectedNodeId = null
+  selectedEdgeId = null
   if (scenarioCatalog[current.scenario]) {
     $('#scenario').value = current.scenario
     configureScenario(current.scenario)

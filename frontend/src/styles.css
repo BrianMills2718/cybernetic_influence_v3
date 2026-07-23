@@ -1,0 +1,144 @@
+.cy-graph-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 680px;
+  background: #0f1721;
+  color: #e8eef7;
+}
+
+.cy-graph-bar {
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-bottom: 1px solid #2a394b;
+  background: #182230;
+  color: #8fa0b5;
+  font-size: 12px;
+}
+
+.cy-graph-bar button {
+  min-height: 32px;
+  padding: 5px 9px;
+}
+
+.cy-graph-canvas {
+  min-width: 0;
+  min-height: 630px;
+}
+
+.cy-flow-node {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  padding: 10px 12px;
+  border: 1px solid #57b49d;
+  border-radius: 9px;
+  background: #182230f2;
+  color: #e8eef7;
+  text-align: left;
+}
+
+.cy-flow-node span,
+.cy-flow-node small {
+  color: #8fa0b5;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.cy-flow-node span {
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.cy-flow-node strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.cy-flow-node--person { border-color: #58a6ff; }
+.cy-flow-node--information { border-color: #ef79b7; }
+.cy-flow-node--mechanism { border-color: #e8a84d; }
+.cy-flow-node--analytical_boundary {
+  border: 2px dashed #b891ff;
+  background: #2a2040f2;
+}
+
+.react-flow__node.cy-flow-node-wrap--active .cy-flow-node {
+  outline: 3px solid #fff;
+  box-shadow: 0 0 18px rgba(255, 255, 255, .28);
+}
+
+.react-flow__node.cy-flow-node-wrap--selected .cy-flow-node {
+  box-shadow: 0 0 0 4px #54a8ff;
+}
+
+.react-flow__node.cy-boundary-hull {
+  border: 2px dashed #8094aa;
+  border-radius: 18px;
+  background: rgba(128, 148, 170, .055);
+  box-shadow: inset 0 0 0 1px rgba(128, 148, 170, .16);
+}
+
+.react-flow__node.cy-boundary-hull--active {
+  border-color: #fff;
+  box-shadow: inset 0 0 0 1px #fff, 0 0 22px rgba(255, 255, 255, .14);
+}
+
+.react-flow__node.cy-boundary-hull--selected {
+  outline: 3px solid #54a8ff;
+}
+
+.cy-boundary-label {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  display: grid;
+  gap: 2px;
+  max-width: calc(100% - 28px);
+  padding: 7px 10px;
+  border: 1px solid #8094aa;
+  border-radius: 8px;
+  background: rgba(15, 23, 33, .94);
+  text-align: left;
+}
+
+.cy-boundary-label span,
+.cy-boundary-label small {
+  color: #8fa0b5;
+  font-size: 9px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.react-flow__edge.cy-flow-edge--selected path {
+  filter: drop-shadow(0 0 5px #54a8ff);
+}
+
+.react-flow__edge-textbg {
+  stroke: #2a394b;
+  stroke-width: 1px;
+}
+
+.react-flow__controls button {
+  background: #e8eef7;
+  color: #0b1017;
+}
+
+.react-flow__minimap {
+  border: 1px solid #2a394b;
+  background: #111923;
+}
+
+@media (max-width: 900px) {
+  .cy-graph-shell { min-height: 540px; }
+  .cy-graph-canvas { min-height: 490px; }
+  .cy-graph-bar { align-items: stretch; flex-direction: column; }
+}

@@ -26,7 +26,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     api = client(tmp_path)
     config = api.get("/api/config")
     assert config.status_code == 200
-    assert config.json()["version"] == "0.6.0"
+    assert config.json()["version"] == "0.7.0"
     assert config.json()["build_commit"] == "development"
     assert config.json()["profiles"] == ["position_context", "procedural_control"]
     assert set(config.json()["scenarios"]) == {
@@ -38,8 +38,16 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert page.headers["content-security-policy"].startswith("default-src 'self'")
     assert page.headers["x-content-type-options"] == "nosniff"
     assert "What happened" in page.text
+    assert "/assets/graph-canvas.js" in page.text
+    assert "/assets/graph-canvas.css" in page.text
     assert "V2 Inspect" not in page.text
     assert "Step through what changed" in page.text
+    graph_script = api.get("/assets/graph-canvas.js")
+    graph_styles = api.get("/assets/graph-canvas.css")
+    assert graph_script.status_code == 200
+    assert graph_styles.status_code == 200
+    assert len(graph_script.content) > 500_000
+    assert b".react-flow" in graph_styles.content
 
 
 def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Path) -> None:

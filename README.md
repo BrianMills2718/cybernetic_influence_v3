@@ -21,10 +21,11 @@ The simulator currently includes:
 - zero-cost scripted reference runs;
 - live LLM runs behind `CYBERNETIC_INFLUENCE_LIVE=1`;
 - human narrative synchronized to an exact causal timeline;
-- a connected causal graph of people, information, world objects, mechanisms,
-  and concrete declared routes;
+- a pannable, zoomable, selectable causal graph of people, information, world
+  objects, mechanisms, and concrete declared routes;
 - reversible execution-inert aggregate views with explicit information-loss
-  counts and one-step return to exact evidence at the same revision;
+  counts, expanded composite hulls, and one-step return to exact evidence at
+  the same revision;
 - event-focused graph nodes, routes, and person traces;
 - event-revision snapshots rather than final-state leakage into earlier events;
 - analyst-safe evidence that redacts mechanism-only values and protected
