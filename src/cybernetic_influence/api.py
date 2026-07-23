@@ -93,6 +93,8 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
         response.headers["Permissions-Policy"] = (
             "camera=(), microphone=(), geolocation=(), payment=()"
         )
+        if request.url.path.startswith("/assets/"):
+            response.headers["Cache-Control"] = "no-cache"
         return response
 
     @app.get("/api/config")

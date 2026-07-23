@@ -55,6 +55,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     graph_styles = api.get("/assets/graph-canvas.css")
     assert graph_script.status_code == 200
     assert graph_styles.status_code == 200
+    assert graph_script.headers["cache-control"] == "no-cache"
+    assert graph_styles.headers["cache-control"] == "no-cache"
     assert len(graph_script.content) > 250_000
     assert b".react-flow" in graph_styles.content
 
