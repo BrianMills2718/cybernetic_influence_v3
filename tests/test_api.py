@@ -42,6 +42,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert page.headers["x-content-type-options"] == "nosniff"
     assert "Scenario condition" in page.text
     assert "Simulation map" in page.text
+    assert "Spatial layout" in page.text
+    assert "Causal flow" in page.text
     assert "What happened at this step" in page.text
     assert "Play simulation" in page.text
     assert "/assets/graph-canvas.js" in page.text

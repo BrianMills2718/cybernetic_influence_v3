@@ -486,6 +486,7 @@ function renderGraph() {
         selectedGraphView = viewMode
         selectedNodeId = null
         selectedEdgeId = null
+        renderProjectionControls()
         renderGraph()
       },
     })
@@ -514,6 +515,16 @@ function renderGraph() {
     route.classList.toggle('event-focus', ids.some((id) => event?.focus_edges?.includes(id)))
   })
   requestAnimationFrame(() => drawGraphLines(projection.edges))
+}
+
+function renderProjectionControls() {
+  const hasWorld = Boolean(current?.world)
+  $('#spatial-layout').disabled = !hasWorld
+  $('#spatial-layout').classList.toggle('active', selectedGraphView === 'world')
+  $('#causal-layout').classList.toggle('active', selectedGraphView === 'causal')
+  $('#projection-help').textContent = hasWorld
+    ? 'Spatial layout is an authored world projection: adjacency does not itself grant permission or traversal.'
+    : 'This scenario has no authored places or spatial topology yet, so only its causal flow can be shown.'
 }
 
 function selectEvent(index) {
@@ -635,6 +646,7 @@ function render(run) {
     describeCondition()
   }
   $('#result').hidden = false
+  renderProjectionControls()
   $('#result-status').textContent = `${current.status} · ${String(current.scenario || '').replaceAll('_',' ')} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
   $('#result-cost').textContent = `${current.model_calls} model calls · $${Number(current.cost).toFixed(6)} · ${current.run_id}`
   $('#story-headline').textContent = current.story.headline
@@ -668,6 +680,22 @@ $('#previous-event').onclick = () => selectEvent(selectedEventIndex - 1)
 $('#next-event').onclick = () => selectEvent(selectedEventIndex + 1)
 $('#scenario').onchange = (event) => configureScenario(event.target.value)
 $('#arm').onchange = describeCondition
+$('#spatial-layout').onclick = () => {
+  if (!current?.world) return
+  selectedGraphView = 'world'
+  selectedNodeId = null
+  selectedEdgeId = null
+  renderProjectionControls()
+  renderGraph()
+}
+$('#causal-layout').onclick = () => {
+  if (!current) return
+  selectedGraphView = 'causal'
+  selectedNodeId = null
+  selectedEdgeId = null
+  renderProjectionControls()
+  renderGraph()
+}
 $('#live').onchange = () => {
   $('#run').textContent = $('#live').checked ? 'Play live simulation' : 'Play reference simulation'
 }

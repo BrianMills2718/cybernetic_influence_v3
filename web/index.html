@@ -37,7 +37,14 @@
       <section id="map-section" class="map-section">
         <span class="eyebrow">People · information · objects · mechanisms</span>
         <h2>Simulation map</h2>
-        <p class="muted">For physical scenarios, start with places and occupants in <strong>World topology</strong>. Switch to <strong>Causal flow</strong> to see the exact information and mechanism route at the same moment. Select a node or edge for its retained state.</p>
+        <p class="muted">Choose a layout, then select a node or edge for its retained state. Spatial layout shows authored places, occupants, and physical topology; causal flow shows information, actions, and exact mechanisms.</p>
+        <div class="projection-toolbar" aria-label="Map layout">
+          <div class="tabs">
+            <button id="spatial-layout" type="button">Spatial layout</button>
+            <button id="causal-layout" type="button">Causal flow</button>
+          </div>
+          <p id="projection-help" class="muted"></p>
+        </div>
         <div class="workspace">
           <div id="graph" class="graph" aria-label="Connected causal graph"></div>
           <aside id="inspector"><p class="muted">Select a node.</p></aside>
