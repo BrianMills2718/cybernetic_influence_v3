@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cybernetic Influence Simulator</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header>
+    <div><span class="eyebrow">Cybernetic influence</span><h1>Simulator</h1></div>
+    <span id="run-status">Ready</span>
+  </header>
+  <main>
+    <section class="run-card">
+      <div>
+        <span class="eyebrow">New simulation</span>
+        <h2>Service desk</h2>
+        <p>Run people, information, records, connections, and exact mechanisms together.</p>
+      </div>
+      <label>Agent cognition
+        <select id="profile">
+          <option value="position_context">Personal dispositions + remembered position</option>
+          <option value="procedural_control">Explicit procedural instructions</option>
+        </select>
+      </label>
+      <label>World condition
+        <select id="arm">
+          <option value="baseline">Normal communication path</option>
+          <option value="no_direct_path">Direct report path unavailable</option>
+          <option value="speed_priority">Speed pressure</option>
+        </select>
+      </label>
+      <label class="live"><input id="live" type="checkbox"> Use live LLM agents</label>
+      <button id="run">Run simulation</button>
+      <details><summary>Model and maximum cost</summary><p id="cost-details">Loading…</p></details>
+    </section>
+
+    <section id="result" hidden>
+      <div class="status-line"><strong id="result-status"></strong><span id="result-cost"></span></div>
+      <section class="story">
+        <span class="eyebrow">What happened</span>
+        <h2 id="story-headline"></h2>
+        <p id="story-summary"></p>
+        <ol id="story-steps"></ol>
+      </section>
+
+      <section>
+        <span class="eyebrow">People · information · objects · mechanisms</span>
+        <h2>How it flowed</h2>
+        <p class="muted">Select any node to inspect its state. Select a person below to inspect their trace.</p>
+        <div id="routes" class="routes" aria-label="Declared information routes"></div>
+        <div class="workspace">
+          <div id="graph" class="graph"></div>
+          <aside id="inspector"><p class="muted">Select a node.</p></aside>
+        </div>
+      </section>
+
+      <section>
+        <span class="eyebrow">Person traces</span>
+        <h2>What each person perceived and did</h2>
+        <div id="trace-tabs" class="tabs"></div>
+        <div id="trace"></div>
+      </section>
+
+      <details class="advanced">
+        <summary>Advanced evidence</summary>
+        <pre id="raw"></pre>
+      </details>
+    </section>
+  </main>
+  <script src="/assets/app.js"></script>
+</body>
+</html>
