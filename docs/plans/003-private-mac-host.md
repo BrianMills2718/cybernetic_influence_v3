@@ -1,6 +1,6 @@
 # Slice 3: Private Mac Mini Development Host
 
-**Status: In progress — 2026-07-23.**
+**Status: Complete — 2026-07-23.**
 
 ## Frame
 
@@ -34,11 +34,39 @@ than starting the local server.
 
 - C009 mitigated: the host lacks GitHub credentials; use an exact Git bundle
   now and prefer a read-only deploy key later.
-- C010 open: the host lacks `llm_client` and provider-secret injection; live
-  execution remains off rather than adding keys to launchd configuration.
-- C011 invariant: the existing Tailscale Serve and Funnel mappings are outside
-  this project's scope and must remain byte-for-byte unchanged except for the
-  new port-8620 listener.
-- C012 open: tailnet availability is not equivalent to application-level
-  authorization. This instance contains development evidence and must not move
-  to Funnel/public ingress.
+- C010 deferred: the host lacks `llm_client` and provider-secret injection;
+  live execution remains off rather than adding keys to launchd configuration.
+- C011 verified invariant: the existing Tailscale Serve and Funnel mappings
+  remained unchanged except for the new port-8620 listener.
+- C012 mitigated: port 8620 is present in Tailscale Serve and absent from
+  `AllowFunnel`; application-level authorization remains future work if access
+  expands beyond the current tailnet.
+- C013 resolved: an immediate launchd bootstrap after bootout returned a
+  transient input/output error. A one-second lifecycle boundary succeeded and
+  is now part of the operator procedure.
+
+## Audit Result
+
+The Mac installed and passed strict typing plus all seven tests under Homebrew
+Python 3.14. The LaunchAgent runs from exact commit `7d9d26a`, binds only to
+`127.0.0.1:8620`, and reports that commit through `/api/config`. No dotenv file,
+provider environment variable, live authorization, or API key was copied.
+
+A zero-cost missing-path run completed with 66 exact events. After a forced
+service restart, its ID and event document reopened unchanged through the
+tailnet-only HTTPS URL. Browser rendering showed the retained run, alternate
+route narrative, synchronized 66-event timeline, and focused entities.
+Tailscale's existing port 443 Funnel and port 8765 Serve proxy remained
+unchanged; port 8620 is not Funnel-enabled.
+
+The exploratory readout passes: the remote path creates and reopens retained
+evidence without starting a development shell, while the local checkout remains
+the sole source-editing workflow.
+
+## Next Slice Direction
+
+Add one small non-service-desk scenario that exercises a physical boundary,
+credential-bearing person, exact access controller, policy representation, and
+observation channel. This should test whether the ontology and causal runtime
+generalize beyond the scenario from which they were extracted before adding a
+scenario-authoring framework or aggregate organization view.

@@ -55,6 +55,7 @@ Render the LaunchAgent template with the new commit in
 
 ```bash
 launchctl bootout "gui/$(id -u)/com.cybernetic-influence.v3"
+sleep 1
 launchctl bootstrap "gui/$(id -u)" \
   ~/Library/LaunchAgents/com.cybernetic-influence.v3.plist
 ```
