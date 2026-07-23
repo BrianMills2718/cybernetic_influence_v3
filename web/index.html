@@ -15,21 +15,17 @@
     <section class="run-card">
       <div>
         <span class="eyebrow">New simulation</span>
-        <h2>Service desk</h2>
-        <p>Run people, information, records, connections, and exact mechanisms together.</p>
+        <h2 id="scenario-title">Service desk</h2>
+        <p id="scenario-description">Run people, information, records, connections, and exact mechanisms together.</p>
       </div>
+      <label>Scenario
+        <select id="scenario"></select>
+      </label>
       <label>Agent cognition
-        <select id="profile">
-          <option value="position_context">Personal dispositions + remembered position</option>
-          <option value="procedural_control">Explicit procedural instructions</option>
-        </select>
+        <select id="profile"></select>
       </label>
       <label>World condition
-        <select id="arm">
-          <option value="baseline">Normal communication path</option>
-          <option value="no_direct_path">Direct report path unavailable</option>
-          <option value="speed_priority">Speed pressure</option>
-        </select>
+        <select id="arm"></select>
       </label>
       <label class="live"><input id="live" type="checkbox"> Use live LLM agents</label>
       <button id="run">Run simulation</button>

@@ -6,6 +6,7 @@ const html = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => (
 let current = null
 let selectedEventIndex = 0
 let selectedPerson = null
+let scenarioCatalog = {}
 
 async function request(url, options = {}) {
   const response = await fetch(url, options)
@@ -16,10 +17,35 @@ async function request(url, options = {}) {
 
 async function loadConfig() {
   const config = await request('/api/config')
+  scenarioCatalog = config.scenarios || {}
+  $('#scenario').innerHTML = Object.entries(scenarioCatalog).map(([id, item]) =>
+    `<option value="${html(id)}">${html(item.label)}</option>`
+  ).join('')
+  $('#scenario').value = config.scenario
+  configureScenario(config.scenario)
   $('#cost-details').textContent =
     `${config.model} · ${config.reasoning_effort} reasoning · up to ${config.maximum_live_calls} calls · $${config.maximum_live_cost.toFixed(2)} cap. Scripted reference runs cost $0.`
   $('#live').disabled = !config.live_authorized
   if (!config.live_authorized) $('#live').parentElement.title = 'Start the server with CYBERNETIC_INFLUENCE_LIVE=1 to enable live agents.'
+}
+
+function configureScenario(scenarioId) {
+  const selected = scenarioCatalog[scenarioId]
+  if (!selected) return
+  const profileLabels = {
+    position_context:'Personal dispositions + remembered position',
+    procedural_control:'Explicit procedural instructions',
+  }
+  $('#profile').innerHTML = selected.profiles.map((profile) =>
+    `<option value="${html(profile)}">${html(profileLabels[profile] || profile.replaceAll('_',' '))}</option>`
+  ).join('')
+  $('#arm').innerHTML = selected.arms.map((arm) =>
+    `<option value="${html(arm.id)}">${html(arm.label)}</option>`
+  ).join('')
+  $('#scenario-title').textContent = selected.label
+  $('#scenario-description').textContent = scenarioId === 'physical_access'
+    ? 'Separate credential proof, policy authorization, latch operation, physical crossing, and observed feedback.'
+    : 'Run people, information, records, connections, and exact mechanisms together.'
 }
 
 async function loadHistory() {
@@ -33,7 +59,7 @@ async function loadHistory() {
     <article class="history-item">
       <button class="open-run" data-run-id="${run.run_id}">
         <strong>${html(run.headline || run.status)}</strong>
-        <span>${html(run.arm?.replaceAll('_',' '))} · ${html(run.profile?.replaceAll('_',' '))}</span>
+        <span>${html(run.scenario?.replaceAll('_',' '))} · ${html(run.arm?.replaceAll('_',' '))}</span>
         <small>${html(run.status)} · ${html(new Date(run.created_at).toLocaleString())}</small>
       </button>
       <button class="trash-run" data-run-id="${run.run_id}" aria-label="Move ${run.run_id} to trash">×</button>
@@ -186,8 +212,18 @@ function render(run) {
   }
   selectedEventIndex = 0
   selectedPerson = null
+  if (scenarioCatalog[current.scenario]) {
+    $('#scenario').value = current.scenario
+    configureScenario(current.scenario)
+    if ([...$('#profile').options].some((option) => option.value === current.profile)) {
+      $('#profile').value = current.profile
+    }
+    if ([...$('#arm').options].some((option) => option.value === current.arm)) {
+      $('#arm').value = current.arm
+    }
+  }
   $('#result').hidden = false
-  $('#result-status').textContent = `${current.status} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
+  $('#result-status').textContent = `${current.status} · ${String(current.scenario || '').replaceAll('_',' ')} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
   $('#result-cost').textContent = `${current.model_calls} model calls · $${Number(current.cost).toFixed(6)} · ${current.run_id}`
   $('#story-headline').textContent = current.story.headline
   $('#story-summary').textContent = current.story.summary
@@ -232,6 +268,7 @@ function render(run) {
 $('#event-slider').oninput = (event) => selectEvent(Number(event.target.value))
 $('#previous-event').onclick = () => selectEvent(selectedEventIndex - 1)
 $('#next-event').onclick = () => selectEvent(selectedEventIndex + 1)
+$('#scenario').onchange = (event) => configureScenario(event.target.value)
 
 $('#run').onclick = async () => {
   $('#run').disabled = true
@@ -241,6 +278,7 @@ $('#run').onclick = async () => {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
+        scenario:$('#scenario').value,
         cognition_profile:$('#profile').value,
         arm_id:$('#arm').value,
         execution:$('#live').checked ? 'live' : 'scripted',

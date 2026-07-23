@@ -55,6 +55,7 @@ class GraphEdge(BaseModel):
         "binds_input",
         "declares_output",
         "uses_substrate",
+        "reads_representation",
         "carries",
         "derived_from",
         "located_in",
@@ -408,6 +409,9 @@ def _project_graph_components(
             "implementation_id": mechanism.implementation_id,
             "description": mechanism.description,
             "read_fact_ids": _json_string_list(mechanism.read_fact_ids),
+            "read_representation_ids": _json_string_list(
+                mechanism.read_representation_ids
+            ),
             "write_fact_ids": _json_string_list(mechanism.write_fact_ids),
             "write_carrier_ids": _json_string_list(mechanism.write_carrier_ids),
             "observation_target_ids": _json_string_list(
@@ -453,6 +457,19 @@ def _project_graph_components(
                     target_node_id=_node(substrate_kind, substrate_ref),
                     edge_kind="uses_substrate",
                     label="uses substrate",
+                )
+            )
+        for representation_id in mechanism.read_representation_ids:
+            edges.append(
+                GraphEdge(
+                    edge_id=(
+                        f"reads_representation:{mechanism.mechanism_id}:"
+                        f"{representation_id}"
+                    ),
+                    source_node_id=_node("mechanism", mechanism.mechanism_id),
+                    target_node_id=_node("representation", representation_id),
+                    edge_kind="reads_representation",
+                    label="reads stored representation",
                 )
             )
 
@@ -506,18 +523,24 @@ def _project_graph_components(
         state.representations.values(), key=lambda item: item.representation_id
     ):
         representation_properties: dict[str, JsonValue] = {
-            "carrier_id": representation.carrier_id,
-            "carrier_revision": representation.carrier_revision,
             "encoding": representation.encoding,
-            "content_hash": representation.content_hash,
-            "actual_source_ref": representation.actual_source_ref,
-            "parent_representation_ids": _json_string_list(
-                representation.parent_representation_ids
-            ),
             "visibility": representation.visibility,
         }
         if representation.visibility == "public":
-            representation_properties["content"] = representation.content
+            representation_properties.update(
+                {
+                    "carrier_id": representation.carrier_id,
+                    "carrier_revision": representation.carrier_revision,
+                    "content_hash": representation.content_hash,
+                    "actual_source_ref": representation.actual_source_ref,
+                    "parent_representation_ids": _json_string_list(
+                        representation.parent_representation_ids
+                    ),
+                    "content": representation.content,
+                }
+            )
+        else:
+            representation_properties["redacted"] = True
         nodes.append(
             GraphNode(
                 node_id=_node("representation", representation.representation_id),
@@ -653,6 +676,11 @@ def _project_occurrence(event: CausalEvent, state: CausalState) -> GraphOccurren
         for fact_id in mechanism.read_fact_ids:
             entity_id = fact_id.split(".", maxsplit=1)[0]
             refs.add(_node("entity", entity_id))
+        for representation_id in mechanism.read_representation_ids:
+            add_representation(representation_id)
+            edge_refs.add(
+                f"reads_representation:{mechanism_id}:{representation_id}"
+            )
 
     if event.actor_entity_id is not None:
         refs.add(_node("entity", event.actor_entity_id))

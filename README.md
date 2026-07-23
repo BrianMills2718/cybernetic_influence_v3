@@ -10,11 +10,14 @@ programs.
 
 ## Working simulator
 
-The service-desk scenario supports:
+The simulator currently includes:
 
+- a service-desk scenario with normal, missing-channel, and speed-pressure
+  conditions;
+- a physical-access scenario that keeps credential proof, policy
+  authorization, latch operability, crossing, and sensor feedback distinct;
 - personal-disposition plus remembered-position cognition;
 - an explicit procedural control profile;
-- normal, missing-channel, and speed-pressure world conditions;
 - zero-cost scripted reference runs;
 - live LLM runs behind `CYBERNETIC_INFLUENCE_LIVE=1`;
 - human narrative synchronized to an exact causal timeline;

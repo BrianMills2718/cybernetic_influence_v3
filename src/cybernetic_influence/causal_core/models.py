@@ -117,6 +117,7 @@ class MechanismSpec(_StrictModel):
     input_port_ids: list[str] = Field(min_length=1)
     output_port_ids: list[str] = Field(default_factory=list)
     read_fact_ids: list[str] = Field(default_factory=list)
+    read_representation_ids: list[str] = Field(default_factory=list)
     write_fact_ids: list[str] = Field(default_factory=list)
     write_carrier_ids: list[str] = Field(default_factory=list)
     observation_target_ids: list[str] = Field(default_factory=list)
@@ -131,6 +132,7 @@ class MechanismSpec(_StrictModel):
             ("input_port_ids", self.input_port_ids),
             ("output_port_ids", self.output_port_ids),
             ("read_fact_ids", self.read_fact_ids),
+            ("read_representation_ids", self.read_representation_ids),
             ("write_fact_ids", self.write_fact_ids),
             ("write_carrier_ids", self.write_carrier_ids),
             ("observation_target_ids", self.observation_target_ids),
@@ -300,6 +302,16 @@ class CausalState(_StrictModel):
                 raise ValueError(
                     f"mechanism {mechanism.mechanism_id!r} has unknown writable "
                     f"carriers {sorted(unknown_write_carriers)!r}"
+                )
+            unknown_read_representations = (
+                set(mechanism.read_representation_ids)
+                - set(self.representations)
+            )
+            if unknown_read_representations:
+                raise ValueError(
+                    f"mechanism {mechanism.mechanism_id!r} has unknown readable "
+                    "representations "
+                    f"{sorted(unknown_read_representations)!r}"
                 )
             unknown_targets = set(mechanism.observation_target_ids) - entity_ids
             if unknown_targets:
@@ -710,6 +722,7 @@ class CausalEvent(_StrictModel):
     representation_id: str | None = Field(default=None, pattern=_ID_PATTERN)
     observation_id: str | None = Field(default=None, pattern=_ID_PATTERN)
     read_fact_ids: list[str] = Field(default_factory=list)
+    read_representation_ids: list[str] = Field(default_factory=list)
     invariants: list[InvariantResult] = Field(default_factory=list)
     patch: StatePatch | None = None
     details: dict[str, JsonValue] = Field(default_factory=dict)
@@ -1308,6 +1321,13 @@ def _validate_event_references(
                     raise ValueError("mechanism event has an unbound input port")
                 if event.read_fact_ids != mechanism.read_fact_ids:
                     raise ValueError("mechanism event has the wrong read surface")
+                if (
+                    event.read_representation_ids
+                    != mechanism.read_representation_ids
+                ):
+                    raise ValueError(
+                        "mechanism event has the wrong representation-read surface"
+                    )
                 invariant_ids = [item.invariant_id for item in event.invariants]
                 if set(invariant_ids) != set(mechanism.invariant_ids) or not all(
                     item.passed for item in event.invariants
@@ -1379,6 +1399,14 @@ def _validate_event_references(
             raise ValueError(f"event {event.event_id!r} has unknown representation")
         for fact_id in event.read_fact_ids:
             state.fact(fact_id)
+        unknown_read_representations = (
+            set(event.read_representation_ids) - set(state.representations)
+        )
+        if unknown_read_representations:
+            raise ValueError(
+                f"event {event.event_id!r} reads unknown representations "
+                f"{sorted(unknown_read_representations)!r}"
+            )
         if event.patch is not None:
             assert event.mechanism_id is not None
             mechanism = state.mechanisms[event.mechanism_id]

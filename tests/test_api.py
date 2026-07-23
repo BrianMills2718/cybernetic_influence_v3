@@ -26,9 +26,13 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     api = client(tmp_path)
     config = api.get("/api/config")
     assert config.status_code == 200
-    assert config.json()["version"] == "0.4.0"
+    assert config.json()["version"] == "0.5.0"
     assert config.json()["build_commit"] == "development"
     assert config.json()["profiles"] == ["position_context", "procedural_control"]
+    assert set(config.json()["scenarios"]) == {
+        "service_desk",
+        "physical_access",
+    }
     page = api.get("/")
     assert page.status_code == 200
     assert page.headers["content-security-policy"].startswith("default-src 'self'")
@@ -83,6 +87,54 @@ def test_interventions_produce_distinct_grounded_accounts(tmp_path: Path) -> Non
     assert "direct report path was unavailable" in missing["story"]["summary"]
     assert "denied" in speed["story"]["summary"]
     assert missing["outcome"]["remediation_activation"] > speed["outcome"]["remediation_activation"]
+
+
+def test_physical_access_arms_are_distinct_and_cross_scenario_arms_fail(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+    authorized = api.post(
+        "/api/runs",
+        json={
+            "scenario": "physical_access",
+            "arm_id": "authorized_access",
+            "execution": "scripted",
+        },
+    ).json()
+    policy_denied = api.post(
+        "/api/runs",
+        json={
+            "scenario": "physical_access",
+            "arm_id": "authorization_absent",
+            "execution": "scripted",
+        },
+    ).json()
+    jammed = api.post(
+        "/api/runs",
+        json={
+            "scenario": "physical_access",
+            "arm_id": "latch_jammed",
+            "execution": "scripted",
+        },
+    ).json()
+
+    assert authorized["outcome"]["entered"] is True
+    assert "stored policy did not authorize" in policy_denied["story"]["summary"]
+    assert policy_denied["outcome"]["authentication"] == "authenticated"
+    assert policy_denied["outcome"]["entered"] is False
+    assert "physical latch could not release" in jammed["story"]["summary"]
+    assert jammed["outcome"]["authorization"] == "authorized"
+    assert jammed["outcome"]["entered"] is False
+    assert (
+        api.post(
+            "/api/runs",
+            json={
+                "scenario": "physical_access",
+                "arm_id": "baseline",
+            },
+        ).status_code
+        == 422
+    )
 
 
 def test_live_run_requires_explicit_authorization(tmp_path: Path) -> None:

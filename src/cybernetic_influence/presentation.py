@@ -33,11 +33,37 @@ def build_service_desk_analyst_document(
     created_at: str,
 ) -> dict[str, object]:
     """Project one protected result into a retained analyst document."""
-    final_state = result.core_result.final_state
-    snapshots = analyst_snapshots(
-        fixture.scenario.initial_state,
-        result.core_result.events,
+    outcome = readout.model_dump(mode="json")
+    return build_analyst_document(
+        initial_state=fixture.scenario.initial_state,
+        result=result,
+        scenario="service_desk",
+        profile=profile,
+        arm_id=arm_id,
+        execution=execution,
+        created_at=created_at,
+        outcome=outcome,
+        headline=readout.target_outcome.replace("_", " ").title(),
+        summary=service_desk_summary(arm_id, outcome),
     )
+
+
+def build_analyst_document(
+    *,
+    initial_state: CausalState,
+    result: ActiveRuntimeResult,
+    scenario: str,
+    profile: str,
+    arm_id: str,
+    execution: str,
+    created_at: str,
+    outcome: Mapping[str, object],
+    headline: str,
+    summary: str,
+) -> dict[str, object]:
+    """Build the common retained analyst surface proven across scenarios."""
+    final_state = result.core_result.final_state
+    snapshots = analyst_snapshots(initial_state, result.core_result.events)
     nodes = snapshots[str(final_state.revision)]
     edges = [
         {
@@ -55,7 +81,7 @@ def build_service_desk_analyst_document(
         "run_id": result.run_id,
         "created_at": created_at,
         "status": result.status,
-        "scenario": "service_desk",
+        "scenario": scenario,
         "profile": profile,
         "arm": arm_id,
         "execution": execution,
@@ -63,11 +89,11 @@ def build_service_desk_analyst_document(
         "cost": result.total_observed_cost,
         "cost_fully_observable": result.cost_fully_observable,
         "story": {
-            "headline": readout.target_outcome.replace("_", " ").title(),
-            "summary": service_desk_summary(arm_id, readout.model_dump(mode="json")),
+            "headline": headline,
+            "summary": summary,
             "steps": [event for event in timeline if event["kind"] == "action_attempted"],
         },
-        "outcome": readout.model_dump(mode="json"),
+        "outcome": dict(outcome),
         "nodes": nodes,
         "snapshots": snapshots,
         "edges": edges,
@@ -176,6 +202,9 @@ def analyst_timeline(result: ActiveRuntimeResult) -> list[dict[str, object]]:
             value = exact.get(field)
             if isinstance(value, str) and value in node_ids:
                 focus_ids.add(value)
+        for representation_id in exact.get("read_representation_ids", []):
+            if isinstance(representation_id, str) and representation_id in node_ids:
+                focus_ids.add(representation_id)
         connection_id = exact.get("connection_id")
         if isinstance(connection_id, str):
             focus_edges.add(connection_id)

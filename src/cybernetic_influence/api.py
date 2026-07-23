@@ -15,7 +15,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
 from cybernetic_influence import __version__
-from cybernetic_influence.presentation import build_service_desk_analyst_document
+from cybernetic_influence.presentation import (
+    build_analyst_document,
+    build_service_desk_analyst_document,
+)
 from cybernetic_influence.run_store import (
     InvalidRunIdError,
     RunCorruptError,
@@ -26,7 +29,6 @@ from cybernetic_influence.run_store import (
 from cybernetic_influence.scenarios.service_desk import (
     SERVICE_DESK_MODEL,
     SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
-    ServiceDeskArmId,
     ServiceDeskCognitionProfile,
     run_service_desk,
     service_desk_arm_configurations,
@@ -37,15 +39,25 @@ from cybernetic_influence.scenarios.service_desk import (
 from cybernetic_influence.scenarios.service_desk_fidelity import (
     build_service_desk_trial_readout,
 )
+from cybernetic_influence.scenarios.physical_access import (
+    build_physical_access_readout,
+    physical_access_arm_configurations,
+    physical_access_fixture,
+    physical_access_native_bindings,
+    physical_access_scripted_bindings,
+    physical_access_summary,
+    run_physical_access,
+)
 
 
 class RunRequest(BaseModel):
-    """One deliberately small service-desk run request."""
+    """One request from the closed PoC scenario catalog."""
 
     model_config = ConfigDict(extra="forbid")
 
+    scenario: Literal["service_desk", "physical_access"] = "service_desk"
     cognition_profile: ServiceDeskCognitionProfile = "position_context"
-    arm_id: ServiceDeskArmId = "baseline"
+    arm_id: str = "baseline"
     execution: Literal["scripted", "live"] = "scripted"
 
 
@@ -85,6 +97,30 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             "version": __version__,
             "build_commit": os.getenv("CYBERNETIC_INFLUENCE_BUILD_COMMIT", "development"),
             "scenario": "service_desk",
+            "scenarios": {
+                "service_desk": {
+                    "label": "Service desk",
+                    "profiles": ["position_context", "procedural_control"],
+                    "arms": [
+                        {
+                            "id": arm.arm_id,
+                            "label": arm.arm_id.replace("_", " "),
+                        }
+                        for arm in service_desk_arm_configurations()
+                    ],
+                },
+                "physical_access": {
+                    "label": "Physical access",
+                    "profiles": ["position_context"],
+                    "arms": [
+                        {
+                            "id": arm.arm_id,
+                            "label": arm.arm_id.replace("_", " "),
+                        }
+                        for arm in physical_access_arm_configurations()
+                    ],
+                },
+            },
             "profiles": ["position_context", "procedural_control"],
             "arms": [arm.arm_id for arm in service_desk_arm_configurations()],
             "model": SERVICE_DESK_MODEL,
@@ -128,16 +164,38 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
     @app.post("/api/runs")
     def run(request_body: RunRequest, request: Request) -> dict[str, object]:
         _require_access(request)
-        arm = next(
-            (
-                item
-                for item in service_desk_arm_configurations()
-                if item.arm_id == request_body.arm_id
-            ),
-            None,
-        )
-        if arm is None:
-            raise HTTPException(status_code=422, detail="unknown intervention arm")
+        service_arm = None
+        physical_arm = None
+        selected_profile: str = request_body.cognition_profile
+        if request_body.scenario == "service_desk":
+            service_arm = next(
+                (
+                    item
+                    for item in service_desk_arm_configurations()
+                    if item.arm_id == request_body.arm_id
+                ),
+                None,
+            )
+            if service_arm is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="unknown service-desk intervention arm",
+                )
+        else:
+            physical_arm = next(
+                (
+                    item
+                    for item in physical_access_arm_configurations()
+                    if item.arm_id == request_body.arm_id
+                ),
+                None,
+            )
+            if physical_arm is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="unknown physical-access intervention arm",
+                )
+            selected_profile = "position_context"
         live = request_body.execution == "live"
         if live and os.getenv("CYBERNETIC_INFLUENCE_LIVE") != "1":
             raise HTTPException(
@@ -157,8 +215,8 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             "run_id": run_id,
             "created_at": created_at,
             "status": "running",
-            "scenario": "service_desk",
-            "profile": request_body.cognition_profile,
+            "scenario": request_body.scenario,
+            "profile": selected_profile,
             "arm": request_body.arm_id,
             "execution": request_body.execution,
             "model_calls": 0,
@@ -166,27 +224,70 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
         }
         runs.save(initial)
         try:
-            fixture = service_desk_fixture(
-                arm,
-                cognition_profile=request_body.cognition_profile,
-                reasoning_effort=SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
-            )
-            bindings = (
-                service_desk_native_bindings(fixture, trace_id_prefix=run_id)
-                if live
-                else service_desk_scripted_bindings(fixture)
-            )
-            result = run_service_desk(fixture, bindings, run_id=run_id)
-            readout = build_service_desk_trial_readout(request_body.arm_id, 0, result)
-            document = build_service_desk_analyst_document(
-                fixture=fixture,
-                result=result,
-                readout=readout,
-                profile=request_body.cognition_profile,
-                arm_id=request_body.arm_id,
-                execution=request_body.execution,
-                created_at=created_at,
-            )
+            if service_arm is not None:
+                service_fixture = service_desk_fixture(
+                    service_arm,
+                    cognition_profile=request_body.cognition_profile,
+                    reasoning_effort=SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
+                )
+                service_bindings = (
+                    service_desk_native_bindings(
+                        service_fixture,
+                        trace_id_prefix=run_id,
+                    )
+                    if live
+                    else service_desk_scripted_bindings(service_fixture)
+                )
+                result = run_service_desk(
+                    service_fixture,
+                    service_bindings,
+                    run_id=run_id,
+                )
+                readout = build_service_desk_trial_readout(
+                    service_arm.arm_id,
+                    0,
+                    result,
+                )
+                document = build_service_desk_analyst_document(
+                    fixture=service_fixture,
+                    result=result,
+                    readout=readout,
+                    profile=request_body.cognition_profile,
+                    arm_id=service_arm.arm_id,
+                    execution=request_body.execution,
+                    created_at=created_at,
+                )
+            elif physical_arm is not None:
+                physical_fixture = physical_access_fixture(physical_arm)
+                physical_bindings = (
+                    physical_access_native_bindings(
+                        physical_fixture,
+                        trace_id_prefix=run_id,
+                    )
+                    if live
+                    else physical_access_scripted_bindings(physical_fixture)
+                )
+                result = run_physical_access(
+                    physical_fixture,
+                    physical_bindings,
+                    run_id=run_id,
+                )
+                physical_readout = build_physical_access_readout(result)
+                headline, summary = physical_access_summary(physical_readout)
+                document = build_analyst_document(
+                    initial_state=physical_fixture.scenario.initial_state,
+                    result=result,
+                    scenario="physical_access",
+                    profile=selected_profile,
+                    arm_id=physical_arm.arm_id,
+                    execution=request_body.execution,
+                    created_at=created_at,
+                    outcome=physical_readout.model_dump(mode="json"),
+                    headline=headline,
+                    summary=summary,
+                )
+            else:
+                raise RuntimeError("validated request has no scenario arm")
             return runs.save(document)
         except Exception as error:
             failed = {

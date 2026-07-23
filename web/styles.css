@@ -8,13 +8,15 @@ main { display:grid; gap:24px; max-width:1440px; margin:auto; padding:24px; }
 section { min-width:0; }
 .eyebrow { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; }
 .muted { color:var(--muted); }
-.run-card { display:grid; grid-template-columns:minmax(260px,1.2fr) repeat(2,minmax(190px,.8fr)) auto; align-items:end; gap:16px; padding:20px; border:1px solid #316698; border-radius:14px; background:linear-gradient(145deg,#152638,var(--surface)); }
+.run-card { display:grid; grid-template-columns:minmax(260px,1.2fr) repeat(3,minmax(170px,.8fr)); align-items:end; gap:16px; padding:20px; border:1px solid #316698; border-radius:14px; background:linear-gradient(145deg,#152638,var(--surface)); }
 label { display:grid; gap:6px; color:var(--muted); font-size:12px; }
 select,button { min-height:40px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:inherit; padding:8px 12px; }
 button { cursor:pointer; font-weight:750; }
 button:hover { border-color:var(--accent); }
 button:disabled { cursor:wait; opacity:.55; }
 .live { display:flex; align-items:center; gap:8px; min-height:40px; }
+.run-card > .live { grid-column:3; }
+.run-card > #run { grid-column:4; }
 .run-card details { grid-column:1/-1; color:var(--muted); }
 summary { cursor:pointer; font-weight:700; }
 .history-card { display:grid; grid-template-columns:auto 1fr; align-items:start; gap:10px 20px; padding:16px 20px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
@@ -73,4 +75,4 @@ pre { max-height:520px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywh
 .trace-step p { color:var(--muted); }
 .trace-step.event-match { border-color:#fff; background:#203b56; }
 .advanced { padding:18px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
-@media (max-width:900px) { .run-card,.workspace,.history-card { grid-template-columns:1fr; } .history-card > p { justify-self:start; } .graph { grid-template-columns:repeat(2,minmax(130px,1fr)); } .timeline-controls { grid-template-columns:auto 1fr auto; } #event-count { grid-column:1/-1; } header,main { padding:16px; } }
+@media (max-width:900px) { .run-card,.workspace,.history-card { grid-template-columns:1fr; } .run-card > .live,.run-card > #run { grid-column:auto; } .history-card > p { justify-self:start; } .graph { grid-template-columns:repeat(2,minmax(130px,1fr)); } .timeline-controls { grid-template-columns:auto 1fr auto; } #event-count { grid-column:1/-1; } header,main { padding:16px; } }

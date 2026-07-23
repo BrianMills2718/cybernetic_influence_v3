@@ -15,6 +15,7 @@ from cybernetic_influence.presentation import analyst_event, service_desk_summar
 ROOT = Path(__file__).resolve().parents[1]
 TRIAGER_CANARY = "triager_route_key_17"
 SUPERVISOR_CANARY = "supervisor_close_key_17"
+BADGE_CANARY = "equipment_badge_key_41"
 
 
 def test_mechanism_credentials_never_cross_analyst_boundary(tmp_path: Path) -> None:
@@ -44,6 +45,34 @@ def test_mechanism_credentials_never_cross_analyst_boundary(tmp_path: Path) -> N
         if action["representation_id"] == "triager_routing_credential"
     )
     assert protected_action["payload"] == "[redacted]"
+
+
+def test_physical_badge_never_crosses_analyst_boundary(tmp_path: Path) -> None:
+    body = TestClient(create_app(ROOT / "web", tmp_path)).post(
+        "/api/runs",
+        json={
+            "scenario": "physical_access",
+            "arm_id": "authorized_access",
+            "execution": "scripted",
+        },
+    ).json()
+    encoded = json.dumps(body)
+    assert BADGE_CANARY not in encoded
+    badge = next(node for node in body["nodes"] if node["id"] == "technician_badge")
+    assert badge["state"] == {
+        "representation_id": "technician_badge",
+        "encoding": "application/vnd.cybernetic.badge-presentation+json",
+        "visibility": "mechanism",
+        "redacted": True,
+    }
+    policy_event = next(
+        event
+        for event in body["timeline"]
+        if event["kind"] == "mechanism_executed"
+        and event["focus_ids"]
+        and "access_policy_copy" in event["focus_ids"]
+    )
+    assert policy_event["state_revision"] >= 1
 
 
 def test_selected_revision_contains_no_future_world_state(tmp_path: Path) -> None:

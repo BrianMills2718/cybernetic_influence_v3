@@ -94,6 +94,7 @@ class MechanismContext:
         *,
         mechanism: MechanismSpec,
         allowed_facts: Mapping[str, FactState],
+        allowed_representations: Mapping[str, RepresentationToken],
         effect: EffectEnvelope,
         target_port: PortState,
         representation: RepresentationToken | None,
@@ -112,6 +113,10 @@ class MechanismContext:
             fact_id: fact.model_copy(deep=True)
             for fact_id, fact in allowed_facts.items()
         }
+        self._allowed_representations = {
+            representation_id: representation.model_copy(deep=True)
+            for representation_id, representation in allowed_representations.items()
+        }
 
     def read(self, fact_id: str) -> JsonValue:
         """Return one declared fact or reject the undeclared read."""
@@ -123,11 +128,22 @@ class MechanismContext:
             )
         return deepcopy(fact.value)
 
+    def read_representation(self, representation_id: str) -> RepresentationToken:
+        """Return one declared stored representation or reject a global read."""
+        representation = self._allowed_representations.get(representation_id)
+        if representation is None:
+            raise StateAccessViolation(
+                f"mechanism {self.mechanism.mechanism_id!r} attempted "
+                f"undeclared representation read of {representation_id!r}"
+            )
+        return representation.model_copy(deep=True)
+
     def defensive_copy(self) -> "MechanismContext":
         """Return fresh checker input isolated from handler/checker mutation."""
         return MechanismContext(
             mechanism=self.mechanism,
             allowed_facts=self._allowed_facts,
+            allowed_representations=self._allowed_representations,
             effect=self.effect,
             target_port=self.target_port,
             representation=self.representation,
@@ -650,6 +666,10 @@ class CausalSession:
                 fact_id: self._state.fact(fact_id)
                 for fact_id in mechanism.read_fact_ids
             },
+            allowed_representations={
+                representation_id: self._state.representations[representation_id]
+                for representation_id in mechanism.read_representation_ids
+            },
             effect=effect,
             target_port=target_port,
             representation=(
@@ -670,6 +690,10 @@ class CausalSession:
             allowed_facts={
                 fact_id: self._state.fact(fact_id)
                 for fact_id in mechanism.read_fact_ids
+            },
+            allowed_representations={
+                representation_id: self._state.representations[representation_id]
+                for representation_id in mechanism.read_representation_ids
             },
             effect=effect,
             target_port=target_port,
@@ -699,6 +723,7 @@ class CausalSession:
             target_port_id=target_port.port_id,
             representation_id=effect.representation_id,
             read_fact_ids=list(mechanism.read_fact_ids),
+            read_representation_ids=list(mechanism.read_representation_ids),
             invariants=invariants,
         )
         patch, new_state = self._build_patch(
