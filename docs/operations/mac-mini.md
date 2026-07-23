@@ -14,8 +14,16 @@ The service binds only to `127.0.0.1:8620`. Tailscale Serve adds the
 tailnet-only HTTPS listener. Do not use Funnel for this port, and do not reset
 the machine's Serve configuration because its other listeners are unrelated.
 
-Live execution is intentionally disabled. The host does not yet have the
-shared `llm_client` or an approved provider-secret injection path.
+Live execution uses the shared `llm_client` checkout at
+`/Users/b/code/llm_client`. The LaunchAgent starts through
+`deploy/run-with-keychain.sh`, which reads the OpenRouter credential from the
+login Keychain service `cybernetic-influence-v3-openrouter`. The credential is
+not stored in the repository or LaunchAgent plist.
+
+The advertised service-desk live path uses `gpt-5.6-terra` through OpenRouter
+at medium reasoning. Runtime contracts cap each call at $0.05 and the complete
+nine-activation run at $0.50; the UI presents the tighter nine-call estimate of
+$0.45. Only one live run may execute at a time.
 
 ## Inspect
 
@@ -54,9 +62,25 @@ npm --prefix frontend run build
 .venv/bin/python -m pytest -q
 ```
 
-Render the LaunchAgent template with the new commit in
-`__BUILD_COMMIT__` and the approved Tailscale login in
-`__ALLOWED_TAILSCALE_USERS__`, validate it with `plutil -lint`, then use:
+Install the accepted `llm_client` revision into the simulator environment:
+
+```bash
+.venv/bin/python -m pip install -e /Users/b/code/llm_client
+```
+
+Provision or replace the provider credential through the Keychain prompt:
+
+```bash
+security add-generic-password -U \
+  -a "$(id -un)" \
+  -s cybernetic-influence-v3-openrouter \
+  -w
+```
+
+Render the LaunchAgent template with the new commit in `__BUILD_COMMIT__`, the
+approved Tailscale login in `__ALLOWED_TAILSCALE_USERS__`, and
+`/Users/b/Library/Application Support/LLMClient` in
+`__LLM_CLIENT_DATA_ROOT__`. Validate it with `plutil -lint`, then use:
 
 ```bash
 launchctl bootout "gui/$(id -u)/com.cybernetic-influence.v3"
@@ -66,4 +90,7 @@ launchctl bootstrap "gui/$(id -u)" \
 ```
 
 Reopen an existing retained run after restart before considering the update
-complete. Delete the transferred bundle after the update; it is only transport.
+complete. Before advertising live execution, make one bounded provider-backed
+run, verify its retained model-call evidence and cost, and confirm that the
+missing-credential and unauthorized-live controls fail closed. Delete
+transferred bundles after the update; they are only transport.

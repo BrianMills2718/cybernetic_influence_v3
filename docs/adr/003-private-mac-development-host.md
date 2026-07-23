@@ -21,9 +21,11 @@ outside the checkout. Add one new tailnet-only Tailscale Serve listener on port
 8620 without modifying existing Serve or Funnel listeners.
 
 Start with zero-cost scripted execution. Do not place provider keys in a plist,
-shell profile, repository, or copied dotenv file. Live execution remains
-disabled until the shared `llm_client` and a host-native secret injection path
-are separately verified.
+shell profile, repository, or copied dotenv file. Live execution may be enabled
+only after the shared `llm_client` and a host-native secret injection path are
+separately verified. The accepted implementation uses the macOS login Keychain
+and a repository-owned launcher that exports the credential only into the
+service process.
 
 ## Consequences
 

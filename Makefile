@@ -4,7 +4,7 @@ LLM_CLIENT_ROOT ?= ../active/llm_client
 HOST ?= 127.0.0.1
 PORT ?= 8620
 
-.PHONY: install ui-install ui-build test typecheck check serve
+.PHONY: install ui-install ui-build test typecheck deploy-check check serve
 
 install: ui-install
 	python3 -m venv $(VENV) || virtualenv --clear $(VENV)
@@ -28,7 +28,10 @@ test:
 typecheck:
 	$(PYTHON) -m mypy
 
-check: typecheck test ui-build
+deploy-check:
+	bash -n deploy/run-with-keychain.sh
+
+check: typecheck test ui-build deploy-check
 
 serve:
 	$(PYTHON) -m uvicorn cybernetic_influence.api:app --host $(HOST) --port $(PORT)
