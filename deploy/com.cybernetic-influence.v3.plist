@@ -6,7 +6,7 @@
   <string>com.cybernetic-influence.v3</string>
   <key>ProgramArguments</key>
   <array>
-    <string>__PROJECT_ROOT__/deploy/run-with-keychain.sh</string>
+    <string>__PROJECT_ROOT__/deploy/run-with-provider-secret.sh</string>
     <string>__PROJECT_ROOT__/.venv/bin/python</string>
     <string>-m</string>
     <string>uvicorn</string>
@@ -26,6 +26,8 @@
     <string>__BUILD_COMMIT__</string>
     <key>CYBERNETIC_INFLUENCE_LIVE</key>
     <string>1</string>
+    <key>CYBERNETIC_INFLUENCE_OPENROUTER_KEY_FILE</key>
+    <string>__OPENROUTER_KEY_FILE__</string>
     <key>CYBERNETIC_INFLUENCE_RUNS_DIR</key>
     <string>__RUN_ROOT__</string>
     <key>LLM_CLIENT_DATA_ROOT</key>

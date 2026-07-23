@@ -29,7 +29,7 @@ typecheck:
 	$(PYTHON) -m mypy
 
 deploy-check:
-	bash -n deploy/run-with-keychain.sh
+	bash -n deploy/run-with-provider-secret.sh
 
 check: typecheck test ui-build deploy-check
 

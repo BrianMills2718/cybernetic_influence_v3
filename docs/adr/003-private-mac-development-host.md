@@ -24,8 +24,9 @@ Start with zero-cost scripted execution. Do not place provider keys in a plist,
 shell profile, repository, or copied dotenv file. Live execution may be enabled
 only after the shared `llm_client` and a host-native secret injection path are
 separately verified. The accepted implementation uses the macOS login Keychain
-and a repository-owned launcher that exports the credential only into the
-service process.
+where available, with an owner-only `0600` raw secret file when the Keychain is
+locked to background services. A repository-owned launcher validates and
+exports the credential only into the service process.
 
 ## Consequences
 

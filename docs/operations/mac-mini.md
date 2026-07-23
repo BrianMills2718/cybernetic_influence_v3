@@ -16,9 +16,10 @@ the machine's Serve configuration because its other listeners are unrelated.
 
 Live execution uses the shared `llm_client` checkout at
 `/Users/b/code/llm_client`. The LaunchAgent starts through
-`deploy/run-with-keychain.sh`, which reads the OpenRouter credential from the
-login Keychain service `cybernetic-influence-v3-openrouter`. The credential is
-not stored in the repository or LaunchAgent plist.
+`deploy/run-with-provider-secret.sh`, which first checks the login Keychain
+service `cybernetic-influence-v3-openrouter`, then an owner-only raw secret file
+when the Keychain is locked to noninteractive services. The credential is not
+stored in the repository or LaunchAgent plist.
 
 The advertised service-desk live path uses `gpt-5.6-terra` through OpenRouter
 at medium reasoning. Runtime contracts cap each call at $0.05 and the complete
@@ -77,10 +78,17 @@ security add-generic-password -U \
   -w
 ```
 
+If the login Keychain cannot be unlocked for a background service, place only
+the raw key in
+`/Users/b/Library/Application Support/CyberneticInfluenceV3/openrouter.key`,
+owned by `b` with mode `0600`. The launcher refuses other owners or modes.
+
 Render the LaunchAgent template with the new commit in `__BUILD_COMMIT__`, the
 approved Tailscale login in `__ALLOWED_TAILSCALE_USERS__`, and
 `/Users/b/Library/Application Support/LLMClient` in
-`__LLM_CLIENT_DATA_ROOT__`. Validate it with `plutil -lint`, then use:
+`__LLM_CLIENT_DATA_ROOT__`. Set `__OPENROUTER_KEY_FILE__` to the protected file
+path even when Keychain is preferred; it is the fail-closed fallback. Validate
+the result with `plutil -lint`, then use:
 
 ```bash
 launchctl bootout "gui/$(id -u)/com.cybernetic-influence.v3"
