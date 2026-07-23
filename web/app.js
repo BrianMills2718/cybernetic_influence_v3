@@ -124,7 +124,10 @@ function graphProjection() {
   if (selectedScale === 'exact') {
     return {
       nodes: exactNodes,
-      edges: current.edges.map((edge) => ({...edge, routeIds:[edge.id]})),
+      edges: current.edges.map((edge) => ({
+        ...edge,
+        routeIds:edge.exact_route_ids || [edge.id],
+      })),
     }
   }
   const boundary = selectedBoundary()
@@ -148,10 +151,11 @@ function graphProjection() {
     const source = memberIds.has(edge.source) ? boundary.id : edge.source
     const target = memberIds.has(edge.target) ? boundary.id : edge.target
     if (source === target) return
-    const key = `${source}|${target}|${edge.enabled}`
+    const key = `${edge.kind}|${source}|${target}|${edge.enabled}`
     if (!grouped.has(key)) {
       grouped.set(key, {
         id:`coarse_${grouped.size}`,
+        kind:edge.kind,
         source,
         target,
         enabled:edge.enabled,
@@ -159,8 +163,9 @@ function graphProjection() {
         routeIds:[],
       })
     }
-    grouped.get(key).routeIds.push(edge.id)
+    grouped.get(key).routeIds.push(...(edge.exact_route_ids || [edge.id]))
   })
+  grouped.forEach((edge) => { edge.routeIds = [...new Set(edge.routeIds)] })
   return {
     nodes:[...exactNodes.filter((node) => !memberIds.has(node.id)), aggregateNode],
     edges:[...grouped.values()],
@@ -315,16 +320,32 @@ function drawGraphLines(edges) {
   })
 }
 
+function flowOrderedNodes(nodes) {
+  const firstFocus = new Map()
+  current.timeline.forEach((event, index) => {
+    event.focus_ids.forEach((nodeId) => {
+      if (!firstFocus.has(nodeId)) firstFocus.set(nodeId, index)
+    })
+  })
+  return nodes.map((node, index) => ({node, index})).sort((left, right) => {
+    const leftEvent = firstFocus.get(left.node.id) ?? Number.MAX_SAFE_INTEGER
+    const rightEvent = firstFocus.get(right.node.id) ?? Number.MAX_SAFE_INTEGER
+    return leftEvent - rightEvent || left.index - right.index
+  }).map((item) => item.node)
+}
+
 function renderGraph() {
   const projection = graphProjection()
   $('#routes').innerHTML = projection.edges.map((edge) => `
     <span class="route ${edge.enabled ? '' : 'disabled'}" data-route-ids="${html(edge.routeIds.join(' '))}">
       <strong>${html(edge.source.replaceAll('_',' '))}</strong> → ${html(edge.target.replaceAll('_',' '))}
-      ${edge.routeIds.length > 1 ? `<small>${edge.routeIds.length} exact routes</small>` : ''}
+      ${edge.kind === 'mechanism_binding'
+        ? '<small>declared input binding</small>'
+        : edge.routeIds.length > 1 ? `<small>${edge.routeIds.length} exact routes</small>` : ''}
     </span>`).join('') || '<span class="muted">No external route is visible at this scale.</span>'
   const graph = $('#graph')
   graph.innerHTML = '<svg class="graph-lines" aria-hidden="true"></svg>'
-  projection.nodes.forEach((node) => {
+  flowOrderedNodes(projection.nodes).forEach((node) => {
     const button = document.createElement('button')
     button.className = 'node'
     button.dataset.kind = node.kind

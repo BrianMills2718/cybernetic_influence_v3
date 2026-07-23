@@ -57,6 +57,7 @@ summary { cursor:pointer; font-weight:700; }
 .routes { display:flex; gap:8px; overflow-x:auto; margin:12px 0; padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
 .route { flex:0 0 auto; padding:7px 10px; border-radius:999px; background:var(--surface2); color:var(--muted); font-size:11px; }
 .route strong { color:#dbe8f6; }
+.route small { margin-left:5px; color:#73859a; }
 .route.disabled { opacity:.4; text-decoration:line-through; }
 .route.event-focus { outline:2px solid #fff; background:#294968; opacity:1; }
 .graph { position:relative; isolation:isolate; display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); align-content:start; gap:28px 36px; padding:24px; border:1px solid var(--border); border-radius:14px; background:var(--surface); overflow:auto; }

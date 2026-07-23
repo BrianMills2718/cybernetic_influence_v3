@@ -91,7 +91,17 @@ def test_analytical_boundary_is_temporal_reversible_and_evidence_linked(
     assert boundary["executor"] is False
     assert boundary["kind"] == "analytical_boundary"
 
-    exact_edge_ids = {edge["id"] for edge in body["edges"]}
+    exact_edge_ids = {
+        edge["id"] for edge in body["edges"] if edge["kind"] == "connection"
+    }
+    binding_edges = [
+        edge for edge in body["edges"] if edge["kind"] == "mechanism_binding"
+    ]
+    assert binding_edges
+    assert all(edge["target"].startswith("exact_") for edge in binding_edges)
+    assert all(
+        set(edge["exact_route_ids"]) <= exact_edge_ids for edge in binding_edges
+    )
     for revision, aggregate in boundary["snapshots"].items():
         exact_node_ids = {
             node["id"] for node in body["snapshots"][revision]

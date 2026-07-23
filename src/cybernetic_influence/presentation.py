@@ -72,16 +72,7 @@ def build_analyst_document(
         for revision, state in temporal_states.items()
     }
     nodes = snapshots[str(final_state.revision)]
-    edges = [
-        {
-            "id": connection.connection_id,
-            "source": final_state.ports[connection.source_port_id].owner_ref,
-            "target": final_state.ports[connection.target_port_id].owner_ref,
-            "enabled": connection.enabled,
-            "description": connection.description,
-        }
-        for connection in final_state.connections.values()
-    ]
+    edges = analyst_edges(final_state)
     timeline = analyst_timeline(result)
     boundaries = analyst_boundaries(
         analytical_boundaries,
@@ -185,6 +176,8 @@ def analyst_boundaries(
             inbound_routes: list[str] = []
             outbound_routes: list[str] = []
             for edge in edges:
+                if edge.get("kind") != "connection":
+                    continue
                 edge_id = str(edge["id"])
                 source_inside = str(edge["source"]) in member_refs
                 target_inside = str(edge["target"]) in member_refs
@@ -264,6 +257,47 @@ def _boundary_member_refs(
         ):
             member_refs.add(representation.representation_id)
     return member_refs
+
+
+def analyst_edges(state: CausalState) -> list[dict[str, object]]:
+    """Project concrete connections plus their declared mechanism bindings."""
+    edges: list[dict[str, object]] = []
+    routes_by_target_port: dict[str, list[str]] = {}
+    for connection in state.connections.values():
+        routes_by_target_port.setdefault(connection.target_port_id, []).append(
+            connection.connection_id
+        )
+        edges.append(
+            {
+                "id": connection.connection_id,
+                "kind": "connection",
+                "source": state.ports[connection.source_port_id].owner_ref,
+                "target": state.ports[connection.target_port_id].owner_ref,
+                "enabled": connection.enabled,
+                "exact_route_ids": [connection.connection_id],
+                "description": connection.description,
+            }
+        )
+    for mechanism in state.mechanisms.values():
+        for port_id in mechanism.input_port_ids:
+            owner_ref = state.ports[port_id].owner_ref
+            if owner_ref == mechanism.mechanism_id:
+                continue
+            edges.append(
+                {
+                    "id": f"binding_{port_id}",
+                    "kind": "mechanism_binding",
+                    "source": owner_ref,
+                    "target": mechanism.mechanism_id,
+                    "enabled": True,
+                    "exact_route_ids": sorted(routes_by_target_port.get(port_id, [])),
+                    "description": (
+                        f"Declared input {port_id} binds {owner_ref} to exact "
+                        f"mechanism {mechanism.mechanism_id}."
+                    ),
+                }
+            )
+    return edges
 
 
 def analyst_nodes(state: CausalState) -> list[dict[str, object]]:
