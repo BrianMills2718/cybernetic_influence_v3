@@ -1,6 +1,6 @@
 # Slice 9: Event-Driven Causal Moments
 
-**Status: In progress — 2026-07-23.**
+**Status: Complete — 2026-07-23.**
 
 ## Outcome
 
@@ -41,3 +41,30 @@ event and participant activation.
 Do not add universal clocks, random activations, background thoughts, continuous
 physics, new provider abstractions, or a general conflict-resolution language.
 Do not rewrite the historical fixed-schedule fidelity report in this slice.
+
+## Completed Evidence
+
+- Local and Mac-host gates passed mypy, 36 tests, the production React Flow
+  build, and deployment script syntax.
+- Scripted baseline, missing-direct-path, and speed-pressure runs quiesced after
+  5, 7, and 5 causal moments respectively; the baseline and speed-pressure
+  runs each grouped supervisor and triager in one frozen activation set.
+- The missing path delayed remediation from moment 1 to moment 3, while speed
+  pressure retained one exact denial before confirmed closure.
+- Live run `run_11a699e00d2e` completed with five moments, six agent calls, five
+  narrator calls, and fully observed cost of $0.058196875.
+- Full `llm_client` trace inspection confirmed that the simultaneous supervisor
+  and triager calls received different delivered observations at the same
+  logical time without either seeing the other's proposal. The third narrator
+  call received both participant traces plus the two prior narratives and cited
+  only current-moment events.
+- The focused forged-citation test rejects narration that cites outside its
+  moment.
+- Deployed Chrome showed five primary timeline markers, a combined
+  `supervisor + triager` third moment with ten selectable exact events, a
+  selectable final silent moment, no console errors, and no page-level overflow
+  at 1440 px or 390 px.
+
+These checks establish technical execution. Whether causal moments and their
+narratives are sufficiently intuitive remains an operator comprehension
+judgment rather than an automated claim.
