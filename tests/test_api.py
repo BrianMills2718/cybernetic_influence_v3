@@ -231,7 +231,37 @@ def test_physical_world_topology_is_temporal_and_non_normative(
         "/api/runs",
         json={"scenario": "service_desk", "execution": "scripted"},
     ).json()
-    assert service["world"] is None
+    service_world = service["world"]
+    assert {place["id"] for place in service_world["places"]} == {
+        "service_operations_center",
+        "intake_area",
+        "resolution_area",
+        "supervision_area",
+        "customer_site",
+    }
+    service_placements = {
+        item["entity_id"]: item["place_id"]
+        for item in service_world["snapshots"]["0"]["placements"]
+    }
+    assert service_placements == {
+        "customer": "customer_site",
+        "triager": "intake_area",
+        "specialist": "resolution_area",
+        "supervisor": "supervision_area",
+    }
+    assert {link["id"] for link in service_world["links"]} == {
+        "intake_resolution_aisle",
+        "resolution_supervision_aisle",
+    }
+    assert all(
+        link["does_not_imply_traversability"]
+        for link in service_world["links"]
+    )
+    assert all(not event["spatial_link_ids"] for event in service["timeline"])
+    assert any(
+        {"triager", "intake_area"} <= set(event["spatial_focus_ids"])
+        for event in service["timeline"]
+    )
 
 
 def test_live_run_requires_explicit_authorization(tmp_path: Path) -> None:

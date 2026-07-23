@@ -42,9 +42,12 @@ from cybernetic_influence.causal_core.models import (
     MechanismOutcome,
     MechanismSpec,
     ObservationDraft,
+    PlacementState,
+    PlaceState,
     PortState,
     RepresentationDraft,
     RepresentationToken,
+    SpatialLinkState,
     representation_digest,
 )
 
@@ -375,6 +378,9 @@ def service_desk_fixture(
     )
     state = CausalState(
         entities=_entities(selected),
+        places=_places(),
+        placements=_placements(),
+        spatial_links=_spatial_links(),
         ports=_ports(),
         connections=_connections(selected),
         mechanisms=_mechanisms(),
@@ -450,7 +456,9 @@ def service_desk_fixture(
     scenario = CausalScenario(
         scenario_id=f"service_desk_{selected.arm_id}",
         description=(
-            "Nine sequential role activations resolving one concrete login incident."
+            "Nine sequential position activations resolving one concrete login "
+            "incident across an authored service-operations center and remote "
+            "customer site."
         ),
         initial_state=state,
         analytical_boundaries=[
@@ -469,6 +477,7 @@ def service_desk_fixture(
             "Did exact mechanisms separate policy, authentication, authorization, and outcome?",
             "Did the intervention alter only its declared route or incentive state?",
             "Did the service-desk boundary remain execution inert?",
+            "Did descriptive spatial topology remain separate from communication, permission, and mechanism authority?",
         ],
     )
     return ServiceDeskFixture(
@@ -674,6 +683,88 @@ def _entities(arm: ServiceDeskArmConfiguration) -> dict[str, EntityState]:
                 "confirmed_closures": FactState(value=0),
                 "speed_attempts_before_confirmation": FactState(value=0),
             },
+        ),
+    }
+
+
+def _places() -> dict[str, PlaceState]:
+    """Author the physical setting without turning it into communication logic."""
+    return {
+        "service_operations_center": PlaceState(
+            place_id="service_operations_center",
+            place_kind="facility",
+            description="Shared facility containing the modeled service work areas.",
+        ),
+        "intake_area": PlaceState(
+            place_id="intake_area",
+            place_kind="work_area",
+            description="Work area occupied by the triager.",
+            parent_place_id="service_operations_center",
+        ),
+        "resolution_area": PlaceState(
+            place_id="resolution_area",
+            place_kind="work_area",
+            description="Work area occupied by the technical specialist.",
+            parent_place_id="service_operations_center",
+        ),
+        "supervision_area": PlaceState(
+            place_id="supervision_area",
+            place_kind="work_area",
+            description="Work area occupied by the supervisor.",
+            parent_place_id="service_operations_center",
+        ),
+        "customer_site": PlaceState(
+            place_id="customer_site",
+            place_kind="external_site",
+            description="External location occupied by the reporting customer.",
+        ),
+    }
+
+
+def _placements() -> dict[str, PlacementState]:
+    """Place concrete people; logical services remain explicitly unplaced."""
+    return {
+        "customer": PlacementState(
+            entity_id="customer",
+            place_id="customer_site",
+        ),
+        "triager": PlacementState(
+            entity_id="triager",
+            place_id="intake_area",
+        ),
+        "specialist": PlacementState(
+            entity_id="specialist",
+            place_id="resolution_area",
+        ),
+        "supervisor": PlacementState(
+            entity_id="supervisor",
+            place_id="supervision_area",
+        ),
+    }
+
+
+def _spatial_links() -> dict[str, SpatialLinkState]:
+    """Describe physical adjacency only; links grant no access or delivery."""
+    return {
+        "intake_resolution_aisle": SpatialLinkState(
+            spatial_link_id="intake_resolution_aisle",
+            endpoint_a_place_id="intake_area",
+            endpoint_b_place_id="resolution_area",
+            link_kind="interior_walkway",
+            description=(
+                "Physical adjacency between intake and resolution work areas; "
+                "it does not carry information or grant authority."
+            ),
+        ),
+        "resolution_supervision_aisle": SpatialLinkState(
+            spatial_link_id="resolution_supervision_aisle",
+            endpoint_a_place_id="resolution_area",
+            endpoint_b_place_id="supervision_area",
+            link_kind="interior_walkway",
+            description=(
+                "Physical adjacency between resolution and supervision work "
+                "areas; it does not carry information or grant authority."
+            ),
         ),
     }
 

@@ -466,34 +466,6 @@ function buildWorldGraph(options: CanvasOptions): {
       })
   })
 
-  const linkSubstrates = new Set(
-    world.links.flatMap((link) => link.substrateEntityIds ?? []),
-  )
-  const unplaced = world.unplacedEntityIds.filter(
-    (entityId) => !linkSubstrates.has(entityId) && currentNodes.has(entityId),
-  )
-  unplaced.forEach((entityId, index) => {
-    const raw = currentNodes.get(entityId)
-    if (!raw) return
-    const node = toCanvasNode(
-      raw,
-      eventFocus.has(entityId),
-      options.selectedNodeId === entityId,
-    )
-    nodes.push({
-      ...node,
-      position: {
-        x: rootOffset + 30,
-        y: 110 + index * (WORLD_NODE_HEIGHT + 30),
-      },
-      style: {
-        ...node.style,
-        width: WORLD_NODE_WIDTH,
-        height: WORLD_NODE_HEIGHT,
-      },
-    })
-  })
-
   return {
     nodes,
     edges: world.links.map((link) => toCanvasEdge(
@@ -634,6 +606,9 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
               : collapsed ? 'Collapsed composite' : 'Expanded exact network'}
           </strong>
           {' · '}revision {options.event?.state_revision ?? 'final'}
+          {worldMode && options.world?.unplacedEntityIds.length
+            ? ` · ${options.world.unplacedEntityIds.length} logical entities have no authored physical placement`
+            : ''}
         </span>
         <div className="cy-graph-actions">
           {options.world && (

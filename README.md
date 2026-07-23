@@ -13,7 +13,8 @@ programs.
 The simulator currently includes:
 
 - a service-desk scenario with normal, missing-channel, and speed-pressure
-  conditions;
+  conditions, plus an explicit operations-center/customer-site geography that
+  remains separate from digital communication and authority;
 - a physical-access scenario that keeps credential proof, policy
   authorization, latch operability, crossing, and sensor feedback distinct;
 - authoritative topological places, entity placements, and concrete spatial
@@ -22,7 +23,7 @@ The simulator currently includes:
 - an explicit procedural control profile;
 - zero-cost scripted reference runs;
 - live LLM runs behind `CYBERNETIC_INFLUENCE_LIVE=1`;
-- human narrative synchronized to an exact causal timeline;
+- sequential live-LLM turn narratives grounded in exact causal event IDs;
 - a pannable, zoomable, selectable causal graph of people, information, world
   objects, mechanisms, and concrete declared routes;
 - a synchronized world-topology graph with place containers, event-time
