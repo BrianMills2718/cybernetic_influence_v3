@@ -7,6 +7,7 @@ from copy import deepcopy
 
 from cybernetic_influence.active_runtime import ActiveRuntimeResult
 from cybernetic_influence.causal_core.models import (
+    AnalyticalBoundary,
     CausalEvent,
     CausalState,
     RepresentationToken,
@@ -36,6 +37,7 @@ def build_service_desk_analyst_document(
     outcome = readout.model_dump(mode="json")
     return build_analyst_document(
         initial_state=fixture.scenario.initial_state,
+        analytical_boundaries=fixture.scenario.analytical_boundaries,
         result=result,
         scenario="service_desk",
         profile=profile,
@@ -51,6 +53,7 @@ def build_service_desk_analyst_document(
 def build_analyst_document(
     *,
     initial_state: CausalState,
+    analytical_boundaries: Sequence[AnalyticalBoundary],
     result: ActiveRuntimeResult,
     scenario: str,
     profile: str,
@@ -63,7 +66,11 @@ def build_analyst_document(
 ) -> dict[str, object]:
     """Build the common retained analyst surface proven across scenarios."""
     final_state = result.core_result.final_state
-    snapshots = analyst_snapshots(initial_state, result.core_result.events)
+    temporal_states = _temporal_states(initial_state, result.core_result.events)
+    snapshots = {
+        revision: analyst_nodes(state)
+        for revision, state in temporal_states.items()
+    }
     nodes = snapshots[str(final_state.revision)]
     edges = [
         {
@@ -76,6 +83,12 @@ def build_analyst_document(
         for connection in final_state.connections.values()
     ]
     timeline = analyst_timeline(result)
+    boundaries = analyst_boundaries(
+        analytical_boundaries,
+        temporal_states,
+        edges,
+        timeline,
+    )
     traces = analyst_traces(result)
     return {
         "run_id": result.run_id,
@@ -97,6 +110,7 @@ def build_analyst_document(
         "nodes": nodes,
         "snapshots": snapshots,
         "edges": edges,
+        "boundaries": boundaries,
         "timeline": timeline,
         "events": [analyst_event(event) for event in result.core_result.events],
         "traces": traces,
@@ -108,18 +122,148 @@ def analyst_snapshots(
     events: Sequence[CausalEvent],
 ) -> dict[str, list[dict[str, object]]]:
     """Reconstruct and project one canonical state for every observed revision."""
-    snapshots: dict[str, list[dict[str, object]]] = {
-        str(initial_state.revision): analyst_nodes(initial_state)
+    return {
+        revision: analyst_nodes(state)
+        for revision, state in _temporal_states(initial_state, events).items()
+    }
+
+
+def _temporal_states(
+    initial_state: CausalState,
+    events: Sequence[CausalEvent],
+) -> dict[str, CausalState]:
+    """Reconstruct one canonical state for every observed revision."""
+    states: dict[str, CausalState] = {
+        str(initial_state.revision): initial_state.model_copy(deep=True)
     }
     prefix: list[CausalEvent] = []
     for event in events:
         prefix.append(event)
         revision = str(event.state_revision)
-        if revision not in snapshots:
-            snapshots[revision] = analyst_nodes(
-                replay_event_prefix(initial_state, prefix)
-            )
-    return snapshots
+        if revision not in states:
+            states[revision] = replay_event_prefix(initial_state, prefix)
+    return states
+
+
+def analyst_boundaries(
+    boundaries: Sequence[AnalyticalBoundary],
+    temporal_states: Mapping[str, CausalState],
+    edges: Sequence[Mapping[str, object]],
+    timeline: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Derive reversible aggregate evidence without creating runtime state."""
+    projected: list[dict[str, object]] = []
+    members_by_boundary_revision: dict[tuple[str, str], set[str]] = {}
+
+    for boundary in boundaries:
+        snapshots: dict[str, dict[str, object]] = {}
+        for revision, state in temporal_states.items():
+            member_refs = _boundary_member_refs(boundary, state)
+            members_by_boundary_revision[
+                (boundary.boundary_id, revision)
+            ] = member_refs
+            visible_nodes = [
+                node
+                for node in analyst_nodes(state)
+                if str(node["id"]) in member_refs
+            ]
+            visible_ids = {str(node["id"]) for node in visible_nodes}
+            member_kind_counts: dict[str, int] = {}
+            hidden_fact_count = 0
+            hidden_information_count = 0
+            for node in visible_nodes:
+                kind = str(node["kind"])
+                member_kind_counts[kind] = member_kind_counts.get(kind, 0) + 1
+                if kind == "information":
+                    hidden_information_count += 1
+                elif kind != "mechanism":
+                    state_values = node.get("state")
+                    if isinstance(state_values, dict):
+                        hidden_fact_count += len(state_values)
+
+            internal_routes: list[str] = []
+            inbound_routes: list[str] = []
+            outbound_routes: list[str] = []
+            for edge in edges:
+                edge_id = str(edge["id"])
+                source_inside = str(edge["source"]) in member_refs
+                target_inside = str(edge["target"]) in member_refs
+                if source_inside and target_inside:
+                    internal_routes.append(edge_id)
+                elif source_inside:
+                    outbound_routes.append(edge_id)
+                elif target_inside:
+                    inbound_routes.append(edge_id)
+
+            snapshots[revision] = {
+                "state_revision": int(revision),
+                "member_ids": sorted(visible_ids),
+                "member_kind_counts": dict(sorted(member_kind_counts.items())),
+                "authored_member_count": len(boundary.member_refs),
+                "derived_member_count": len(member_refs),
+                "selectable_member_count": len(visible_ids),
+                "nonselectable_member_count": len(member_refs - visible_ids),
+                "hidden_fact_count": hidden_fact_count,
+                "hidden_information_count": hidden_information_count,
+                "internal_route_ids": sorted(internal_routes),
+                "inbound_route_ids": sorted(inbound_routes),
+                "outbound_route_ids": sorted(outbound_routes),
+            }
+
+        projected.append(
+            {
+                "id": boundary.boundary_id,
+                "kind": "analytical_boundary",
+                "label": boundary.label,
+                "description": boundary.description,
+                "executor": boundary.executor,
+                "authored_member_ids": list(boundary.member_refs),
+                "snapshots": snapshots,
+                "trace_event_ids": [],
+            }
+        )
+
+    trace_ids: dict[str, list[str]] = {
+        str(projected_boundary["id"]): []
+        for projected_boundary in projected
+    }
+    for event in timeline:
+        revision = str(event["state_revision"])
+        raw_focus_ids = event.get("focus_ids")
+        focus_ids = (
+            {str(item) for item in raw_focus_ids}
+            if isinstance(raw_focus_ids, list)
+            else set()
+        )
+        boundary_ids: list[str] = []
+        for projected_boundary in projected:
+            boundary_id = str(projected_boundary["id"])
+            members = members_by_boundary_revision[(boundary_id, revision)]
+            if focus_ids.intersection(members):
+                boundary_ids.append(boundary_id)
+                trace_ids[boundary_id].append(str(event["event_id"]))
+        event["boundary_ids"] = boundary_ids
+    for projected_boundary in projected:
+        projected_boundary["trace_event_ids"] = trace_ids[
+            str(projected_boundary["id"])
+        ]
+    return projected
+
+
+def _boundary_member_refs(
+    boundary: AnalyticalBoundary,
+    state: CausalState,
+) -> set[str]:
+    """Close authored membership over representations on member carriers."""
+    member_refs = set(boundary.member_refs)
+    for representation in state.representations.values():
+        carrier = state.carriers[representation.carrier_id]
+        if (
+            representation.carrier_id in member_refs
+            or carrier.owner_ref in member_refs
+        ):
+            member_refs.add(representation.representation_id)
+    return member_refs
 
 
 def analyst_nodes(state: CausalState) -> list[dict[str, object]]:

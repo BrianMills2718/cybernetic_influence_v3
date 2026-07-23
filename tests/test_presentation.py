@@ -75,6 +75,91 @@ def test_physical_badge_never_crosses_analyst_boundary(tmp_path: Path) -> None:
     assert policy_event["state_revision"] >= 1
 
 
+def test_analytical_boundary_is_temporal_reversible_and_evidence_linked(
+    tmp_path: Path,
+) -> None:
+    body = TestClient(create_app(ROOT / "web", tmp_path)).post(
+        "/api/runs",
+        json={
+            "scenario": "physical_access",
+            "arm_id": "authorized_access",
+            "execution": "scripted",
+        },
+    ).json()
+    assert len(body["boundaries"]) == 1
+    boundary = body["boundaries"][0]
+    assert boundary["executor"] is False
+    assert boundary["kind"] == "analytical_boundary"
+
+    exact_edge_ids = {edge["id"] for edge in body["edges"]}
+    for revision, aggregate in boundary["snapshots"].items():
+        exact_node_ids = {
+            node["id"] for node in body["snapshots"][revision]
+        }
+        assert set(aggregate["member_ids"]) <= exact_node_ids
+        route_sets = [
+            set(aggregate["internal_route_ids"]),
+            set(aggregate["inbound_route_ids"]),
+            set(aggregate["outbound_route_ids"]),
+        ]
+        assert all(route_set <= exact_edge_ids for route_set in route_sets)
+        assert not route_sets[0] & route_sets[1]
+        assert not route_sets[0] & route_sets[2]
+        assert not route_sets[1] & route_sets[2]
+
+    initial = boundary["snapshots"]["0"]
+    final_revision = str(body["timeline"][-1]["state_revision"])
+    final = boundary["snapshots"][final_revision]
+    assert not any(
+        member_id.startswith("delivered_event_")
+        for member_id in initial["member_ids"]
+    )
+    assert any(
+        member_id.startswith("delivered_event_")
+        for member_id in final["member_ids"]
+    )
+    linked_event_ids = {
+        event["event_id"]
+        for event in body["timeline"]
+        if boundary["id"] in event["boundary_ids"]
+    }
+    assert set(boundary["trace_event_ids"]) == linked_event_ids
+
+
+def test_analytical_boundary_never_enters_runtime_authority() -> None:
+    from cybernetic_influence.scenarios.physical_access import (
+        physical_access_arm_configurations,
+        physical_access_fixture,
+        physical_access_scripted_bindings,
+        run_physical_access,
+    )
+
+    fixture = physical_access_fixture(physical_access_arm_configurations()[0])
+    boundary = fixture.scenario.analytical_boundaries[0]
+    boundary_id = boundary.boundary_id
+    state = fixture.scenario.initial_state
+    assert boundary_id not in state.entities
+    assert boundary_id not in state.mechanisms
+    assert boundary_id not in state.ports
+    assert boundary_id not in state.carriers
+    assert boundary_id not in state.connections
+    assert all(port.owner_ref != boundary_id for port in state.ports.values())
+    assert all(carrier.owner_ref != boundary_id for carrier in state.carriers.values())
+
+    result = run_physical_access(
+        fixture,
+        physical_access_scripted_bindings(fixture),
+        run_id="boundary_execution_inert_gate",
+    )
+    for event in result.core_result.events:
+        assert event.actor_entity_id != boundary_id
+        assert event.mechanism_id != boundary_id
+        assert event.source_port_id != boundary_id
+        assert event.target_port_id != boundary_id
+        if event.patch is not None:
+            assert boundary_id not in json.dumps(event.patch.model_dump(mode="json"))
+
+
 def test_selected_revision_contains_no_future_world_state(tmp_path: Path) -> None:
     body = TestClient(create_app(ROOT / "web", tmp_path)).post(
         "/api/runs",

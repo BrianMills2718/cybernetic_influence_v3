@@ -6,6 +6,7 @@ const html = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => (
 let current = null
 let selectedEventIndex = 0
 let selectedPerson = null
+let selectedScale = 'exact'
 let scenarioCatalog = {}
 
 async function request(url, options = {}) {
@@ -109,7 +110,142 @@ function nodesAtSelectedEvent() {
   return current.snapshots?.[String(event.state_revision)] || []
 }
 
+function selectedBoundary() {
+  return (current?.boundaries || []).find((boundary) => boundary.id === selectedScale)
+}
+
+function boundarySnapshot(boundary = selectedBoundary()) {
+  const event = current?.timeline?.[selectedEventIndex]
+  return boundary?.snapshots?.[String(event?.state_revision)] || null
+}
+
+function graphProjection() {
+  const exactNodes = nodesAtSelectedEvent()
+  if (selectedScale === 'exact') {
+    return {
+      nodes: exactNodes,
+      edges: current.edges.map((edge) => ({...edge, routeIds:[edge.id]})),
+    }
+  }
+  const boundary = selectedBoundary()
+  const snapshot = boundarySnapshot(boundary)
+  if (!boundary || !snapshot) return {nodes:exactNodes, edges:[]}
+  const memberIds = new Set(snapshot.member_ids)
+  const aggregateNode = {
+    id:boundary.id,
+    kind:'analytical_boundary',
+    label:boundary.label,
+    description:boundary.description,
+    state:{
+      executor:false,
+      member_kinds:snapshot.member_kind_counts,
+      hidden_state_facts:snapshot.hidden_fact_count,
+      hidden_information_tokens:snapshot.hidden_information_count,
+    },
+  }
+  const grouped = new Map()
+  current.edges.forEach((edge) => {
+    const source = memberIds.has(edge.source) ? boundary.id : edge.source
+    const target = memberIds.has(edge.target) ? boundary.id : edge.target
+    if (source === target) return
+    const key = `${source}|${target}|${edge.enabled}`
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        id:`coarse_${grouped.size}`,
+        source,
+        target,
+        enabled:edge.enabled,
+        description:'Coarse route backed by exact declared connections.',
+        routeIds:[],
+      })
+    }
+    grouped.get(key).routeIds.push(edge.id)
+  })
+  return {
+    nodes:[...exactNodes.filter((node) => !memberIds.has(node.id)), aggregateNode],
+    edges:[...grouped.values()],
+  }
+}
+
+function renderScaleControls() {
+  const boundaries = current?.boundaries || []
+  if (selectedScale !== 'exact' && !boundaries.some((item) => item.id === selectedScale)) {
+    selectedScale = 'exact'
+  }
+  $('#scale-tabs').innerHTML = [
+    `<button data-scale="exact" class="${selectedScale === 'exact' ? 'active' : ''}">Exact components</button>`,
+    ...boundaries.map((boundary) =>
+      `<button data-scale="${html(boundary.id)}" class="${selectedScale === boundary.id ? 'active' : ''}">${html(boundary.label)}</button>`
+    ),
+  ].join('')
+  document.querySelectorAll('#scale-tabs button').forEach((button) => {
+    button.onclick = () => {
+      selectedScale = button.dataset.scale
+      renderScaleControls()
+      renderGraph()
+      selectEvent(selectedEventIndex)
+    }
+  })
+  const snapshot = boundarySnapshot()
+  $('#scale-loss').textContent = snapshot
+    ? `Coarse analytical view: ${snapshot.selectable_member_count} selectable components and ${snapshot.internal_route_ids.length} internal routes are hidden; ${snapshot.hidden_fact_count} state facts and ${snapshot.hidden_information_count} information tokens are summarized. The boundary does not act.`
+    : boundaries.length
+      ? 'Exact view: every retained component and declared connection remains selectable.'
+      : 'Exact view: this older retained run has no authored analytical boundary.'
+}
+
+function showBoundary(boundaryId) {
+  const boundary = (current?.boundaries || []).find((item) => item.id === boundaryId)
+  const snapshot = boundarySnapshot(boundary)
+  const event = current?.timeline?.[selectedEventIndex]
+  if (!boundary || !snapshot) return
+  document.querySelectorAll('.node').forEach((button) => button.classList.toggle('selected', button.dataset.nodeId === boundaryId))
+  const linked = boundary.trace_event_ids.filter((eventId) =>
+    current.timeline.findIndex((item) => item.event_id === eventId) <= selectedEventIndex
+  )
+  $('#inspector').innerHTML = `
+    <span class="eyebrow">Analytical boundary · revision ${html(event?.state_revision)}</span>
+    <h2>${html(boundary.label)}</h2>
+    <p>${html(boundary.description)}</p>
+    <p><strong>Execution-inert.</strong> This is a derived view, not another mind or world executor.</p>
+    <dl class="aggregate-facts">
+      <div><dt>Selectable components hidden</dt><dd>${html(snapshot.selectable_member_count)}</dd></div>
+      <div><dt>Internal routes hidden</dt><dd>${html(snapshot.internal_route_ids.length)}</dd></div>
+      <div><dt>State facts summarized</dt><dd>${html(snapshot.hidden_fact_count)}</dd></div>
+      <div><dt>Information tokens summarized</dt><dd>${html(snapshot.hidden_information_count)}</dd></div>
+      <div><dt>Linked events through here</dt><dd>${html(linked.length)}</dd></div>
+    </dl>
+    <button id="expand-boundary">Expand exact components at revision ${html(event?.state_revision)}</button>
+    <details><summary>Exact evidence identifiers</summary><pre>${html(JSON.stringify({
+      members:snapshot.member_ids,
+      internal_routes:snapshot.internal_route_ids,
+      inbound_routes:snapshot.inbound_route_ids,
+      outbound_routes:snapshot.outbound_route_ids,
+      trace_events:linked,
+    }, null, 2))}</pre></details>`
+  $('#expand-boundary').onclick = () => {
+    selectedScale = 'exact'
+    renderScaleControls()
+    renderGraph()
+    $('#inspector').innerHTML = `
+      <span class="eyebrow">Exact components · revision ${html(event?.state_revision)}</span>
+      <h2>${html(boundary.label)} expanded</h2>
+      <p>Select any component for its exact retained state.</p>
+      <div class="focus-list">${snapshot.member_ids.map((memberId) => {
+        const node = nodesAtSelectedEvent().find((item) => item.id === memberId)
+        return node ? `<button data-node-id="${html(node.id)}">${html(node.kind)} · ${html(node.label)}</button>` : ''
+      }).join('')}</div>`
+    document.querySelectorAll('.focus-list button').forEach((button) => {
+      button.onclick = () => showNode(button.dataset.nodeId)
+    })
+  }
+}
+
 function showNode(nodeId) {
+  if ((current?.boundaries || []).some((boundary) => boundary.id === nodeId)) {
+    showBoundary(nodeId)
+    return
+  }
   const event = current?.timeline?.[selectedEventIndex]
   const node = nodesAtSelectedEvent().find((candidate) => candidate.id === nodeId)
   const finalNode = current?.nodes?.find((candidate) => candidate.id === nodeId)
@@ -130,7 +266,7 @@ function showNode(nodeId) {
 
 function showTrace(person) {
   selectedPerson = person
-  document.querySelectorAll('.tabs button').forEach((button) => button.classList.toggle('active', button.dataset.person === person))
+  document.querySelectorAll('#trace-tabs button').forEach((button) => button.classList.toggle('active', button.dataset.person === person))
   const selectedEvent = current?.timeline?.[selectedEventIndex]
   const entries = (current?.traces || []).filter((entry) => entry.person === person)
   $('#trace').innerHTML = entries.map((entry) => {
@@ -148,6 +284,69 @@ function showTrace(person) {
   document.querySelector('.trace-step.event-match')?.scrollIntoView({behavior:'smooth', block:'nearest'})
 }
 
+function drawGraphLines(edges) {
+  const graph = $('#graph')
+  const svg = graph.querySelector('.graph-lines')
+  if (!svg) return
+  const box = graph.getBoundingClientRect()
+  svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`)
+  svg.innerHTML = `
+    <defs><marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z"></path>
+    </marker></defs>`
+  const event = current?.timeline?.[selectedEventIndex]
+  edges.forEach((edge, index) => {
+    const source = graph.querySelector(`[data-node-id="${CSS.escape(edge.source)}"]`)
+    const target = graph.querySelector(`[data-node-id="${CSS.escape(edge.target)}"]`)
+    if (!source || !target) return
+    const sourceBox = source.getBoundingClientRect()
+    const targetBox = target.getBoundingClientRect()
+    const x1 = sourceBox.left - box.left + sourceBox.width / 2
+    const y1 = sourceBox.top - box.top + sourceBox.height / 2
+    const x2 = targetBox.left - box.left + targetBox.width / 2
+    const y2 = targetBox.top - box.top + targetBox.height / 2
+    const bend = Math.max(30, Math.abs(x2 - x1) * .35) + index % 3 * 8
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    path.setAttribute('d', `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`)
+    path.setAttribute('marker-end', 'url(#arrowhead)')
+    path.classList.toggle('disabled', !edge.enabled)
+    path.classList.toggle('event-focus', edge.routeIds.some((routeId) => event?.focus_edges?.includes(routeId)))
+    svg.append(path)
+  })
+}
+
+function renderGraph() {
+  const projection = graphProjection()
+  $('#routes').innerHTML = projection.edges.map((edge) => `
+    <span class="route ${edge.enabled ? '' : 'disabled'}" data-route-ids="${html(edge.routeIds.join(' '))}">
+      <strong>${html(edge.source.replaceAll('_',' '))}</strong> → ${html(edge.target.replaceAll('_',' '))}
+      ${edge.routeIds.length > 1 ? `<small>${edge.routeIds.length} exact routes</small>` : ''}
+    </span>`).join('') || '<span class="muted">No external route is visible at this scale.</span>'
+  const graph = $('#graph')
+  graph.innerHTML = '<svg class="graph-lines" aria-hidden="true"></svg>'
+  projection.nodes.forEach((node) => {
+    const button = document.createElement('button')
+    button.className = 'node'
+    button.dataset.kind = node.kind
+    button.dataset.nodeId = node.id
+    button.innerHTML = `<span>${html(node.kind.replaceAll('_',' '))}</span><strong>${html(node.label)}</strong><small>${html(node.description)}</small>`
+    button.onclick = () => showNode(node.id)
+    graph.append(button)
+  })
+  const event = current?.timeline?.[selectedEventIndex]
+  const boundary = selectedBoundary()
+  document.querySelectorAll('.node').forEach((button) => {
+    const exactFocus = event?.focus_ids?.includes(button.dataset.nodeId)
+    const boundaryFocus = button.dataset.nodeId === boundary?.id && event?.boundary_ids?.includes(boundary.id)
+    button.classList.toggle('event-focus', exactFocus || boundaryFocus)
+  })
+  document.querySelectorAll('.route').forEach((route) => {
+    const ids = route.dataset.routeIds.split(' ').filter(Boolean)
+    route.classList.toggle('event-focus', ids.some((id) => event?.focus_edges?.includes(id)))
+  })
+  requestAnimationFrame(() => drawGraphLines(projection.edges))
+}
+
 function selectEvent(index) {
   if (!current?.timeline?.length) return
   selectedEventIndex = Math.max(0, Math.min(index, current.timeline.length - 1))
@@ -162,12 +361,13 @@ function selectEvent(index) {
     <small>${html(event.event_id)}</small>`
   document.querySelectorAll('.timeline-marker').forEach((marker) => marker.classList.toggle('active', Number(marker.dataset.index) === selectedEventIndex))
   document.querySelectorAll('.story-event').forEach((button) => button.classList.toggle('active', button.dataset.eventId === event.event_id))
-  document.querySelectorAll('.node').forEach((button) => button.classList.toggle('event-focus', event.focus_ids.includes(button.dataset.nodeId)))
-  document.querySelectorAll('.route').forEach((route) => route.classList.toggle('event-focus', event.focus_edges.includes(route.dataset.edgeId)))
-  const presentIds = new Set(nodesAtSelectedEvent().map((node) => node.id))
-  document.querySelectorAll('.node').forEach((button) => button.classList.toggle('not-present', !presentIds.has(button.dataset.nodeId)))
+  renderScaleControls()
+  renderGraph()
 
-  const focusedNodes = nodesAtSelectedEvent().filter((node) => event.focus_ids.includes(node.id))
+  const focusedNodes = graphProjection().nodes.filter((node) =>
+    event.focus_ids.includes(node.id)
+    || (node.kind === 'analytical_boundary' && event.boundary_ids?.includes(node.id))
+  )
   $('#inspector').innerHTML = focusedNodes.length
     ? `<span class="eyebrow">Focused by selected event</span><h2>${focusedNodes.length} participating ${focusedNodes.length === 1 ? 'entity' : 'entities'}</h2>
        <div class="focus-list">${focusedNodes.map((node) => `<button data-node-id="${html(node.id)}">${html(node.kind)} · ${html(node.label)}</button>`).join('')}</div>`
@@ -205,13 +405,14 @@ function renderTimeline(run) {
 
 function render(run) {
   current = {
-    nodes: [], snapshots: {}, edges: [], timeline: [], traces: [], events: [],
+    nodes: [], snapshots: {}, edges: [], boundaries: [], timeline: [], traces: [], events: [],
     story: {headline: run.status, summary: run.error || 'No final account was retained.', steps: []},
     model_calls: 0, cost: 0,
     ...run,
   }
   selectedEventIndex = 0
   selectedPerson = null
+  selectedScale = 'exact'
   if (scenarioCatalog[current.scenario]) {
     $('#scenario').value = current.scenario
     configureScenario(current.scenario)
@@ -241,20 +442,7 @@ function render(run) {
     item.append(button)
     $('#story-steps').append(item)
   })
-  $('#routes').innerHTML = current.edges.map((edge) => `
-    <span class="route ${edge.enabled ? '' : 'disabled'}" data-edge-id="${html(edge.id)}">
-      <strong>${html(edge.source.replaceAll('_',' '))}</strong> → ${html(edge.target.replaceAll('_',' '))}
-    </span>`).join('')
-  $('#graph').innerHTML = ''
-  current.nodes.forEach((node) => {
-    const button = document.createElement('button')
-    button.className = 'node'
-    button.dataset.kind = node.kind
-    button.dataset.nodeId = node.id
-    button.innerHTML = `<span>${html(node.kind)}</span><strong>${html(node.label)}</strong><small>${html(node.description)}</small>`
-    button.onclick = () => showNode(node.id)
-    $('#graph').append(button)
-  })
+  renderScaleControls()
   const people = [...new Set(current.traces.map((entry) => entry.person))]
   $('#trace-tabs').innerHTML = people.map((person) => `<button data-person="${html(person)}">${html(person.replaceAll('_',' '))}</button>`).join('')
   document.querySelectorAll('#trace-tabs button').forEach((button) => button.onclick = () => showTrace(button.dataset.person))
@@ -304,3 +492,7 @@ Promise.all([loadConfig(), loadHistory()])
     if (retainedId) await openRetained(retainedId)
   })
   .catch((error) => { $('#run-status').textContent = error.message })
+
+window.addEventListener('resize', () => {
+  if (current) drawGraphLines(graphProjection().edges)
+})

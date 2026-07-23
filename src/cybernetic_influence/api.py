@@ -276,6 +276,9 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 headline, summary = physical_access_summary(physical_readout)
                 document = build_analyst_document(
                     initial_state=physical_fixture.scenario.initial_state,
+                    analytical_boundaries=(
+                        physical_fixture.scenario.analytical_boundaries
+                    ),
                     result=result,
                     scenario="physical_access",
                     profile=selected_profile,
