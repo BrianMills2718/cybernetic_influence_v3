@@ -1,6 +1,8 @@
 VENV ?= .venv
 PYTHON := $(VENV)/bin/python
 LLM_CLIENT_ROOT ?= ../active/llm_client
+HOST ?= 127.0.0.1
+PORT ?= 8620
 
 .PHONY: install test typecheck check serve
 
@@ -22,4 +24,4 @@ typecheck:
 check: typecheck test
 
 serve:
-	$(PYTHON) -m uvicorn cybernetic_influence.api:app --port 8620
+	$(PYTHON) -m uvicorn cybernetic_influence.api:app --host $(HOST) --port $(PORT)

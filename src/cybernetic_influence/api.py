@@ -1,4 +1,4 @@
-"""Small operator-first API for the first complete simulator slice."""
+"""Operator-first API for retained, temporally inspectable simulator runs."""
 
 from __future__ import annotations
 
@@ -26,6 +26,12 @@ from cybernetic_influence.scenarios.service_desk import (
 from cybernetic_influence.scenarios.service_desk_fidelity import (
     build_service_desk_trial_readout,
 )
+from cybernetic_influence.run_store import (
+    InvalidRunIdError,
+    RunNotFoundError,
+    RunStore,
+    now_iso,
+)
 
 
 class RunRequest(BaseModel):
@@ -38,10 +44,16 @@ class RunRequest(BaseModel):
     execution: Literal["scripted", "live"] = "scripted"
 
 
-def create_app(web_root: Path | None = None) -> FastAPI:
+def create_app(web_root: Path | None = None, run_root: Path | None = None) -> FastAPI:
     """Create the API without importing any legacy workbench."""
-    app = FastAPI(title="Cybernetic Influence Simulator", version="0.1.0")
+    app = FastAPI(title="Cybernetic Influence Simulator", version="0.2.0")
     root = web_root or Path(__file__).resolve().parents[2] / "web"
+    configured_run_root = os.getenv("CYBERNETIC_INFLUENCE_RUNS_DIR")
+    runs = RunStore(
+        run_root
+        or (Path(configured_run_root) if configured_run_root else root.parent / "artifacts" / "runs")
+    )
+    runs.mark_incomplete_interrupted()
 
     @app.get("/api/config")
     def config() -> dict[str, object]:
@@ -57,6 +69,30 @@ def create_app(web_root: Path | None = None) -> FastAPI:
             "maximum_live_cost": 0.45,
         }
 
+    @app.get("/api/runs")
+    def history() -> dict[str, object]:
+        retained, corrupt = runs.list_runs()
+        return {"runs": retained, "corrupt_files": corrupt}
+
+    @app.get("/api/runs/{run_id}")
+    def retained_run(run_id: str) -> dict[str, object]:
+        try:
+            return runs.get(run_id)
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except RunNotFoundError as error:
+            raise HTTPException(status_code=404, detail="run not found") from error
+
+    @app.delete("/api/runs/{run_id}")
+    def delete_run(run_id: str) -> dict[str, object]:
+        try:
+            runs.trash(run_id)
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except RunNotFoundError as error:
+            raise HTTPException(status_code=404, detail="run not found") from error
+        return {"run_id": run_id, "status": "trashed", "recoverable": True}
+
     @app.post("/api/runs")
     def run(request: RunRequest) -> dict[str, object]:
         arm = next(
@@ -70,18 +106,41 @@ def create_app(web_root: Path | None = None) -> FastAPI:
                 status_code=403,
                 detail="live execution requires CYBERNETIC_INFLUENCE_LIVE=1",
             )
-        fixture = service_desk_fixture(
-            arm,
-            cognition_profile=request.cognition_profile,
-            reasoning_effort=SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
-        )
         run_id = f"run_{uuid4().hex[:12]}"
-        bindings = (
-            service_desk_native_bindings(fixture, trace_id_prefix=run_id)
-            if request.execution == "live"
-            else service_desk_scripted_bindings(fixture)
-        )
-        result = run_service_desk(fixture, bindings, run_id=run_id)
+        created_at = now_iso()
+        initial: dict[str, object] = {
+            "run_id": run_id,
+            "created_at": created_at,
+            "status": "running",
+            "scenario": "service_desk",
+            "profile": request.cognition_profile,
+            "arm": request.arm_id,
+            "execution": request.execution,
+            "model_calls": 0,
+            "cost": 0.0,
+        }
+        runs.save(initial)
+        try:
+            fixture = service_desk_fixture(
+                arm,
+                cognition_profile=request.cognition_profile,
+                reasoning_effort=SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
+            )
+            bindings = (
+                service_desk_native_bindings(fixture, trace_id_prefix=run_id)
+                if request.execution == "live"
+                else service_desk_scripted_bindings(fixture)
+            )
+            result = run_service_desk(fixture, bindings, run_id=run_id)
+        except Exception as error:
+            failed = {
+                **initial,
+                "status": "failed",
+                "error": f"{type(error).__name__}: {error}",
+            }
+            runs.save(failed)
+            raise HTTPException(status_code=500, detail="simulation failed; retained for inspection") from error
+
         readout = build_service_desk_trial_readout(request.arm_id, 0, result)
         state = result.core_result.final_state
 
@@ -159,6 +218,62 @@ def create_app(web_root: Path | None = None) -> FastAPI:
                     }
                 )
 
+        node_ids = {str(node["id"]) for node in nodes}
+        timeline: list[dict[str, object]] = []
+        for event in result.core_result.events:
+            exact = event.model_dump(mode="json")
+            focus_ids: set[str] = set()
+            focus_edges: set[str] = set()
+            for field in ("actor_entity_id", "mechanism_id", "representation_id"):
+                value = exact.get(field)
+                if isinstance(value, str) and value in node_ids:
+                    focus_ids.add(value)
+            connection_id = exact.get("connection_id")
+            if isinstance(connection_id, str):
+                focus_edges.add(connection_id)
+                focused_connection = state.connections.get(connection_id)
+                if focused_connection is not None:
+                    focus_ids.add(state.ports[focused_connection.source_port_id].owner_ref)
+                    focus_ids.add(state.ports[focused_connection.target_port_id].owner_ref)
+            for field in ("source_port_id", "target_port_id"):
+                port_id = exact.get(field)
+                if isinstance(port_id, str) and port_id in state.ports:
+                    focus_ids.add(state.ports[port_id].owner_ref)
+            patch = exact.get("patch")
+            if isinstance(patch, dict):
+                for change in patch.get("fact_changes", []):
+                    if isinstance(change, dict):
+                        fact_id = change.get("fact_id")
+                        if isinstance(fact_id, str) and fact_id.partition(".")[0] in node_ids:
+                            focus_ids.add(fact_id.partition(".")[0])
+                for observation in patch.get("observations_added", []):
+                    if isinstance(observation, dict):
+                        observation_target = observation.get("target_entity_id")
+                        if isinstance(observation_target, str) and observation_target in node_ids:
+                            focus_ids.add(observation_target)
+            actor = exact.get("actor_entity_id")
+            event_person = (
+                actor
+                if isinstance(actor, str)
+                and actor in {"triager", "specialist", "supervisor"}
+                else None
+            )
+            if event_person is None:
+                people = focus_ids.intersection({"triager", "specialist", "supervisor"})
+                event_person = sorted(people)[0] if len(people) == 1 else None
+            timeline.append(
+                {
+                    "event_id": exact["event_id"],
+                    "sequence": exact["sequence"],
+                    "logical_time": exact["logical_time"],
+                    "kind": exact["event_kind"],
+                    "summary": exact["summary"],
+                    "person": event_person,
+                    "focus_ids": sorted(focus_ids),
+                    "focus_edges": sorted(focus_edges),
+                }
+            )
+
         if request.arm_id == "no_direct_path":
             summary = (
                 "The direct report path was unavailable. The specialist requested the missing "
@@ -177,8 +292,13 @@ def create_app(web_root: Path | None = None) -> FastAPI:
                 "closed the incident safely."
             )
 
-        return {
+        # The concise account stays at the human-action level; the adjacent
+        # timeline exposes every route, exact decision, commit, and observation.
+        story_kinds = {"action_attempted"}
+        story_steps = [event for event in timeline if event["kind"] in story_kinds]
+        document: dict[str, object] = {
             "run_id": run_id,
+            "created_at": created_at,
             "status": result.status,
             "scenario": "service_desk",
             "profile": request.cognition_profile,
@@ -190,20 +310,18 @@ def create_app(web_root: Path | None = None) -> FastAPI:
             "story": {
                 "headline": readout.target_outcome.replace("_", " ").title(),
                 "summary": summary,
-                "steps": [
-                    event.summary
-                    for event in result.core_result.events
-                    if event.event_kind in {"action_attempted", "mechanism_decided", "state_changed"}
-                ],
+                "steps": story_steps,
             },
             "outcome": readout.model_dump(mode="json"),
             "nodes": nodes,
             "edges": edges,
+            "timeline": timeline,
             "events": [
                 event.model_dump(mode="json") for event in result.core_result.events
             ],
             "traces": traces,
         }
+        return runs.save(document)
 
     app.mount("/assets", StaticFiles(directory=root), name="assets")
 

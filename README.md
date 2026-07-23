@@ -8,7 +8,7 @@ boundaries—not hidden minds or executors. Occupied positions are external
 social context remembered and interpreted by people, not intrinsic behavioral
 programs.
 
-## First working slice
+## Working simulator
 
 The service-desk scenario supports:
 
@@ -17,7 +17,10 @@ The service-desk scenario supports:
 - normal, missing-channel, and speed-pressure world conditions;
 - zero-cost scripted reference runs;
 - live LLM runs behind `CYBERNETIC_INFLUENCE_LIVE=1`;
-- human narrative, inspectable world nodes, person traces, and raw evidence.
+- human narrative synchronized to an exact causal timeline;
+- event-focused information routes, world nodes, and person traces;
+- retained run history that survives refreshes and server restarts;
+- recoverable deletion and visible failed/interrupted records.
 
 ## Run
 
@@ -31,6 +34,17 @@ Open <http://127.0.0.1:8620>.
 
 The native LLM path uses the shared `llm_client` checkout installed in the
 environment. Scripted runs require no provider and make no model calls.
+
+Runs are retained under `artifacts/runs/`. Override that location with
+`CYBERNETIC_INFLUENCE_RUNS_DIR`. A shared development host can bind another
+interface explicitly:
+
+```bash
+make serve HOST=0.0.0.0 PORT=8620
+```
+
+Binding a network interface does not add authentication. Use private-network
+access rather than exposing this development server publicly.
 
 ## Lineage
 

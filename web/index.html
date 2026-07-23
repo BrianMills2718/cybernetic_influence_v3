@@ -36,6 +36,16 @@
       <details><summary>Model and maximum cost</summary><p id="cost-details">Loading…</p></details>
     </section>
 
+    <section class="history-card">
+      <div>
+        <span class="eyebrow">Retained evidence</span>
+        <h2>Recent runs</h2>
+      </div>
+      <p id="history-empty" class="muted">No retained runs yet.</p>
+      <div id="history" class="history"></div>
+      <p id="storage-warning" class="warning" hidden></p>
+    </section>
+
     <section id="result" hidden>
       <div class="status-line"><strong id="result-status"></strong><span id="result-cost"></span></div>
       <section class="story">
@@ -45,10 +55,23 @@
         <ol id="story-steps"></ol>
       </section>
 
+      <section class="timeline-panel">
+        <span class="eyebrow">Causal time</span>
+        <h2>Step through what changed</h2>
+        <div class="timeline-controls">
+          <button id="previous-event" aria-label="Previous event">←</button>
+          <input id="event-slider" type="range" min="0" value="0" aria-label="Selected causal event">
+          <button id="next-event" aria-label="Next event">→</button>
+          <span id="event-count"></span>
+        </div>
+        <div id="timeline-track" class="timeline-track"></div>
+        <article id="event-detail" class="event-detail"></article>
+      </section>
+
       <section>
         <span class="eyebrow">People · information · objects · mechanisms</span>
         <h2>How it flowed</h2>
-        <p class="muted">Select any node to inspect its state. Select a person below to inspect their trace.</p>
+        <p class="muted">The selected event highlights its participating entities and route. Select any node for its exact retained state.</p>
         <div id="routes" class="routes" aria-label="Declared information routes"></div>
         <div class="workspace">
           <div id="graph" class="graph"></div>
