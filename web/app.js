@@ -121,10 +121,14 @@ function boundarySnapshot(boundary = selectedBoundary()) {
 
 function graphProjection() {
   const exactNodes = nodesAtSelectedEvent()
+  const exactNodeIds = new Set(exactNodes.map((node) => node.id))
+  const temporalEdges = current.edges.filter((edge) =>
+    exactNodeIds.has(edge.source) && exactNodeIds.has(edge.target)
+  )
   if (selectedScale === 'exact') {
     return {
       nodes: exactNodes,
-      edges: current.edges.map((edge) => ({
+      edges: temporalEdges.map((edge) => ({
         ...edge,
         routeIds:edge.exact_route_ids || [edge.id],
       })),
@@ -147,7 +151,7 @@ function graphProjection() {
     },
   }
   const grouped = new Map()
-  current.edges.forEach((edge) => {
+  temporalEdges.forEach((edge) => {
     const source = memberIds.has(edge.source) ? boundary.id : edge.source
     const target = memberIds.has(edge.target) ? boundary.id : edge.target
     if (source === target) return
@@ -314,8 +318,11 @@ function drawGraphLines(edges) {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     path.setAttribute('d', `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`)
     path.setAttribute('marker-end', 'url(#arrowhead)')
+    path.classList.add(`kind-${edge.kind}`)
     path.classList.toggle('disabled', !edge.enabled)
-    path.classList.toggle('event-focus', edge.routeIds.some((routeId) => event?.focus_edges?.includes(routeId)))
+    const routeFocused = edge.routeIds.some((routeId) => event?.focus_edges?.includes(routeId))
+    const endpointsFocused = event?.focus_ids?.includes(edge.source) && event?.focus_ids?.includes(edge.target)
+    path.classList.toggle('event-focus', routeFocused || endpointsFocused)
     svg.append(path)
   })
 }
@@ -341,6 +348,10 @@ function renderGraph() {
       <strong>${html(edge.source.replaceAll('_',' '))}</strong> → ${html(edge.target.replaceAll('_',' '))}
       ${edge.kind === 'mechanism_binding'
         ? '<small>declared input binding</small>'
+        : edge.kind === 'information_lineage'
+          ? '<small>information lineage</small>'
+        : edge.kind === 'information_location'
+          ? '<small>information carrier</small>'
         : edge.routeIds.length > 1 ? `<small>${edge.routeIds.length} exact routes</small>` : ''}
     </span>`).join('') || '<span class="muted">No external route is visible at this scale.</span>'
   const graph = $('#graph')

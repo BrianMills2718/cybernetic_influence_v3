@@ -64,6 +64,9 @@ summary { cursor:pointer; font-weight:700; }
 .graph-lines { position:absolute; z-index:0; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
 .graph-lines path { fill:none; stroke:#52789d; stroke-width:2; opacity:.58; }
 .graph-lines marker path { fill:#52789d; stroke:none; }
+.graph-lines path.kind-mechanism_binding { stroke:#d39a45; stroke-dasharray:5 4; }
+.graph-lines path.kind-information_lineage { stroke:#d96ca9; stroke-dasharray:3 4; }
+.graph-lines path.kind-information_location { stroke:#d96ca9; }
 .graph-lines path.disabled { stroke-dasharray:6 6; opacity:.25; }
 .graph-lines path.event-focus { stroke:#fff; stroke-width:4; opacity:1; }
 .node { position:relative; z-index:1; display:grid; gap:5px; min-height:100px; padding:12px; border:1px solid #4778a8; border-radius:10px; background:#182230f2; text-align:left; }

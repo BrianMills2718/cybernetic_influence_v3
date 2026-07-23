@@ -102,6 +102,15 @@ def test_analytical_boundary_is_temporal_reversible_and_evidence_linked(
     assert all(
         set(edge["exact_route_ids"]) <= exact_edge_ids for edge in binding_edges
     )
+    location_edges = [
+        edge for edge in body["edges"] if edge["kind"] == "information_location"
+    ]
+    assert any(
+        edge["source"] == "technician"
+        and edge["target"] == "technician_badge"
+        for edge in location_edges
+    )
+    assert all(edge["exact_route_ids"] == [] for edge in location_edges)
     for revision, aggregate in boundary["snapshots"].items():
         exact_node_ids = {
             node["id"] for node in body["snapshots"][revision]

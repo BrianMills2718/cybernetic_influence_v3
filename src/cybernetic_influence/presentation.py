@@ -260,7 +260,7 @@ def _boundary_member_refs(
 
 
 def analyst_edges(state: CausalState) -> list[dict[str, object]]:
-    """Project concrete connections plus their declared mechanism bindings."""
+    """Project concrete connections, bindings, and representation lineage."""
     edges: list[dict[str, object]] = []
     routes_by_target_port: dict[str, list[str]] = {}
     for connection in state.connections.values():
@@ -294,6 +294,49 @@ def analyst_edges(state: CausalState) -> list[dict[str, object]]:
                     "description": (
                         f"Declared input {port_id} binds {owner_ref} to exact "
                         f"mechanism {mechanism.mechanism_id}."
+                    ),
+                }
+            )
+    for representation in state.representations.values():
+        carrier_owner = state.carriers[representation.carrier_id].owner_ref
+        if carrier_owner != representation.representation_id:
+            edges.append(
+                {
+                    "id": (
+                        f"location_{carrier_owner}_to_"
+                        f"{representation.representation_id}"
+                    ),
+                    "kind": "information_location",
+                    "source": carrier_owner,
+                    "target": representation.representation_id,
+                    "enabled": True,
+                    "exact_route_ids": [],
+                    "description": (
+                        f"{representation.representation_id} is retained on a "
+                        f"carrier owned by {carrier_owner}."
+                    ),
+                }
+            )
+        sources = (
+            representation.parent_representation_ids
+            if representation.parent_representation_ids
+            else [representation.actual_source_ref]
+        )
+        for source_ref in sources:
+            edges.append(
+                {
+                    "id": (
+                        f"lineage_{source_ref}_to_"
+                        f"{representation.representation_id}"
+                    ),
+                    "kind": "information_lineage",
+                    "source": source_ref,
+                    "target": representation.representation_id,
+                    "enabled": True,
+                    "exact_route_ids": [],
+                    "description": (
+                        f"Retained representation lineage from {source_ref} to "
+                        f"{representation.representation_id}."
                     ),
                 }
             )
