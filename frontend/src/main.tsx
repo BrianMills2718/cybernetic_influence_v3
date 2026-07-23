@@ -598,11 +598,25 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
   useEffect(() => {
     if (!initialized) return
     const frame = window.requestAnimationFrame(() => {
-      void fitView({ padding: 0.12, duration: 280, maxZoom: 1.35 })
+      const mobileWorldMinimum =
+        options.viewMode === 'world' && window.innerWidth <= 700 ? 0.65 : 0.1
+      void fitView({
+        padding: 0.12,
+        duration: 280,
+        minZoom: mobileWorldMinimum,
+        maxZoom: 1.35,
+      })
       setEdges(graph.edges.map((edge) => ({ ...edge })))
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [fitView, initialized, layoutKey, graph.edges, setEdges])
+  }, [
+    fitView,
+    initialized,
+    layoutKey,
+    graph.edges,
+    options.viewMode,
+    setEdges,
+  ])
 
   const boundaryId = options.boundary?.id ?? options.collapsedBoundaryId
   const boundaryLabel = options.boundary?.label
