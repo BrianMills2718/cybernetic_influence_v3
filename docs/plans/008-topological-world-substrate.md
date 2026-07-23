@@ -1,6 +1,6 @@
 # Slice 8: Topological World Substrate
 
-**Status: Active — 2026-07-23.**
+**Status: Complete — 2026-07-23.**
 
 ## Frame
 
@@ -125,3 +125,26 @@ exact placement patches and retained world snapshots, and exercise the critical
 flow in desktop and mobile browsers. Preserve technical execution separately
 from the user's later comprehension judgment.
 
+Completed evidence:
+
+- local and Mac-host gates passed static typing, 33 tests, and the production
+  TypeScript/Vite build;
+- the authorized arm committed and replayed exactly one
+  hallway-to-equipment-room placement change, while both denied arms committed
+  none;
+- adversarial tests reject cyclic places, unknown and undeclared links, wrong
+  link endpoints, and undeclared placement writes;
+- the retained API document exposes three places, one explicitly
+  non-traversability-implying link, and seven revision-keyed world snapshots;
+- Chrome exercised the revision-5 crossing in both world and causal views
+  without losing the selected revision or emitting console errors;
+- the 1440 px desktop canvas showed both places, their event-time occupants,
+  the secure-door link substrate, and the exact spatial evidence list;
+- the 390 px mobile canvas retained pan/zoom, readable labels at its bounded
+  starting scale, and no page-level horizontal overflow;
+- the private Mac service restarted on version 0.8.0, reopened an older retained
+  run, and completed a fresh zero-cost physical-access run.
+
+This establishes technical execution and traceability. Whether the projection
+is sufficiently intuitive for the operator remains a separate comprehension
+judgment to collect through use rather than infer from automated gates.
