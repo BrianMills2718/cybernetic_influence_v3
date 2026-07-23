@@ -661,7 +661,6 @@ function render(run) {
   else $('#trace').innerHTML = '<p class="muted">No completed person traces were retained.</p>'
   renderTimeline(current)
   $('#raw').textContent = JSON.stringify(current, null, 2)
-  $('#result').scrollIntoView({behavior:'smooth', block:'start'})
 }
 
 $('#event-slider').oninput = (event) => selectEvent(Number(event.target.value))
