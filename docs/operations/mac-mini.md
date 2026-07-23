@@ -45,6 +45,9 @@ On the Mac:
 cd ~/code/cybernetic_influence_v3
 git fetch /tmp/cybernetic-influence-v3.bundle main
 git merge --ff-only FETCH_HEAD
+export PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+npm --prefix frontend ci
+npm --prefix frontend run build
 .venv/bin/python -m pip install -r requirements-dev.lock
 .venv/bin/python -m pip install -e . --no-deps
 .venv/bin/python -m mypy

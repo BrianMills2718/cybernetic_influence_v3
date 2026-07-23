@@ -52,6 +52,7 @@ summary { cursor:pointer; font-weight:700; }
 .event-kind { color:var(--accent); font-weight:800; text-transform:uppercase; }
 .scale-toolbar { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-top:12px; }
 .scale-toolbar .tabs { margin:0; }
+.canvas-replaced { display:none !important; }
 .scale-loss { max-width:75ch; margin:4px 0 0; color:var(--muted); font-size:12px; text-align:right; }
 .workspace { display:grid; grid-template-columns:minmax(0,2fr) minmax(300px,.7fr); gap:16px; min-height:520px; }
 .routes { display:flex; gap:8px; overflow-x:auto; margin:12px 0; padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }

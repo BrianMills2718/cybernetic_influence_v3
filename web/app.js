@@ -180,6 +180,7 @@ function graphProjection() {
 
 function renderScaleControls() {
   const boundaries = current?.boundaries || []
+  $('#scale-tabs').classList.toggle('canvas-replaced', Boolean(window.CyberneticGraph))
   if (selectedScale !== 'exact' && !boundaries.some((item) => item.id === selectedScale)) {
     selectedScale = 'exact'
   }
@@ -366,6 +367,7 @@ function flowOrderedNodes(nodes) {
 
 function renderGraph() {
   const projection = graphProjection()
+  $('#routes').classList.toggle('canvas-replaced', Boolean(window.CyberneticGraph))
   $('#routes').innerHTML = projection.edges.map((edge) => `
     <span class="route ${edge.enabled ? '' : 'disabled'}" data-route-ids="${html(edge.routeIds.join(' '))}">
       <strong>${html(edge.source.replaceAll('_',' '))}</strong> → ${html(edge.target.replaceAll('_',' '))}
