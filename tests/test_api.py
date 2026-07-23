@@ -82,6 +82,8 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
     assert body["outcome"]["causal_moment_count"] < body["outcome"][
         "participant_activation_count"
     ]
+    assert body["outcome"]["remediation_moment"] == 2
+    assert body["outcome"]["confirmed_closure_moment"] == 4
     assert any(
         len({trace["person"] for trace in body["traces"] if trace["activation"] == activation})
         > 1

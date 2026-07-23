@@ -49,7 +49,7 @@ Do not rewrite the historical fixed-schedule fidelity report in this slice.
 - Scripted baseline, missing-direct-path, and speed-pressure runs quiesced after
   5, 7, and 5 causal moments respectively; the baseline and speed-pressure
   runs each grouped supervisor and triager in one frozen activation set.
-- The missing path delayed remediation from moment 1 to moment 3, while speed
+- The missing path delayed remediation from moment 2 to moment 4, while speed
   pressure retained one exact denial before confirmed closure.
 - Live run `run_11a699e00d2e` completed with five moments, six agent calls, five
   narrator calls, and fully observed cost of $0.058196875.

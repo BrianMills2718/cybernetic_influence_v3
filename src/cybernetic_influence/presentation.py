@@ -64,7 +64,7 @@ def event_driven_service_desk_outcome(
     }
     remediation_moment: int | None = None
     closure_moment: int | None = None
-    for attempt in result.attempts:
+    for moment_number, attempt in enumerate(result.attempts, start=1):
         for event_id in attempt.core_event_ids:
             event = event_by_id[event_id]
             if event.patch is None:
@@ -75,13 +75,13 @@ def event_driven_service_desk_outcome(
                     and change.after is True
                     and remediation_moment is None
                 ):
-                    remediation_moment = attempt.logical_time
+                    remediation_moment = moment_number
                 if (
                     change.fact_id == "incident_17.status"
                     and change.after == "closed_confirmed"
                     and closure_moment is None
                 ):
-                    closure_moment = attempt.logical_time
+                    closure_moment = moment_number
     final = result.core_result.final_state
     final_status = str(final.fact("incident_17.status").value)
     target_outcome = (
