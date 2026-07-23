@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import re
 from pathlib import Path
 from types import SimpleNamespace
@@ -62,3 +63,40 @@ def test_live_turn_narration_chains_prior_accounts_and_cites_current_events(
         or turn["source_event_ids"] == [f"{turn['activation']}:silence"]
         for turn in turns
     )
+
+
+def test_narrator_citation_outside_the_current_turn_is_retained_as_unavailable(
+    tmp_path: Path,
+) -> None:
+    document = TestClient(create_app(ROOT / "web", tmp_path)).post(
+        "/api/runs",
+        json={"execution": "scripted"},
+    ).json()
+
+    def forged_call(
+        _model: str,
+        _messages: list[dict[str, str]],
+        response_model: type[TurnNarration],
+        **_kwargs: Any,
+    ) -> tuple[TurnNarration, object]:
+        return (
+            response_model(
+                narrative="This should not be retained as a supported account.",
+                source_event_ids=["event_not_in_this_turn"],
+            ),
+            SimpleNamespace(cost=0.01, cost_source="provider_reported"),
+        )
+
+    narration = narrate_live_turns(
+        document,
+        model="test-model",
+        trace_id_prefix="run_test",
+        structured_call=forged_call,
+    )
+
+    assert narration["status"] == "unavailable"
+    assert narration["turns"] == []
+    calls = narration["calls"]
+    assert isinstance(calls, list)
+    assert isinstance(calls[0], Mapping)
+    assert calls[0]["error_type"] == "ValueError"
