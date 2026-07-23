@@ -21,7 +21,7 @@ user: |
   Current turn trace:
   {{ turn | tojson }}
 
-  Write two to five sentences. Explain what the active person or exact mechanism
+  Write one to three sentences. Explain what the active person or exact mechanism
   did, what happened as a result, and how this follows from the prior account
   when relevant. If no action committed, explain that plainly without implying
   an unseen cause.
