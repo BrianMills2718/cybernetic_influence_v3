@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
+from cybernetic_influence import __version__
 from cybernetic_influence.scenarios.service_desk import (
     SERVICE_DESK_MODEL,
     SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
@@ -58,6 +59,8 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
     @app.get("/api/config")
     def config() -> dict[str, object]:
         return {
+            "version": __version__,
+            "build_commit": os.getenv("CYBERNETIC_INFLUENCE_BUILD_COMMIT", "development"),
             "scenario": "service_desk",
             "profiles": ["position_context", "procedural_control"],
             "arms": [arm.arm_id for arm in service_desk_arm_configurations()],
