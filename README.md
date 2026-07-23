@@ -21,9 +21,13 @@ The simulator currently includes:
   links whose existence never implies permission or successful traversal;
 - personal-disposition plus remembered-position cognition;
 - an explicit procedural control profile;
+- event-triggered causal moments: everyone with newly delivered observations
+  decides from the same frozen pre-moment state, while individual activations
+  remain inspectable;
 - zero-cost scripted reference runs;
 - live LLM runs behind `CYBERNETIC_INFLUENCE_LIVE=1`;
-- sequential live-LLM turn narratives grounded in exact causal event IDs;
+- sequential live-LLM causal-moment narratives grounded in exact causal event
+  IDs and informed by the prior moment narratives;
 - a pannable, zoomable, selectable causal graph of people, information, world
   objects, mechanisms, and concrete declared routes;
 - a synchronized world-topology graph with place containers, event-time
@@ -50,6 +54,13 @@ Open <http://127.0.0.1:8620>.
 
 The native LLM path uses the shared `llm_client` checkout installed in the
 environment. Scripted runs require no provider and make no model calls.
+
+The user-facing Service Desk simulation is event driven. Its initial customer
+report activates the triager; thereafter, newly delivered observations trigger
+the next frozen activation set. Agents without a trigger are not called merely
+because their place in a rotation arrived. The older fixed nine-activation
+schedule remains only inside the closed fidelity-report harness so historical
+comparison evidence retains its original sampling contract.
 
 Runs are retained under `artifacts/runs/`. Override that location with
 `CYBERNETIC_INFLUENCE_RUNS_DIR`. A shared development host can bind another

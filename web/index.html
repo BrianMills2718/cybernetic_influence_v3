@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=service-spatial-v1">
-  <link rel="stylesheet" href="/assets/graph-canvas.css?v=service-spatial-v1">
+  <link rel="stylesheet" href="/assets/styles.css?v=causal-moments-v1">
+  <link rel="stylesheet" href="/assets/graph-canvas.css?v=causal-moments-v1">
 </head>
 <body>
   <header>
@@ -65,17 +65,18 @@
       </section>
 
       <section class="step-account">
-        <span class="eyebrow">Narrative for the selected turn</span>
+        <span class="eyebrow">Narrative for the selected causal moment</span>
         <h2 id="step-account-title"></h2>
         <p id="step-account-body"></p>
         <p id="step-account-source" class="muted"></p>
+        <div id="moment-events" class="moment-events" aria-label="Exact events in selected causal moment"></div>
         <article id="event-detail" class="event-detail"></article>
       </section>
 
       <section class="turn-narratives">
-        <span class="eyebrow">Turn-by-turn narrative</span>
+        <span class="eyebrow">Causal-moment narrative</span>
         <h2>How the run unfolded</h2>
-        <p class="muted">Each live narrator account receives the previous accounts and only the next turn’s retained trace.</p>
+        <p class="muted">Each account combines everyone activated from the same frozen pre-moment state, then carries the prior narrative forward.</p>
         <div id="turn-narratives"></div>
       </section>
 
@@ -115,7 +116,7 @@
       <p id="storage-warning" class="warning" hidden></p>
     </details>
   </main>
-  <script src="/assets/graph-canvas.js?v=service-spatial-v1"></script>
-  <script src="/assets/app.js?v=service-spatial-v1"></script>
+  <script src="/assets/graph-canvas.js?v=causal-moments-v1"></script>
+  <script src="/assets/app.js?v=causal-moments-v1"></script>
 </body>
 </html>

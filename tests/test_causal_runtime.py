@@ -31,6 +31,7 @@ from cybernetic_influence.scenarios.physical_access import (
     run_physical_access,
 )
 from cybernetic_influence.scenarios.service_desk import (
+    run_event_driven_service_desk,
     run_service_desk,
     service_desk_arm_configurations,
     service_desk_fixture,
@@ -97,6 +98,42 @@ def test_service_desk_replay_reconstructs_exact_final_state() -> None:
     )
     replayed = replay_committed_trajectory(fixture.scenario, result.core_result)
     assert replayed == result.core_result.final_state
+
+
+def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state() -> None:
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0],
+        cognition_profile="position_context",
+        reasoning_effort="medium",
+    )
+    result = run_event_driven_service_desk(
+        fixture,
+        service_desk_scripted_bindings(fixture),
+        run_id="service_desk_event_driven_gate",
+    )
+    joint = next(
+        attempt for attempt in result.attempts if len(attempt.participants) == 2
+    )
+    assert joint.declared_active_system_ids == ["supervisor", "triager"]
+    observations = {
+        participant.requested_active_system_id: {
+            observation.via_port_id
+            for observation in participant.input.observations
+        }
+        for participant in joint.participants
+    }
+    assert observations == {
+        "supervisor": {"supervisor_remediation_in"},
+        "triager": {"triager_customer_feedback_in"},
+    }
+    assert all(
+        participant.input.activation_id == joint.activation_id
+        and participant.input.logical_time == joint.logical_time
+        for participant in joint.participants
+    )
+    assert result.core_result.final_state.fact(
+        "incident_17.status"
+    ).value == "closed_confirmed"
 
 
 def test_mechanism_credentials_do_not_enter_agent_prompts() -> None:

@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from cybernetic_influence.api import create_app
 from cybernetic_influence.run_store import RunStore
 from cybernetic_influence.scenarios.service_desk import (
-    run_service_desk as original_run_service_desk,
+    run_event_driven_service_desk as original_run_service_desk,
     service_desk_scripted_bindings,
 )
 
@@ -26,7 +26,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     api = client(tmp_path)
     config = api.get("/api/config")
     assert config.status_code == 200
-    assert config.json()["version"] == "0.8.0"
+    assert config.json()["version"] == "0.9.0"
     assert config.json()["build_commit"] == "development"
     assert config.json()["model"] == "openrouter/openai/gpt-5.6-terra"
     assert config.json()["reasoning_effort"] == "medium"
@@ -44,8 +44,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Simulation map" in page.text
     assert "Spatial layout" in page.text
     assert "Causal flow" in page.text
-    assert "Narrative for the selected turn" in page.text
-    assert "Turn-by-turn narrative" in page.text
+    assert "Narrative for the selected causal moment" in page.text
+    assert "Causal-moment narrative" in page.text
     assert "Play simulation" in page.text
     assert "/assets/graph-canvas.js" in page.text
     assert "/assets/graph-canvas.css" in page.text
@@ -77,6 +77,16 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
     assert body["cost"] == 0
     assert body["narration"]["status"] == "not_requested"
     assert body["narration_model_calls"] == 0
+    assert len(body["moments"]) == body["outcome"]["causal_moment_count"]
+    assert body["moments"][-1]["silent"] is True
+    assert body["outcome"]["causal_moment_count"] < body["outcome"][
+        "participant_activation_count"
+    ]
+    assert any(
+        len({trace["person"] for trace in body["traces"] if trace["activation"] == activation})
+        > 1
+        for activation in {trace["activation"] for trace in body["traces"]}
+    )
     assert body["story"]["summary"]
     assert {entry["person"] for entry in body["traces"]} == {
         "triager",
@@ -310,7 +320,10 @@ def test_interrupted_corrupt_and_invalid_records_are_explicit(tmp_path: Path) ->
 
 
 def test_failed_run_is_retained_for_inspection(tmp_path: Path) -> None:
-    with patch("cybernetic_influence.api.run_service_desk", side_effect=RuntimeError("test failure")):
+    with patch(
+        "cybernetic_influence.api.run_event_driven_service_desk",
+        side_effect=RuntimeError("test failure"),
+    ):
         api = client(tmp_path)
         response = api.post("/api/runs", json={"execution": "scripted"})
     assert response.status_code == 500
@@ -365,14 +378,17 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
             "cybernetic_influence.api.service_desk_native_bindings",
             side_effect=scripted_native,
         ),
-        patch("cybernetic_influence.api.run_service_desk", side_effect=slow_run),
         patch(
-            "cybernetic_influence.api.narrate_live_turns",
+            "cybernetic_influence.api.run_event_driven_service_desk",
+            side_effect=slow_run,
+        ),
+        patch(
+            "cybernetic_influence.api.narrate_live_moments",
             return_value={
                 "status": "completed",
                 "model_calls": 0,
                 "cost": 0.0,
-                "turns": [],
+                "moments": [],
                 "calls": [],
             },
         ),

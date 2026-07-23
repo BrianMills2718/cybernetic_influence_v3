@@ -24,9 +24,11 @@ stored in the repository or LaunchAgent plist.
 The advertised service-desk live path uses the explicit
 `openrouter/openai/gpt-5.6-terra` identity at medium reasoning. The explicit
 provider prefix is required because bare `gpt-5.6-terra` intentionally selects
-the direct OpenAI route in `llm_client`. Runtime contracts cap each call at
-$0.05 and the complete nine-activation run at $0.50; the UI presents the
-tighter nine-call estimate of $0.45. Only one live run may execute at a time.
+the direct OpenAI route in `llm_client`. Runtime contracts cap each participant
+call at $0.05 and participant calls for one run at $0.50. Causal-moment
+narration adds at most $0.02 per bounded moment; the UI advertises the
+conservative combined $0.74 envelope. Typical Service Desk runs quiesce well
+before that bound. Only one live run may execute at a time.
 
 ## Inspect
 

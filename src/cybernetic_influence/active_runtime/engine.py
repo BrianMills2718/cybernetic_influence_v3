@@ -134,6 +134,28 @@ class ActiveRuntimeSession:
             }
 
     @property
+    def pending_active_system_ids(self) -> list[str]:
+        """Return systems with at least one newly delivered declared observation."""
+        with self._lock:
+            pending: list[str] = []
+            for active_system_id, spec in self._specs.items():
+                state = self._states[active_system_id]
+                consumed = set(state.consumed_observation_ids)
+                declared_ports = set(spec.observation_port_ids)
+                if any(
+                    observation_id not in consumed
+                    and self._core.state.observations[
+                        observation_id
+                    ].via_port_id
+                    in declared_ports
+                    for observation_id in self._core.state.inboxes.get(
+                        spec.entity_id, []
+                    )
+                ):
+                    pending.append(active_system_id)
+            return sorted(pending)
+
+    @property
     def attempts(self) -> list[ActivationAttemptRecord]:
         """Return defensive protected activation-attempt evidence."""
         with self._lock:

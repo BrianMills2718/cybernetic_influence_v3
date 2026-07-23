@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 import yaml
 
 
-NARRATOR_TASK = "cybernetic_turn_narration"
+NARRATOR_TASK = "cybernetic_causal_moment_narration"
 NARRATOR_MAX_BUDGET = 0.02
 NARRATOR_MAX_TOKENS = 256
 NARRATOR_REASONING_EFFORT = "low"
@@ -21,7 +21,7 @@ StructuredCall = Callable[..., tuple[Any, Any]]
 _FORBID = ConfigDict(extra="forbid", strict=True)
 
 
-class TurnNarration(BaseModel):
+class CausalMomentNarration(BaseModel):
     """One bounded natural-language account with explicit causal provenance."""
 
     model_config = _FORBID
@@ -30,27 +30,27 @@ class TurnNarration(BaseModel):
     source_event_ids: list[str] = Field(min_length=1)
 
 
-def narrate_live_turns(
+def narrate_live_moments(
     document: Mapping[str, object],
     *,
     model: str,
     trace_id_prefix: str,
     structured_call: StructuredCall | None = None,
 ) -> dict[str, object]:
-    """Narrate each retained activation in order without giving the narrator authority.
+    """Narrate each retained causal moment without giving the narrator authority.
 
     The narrator sees only analyst-visible fields.  It returns evidence IDs that
-    must be drawn from that turn, making a fluent account step down to exact
+    must be drawn from that moment, making a fluent account step down to exact
     retained events rather than become another world model.
     """
-    turns = _turn_inputs(document)
-    if not turns:
+    moments = _moment_inputs(document)
+    if not moments:
         return {
             "status": "unavailable",
-            "reason": "the completed run retained no activations to narrate",
+            "reason": "the completed run retained no causal moments to narrate",
             "model_calls": 0,
             "cost": 0.0,
-            "turns": [],
+            "moments": [],
             "calls": [],
         }
 
@@ -59,9 +59,11 @@ def narrate_live_turns(
     narrated: list[dict[str, object]] = []
     calls: list[dict[str, object]] = []
     total_cost = 0.0
-    for index, turn in enumerate(turns, start=1):
-        system, user = _render_prompt(turn=turn, prior=prior)
-        trace_id = f"{trace_id_prefix}/narrator/turn/{turn['activation']}"
+    for index, moment in enumerate(moments, start=1):
+        system, user = _render_prompt(moment=moment, prior=prior)
+        trace_id = (
+            f"{trace_id_prefix}/narrator/moment/{moment['activation']}"
+        )
         try:
             parsed, meta = call(
                 model,
@@ -69,29 +71,31 @@ def narrate_live_turns(
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
-                response_model=TurnNarration,
+                response_model=CausalMomentNarration,
                 task=NARRATOR_TASK,
                 trace_id=trace_id,
                 max_budget=NARRATOR_MAX_BUDGET,
                 max_tokens=NARRATOR_MAX_TOKENS,
                 reasoning_effort=NARRATOR_REASONING_EFFORT,
             )
-            narration = TurnNarration.model_validate(
+            narration = CausalMomentNarration.model_validate(
                 parsed.model_dump(mode="json")
                 if isinstance(parsed, BaseModel)
                 else parsed
             )
-            events = cast(list[dict[str, object]], turn["events"])
+            events = cast(list[dict[str, object]], moment["events"])
             allowed_ids = {str(event["event_id"]) for event in events}
             if not set(narration.source_event_ids) <= allowed_ids:
-                raise ValueError("narrator cited an event outside its current turn")
+                raise ValueError(
+                    "narrator cited an event outside its current causal moment"
+                )
             cost = _observed_cost(meta)
             total_cost += cost
             record = {
-                "turn": index,
-                "activation": turn["activation"],
-                "person": turn["person"],
-                "logical_time": turn["logical_time"],
+                "moment": index,
+                "activation": moment["activation"],
+                "participants": moment["participants"],
+                "logical_time": moment["logical_time"],
                 "narrative": narration.narrative,
                 "source_event_ids": narration.source_event_ids,
             }
@@ -122,17 +126,17 @@ def narrate_live_turns(
             )
             return {
                 "status": "unavailable",
-                "reason": "live turn narration stopped before the run could be fully narrated",
+                "reason": "live causal-moment narration stopped before the run could be fully narrated",
                 "model_calls": len(calls),
                 "cost": total_cost,
-                "turns": narrated,
+                "moments": narrated,
                 "calls": calls,
             }
     return {
         "status": "completed",
         "model_calls": len(calls),
         "cost": total_cost,
-        "turns": narrated,
+        "moments": narrated,
         "calls": calls,
     }
 
@@ -141,15 +145,15 @@ def reference_narration() -> dict[str, object]:
     """Truthful marker for a zero-cost run that intentionally called no narrator."""
     return {
         "status": "not_requested",
-        "reason": "turn narration is created only for live LLM runs",
+        "reason": "causal-moment narration is created only for live LLM runs",
         "model_calls": 0,
         "cost": 0.0,
-        "turns": [],
+        "moments": [],
         "calls": [],
     }
 
 
-def _turn_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
+def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
     timeline = _list_of_mappings(document.get("timeline"))
     traces = _list_of_mappings(document.get("traces"))
     events_by_activation: dict[str, list[dict[str, object]]] = {}
@@ -163,32 +167,50 @@ def _turn_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
                     if key in event
                 }
             )
-    turns: list[dict[str, object]] = []
+    traces_by_activation: dict[str, list[dict[str, object]]] = {}
     for trace in traces:
         activation = trace.get("activation")
         person = trace.get("person")
         logical_time = trace.get("logical_time")
         if not isinstance(activation, str) or not isinstance(person, str) or not isinstance(logical_time, int):
             continue
+        traces_by_activation.setdefault(activation, []).append(trace)
+    moments: list[dict[str, object]] = []
+    for activation, activation_traces in traces_by_activation.items():
+        logical_time = activation_traces[0]["logical_time"]
         events = events_by_activation.get(activation, [])
         if not events:
-            # A silent activation is still a turn, but it needs a retained anchor.
-            events = [{"event_id": f"{activation}:silence", "kind": "no_action", "summary": "No action was committed during this activation.", "logical_time": logical_time, "state_revision": None}]
-        turns.append(
+            events = [{
+                "event_id": f"{activation}:silence",
+                "kind": "no_action",
+                "summary": "No participant committed an action during this causal moment.",
+                "logical_time": logical_time,
+                "state_revision": None,
+            }]
+        moments.append(
             {
                 "activation": activation,
-                "person": person,
+                "participants": [trace["person"] for trace in activation_traces],
                 "logical_time": logical_time,
                 "events": events,
-                "agent_trace": {
-                    key: trace[key]
-                    for key in ("orientation", "actions", "observations", "status")
-                    if key in trace
-                },
+                "participant_traces": [
+                    {
+                        key: trace[key]
+                        for key in (
+                            "person",
+                            "orientation",
+                            "actions",
+                            "observations",
+                            "status",
+                        )
+                        if key in trace
+                    }
+                    for trace in activation_traces
+                ],
             }
         )
     return sorted(
-        turns,
+        moments,
         key=lambda item: (cast(int, item["logical_time"]), str(item["activation"])),
     )
 
@@ -200,10 +222,10 @@ def _list_of_mappings(value: object) -> list[dict[str, object]]:
 
 
 def _render_prompt(
-    *, turn: Mapping[str, object], prior: Sequence[Mapping[str, object]],
+    *, moment: Mapping[str, object], prior: Sequence[Mapping[str, object]],
 ) -> tuple[str, str]:
     raw = resources.files("cybernetic_influence.active_runtime").joinpath(
-        "prompts/turn_narrator.yaml"
+        "prompts/causal_moment_narrator.yaml"
     ).read_text(encoding="utf-8")
     template = yaml.safe_load(raw)
     if not isinstance(template, dict):
@@ -215,7 +237,7 @@ def _render_prompt(
     return (
         environment.from_string(str(template["system"])).render(),
         environment.from_string(str(template["user"])).render(
-            turn=turn,
+            moment=moment,
             prior=list(prior),
         ),
     )

@@ -18,9 +18,10 @@ from cybernetic_influence import __version__
 from cybernetic_influence.presentation import (
     build_analyst_document,
     build_service_desk_analyst_document,
+    event_driven_service_desk_outcome,
 )
 from cybernetic_influence.narration import (
-    narrate_live_turns,
+    narrate_live_moments,
     reference_narration,
 )
 from cybernetic_influence.run_store import (
@@ -34,14 +35,11 @@ from cybernetic_influence.scenarios.service_desk import (
     SERVICE_DESK_MODEL,
     SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
     ServiceDeskCognitionProfile,
-    run_service_desk,
+    run_event_driven_service_desk,
     service_desk_arm_configurations,
     service_desk_fixture,
     service_desk_native_bindings,
     service_desk_scripted_bindings,
-)
-from cybernetic_influence.scenarios.service_desk_fidelity import (
-    build_service_desk_trial_readout,
 )
 from cybernetic_influence.scenarios.physical_access import (
     build_physical_access_readout,
@@ -144,8 +142,8 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             "live_authorized": os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1",
             "access_restricted": bool(_allowed_tailscale_users()),
             "scripted_cost": 0.0,
-            "maximum_live_calls": 18,
-            "maximum_live_cost": 0.63,
+            "maximum_live_calls": 48,
+            "maximum_live_cost": 0.74,
         }
 
     @app.get("/api/runs")
@@ -254,16 +252,12 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                     if live
                     else service_desk_scripted_bindings(service_fixture)
                 )
-                result = run_service_desk(
+                result = run_event_driven_service_desk(
                     service_fixture,
                     service_bindings,
                     run_id=run_id,
                 )
-                readout = build_service_desk_trial_readout(
-                    service_arm.arm_id,
-                    0,
-                    result,
-                )
+                readout = event_driven_service_desk_outcome(result)
                 document = build_service_desk_analyst_document(
                     fixture=service_fixture,
                     result=result,
@@ -357,10 +351,10 @@ app = create_app()
 def _attach_narration(
     document: dict[str, object], *, live: bool, run_id: str
 ) -> dict[str, object]:
-    """Add costed sequential LLM narration without changing causal evidence."""
+    """Add costed causal-moment narration without changing causal evidence."""
     narrated = dict(document)
     narration = (
-        narrate_live_turns(
+        narrate_live_moments(
             narrated,
             model=SERVICE_DESK_MODEL,
             trace_id_prefix=run_id,

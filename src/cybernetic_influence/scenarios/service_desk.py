@@ -67,6 +67,7 @@ SERVICE_DESK_SCHEDULE: tuple[tuple[int, str], ...] = (
     (7, "specialist"),
     (8, "supervisor"),
 )
+SERVICE_DESK_MAX_CAUSAL_MOMENTS = 12
 
 CUSTOMER_REPORT_ENCODING = "application/vnd.cybernetic.customer-report+json"
 POLICY_ENCODING = "application/vnd.cybernetic.escalation-policy+json"
@@ -456,7 +457,7 @@ def service_desk_fixture(
     scenario = CausalScenario(
         scenario_id=f"service_desk_{selected.arm_id}",
         description=(
-            "Nine sequential position activations resolving one concrete login "
+            "Bounded position activations resolving one concrete login "
             "incident across an authored service-operations center and remote "
             "customer site."
         ),
@@ -495,7 +496,7 @@ def service_desk_fixture(
 
 
 def service_desk_runtime_config() -> ActiveRuntimeConfig:
-    """Return the predeclared nine-call per-run budget envelope."""
+    """Return the bounded participant-call budget envelope."""
     return ActiveRuntimeConfig(
         per_call_budget=0.05,
         per_run_budget=0.50,
@@ -589,6 +590,48 @@ def run_service_desk(
             raise
         if checkpoint_observer is not None:
             checkpoint_observer(session.checkpoint())
+    return session.complete()
+
+
+def run_event_driven_service_desk(
+    fixture: ServiceDeskFixture,
+    bindings: Mapping[str, ActiveSystemBinding],
+    *,
+    run_id: str,
+    checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
+) -> ActiveRuntimeResult:
+    """Run causal moments until no person has a newly delivered observation.
+
+    The initial customer report triggers the triager explicitly.  Thereafter,
+    every person with newly delivered input is activated in one frozen set.
+    The bound prevents a faulty scenario from manufacturing an endless
+    observation/activation loop.
+    """
+    session = ActiveRuntimeSession(
+        fixture.scenario,
+        fixture.exact_bindings,
+        fixture.active_specs,
+        bindings,
+        run_id=run_id,
+        config=service_desk_runtime_config(),
+    )
+    active_system_ids = ["triager"]
+    logical_time = 0
+    while active_system_ids:
+        if logical_time >= SERVICE_DESK_MAX_CAUSAL_MOMENTS:
+            raise RuntimeError(
+                "service-desk event scheduler exceeded its causal-moment bound"
+            )
+        try:
+            session.activate(active_system_ids, logical_time=logical_time)
+        except Exception:
+            if checkpoint_observer is not None:
+                checkpoint_observer(session.checkpoint())
+            raise
+        if checkpoint_observer is not None:
+            checkpoint_observer(session.checkpoint())
+        active_system_ids = session.pending_active_system_ids
+        logical_time += 1
     return session.complete()
 
 
@@ -2072,5 +2115,6 @@ __all__ = [
     "service_desk_personas",
     "service_desk_runtime_config",
     "service_desk_scripted_bindings",
+    "run_event_driven_service_desk",
     "run_service_desk",
 ]

@@ -5,6 +5,7 @@ const html = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => (
 
 let current = null
 let selectedEventIndex = 0
+let selectedMomentIndex = 0
 let selectedPerson = null
 let selectedScale = 'exact'
 let selectedGraphView = 'causal'
@@ -527,20 +528,72 @@ function renderProjectionControls() {
     : 'This scenario has no authored places or spatial topology yet, so only its causal flow can be shown.'
 }
 
-function selectEvent(index) {
+function causalMoments() {
+  if (current?.moments?.length) return current.moments
+  const activations = [...new Set((current?.traces || []).map((trace) => trace.activation))]
+  return activations.map((activation, index) => {
+    const traces = current.traces.filter((trace) => trace.activation === activation)
+    const eventIds = current.timeline.filter((event) => event.activation === activation).map((event) => event.event_id)
+    return {
+      moment:index + 1,
+      activation,
+      logical_time:traces[0]?.logical_time ?? index,
+      participants:traces.map((trace) => trace.person),
+      event_ids:eventIds,
+      representative_event_index:Math.max(0, current.timeline.findIndex((event) => event.event_id === eventIds[0])),
+      silent:eventIds.length === 0,
+    }
+  })
+}
+
+function selectMoment(index) {
+  const moments = causalMoments()
+  if (!moments.length) return
+  selectedMomentIndex = Math.max(0, Math.min(index, moments.length - 1))
+  const moment = moments[selectedMomentIndex]
+  const eventIndex = moment.event_ids.length
+    ? current.timeline.findIndex((event) => event.event_id === moment.event_ids[0])
+    : moment.representative_event_index
+  selectEvent(Math.max(0, eventIndex), moment.activation)
+}
+
+function selectEvent(index, momentActivation = null) {
   if (!current?.timeline?.length) return
   selectedEventIndex = Math.max(0, Math.min(index, current.timeline.length - 1))
   const event = current.timeline[selectedEventIndex]
-  $('#event-slider').value = selectedEventIndex
-  $('#event-count').textContent = `${selectedEventIndex + 1} / ${current.timeline.length}`
-  $('#previous-event').disabled = selectedEventIndex === 0
-  $('#next-event').disabled = selectedEventIndex === current.timeline.length - 1
-  $('#event-detail').innerHTML = `
+  const moments = causalMoments()
+  const activation = momentActivation || event.activation
+  const momentIndex = Math.max(0, moments.findIndex((moment) => moment.activation === activation))
+  const moment = moments[momentIndex]
+  selectedMomentIndex = momentIndex
+  $('#event-slider').value = selectedMomentIndex
+  $('#event-count').textContent = `${selectedMomentIndex + 1} / ${moments.length} moments`
+  $('#previous-event').disabled = selectedMomentIndex === 0
+  $('#next-event').disabled = selectedMomentIndex === moments.length - 1
+  const exactBelongsToMoment = event.activation === activation
+  $('#event-detail').innerHTML = exactBelongsToMoment ? `
     <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>time ${html(event.logical_time)}</span><span>revision ${html(event.state_revision)}</span>${event.activation ? `<span>${html(event.activation)}</span>` : ''}</div>
     <h3>${html(event.summary)}</h3>
-    <small>${html(event.event_id)}</small>`
-  renderStepAccount(event)
-  document.querySelectorAll('.timeline-marker').forEach((marker) => marker.classList.toggle('active', Number(marker.dataset.index) === selectedEventIndex))
+    <small>${html(event.event_id)}</small>` : `
+    <div><span class="event-kind">No committed event</span><span>time ${html(moment?.logical_time)}</span><span>${html(activation)}</span></div>
+    <h3>Every participant remained silent in this causal moment.</h3>
+    <small>The map remains at the latest preceding exact event.</small>`
+  const accountEvent = exactBelongsToMoment ? event : {...event, activation, person:null}
+  renderStepAccount(accountEvent)
+  const momentEventIds = moment?.event_ids || []
+  $('#moment-events').innerHTML = momentEventIds.length
+    ? momentEventIds.map((eventId) => {
+        const exact = current.timeline.find((item) => item.event_id === eventId)
+        return `<button data-event-id="${html(eventId)}" class="${eventId === event.event_id ? 'active' : ''}">${html(exact?.kind?.replaceAll('_',' ') || eventId)}</button>`
+      }).join('')
+    : '<span class="muted">No exact event was committed in this moment.</span>'
+  document.querySelectorAll('#moment-events button').forEach((button) => {
+    button.onclick = () => {
+      const exactIndex = current.timeline.findIndex((item) => item.event_id === button.dataset.eventId)
+      if (exactIndex >= 0) selectEvent(exactIndex, activation)
+    }
+  })
+  document.querySelectorAll('.timeline-marker').forEach((marker) => marker.classList.toggle('active', Number(marker.dataset.index) === selectedMomentIndex))
   document.querySelectorAll('.story-event').forEach((button) => button.classList.toggle('active', button.dataset.eventId === event.event_id))
   renderScaleControls()
   renderGraph()
@@ -575,7 +628,8 @@ function selectEvent(index) {
 }
 
 function renderStepAccount(event) {
-  const narration = current.narration?.turns?.find((turn) => turn.activation === event.activation)
+  const narrations = current.narration?.moments || current.narration?.turns || []
+  const narration = narrations.find((moment) => moment.activation === event.activation)
   const trace = event.person && event.activation
     ? current.traces.find((entry) => entry.person === event.person && entry.activation === event.activation)
     : null
@@ -588,16 +642,18 @@ function renderStepAccount(event) {
     state_committed:'The world state changed',
   }[event.kind] || event.kind.replaceAll('_', ' ')
   if (narration) {
-    $('#step-account-title').textContent = `Turn ${narration.turn} · ${String(narration.person || 'system').replaceAll('_', ' ')}`
+    const momentNumber = narration.moment || narration.turn
+    const participants = narration.participants || [narration.person || 'system']
+    $('#step-account-title').textContent = `Causal moment ${momentNumber} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
     $('#step-account-body').textContent = narration.narrative
-    $('#step-account-source').textContent = `Live LLM narrator · grounded in ${narration.source_event_ids.join(', ')}. It received this turn’s trace and the earlier turn narratives.`
+    $('#step-account-source').textContent = `Live LLM narrator · grounded in ${narration.source_event_ids.join(', ')}. It received this moment’s trace and the earlier moment narratives.`
   } else if (trace?.orientation && current.execution === 'live') {
     $('#step-account-title').textContent = title
     const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The active person'
     $('#step-account-body').textContent = `${name} read the situation as: “${trace.orientation}” ${event.summary}`
     $('#step-account-source').textContent = current.narration?.status === 'unavailable'
       ? 'The live narrator was unavailable, so this is the acting agent’s own LLM orientation paired with the exact recorded event.'
-      : 'This run predates turn-by-turn narration, so this is the acting agent’s own LLM orientation paired with the exact recorded event.'
+      : 'This run predates causal-moment narration, so this is the acting agent’s own LLM orientation paired with the exact recorded event.'
   } else if (trace?.orientation) {
     $('#step-account-title').textContent = title
     const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The active person'
@@ -616,41 +672,47 @@ function renderStepAccount(event) {
 function renderTurnNarratives() {
   const narration = current.narration || {}
   const container = $('#turn-narratives')
-  if (narration.status === 'completed' && narration.turns?.length) {
-    container.innerHTML = narration.turns.map((turn) => `
-      <button class="turn-narrative" data-activation="${html(turn.activation)}">
-        <span>Turn ${html(turn.turn)} · ${html(String(turn.person).replaceAll('_',' '))}</span>
-        <p>${html(turn.narrative)}</p>
-        <small>${html((turn.source_event_ids || []).join(' · '))}</small>
-      </button>`).join('')
+  const moments = narration.moments || narration.turns || []
+  if (narration.status === 'completed' && moments.length) {
+    container.innerHTML = moments.map((moment) => {
+      const momentNumber = moment.moment || moment.turn
+      const participants = moment.participants || [moment.person || 'system']
+      return `
+      <button class="turn-narrative" data-activation="${html(moment.activation)}">
+        <span>Causal moment ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
+        <p>${html(moment.narrative)}</p>
+        <small>${html((moment.source_event_ids || []).join(' · '))}</small>
+      </button>`
+    }).join('')
     document.querySelectorAll('.turn-narrative').forEach((button) => {
       button.onclick = () => {
-        const index = current.timeline.findIndex((event) => event.activation === button.dataset.activation)
-        if (index >= 0) selectEvent(index)
+        const index = causalMoments().findIndex((moment) => moment.activation === button.dataset.activation)
+        if (index >= 0) selectMoment(index)
       }
     })
     return
   }
-  const reason = narration.reason || 'No turn narration was retained for this run.'
+  const reason = narration.reason || 'No causal-moment narration was retained for this run.'
   container.innerHTML = `<p class="muted">${html(reason)}</p>`
 }
 
 function renderTimeline(run) {
   const timeline = run.timeline || []
-  $('#event-slider').max = Math.max(0, timeline.length - 1)
+  const moments = causalMoments()
+  $('#event-slider').max = Math.max(0, moments.length - 1)
   $('#timeline-track').innerHTML = ''
-  timeline.forEach((event, index) => {
+  moments.forEach((moment, index) => {
     const marker = document.createElement('button')
-    marker.className = `timeline-marker kind-${event.kind}`
+    marker.className = 'timeline-marker'
     marker.dataset.index = index
-    marker.title = `${event.kind.replaceAll('_',' ')}: ${event.summary}`
-    marker.setAttribute('aria-label', `Event ${index + 1}: ${event.summary}`)
-    marker.onclick = () => selectEvent(index)
+    const people = moment.participants.map((person) => person.replaceAll('_',' ')).join(' + ')
+    marker.title = `Causal moment ${index + 1}: ${people}${moment.silent ? ' (silent)' : ''}`
+    marker.setAttribute('aria-label', marker.title)
+    marker.onclick = () => selectMoment(index)
     $('#timeline-track').append(marker)
   })
-  if (timeline.length) {
-    const firstAction = timeline.findIndex((event) => event.kind === 'action_attempted')
-    selectEvent(firstAction >= 0 ? firstAction : 0)
+  if (moments.length) {
+    selectMoment(0)
   }
   else {
     $('#event-count').textContent = 'No causal events'
@@ -660,13 +722,14 @@ function renderTimeline(run) {
 
 function render(run) {
   current = {
-    nodes: [], snapshots: {}, edges: [], boundaries: [], timeline: [], traces: [], events: [],
+    nodes: [], snapshots: {}, edges: [], boundaries: [], timeline: [], moments: [], traces: [], events: [],
     story: {headline: run.status, summary: run.error || 'No final account was retained.', steps: []},
-    narration: {status:'not_requested', turns:[]},
+    narration: {status:'not_requested', moments:[]},
     model_calls: 0, cost: 0,
     ...run,
   }
   selectedEventIndex = 0
+  selectedMomentIndex = 0
   selectedPerson = null
   selectedScale = 'exact'
   selectedGraphView = current.world ? 'world' : 'causal'
@@ -711,9 +774,9 @@ function render(run) {
   $('#raw').textContent = JSON.stringify(current, null, 2)
 }
 
-$('#event-slider').oninput = (event) => selectEvent(Number(event.target.value))
-$('#previous-event').onclick = () => selectEvent(selectedEventIndex - 1)
-$('#next-event').onclick = () => selectEvent(selectedEventIndex + 1)
+$('#event-slider').oninput = (event) => selectMoment(Number(event.target.value))
+$('#previous-event').onclick = () => selectMoment(selectedMomentIndex - 1)
+$('#next-event').onclick = () => selectMoment(selectedMomentIndex + 1)
 $('#scenario').onchange = (event) => configureScenario(event.target.value)
 $('#arm').onchange = describeCondition
 $('#spatial-layout').onclick = () => {
