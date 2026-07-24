@@ -27,9 +27,10 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-V0.12 is implemented, verified, and deployed on the private Mac development
-host from behavior commit
-`e6c935f6352e937f2307342757f2f04ddaa02285`.
+V0.12.1 is implemented, verified, and deployed on the private Mac development
+host from narrative-fidelity repair commit
+`fc985ac89d11a649b1afd232b6620fa05966d8e7`, preserving the V0.12 event-driven
+behavior introduced by `e6c935f6352e937f2307342757f2f04ddaa02285`.
 
 - three concrete scenario families: Service Desk, physical access, and
   purchase to payment;
@@ -92,13 +93,26 @@ context, current-moment-only citations, exact-gate authorization, and zero
 processor LLM calls. The deployed run reopened with four narratives, four
 analytical scales, both layouts, exact traces, and no browser errors.
 
+The narrative-fidelity canary `run_d187cea6b5ec` exercised V0.12.1 repair
+commit `fc985ac89d11a649b1afd232b6620fa05966d8e7` with four human calls at
+medium reasoning and four narrator calls at low reasoning for $0.04639125.
+All eight calls validated with zero retries. Full-trace inspection confirmed
+that the narrator received the coarse processor's stipulated abstraction and
+known omissions, received only a boolean indication of protected private-state
+change, preserved the complete prior-narrative chain, and cited only its
+current moment. The retained account called the processor “stipulated coarse”
+rather than exact and distinguished the final AP clerk's protected memory
+update from the absence of an external action or world-state effect. Desktop
+and mobile browser checks reopened the run with four narratives, both layouts,
+no horizontal overflow, and no console or network errors.
+
 The causal core still drains one action's complete routed cascade before
 accepting another; arbitrary interleaving within nonzero-delay routes is not
 yet supported. The UI is technically reviewable; operator comprehension and
 analytical usefulness remain under iterative stakeholder review rather than
 being treated as proven.
 
-Technical execution is established for V0.12, and the deployed simulator is
+Technical execution is established for V0.12.1, and the deployed simulator is
 stakeholder-reviewable. Stakeholder comprehension and analytical usefulness of
 the autonomous purchase-to-payment vertical have not yet been observed.
 
