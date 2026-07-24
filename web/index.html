@@ -11,28 +11,35 @@
 <body>
   <header>
     <div><span class="eyebrow">Cybernetic influence</span><h1>Simulator</h1></div>
-    <span id="run-status">Ready</span>
+    <div class="header-actions">
+      <nav class="app-tabs" aria-label="Simulator workspace">
+        <button id="simulation-tab" type="button" class="active" aria-pressed="true" aria-controls="simulation-view">Simulation</button>
+        <button id="history-tab" type="button" aria-pressed="false" aria-controls="history-view">Run history</button>
+      </nav>
+      <span id="run-status">Ready</span>
+    </div>
   </header>
   <main>
-    <section class="run-card">
-      <div>
-        <span class="eyebrow">Choose and play</span>
-        <h2 id="scenario-title">Service desk</h2>
-        <p id="scenario-description">Run people, information, records, connections, and exact mechanisms together.</p>
-      </div>
-      <label>Scenario
-        <select id="scenario"></select>
-      </label>
-      <label>Scenario condition
-        <select id="arm"></select>
-        <small id="arm-help">Choose the condition you want to test.</small>
-      </label>
-      <label class="live"><input id="live" type="checkbox"> Use live LLM agents <small id="live-help">People reason from their own memory, position, and delivered observations.</small></label>
-      <button id="run">Play simulation</button>
-      <details><summary>Model, cost, and simulation assumptions</summary><p id="cost-details">Loading…</p><p>People are modeled with remembered positions and dispositions. The scenario condition changes the world or institutional mechanism; it is not an instruction placed in a person's mind.</p></details>
-    </section>
+    <div id="simulation-view" class="app-view">
+      <section class="run-card">
+        <div>
+          <span class="eyebrow">Choose and play</span>
+          <h2 id="scenario-title">Service desk</h2>
+          <p id="scenario-description">Run people, information, records, connections, and exact mechanisms together.</p>
+        </div>
+        <label>Scenario
+          <select id="scenario"></select>
+        </label>
+        <label>Scenario condition
+          <select id="arm"></select>
+          <small id="arm-help">Choose the condition you want to test.</small>
+        </label>
+        <label class="live"><input id="live" type="checkbox"> Use live LLM agents <small id="live-help">People reason from their own memory, position, and delivered observations.</small></label>
+        <button id="run">Play simulation</button>
+        <details><summary>Model, cost, and simulation assumptions</summary><p id="cost-details">Loading…</p><p>People are modeled with remembered positions and dispositions. The scenario condition changes the world or institutional mechanism; it is not an instruction placed in a person's mind.</p></details>
+      </section>
 
-    <section id="result" hidden>
+      <section id="result" hidden>
       <div class="status-line"><strong id="result-status"></strong><span id="result-cost"></span></div>
       <section id="map-section" class="map-section">
         <span class="eyebrow">People · information · objects · mechanisms</span>
@@ -108,14 +115,17 @@
         <summary>Advanced evidence</summary>
         <pre id="raw"></pre>
       </details>
-    </section>
+      </section>
+    </div>
 
-    <details class="history-card">
-      <summary><span class="eyebrow">Retained evidence</span><strong> Recent runs</strong></summary>
+    <section id="history-view" class="app-view history-card" hidden>
+      <span class="eyebrow">Saved simulations</span>
+      <h2>Run history</h2>
+      <p class="muted">Open an earlier run for inspection or move it to recoverable server trash.</p>
       <p id="history-empty" class="muted">No retained runs yet.</p>
       <div id="history" class="history"></div>
       <p id="storage-warning" class="warning" hidden></p>
-    </details>
+    </section>
   </main>
   <script src="/assets/graph-canvas.js?v=multirate-time-v1"></script>
   <script src="/assets/app.js?v=multirate-time-v1"></script>

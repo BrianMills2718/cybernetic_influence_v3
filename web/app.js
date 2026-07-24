@@ -14,6 +14,16 @@ let selectedEdgeId = null
 let scenarioCatalog = {}
 let runtimeConfig = {}
 
+function setWorkspaceView(view) {
+  const history = view === 'history'
+  $('#simulation-view').hidden = history
+  $('#history-view').hidden = !history
+  $('#simulation-tab').classList.toggle('active', !history)
+  $('#simulation-tab').setAttribute('aria-pressed', String(!history))
+  $('#history-tab').classList.toggle('active', history)
+  $('#history-tab').setAttribute('aria-pressed', String(history))
+}
+
 function simulatedTime(value) {
   const unit = current?.time_unit || 'step'
   const plural = Number(value) === 1 ? unit : `${unit}s`
@@ -130,6 +140,7 @@ async function loadHistory() {
 
 async function openRetained(runId) {
   render(await request(`/api/runs/${runId}`))
+  setWorkspaceView('simulation')
   const url = new URL(window.location)
   url.searchParams.set('run', runId)
   window.history.replaceState({}, '', url)
@@ -193,6 +204,7 @@ function graphProjection() {
       nodes: exactNodes,
       edges: temporalEdges.map((edge) => ({
         ...edge,
+        kind:edge.kind || 'connection',
         routeIds:edge.exact_route_ids || [edge.id],
       })),
     }
@@ -215,14 +227,15 @@ function graphProjection() {
   }
   const grouped = new Map()
   temporalEdges.forEach((edge) => {
+    const kind = edge.kind || 'connection'
     const source = memberIds.has(edge.source) ? boundary.id : edge.source
     const target = memberIds.has(edge.target) ? boundary.id : edge.target
     if (source === target) return
-    const key = `${edge.kind}|${source}|${target}|${edge.enabled}`
+    const key = `${kind}|${source}|${target}|${edge.enabled}`
     if (!grouped.has(key)) {
       grouped.set(key, {
         id:`coarse_${grouped.size}`,
-        kind:edge.kind,
+        kind,
         source,
         target,
         enabled:edge.enabled,
@@ -414,7 +427,6 @@ function showTrace(person) {
         </details>
       </article>`
   }).join('') || '<p class="muted">No retained activations for this person.</p>'
-  document.querySelector('.trace-step.event-match')?.scrollIntoView({behavior:'smooth', block:'nearest'})
 }
 
 function drawGraphLines(edges) {
@@ -821,6 +833,8 @@ function render(run) {
 $('#event-slider').oninput = (event) => selectMoment(Number(event.target.value))
 $('#previous-event').onclick = () => selectMoment(selectedMomentIndex - 1)
 $('#next-event').onclick = () => selectMoment(selectedMomentIndex + 1)
+$('#simulation-tab').onclick = () => setWorkspaceView('simulation')
+$('#history-tab').onclick = () => setWorkspaceView('history')
 $('#scenario').onchange = (event) => configureScenario(event.target.value)
 $('#arm').onchange = describeCondition
 $('#spatial-layout').onclick = () => {

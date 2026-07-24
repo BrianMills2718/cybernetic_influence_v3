@@ -48,18 +48,26 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Narrative for the selected causal moment" in page.text
     assert "Causal-moment narrative" in page.text
     assert "Play simulation" in page.text
+    assert "Run history" in page.text
+    assert 'id="history-view"' in page.text
+    assert 'id="simulation-view"' in page.text
     assert "/assets/graph-canvas.js" in page.text
     assert "/assets/graph-canvas.css" in page.text
     assert "V2 Inspect" not in page.text
     assert "Choose a moment" in page.text
     graph_script = api.get("/assets/graph-canvas.js")
     graph_styles = api.get("/assets/graph-canvas.css")
+    app_script = api.get("/assets/app.js")
     assert graph_script.status_code == 200
     assert graph_styles.status_code == 200
+    assert app_script.status_code == 200
     assert graph_script.headers["cache-control"] == "no-cache"
     assert graph_styles.headers["cache-control"] == "no-cache"
+    assert app_script.headers["cache-control"] == "no-cache"
     assert len(graph_script.content) > 250_000
     assert b".react-flow" in graph_styles.content
+    assert b".scrollIntoView" not in app_script.content
+    assert b"kind:edge.kind || 'connection'" in app_script.content
 
 
 def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Path) -> None:
