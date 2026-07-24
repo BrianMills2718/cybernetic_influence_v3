@@ -1,18 +1,20 @@
 ---
-doc_role: implementation_plan
-authority: bounded_design
-status: proposed
+doc_role: active_plan
+authority: implementation_plan
+status: active
 created: 2026-07-24
+updated: 2026-07-24
 predecessor: 013-configurable-explainable-runs.md
 ---
 
 # Slice 14: Pausable Live Runs
 
-**Status: scripted Service Desk pause/resume implemented; live pause/resume deferred.**
+**Status: Live pause/resume implemented and deployed; integrated demo acceptance
+remains active.**
 
 ## Current implementation evidence
 
-The service-desk event scheduler can now stop only after a validated quiescent
+The service-desk event scheduler can stop only after a validated quiescent
 `ActiveRuntimeCheckpoint` and restore that checkpoint into the same event-driven
 schedule. The focused scripted test pauses after three causal moments and
 proves that the resumed run has the same activation IDs, event IDs, and final
@@ -21,11 +23,47 @@ boundary, the API now atomically retains the full validated checkpoint under a
 private continuation envelope as well as its analyst-safe progress summary.
 The failure path preserves that envelope with lifecycle `interrupted`; a
 focused API test verifies its checkpoint digest rather than trusting a progress
-summary. The scripted Service Desk control now accepts a concurrent pause
+summary. The scripted Service Desk control accepts a concurrent pause
 request, stops after its current causal moment, and resumes the retained
-checkpoint to a completed analyst document. The browser exposes those controls
-only for that zero-cost scripted scenario. Live pause/resume remains deferred:
-an in-flight provider call must not be replayed or mis-accounted.
+checkpoint to a completed analyst document. The same continuation path is now
+enabled for live Service Desk runs, and the browser exposes pause/resume
+according to retained lifecycle state.
+
+The deployed DeepSeek canary `run_abcd00000000` is current evidence that a live
+run can complete from a retained checkpoint. It finished with lifecycle
+`completed_from_checkpoint`, 12 causal moments, 105 events, 11 participant
+calls, 12 narrator calls, 12 narratives, and `$0.0054597981` observed cost on
+simulator `1be312441fcc934ab2fb72e044db3b5dc14f7985` and shared client
+`9f61bd7c9419c93961a722a7ef6209adcf593382`. This licenses the bounded
+completion claim only. Full duplicate/cost-continuity trace inspection and the
+current desktop interaction pass remain open below.
+
+## Demo completion gate
+
+This packet is the sole active path to calling the current private PoC demo
+finished. It does not require conversational scenario authoring or broader
+scenario fidelity.
+
+- [x] A current DeepSeek V4 Flash `none` Service Desk run completes with eight
+  grounded moment narratives, participant traces, exact evidence, retained
+  configuration, and observed provider cost.
+- [x] A live run pauses at a validated causal boundary and later completes from
+  that retained checkpoint.
+- [ ] Inspect the resumed run's full causal and provider-call trace: no repeated
+  pre-pause event IDs or provider logical calls, a continuous narrative prefix,
+  and observed cost supported by terminal receipts.
+- [ ] Exercise the current desktop path—choose scenario, Play, map, narrative,
+  traces, pause, resume, and Run history—with no blocking console/network error,
+  disruptive scroll jump, or misleading lifecycle control.
+- [x] Confirm the roadmap, plan index, README, and deployed configuration agree
+  on revisions, model defaults, supported controls, and explicit non-claims.
+- [ ] Have the operator use the current build for five to ten minutes. Fix only
+  demo-blocking comprehension or control defects; otherwise record the judgment
+  and mark this packet complete.
+
+The demo is finished when all six checks are satisfied. Conversational scenario
+drafting then becomes eligible as the next product phase; it is not part of
+this completion boundary.
 
 ## Decision packet
 
@@ -205,7 +243,7 @@ retained lifecycle and invokes the JSON endpoints.
 
 ## Fixtures, negative cases, and slices
 
-### Slice 14A — durable causal pause/resume
+### Slice 14A — durable causal pause/resume — complete
 
 Persist a full active checkpoint at a controlled causal boundary, implement the
 lifecycle store/controller and two APIs, then resume a scripted Service Desk
@@ -217,12 +255,12 @@ corrupt checkpoint, wrong scenario fingerprint, and an already terminal run.
 attempts, or state revisions; the run history reports `paused` before resume
 and `completed` after it.
 
-### Slice 14B — live call/accounting boundary and narration prefix
+### Slice 14B — live call/accounting boundary and narration prefix — acceptance open
 
-Run a low-cost real DeepSeek-`none` live sample with a controlled pause after
-one completed causal moment, resume it, and inspect the exact shared-client
-trace. Exercise the negative in-flight condition through a deterministic test
-double: it becomes interrupted/failed and is never automatically resubmitted.
+The low-cost DeepSeek-`none` sample has paused and resumed to completion.
+Inspect its exact shared-client trace and exercise the negative in-flight
+condition through the existing deterministic test double: it becomes
+interrupted/failed and is never automatically resubmitted.
 
 **Acceptance:** retained provider-call logical IDs before pause occur once;
 observed cost after resume equals the terminal receipts; narration resumes with
@@ -230,15 +268,12 @@ its retained prior account and emits no duplicate moment account.
 
 ## Verification and promotion
 
-- Focused Pydantic/store tests: lifecycle transitions, corrupt/mismatched
-  checkpoint rejection, compatibility for old records, atomic paused write.
-- Runtime tests: scripted pause/resume exact-prefix equivalence; provider-call
-  double verifies no replay after uncertain in-flight call.
-- API tests: pause/resume status/error contracts and live-lock release.
-- Browser verification: run → pause request → paused evidence → resume → final
-  narrative on the private Mac; inspect the returned retained record.
-- LLM evidence: exact full trace and cost receipts for the one Slice 14B live
-  sample, not a claim of deterministic model behavior.
+Focused store, runtime, and API tests cover lifecycle transitions,
+corrupt/mismatched checkpoints, compatibility, scripted exact-prefix
+equivalence, uncertain-call non-replay, status contracts, live-lock release,
+and native live continuation. Remaining promotion evidence is exactly the open
+work in the demo completion gate: inspect the live full trace and cost receipts,
+then exercise pause/resume through the private-Mac browser.
 
 Required now: full checkpoint validation, immutable execution identity, typed
 state transitions, and explicit provider uncertainty. Deferred until a real

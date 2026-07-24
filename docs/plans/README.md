@@ -14,14 +14,18 @@ instructions to continue their former “next slice” sections.
 
 ## Active packet
 
-[Slice 13: Configurable, explainable runs](013-configurable-explainable-runs.md).
-Its implementation is deployed. Terra and DeepSeek-without-reasoning have
-complete current-revision canaries; DeepSeek `high` and `xhigh` are explicitly
-operator-selectable experiments, not certified settings. A current-revision
-rendered desktop browser pass remains open. [Slice 14: pausable live
-runs](014-pausable-live-runs.md) is the next bounded design; it is not yet
-implemented. Conversational scenario authoring is sequenced in the roadmap but
-has no active implementation plan yet.
+[Slice 14: Pausable live runs](014-pausable-live-runs.md) is the sole active
+packet. Its runtime implementation is deployed, and a real DeepSeek run has
+completed from a retained live checkpoint. The remaining work is the integrated
+demo completion gate: inspect that resumed trace for duplicate-free causal and
+provider-call continuity, exercise the current desktop workflow, and obtain the
+operator's short usability judgment.
+
+[Slice 13: Configurable, explainable runs](013-configurable-explainable-runs.md)
+is implemented and retained as completed design evidence. Its remaining
+desktop acceptance is consolidated into Slice 14's integrated demo gate rather
+than advertised as a second active packet. Conversational scenario authoring is
+post-demo roadmap direction and has no active implementation plan.
 
 ## Completed evidence
 
@@ -39,6 +43,7 @@ has no active implementation plan yet.
 | [010](010-autonomous-multirate-substrate.md) | Autonomous multirate process time |
 | [011](011-purchase-payment-representation-boundary.md) | Coarse processor and representation depth |
 | [012](012-event-driven-purchase-payment.md) | Event-driven purchase-to-payment causal chain |
+| [013](013-configurable-explainable-runs.md) | Configurable model, reasoning, spend, and fidelity explanation |
 
 No completed plan is archived or deleted: each contains unique acceptance
 evidence and design lineage, while this index and explicit completion statuses

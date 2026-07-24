@@ -27,58 +27,34 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-V0.13 is implemented and deployed as a release candidate on the private Mac
-development host at simulator commit
-`a919777af6803f8dc1e9c4b3820667feac6bcea9` with shared-client revision
-`9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`. It adds typed model/reasoning/spend
-configuration, model-specific reasoning choices, accessible explanations,
-scenario assumptions and omissions, retained effective configuration, and
-pre-call total-budget admission while preserving the V0.12.2 history and
-in-place inspection repairs.
+V0.13 plus live checkpoint continuation is implemented and deployed as the
+current private demo candidate on the Mac development host at simulator
+`1be312441fcc934ab2fb72e044db3b5dc14f7985` with shared-client revision
+`9f61bd7c9419c93961a722a7ef6209adcf593382`. The API reports DeepSeek V4
+Flash with `none` reasoning as the default and Terra as the other certified
+route. DeepSeek `high` and `xhigh` remain explicitly experimental; `medium` is
+rejected by shared-client policy. Exact scenario mechanisms make no model call.
 
-Current local validation passes mypy for the changed server boundary, all 59
-tests, JavaScript syntax, and the whitespace/error diff check. The private Mac
-deployment API reports the deployed build revision and model catalog. A
-current-revision rendered desktop browser pass remains open. The shared-client
-certification seam previously had 44 relevant synchronous policy/attempt/route
-tests passing on the simulator environment; seven async-only tests were
-uncollected there because that environment does not install `pytest-asyncio`.
+Current participant/narrator route observations are:
 
-Terra and DeepSeek V4 Flash are currently in the selectable catalog. Terra's
-current participant and narrator schema observations are
-`routeobs1_cfe8e9cc144d22be087e848a` and
-`routeobs1_a11d208c426f16940ee43c4b`; it defaults to medium agent reasoning
-and retains low narrator reasoning. Exact scenario mechanisms still make no
-model call.
+- Terra: `routeobs1_7cc1c51f065c181a33ff422d` and
+  `routeobs1_bb5643a65107960dadc76a36`;
+- DeepSeek V4 Flash `none`: `routeobs1_029097c508a11554b6b9301f` and
+  `routeobs1_ba61b37be133f07f47177352`.
 
-The exact-revision deployed canary `run_feb8ed10258d` completed the Service Desk
-baseline and reached `closed_confirmed` in eight causal moments. Seven Terra
-participant calls used medium reasoning and all eight moment narrations used
-low reasoning for a fully provider-observed total of `$0.103861875`. Every one
-of the 15 retained provider records completed on the native-schema path with
-zero retries, warnings, or validation errors. Seven narratives cite only
-events retained in their causal moment; the silent eighth cites its validated
-synthetic silence marker. The retained configuration names the selected model,
-reasoning levels, `$0.55` authorization, and exact shared-client revision.
+The deployed DeepSeek baseline `run_954220d513c3` reached
+`closed_confirmed` in eight causal moments with seven participant calls, eight
+narrator calls, eight narratives, and `$0.0034581043` observed cost. The
+deployed continuation canary `run_abcd00000000` later completed from a retained
+live checkpoint with lifecycle `completed_from_checkpoint`, 12 causal moments,
+105 events, 11 participant calls, 12 narrator calls, 12 narratives, and
+`$0.0054597981` observed cost.
 
-DeepSeek V4 Flash is certified at `none` reasoning. The shared-client policy
-rejects `medium`. At the operator's request, `high` and `xhigh` are also
-selectable as clearly labeled experiments, not certified configurations: a
-focused current-revision participant probe did not produce valid structured
-output. Fresh current-revision participant and narrator observations for the
-certified `none` setting are
-`routeobs1_811669be15ab4d6dda51c296` and
-`routeobs1_82ba91498a4ea780e31b00d3`. The complete Service Desk canary
-`run_164fee2c564f` finished with nine participant and ten narrator calls for
-`$0.004636731`. One narrator first attempt exceeded the 360-character schema
-limit and succeeded on retry; this is retained as a schema-compliance finding,
-not misclassified as empty provider output.
-
-Rendered desktop certification is also still open: production assets
-build, API/static checks pass, and prior V0.12 browser evidence exists, but both
-headless Chrome and Safari automation hung from the current SSH session. Do not
-upgrade this to a visual pass without a successful current-revision browser
-run.
+Technical execution is therefore observed for the configured live path and for
+one live checkpoint continuation. The continuation canary's full
+duplicate/cost-continuity trace inspection and a current-revision desktop
+workflow pass remain open. Stakeholder reviewability is established; the final
+operator usability judgment for this demo candidate is not yet recorded.
 
 V0.12.2 remains the last fully narrated and browser-certified release. It adds
 the separate run-history workspace and stable in-place scale/time inspection
@@ -171,13 +147,12 @@ yet supported. The UI is technically reviewable; operator comprehension and
 analytical usefulness remain under iterative stakeholder review rather than
 being treated as proven.
 
-Technical execution is established for V0.12.2 locally and on the private Mac
-development host. Stakeholder observation has now occurred on the deployed
-workflow: the operator successfully ran and inspected authored scenarios, and
-identified fixed LLM settings, insufficient control explanations, and the
-closed scenario catalog as the next barriers to the intended modeling job.
-This licenses the next product direction; it does not yet establish analytical
-usefulness on a real research question.
+Stakeholder observation has occurred repeatedly on the deployed workflow: the
+operator ran and inspected authored scenarios and directly shaped the map,
+narrative, configuration, and lifecycle controls. This licenses the current
+integrated demo completion pass and the later conversational-authoring
+direction. It does not establish analytical usefulness on a real research
+question.
 
 ## Canonical MVP Probe
 
@@ -205,22 +180,43 @@ human psychology, calibrated human timing, arbitrary delayed-route
 interleaving, continuous time, or fidelity outside its stipulated service
 workflow.
 
+## Current Demo Completion Boundary
+
+“Finished” currently means a reviewable private PoC demo, not completion of the
+North Star or a production simulator. The sole active packet is
+[Slice 14](plans/014-pausable-live-runs.md), and the demo is complete when:
+
+1. the current DeepSeek-default Service Desk run exposes synchronized spatial
+   and causal maps, grounded moment narratives, participant/composite traces,
+   exact evidence, effective configuration, and observed cost;
+2. a live run pauses at a validated causal boundary and resumes without
+   duplicated pre-pause causal events or provider logical calls, with continuous
+   narration and receipt-supported observed cost;
+3. the current desktop path—choose scenario, Play, map, narrative, traces,
+   pause/resume, and Run history—has no demo-blocking error, scroll jump, or
+   misleading lifecycle control;
+4. the roadmap, plan index, README, and deployed configuration agree; and
+5. the operator uses the current build for five to ten minutes and finds no
+   remaining demo-blocking comprehension or control defect.
+
+The live run/data portion of check 1 and the pause/resume execution portion of
+check 2 have current deployed evidence. Full continuation-trace inspection, the
+integrated desktop presentation pass, and the final operator judgment remain
+open. Once those pass, mark Slice 14 and the current demo complete. Do not add
+another substrate or feature packet to this gate.
+
 ## Approved Outcome Extension
 
-The next product increment preserves the same analyst and inspectable result
-while removing two observed restrictions in sequence:
+The approved direction beyond the current demo preserves the same analyst and
+inspectable result while removing the remaining closed-catalog restriction:
 
-1. The analyst can choose an available, policy-allowed structured-output model,
-   agent reasoning level, and maximum total LLM spend; understand the meaning
-   of each control and the scenario's read-only fidelity assumptions; then
-   recover the effective configuration from the retained run.
-2. After that configuration contract is proven, the analyst can describe a
-   bounded situation conversationally, review and correct a typed scenario
-   draft and its unresolved assumptions, approve its graph, and run it only
-   when every executable mechanism has a validated implementation.
+The analyst can describe a bounded situation conversationally, review and
+correct a typed scenario draft and its unresolved assumptions, approve its
+graph, and run it only when every executable mechanism has a validated
+implementation.
 
-The second increment is not permission for a chatbot to generate arbitrary
-runtime code. Natural language will propose a typed draft; validation,
+This is not permission for a chatbot to generate arbitrary runtime code.
+Natural language will propose a typed draft; validation,
 template-backed mechanism composition, explicit coarse boundaries, and human
 approval remain separate gates.
 
@@ -285,7 +281,7 @@ processor-fidelity behavior, and stops at quiescence. Deterministic controls,
 full live traces, deployed UI reopening, and fail-closed credential/access
 checks passed.
 
-### 5. Make one run configurable and self-explanatory — implemented, acceptance open
+### 5. Make one run configurable and self-explanatory — complete
 
 Expose model, agent reasoning, and a bounded total-spend authorization through
 one typed request contract and the existing simulator screen. The shared
@@ -295,19 +291,26 @@ Scenario assumptions, known omissions, and fidelity questions are visible and
 explained but remain read-only unless an authored scenario contract actually
 supports changing them.
 
-The active bounded design is
-[Slice 13](plans/013-configurable-explainable-runs.md). Its implementation and
-deterministic gates are complete. Terra passes route/schema certification and
-the complete deployed participant-plus-narrator canary. DeepSeek is advertised
-only at the successfully exercised `none` setting; its schema-compliance
-behavior still needs monitoring. Current-revision rendered
-browser verification is still open. Slice 13 remains the sole active packet
-until a desktop pass is inspected; a second model is promoted only when
-it independently passes the same gates.
+The completed bounded design is
+[Slice 13](plans/013-configurable-explainable-runs.md). Terra and DeepSeek
+`none` pass the participant/narrator schema boundary and complete deployed
+canaries. DeepSeek is the default; `high` and `xhigh` remain experiments rather
+than inheriting the `none` evidence. Its final desktop observation is
+consolidated into the integrated demo gate rather than left as a competing
+active packet.
 
-### 6. Add conversational scenario drafting behind a typed compiler — next
+### 6. Finish the integrated private demo — active
 
-After Slice 13 is completely observed in use, design one representative authoring
+[Slice 14](plans/014-pausable-live-runs.md) is the sole active packet. Live
+pause/resume is implemented and one retained run completed from its checkpoint.
+The shortest remaining path is full continuation-trace inspection, one current
+desktop workflow pass, and the operator's short usability judgment. Passing the
+[Current Demo Completion Boundary](#current-demo-completion-boundary) ends this
+PoC demo stage.
+
+### 7. Add conversational scenario drafting behind a typed compiler — post-demo next
+
+After the current demo is marked complete, design one representative authoring
 vertical:
 
 ```text
@@ -321,19 +324,18 @@ approved mechanism templates and one bounded novel workflow. Unsupported
 mechanisms remain unresolved or explicitly coarse; they never become silently
 generated adjudication code.
 
-Do not activate this packet until configurable runs are technically verified
-and reviewed by the stakeholder. Its bounded design must freeze a
-human-reviewed target draft and one ambiguity case before implementation.
+Do not activate this packet until the demo completion gate is closed. Its
+bounded design must freeze a human-reviewed target draft and one ambiguity case
+before implementation.
 
-### 7. Expand multiscale agency only through concrete pressure
+### 8. Expand multiscale agency only through concrete pressure
 
 Add overlapping/nested aggregate views, richer composite analysis, additional
 process implementations, or representation refinement only when a scenario
 requires them to answer an analyst question that current contracts cannot.
 
-Do not start another substrate or ontology packet while the configurable-run
-and conversational-authoring path is the shorter route to the observed user
-need.
+Do not start another substrate or ontology packet while demo completion and
+conversational authoring are the shorter routes to the observed user need.
 
 ## Explicit MVP Deferrals
 

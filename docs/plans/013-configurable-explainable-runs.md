@@ -1,7 +1,7 @@
 ---
-doc_role: active_plan
-authority: implementation_plan
-status: active
+doc_role: historical_evidence
+authority: evidence
+status: complete
 created: 2026-07-23
 updated: 2026-07-24
 predecessor: 012-event-driven-purchase-payment.md
@@ -9,28 +9,25 @@ predecessor: 012-event-driven-purchase-payment.md
 
 # Slice 13: Configurable, Explainable Runs
 
-**Status: Implemented; deployed acceptance remains open.**
+**Status: Implemented. Integrated desktop acceptance moved to Slice 14's demo
+completion gate.**
 
 ## Current implementation and acceptance state
 
-The configurable-run vertical is implemented and deployed at simulator
-`a919777af6803f8dc1e9c4b3820667feac6bcea9` with shared `llm_client`
-`9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`.
+The configurable-run vertical is implemented. Its current deployed successor is
+simulator `1be312441fcc934ab2fb72e044db3b5dc14f7985` with shared `llm_client`
+`9f61bd7c9419c93961a722a7ef6209adcf593382`.
 
-- Current Linux validation passes mypy for the changed server boundary, all 59
-  tests, the JavaScript syntax check, and a whitespace/error diff check. The
-  current Mac deployment probe returns this slice's build revision and the
-  expected model catalog; a rendered desktop browser pass remains separately
-  open.
+- The deployed API reports the expected build and shared-client revisions,
+  model catalog, and DeepSeek V4 Flash `none` default.
 - Terra's current exact participant and narrator observations are
-  `routeobs1_cfe8e9cc144d22be087e848a` and
-  `routeobs1_a11d208c426f16940ee43c4b`; it remains selectable at its
-  shared-client-supported settings.
-- The current DeepSeek V4 Flash `none` observations are
-  `routeobs1_811669be15ab4d6dda51c296` and
-  `routeobs1_82ba91498a4ea780e31b00d3`. The complete deployed canary
-  `run_164fee2c564f` reached `closed_confirmed` with nine participant and ten
-  narrator calls for `$0.004636731`.
+  `routeobs1_7cc1c51f065c181a33ff422d` and
+  `routeobs1_bb5643a65107960dadc76a36`.
+- DeepSeek V4 Flash `none` observations are
+  `routeobs1_029097c508a11554b6b9301f` and
+  `routeobs1_ba61b37be133f07f47177352`. Deployed canary
+  `run_954220d513c3` reached `closed_confirmed` with seven participant calls,
+  eight narrator calls, eight narratives, and `$0.0034581043` observed cost.
 - DeepSeek `high` and `xhigh` are visible only as experimental participant
   settings at the operator's request. The shared client accepts them, but a
   focused current-revision participant probe failed to produce valid structured
@@ -39,8 +36,8 @@ The configurable-run vertical is implemented and deployed at simulator
 - The DeepSeek canary's one narrator retry was a 360-character schema-limit
   violation, not empty provider output. Each successful narrated moment cites
   only retained moment evidence or its validated synthetic silence marker.
-- Current-revision rendered desktop verification is unproven because the
-  available browser-automation paths hung from the SSH session. Mobile is not
+- Current-revision rendered desktop verification remains part of the integrated
+  demo completion gate in [Slice 14](014-pausable-live-runs.md). Mobile is not
   an acceptance target for this private PoC.
 
 Two shared-client defects found by deployment certification were fixed and
@@ -48,10 +45,9 @@ tested: malformed received JSON now produces a complete validation-retry
 lifecycle (`4e0780d`), and the public certification schema helper now exactly
 matches the runtime provider schema (`07b168f`).
 
-The remaining acceptance packet is one current-revision desktop browser pass.
-Experimental DeepSeek settings are a deliberate operator-facing investigation
-surface, not a claim that a second fully certified reasoning configuration is
-available.
+Experimental DeepSeek settings remain a deliberate operator-facing
+investigation surface, not a claim that a second fully certified reasoning
+configuration is available.
 
 ## UX correction: readable run flow
 
@@ -74,9 +70,9 @@ projection and composite terms without competing with the run flow.
 
 ## Route and Outcome
 
-Request mode: plan and implement the approved documentation direction; runtime
-implementation begins only after this packet is accepted as the sole active
-plan.
+Design-time request mode: plan and implement the approved documentation
+direction. This section preserves the packet's original implementation scope;
+current execution is owned by Slice 14.
 
 Design depth: Standard. Execution profile: PoC on a private, single-operator
 development host. Overlays: runtime state, LLM, UI, and the existing strict JSON
@@ -156,7 +152,7 @@ Design-time current:
 - retained documents do not expose one normalized effective run-LLM
   configuration;
 - the original design began with divergent shared-client revisions; the current
-  deployed environments use `9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`.
+  deployed environments use `9f61bd7c9419c93961a722a7ef6209adcf593382`.
 
 Implemented target:
 
@@ -218,10 +214,9 @@ advertised model
   ∩ simulator-schema canary passed
 ```
 
-The deployment-selected set is operator configuration. Treat Terra and
-DeepSeek V4 Flash as candidates, but advertise each independently only after it
-passes the exact simulator schemas on the Mac. Currently only Terra passes. Do
-not expose an arbitrary model text box in this slice.
+The deployment-selected set is operator configuration. Terra and DeepSeek V4
+Flash `none` now independently pass the exact simulator schemas on the Mac.
+Do not expose an arbitrary model text box in this slice.
 
 ### Scenario binding factories
 
@@ -481,7 +476,7 @@ Dependency: current shared-client execution policy on the Mac.
   `ALLOWED_EXECUTION_MODELS`, structured-output metadata, execution-policy
   validation, and `LLM_CLIENT_REVISION`.
 - **Resolved state:** Linux and Mac use clean shared-client revision
-  `9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`.
+  `9f61bd7c9419c93961a722a7ef6209adcf593382`.
 - **Resolution:** advance the Mac editable checkout to one approved clean main
   revision, install it into the simulator environment, bind
   `LLM_CLIENT_REVISION`, and run the shared-client policy tests plus simulator
@@ -537,7 +532,7 @@ technically verified and the stakeholder has used it.
 
 ## YAGNI and Deferred Work
 
-Do not add:
+This slice did not add:
 
 - an arbitrary model text field or simulator-owned provider capability matrix;
 - separate narrator model/reasoning controls;
@@ -546,7 +541,7 @@ Do not add:
 - editable personas, memories, timing, mechanisms, fidelity notes, or
   assumptions;
 - resumable partial-run checkpoints or a full causal graph synthesized from a
-  failed mid-run state;
+  failed mid-run state (subsequently implemented for Service Desk by Slice 14);
 - a scenario DSL, compiler, chatbot, mechanism marketplace, or generated code;
 - multi-user presets, accounts, billing, quotas, or production operations;
 - a new frontend framework or settings page.

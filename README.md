@@ -57,6 +57,8 @@ The simulator currently includes:
 - analyst-safe evidence that redacts mechanism-only values and protected
   representation content;
 - a separate run-history workspace that survives refreshes and server restarts;
+- pause at a validated causal boundary and continuation of retained Service
+  Desk runs, including live LLM runs on the same deployment and configuration;
 - recoverable deletion and visible failed/interrupted records.
 
 ## Run
@@ -71,8 +73,19 @@ Open <http://127.0.0.1:8620>.
 
 The native LLM path uses the shared `llm_client` checkout installed in the
 environment. Scripted runs require no provider and make no model calls.
-The private Mac host currently advertises only the exact-schema-certified Terra
-route; configured candidates that fail route or full-run evidence stay absent.
+The private Mac host currently advertises exact-schema-certified Terra and
+DeepSeek V4 Flash routes. DeepSeek with `none` reasoning is the default;
+DeepSeek `high` and `xhigh` are visibly experimental, and unsupported
+`medium` is rejected by shared-client policy. Configured candidates that fail
+route or full-run evidence stay absent.
+
+The current private-demo finish line is intentionally smaller than the full
+research vision: exercise one DeepSeek-default Service Desk run through map,
+narrative, traces, cost, pause/resume, and history; verify the resumed trace and
+desktop interaction; then obtain the operator's short usability judgment. The
+canonical checklist is in
+[Slice 14](docs/plans/014-pausable-live-runs.md). Conversational scenario
+authoring is the next product phase, not a requirement for this demo.
 
 The user-facing Service Desk simulation is autonomous and event driven. Its
 initial customer report starts the triager; thereafter, newly delivered
