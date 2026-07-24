@@ -27,9 +27,9 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-V0.10 is deployed on the private Mac development host. V0.11 has completed its
-deterministic implementation and local verification; its bounded live canary
-and exact-revision deployment are the remaining release checks.
+V0.11 is implemented, verified, and deployed on the private Mac development
+host from behavior commit
+`d504c48669d5dd2220ce92a3e56b613a2d222e3d`.
 
 - three concrete scenario families: Service Desk, physical access, and
   purchase to payment;
@@ -43,7 +43,7 @@ and exact-revision deployment are the remaining release checks.
   internal wake with no new observation and a three-phase exact process with
   no model calls;
 - one frozen simulated-second-1 activation set shared by that person and
-  process.
+  process;
 - a purchase-to-payment probe that separates human approval, copied policy and
   signing evidence, exact internal payment authorization, and a declared coarse
   external processor;
@@ -66,11 +66,27 @@ inside the cited moment, and the exact process made no model call. The retained
 run reopened through the operator-facing tailnet URL with all eight narratives
 and the exact process visible in the graph and participant traces.
 
+The purchase-to-payment live canary `run_ac10cc7a4b23` exercised V0.11 with
+four human cognition calls at medium reasoning and four causal-moment narrator
+calls at low reasoning for $0.041418125. All eight structured calls validated
+on their first provider attempt. Full-trace inspection confirmed that each
+person used only retained or delivered documents and an exposed interface, the
+exact internal gate alone authorized the payment instruction, narrator
+citations stayed within each current moment, and the coarse processor made no
+LLM call. The retained run reopened in the deployed UI with four narratives,
+all three analytical scales, spatial and causal projections, and exact
+participant traces.
+
 The causal core still drains one action's complete routed cascade before
 accepting another; arbitrary interleaving within nonzero-delay routes is not
 yet supported. The UI is technically reviewable; operator comprehension and
 analytical usefulness remain under iterative stakeholder review rather than
 being treated as proven.
+
+The purchase-to-payment probe currently uses four authored
+`manual_schedule` activations. It demonstrates representation depth, exact
+authorization, and coarse-subsystem replacement—not autonomous scheduling or
+calibrated organizational timing.
 
 ## Canonical MVP Probe
 
@@ -133,7 +149,7 @@ and exact events without invented information access. This is an integrated
 outcome proof for the stipulated scenario, not a claim of calibrated human
 timing or general fidelity.
 
-### 3. Introduce a coarse subsystem boundary only on demand — deterministic proof complete
+### 3. Introduce a coarse subsystem boundary only on demand — complete
 
 The purchase-to-payment scenario now exposes one coarse external processor
 behind the same typed payment-instruction/result boundary a finer
@@ -142,9 +158,9 @@ assumptions, omissions, validation basis, and the invalid question it cannot
 answer: why an external decline occurred. Exact internal authorization remains
 separate and no processor call occurs after a human denial.
 
-The remaining V0.11 gate is one bounded live settled run with full agent and
-narrator trace inspection. No generalized surrogate library or stock-market
-implementation is justified by this concrete slice.
+The bounded live settled run and full agent/narrator trace inspection passed.
+No generalized surrogate library or stock-market implementation is justified
+by this concrete slice.
 
 ### 4. Expand multiscale agency only through concrete pressure
 

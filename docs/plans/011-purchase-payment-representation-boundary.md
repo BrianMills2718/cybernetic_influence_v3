@@ -1,6 +1,6 @@
 # Slice 11: Purchase-to-Payment Representation Boundary
 
-**Status: Packet 1 complete; Packet 2 live canary pending — 2026-07-23.**
+**Status: Complete — 2026-07-23.**
 
 ## Outcome
 
@@ -194,3 +194,34 @@ configured model. Inspect every full agent and narrator trace, confirm the
 processor made no LLM call, and decide whether the scenario supplies enough
 concrete pressure to design nested/overlapping boundary semantics. Do not add
 those semantics merely because three boundaries exist.
+
+Completed on the private Mac at exact commit
+`d504c48669d5dd2220ce92a3e56b613a2d222e3d`. Retained run
+`run_ac10cc7a4b23` completed the settled arm in four authored causal moments
+with four human calls at medium reasoning and four narrator calls at low
+reasoning for $0.041418125. All calls used
+`openrouter/openai/gpt-5.6-terra`, JSON Schema structured output,
+provider-reported cost, and zero retries or validation errors.
+
+Full-trace inspection found:
+
+- the requester saw its retained request and invoice;
+- the approver saw the delivered review package plus remembered policy copy;
+- the AP clerk saw only the delivered recorded approval and later settlement;
+- all three acted only through exposed interfaces with permitted
+  representations;
+- the exact payment gate authorized the processor instruction;
+- the coarse processor made no LLM call;
+- every narrator input contained the complete prior narrative chain plus only
+  the current retained causal moment, and every citation remained in that
+  moment.
+
+The forced-request-after-denial negative test detected the intended risk: the
+exact gate denied it and no processor event occurred. The deployed UI reopened
+the canary with four narratives, three analytical scales, both spatial and
+causal projections, and no browser errors or horizontal overflow.
+
+No nested-boundary runtime is justified yet. The concrete UI pressure instead
+required making every authored boundary directly selectable; that defect was
+fixed. The scenario's four activations remain authored `manual_schedule`
+events, so this slice does not claim autonomous organizational timing.
