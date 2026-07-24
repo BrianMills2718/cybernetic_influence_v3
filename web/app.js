@@ -151,8 +151,18 @@ function updateAuthorizationPreview() {
   const reasoning = $('#reasoning').value || 'medium'
   const narratorReasoning = selectedModelChoice()?.narrator_reasoning_effort || 'low'
   const authorized = Number($('#max-cost').value || 0)
+  const baseline = (runtimeConfig.cost_baselines || []).find((item) =>
+    item.scenario === $('#scenario').value &&
+    item.arm === $('#arm').value &&
+    item.model === $('#model').value &&
+    item.agent_reasoning_effort === reasoning &&
+    item.narrator_reasoning_effort === narratorReasoning
+  )
+  const estimate = baseline
+    ? `Expected observed spend: about $${Number(baseline.median_cost).toFixed(4)} from ${baseline.sample_count} comparable completed live run${baseline.sample_count === 1 ? '' : 's'} (range $${Number(baseline.minimum_cost).toFixed(4)}–$${Number(baseline.maximum_cost).toFixed(4)}).`
+    : 'Expected observed spend: no comparable completed live run is retained yet.'
   $('#cost-details').textContent =
-    `${modelLabel} · ${reasoning} agent reasoning · ${narratorReasoning} narrator reasoning · participants ≤ ${limits.maximum_participant_calls ?? 0} calls at $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} each · narrator ≤ ${limits.maximum_narrator_calls ?? 0} calls at $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} each · $${authorized.toFixed(2)} total authorized.`
+    `${estimate} Hard authorization: $${authorized.toFixed(2)}; no hidden overage. Each participant call is capped at $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} and each narrator call at $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)}.`
 }
 
 function describeCondition() {

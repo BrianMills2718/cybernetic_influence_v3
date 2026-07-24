@@ -208,6 +208,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             "maximum_live_calls": 48,
             "maximum_live_cost": 0.74,
             "live_options": live_options,
+            "cost_baselines": runs.cost_baselines(),
         }
 
     @app.get("/api/runs")

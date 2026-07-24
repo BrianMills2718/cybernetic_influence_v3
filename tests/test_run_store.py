@@ -37,3 +37,48 @@ def test_filename_and_document_identity_must_match(tmp_path: Path) -> None:
     summaries, corrupt = store.list_runs()
     assert summaries == []
     assert corrupt == ["run_aaaaaaaaaaaa.json"]
+
+
+def test_cost_baselines_only_use_comparable_observed_live_runs(tmp_path: Path) -> None:
+    store = RunStore(tmp_path)
+    configuration = {
+        "model": "openrouter/deepseek/deepseek-v4-flash",
+        "agent_reasoning_effort": "none",
+        "narrator_reasoning_effort": "none",
+    }
+    for run_id, cost in (("run_aaaaaaaaaaaa", 0.004), ("run_bbbbbbbbbbbb", 0.006)):
+        store.save(
+            {
+                "run_id": run_id,
+                "status": "completed",
+                "execution": "live",
+                "cost_fully_observable": True,
+                "cost": cost,
+                "scenario": "service_desk",
+                "arm": "baseline",
+                "llm_configuration": configuration,
+            }
+        )
+    store.save(
+        {
+            "run_id": "run_cccccccccccc",
+            "status": "completed",
+            "execution": "scripted",
+            "cost_fully_observable": True,
+            "cost": 0.0,
+        }
+    )
+
+    assert store.cost_baselines() == [
+        {
+            "scenario": "service_desk",
+            "arm": "baseline",
+            "model": "openrouter/deepseek/deepseek-v4-flash",
+            "agent_reasoning_effort": "none",
+            "narrator_reasoning_effort": "none",
+            "sample_count": 2,
+            "median_cost": 0.005,
+            "minimum_cost": 0.004,
+            "maximum_cost": 0.006,
+        }
+    ]

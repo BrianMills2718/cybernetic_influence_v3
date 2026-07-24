@@ -8,6 +8,7 @@ import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
+from statistics import median
 from typing import cast
 from uuid import uuid4
 
@@ -89,6 +90,57 @@ class RunStore:
                 corrupt.append(path.name)
         summaries.sort(key=lambda item: str(item.get("created_at", "")), reverse=True)
         return summaries, sorted(corrupt)
+
+    def cost_baselines(self) -> list[dict[str, object]]:
+        """Summarize comparable, fully observed completed live-run costs.
+
+        These are descriptive history, not provider pricing or a promise about
+        a future call.  Keeping the calculation beside the retained evidence
+        lets the UI distinguish an expected spend from its hard authorization.
+        """
+        buckets: dict[tuple[str, str, str, str, str], list[float]] = {}
+        for path in self.root.glob("run_*.json"):
+            try:
+                document = self._read(path)
+            except (OSError, UnicodeError, json.JSONDecodeError, ValueError, TypeError):
+                continue
+            if (
+                document.get("status") != "completed"
+                or document.get("execution") != "live"
+                or document.get("cost_fully_observable") is not True
+            ):
+                continue
+            configuration = document.get("llm_configuration")
+            cost = document.get("cost")
+            if not isinstance(configuration, Mapping) or isinstance(cost, bool):
+                continue
+            if not isinstance(cost, (int, float)) or cost < 0:
+                continue
+            fields = (
+                document.get("scenario"),
+                document.get("arm"),
+                configuration.get("model"),
+                configuration.get("agent_reasoning_effort"),
+                configuration.get("narrator_reasoning_effort"),
+            )
+            if not all(isinstance(value, str) and value for value in fields):
+                continue
+            key = cast(tuple[str, str, str, str, str], fields)
+            buckets.setdefault(key, []).append(float(cost))
+        return [
+            {
+                "scenario": key[0],
+                "arm": key[1],
+                "model": key[2],
+                "agent_reasoning_effort": key[3],
+                "narrator_reasoning_effort": key[4],
+                "sample_count": len(costs),
+                "median_cost": median(costs),
+                "minimum_cost": min(costs),
+                "maximum_cost": max(costs),
+            }
+            for key, costs in sorted(buckets.items())
+        ]
 
     def trash(self, run_id: str) -> Path:
         """Move a retained run to recoverable private trash."""

@@ -61,6 +61,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert config.json()["scenarios"]["service_desk"]["representation_summary"].startswith(
         "A customer cannot log in after resetting a password."
     )
+    assert config.json()["cost_baselines"] == []
     assert "No authored spatial topology is present." not in config.json()["scenarios"]["service_desk"]["known_omissions"]
     assert "authored topology" in config.json()["scenarios"]["service_desk"]["known_omissions"][0]
     page = api.get("/")
@@ -80,6 +81,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="model"' in page.text
     assert 'id="reasoning"' in page.text
     assert 'id="max-cost"' in page.text
+    assert "Hard authorization cap" in page.text
     assert 'aria-controls="model-help"' in page.text
     assert 'id="history-view"' in page.text
     assert 'id="simulation-view"' in page.text
