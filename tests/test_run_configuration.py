@@ -12,8 +12,10 @@ from llm_client.route_certification import (
 from pytest import MonkeyPatch
 
 from cybernetic_influence.run_configuration import (
+    RunLlmOptions,
     _current_schema_digests,
     model_catalog,
+    resolve_live_configuration,
 )
 
 
@@ -67,6 +69,7 @@ def test_model_catalog_requires_two_current_replayed_schema_observations(
     catalog = model_catalog()
     assert [item["model"] for item in catalog] == [MODEL]
     assert catalog[0]["agent_reasoning_efforts"] == ["none", "low", "medium", "high"]
+    assert catalog[0]["experimental_agent_reasoning_efforts"] == []
     assert catalog[0]["default_agent_reasoning_effort"] == "medium"
     assert catalog[0]["narrator_reasoning_effort"] == "low"
 
@@ -96,3 +99,30 @@ def test_stale_route_observations_do_not_advertise(
     )
 
     assert model_catalog() == []
+
+
+def test_experimental_deepseek_effort_is_resolved_without_claiming_certification(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "cybernetic_influence.run_configuration.model_catalog",
+        lambda: [
+            {
+                "model": "openrouter/deepseek/deepseek-v4-flash",
+                "agent_reasoning_efforts": ["none", "high", "xhigh"],
+                "experimental_agent_reasoning_efforts": ["high", "xhigh"],
+                "narrator_reasoning_effort": "none",
+            }
+        ],
+    )
+
+    resolved = resolve_live_configuration(
+        RunLlmOptions(
+            model="openrouter/deepseek/deepseek-v4-flash",
+            agent_reasoning_effort="xhigh",
+            max_total_cost=0.20,
+        )
+    )
+
+    assert resolved.agent_reasoning_effort == "xhigh"
+    assert resolved.narrator_reasoning_effort == "none"

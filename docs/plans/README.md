@@ -15,11 +15,13 @@ instructions to continue their former “next slice” sections.
 ## Active packet
 
 [Slice 13: Configurable, explainable runs](013-configurable-explainable-runs.md).
-Its implementation is deployed, but its final narrated Terra canary and
-current-revision rendered browser pass remain open; DeepSeek is intentionally
-unadvertised after failed final-revision probes. This remains the sole active
-packet. Conversational scenario authoring is sequenced in the roadmap but has
-no active implementation plan yet.
+Its implementation is deployed. Terra and DeepSeek-without-reasoning have
+complete current-revision canaries; DeepSeek `high` and `xhigh` are explicitly
+operator-selectable experiments, not certified settings. A current-revision
+rendered desktop browser pass remains open. [Slice 14: pausable live
+runs](014-pausable-live-runs.md) is the next bounded design; it is not yet
+implemented. Conversational scenario authoring is sequenced in the roadmap but
+has no active implementation plan yet.
 
 ## Completed evidence
 

@@ -14,25 +14,28 @@ predecessor: 012-event-driven-purchase-payment.md
 ## Current implementation and acceptance state
 
 The configurable-run vertical is implemented and deployed at simulator
-`00ea2342a6c5e3125366e59820f1e49b12dec17c` with shared `llm_client`
-`07b168ffc10ab28834d8571fdf48aa9b775d57bc`.
+`a919777af6803f8dc1e9c4b3820667feac6bcea9` with shared `llm_client`
+`9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`.
 
-- Linux and Mac gates pass: mypy, 57 tests, production graph build, and launcher
+- Linux and Mac gates pass: mypy, 59 tests, production graph build, and launcher
   syntax.
-- Terra is the only advertised route. Its exact current-revision participant
-  and narrator observations are `routeobs1_a7a692e9a6893e15d36f30ab` and
-  `routeobs1_8d61ca73ab6c08249e5cdf59`.
-- The exact-revision deployed canary `run_feb8ed10258d` reached
-  `closed_confirmed` across eight causal moments. Seven participant calls used
-  Terra at medium reasoning and eight narrator calls used Terra at low
-  reasoning for a fully observed `$0.103861875`.
-- All 15 provider records completed through native structured output with zero
-  retries, warnings, or validation errors. Each narrated moment cites only its
-  retained moment events or, for the one silent moment, its validated synthetic
-  silence marker.
-- DeepSeek V4 Flash remains unadvertised. Final-revision high-reasoning probes
-  repeatedly returned empty structured content at both 384 and 512 output
-  tokens.
+- Terra's current exact participant and narrator observations are
+  `routeobs1_cfe8e9cc144d22be087e848a` and
+  `routeobs1_a11d208c426f16940ee43c4b`; it remains selectable at its
+  shared-client-supported settings.
+- The current DeepSeek V4 Flash `none` observations are
+  `routeobs1_811669be15ab4d6dda51c296` and
+  `routeobs1_82ba91498a4ea780e31b00d3`. The complete deployed canary
+  `run_164fee2c564f` reached `closed_confirmed` with nine participant and ten
+  narrator calls for `$0.004636731`.
+- DeepSeek `high` and `xhigh` are visible only as experimental participant
+  settings at the operator's request. The shared client accepts them, but a
+  focused current-revision participant probe failed to produce valid structured
+  output; they do not inherit the `none` certification and must be inspected
+  through retained traces. `medium` is rejected by shared policy.
+- The DeepSeek canary's one narrator retry was a 360-character schema-limit
+  violation, not empty provider output. Each successful narrated moment cites
+  only retained moment evidence or its validated synthetic silence marker.
 - Current-revision rendered desktop verification is unproven because the
   available browser-automation paths hung from the SSH session. Mobile is not
   an acceptance target for this private PoC.
@@ -43,8 +46,9 @@ lifecycle (`4e0780d`), and the public certification schema helper now exactly
 matches the runtime provider schema (`07b168f`).
 
 The remaining acceptance packet is one current-revision desktop browser pass.
-A second model is not a blocker to honest single-route use; it becomes
-selectable only after its own exact schema and complete canary evidence pass.
+Experimental DeepSeek settings are a deliberate operator-facing investigation
+surface, not a claim that a second fully certified reasoning configuration is
+available.
 
 ## UX correction: readable run flow
 
@@ -148,9 +152,8 @@ Design-time current:
 - the UI uses one prose paragraph for settings and assumptions;
 - retained documents do not expose one normalized effective run-LLM
   configuration;
-- the original design began with divergent shared-client revisions; both
-  environments now use
-  `07b168ffc10ab28834d8571fdf48aa9b775d57bc`.
+- the original design began with divergent shared-client revisions; the current
+  deployed environments use `9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`.
 
 Implemented target:
 
@@ -266,7 +269,7 @@ Strict Pydantic request value:
 
 ```text
 model: nonempty canonical model identifier
-agent_reasoning_effort: none | low | medium | high
+agent_reasoning_effort: none | low | medium | high | xhigh
 max_total_cost: finite positive number
 ```
 
@@ -319,6 +322,7 @@ narrator_reasoning_effort
 structured_output
 availability_basis
 certification_basis
+experimental_agent_reasoning_efforts
 ```
 
 `availability_basis` describes configured credentials, not health.
@@ -371,10 +375,10 @@ Scenario          Condition          [ ] Live LLM agents
 
 [Model, cost, and assumptions ▾]
   Model [?]          Agent reasoning [?]     Maximum spend [?]
-  <choice>           <low|medium|high>        <$>
+  <choice>           <none|low|medium|high|xhigh> <$>
 
-  Preview: participants ≤ N calls · narrator ≤ M calls
-           per-call ceilings · total authorized spend
+  Preview: comparable observed-spend baseline, if retained · hard authorization
+           · per-call ceilings
 
   What this scenario represents
   summary · assumptions · known omissions · fidelity questions
@@ -474,7 +478,7 @@ Dependency: current shared-client execution policy on the Mac.
   `ALLOWED_EXECUTION_MODELS`, structured-output metadata, execution-policy
   validation, and `LLM_CLIENT_REVISION`.
 - **Resolved state:** Linux and Mac use clean shared-client revision
-  `07b168ffc10ab28834d8571fdf48aa9b775d57bc`.
+  `9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`.
 - **Resolution:** advance the Mac editable checkout to one approved clean main
   revision, install it into the simulator environment, bind
   `LLM_CLIENT_REVISION`, and run the shared-client policy tests plus simulator

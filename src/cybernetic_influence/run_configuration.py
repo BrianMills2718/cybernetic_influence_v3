@@ -12,7 +12,7 @@ from typing import Literal, NotRequired, TypedDict, cast
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-ReasoningEffort = Literal["none", "low", "medium", "high"]
+ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh"]
 DEFAULT_MODEL = "openrouter/openai/gpt-5.6-terra"
 DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium"
 NARRATOR_REASONING_EFFORT: Literal["low"] = "low"
@@ -31,6 +31,7 @@ class _RouteAdvertisement(TypedDict):
     certification_env: str
     narrator_reasoning_effort: ReasoningEffort
     agent_reasoning_efforts: NotRequired[tuple[ReasoningEffort, ...]]
+    experimental_agent_reasoning_efforts: NotRequired[tuple[ReasoningEffort, ...]]
 
 
 # This is a simulator-owned advertisement set, not a provider capability matrix.
@@ -45,10 +46,13 @@ _ADVERTISEMENT: dict[str, _RouteAdvertisement] = {
     "openrouter/deepseek/deepseek-v4-flash": {
         "label": "DeepSeek V4 Flash",
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH",
-        # This route's exact simulator schemas have only been evidenced with
-        # reasoning disabled.  Do not turn registry support for another effort
-        # into an advertised simulator promise.
-        "agent_reasoning_efforts": ("none",),
+        # `none` is the only certified simulator setting.  The shared client
+        # also supports high and xhigh, which the operator explicitly asked to
+        # make available for investigation.  They remain visibly experimental:
+        # focused current-revision structured-output probes did not complete
+        # reliably and are not treated as route certification.
+        "agent_reasoning_efforts": ("none", "high", "xhigh"),
+        "experimental_agent_reasoning_efforts": ("high", "xhigh"),
         "narrator_reasoning_effort": "none",
     },
 }
@@ -161,6 +165,13 @@ def model_catalog() -> list[dict[str, object]]:
                 "label": advertisement["label"],
                 "default": model == DEFAULT_MODEL,
                 "agent_reasoning_efforts": supported_efforts,
+                "experimental_agent_reasoning_efforts": [
+                    effort
+                    for effort in advertisement.get(
+                        "experimental_agent_reasoning_efforts", ()
+                    )
+                    if effort in supported_efforts
+                ],
                 "default_agent_reasoning_effort": (
                     DEFAULT_REASONING_EFFORT
                     if DEFAULT_REASONING_EFFORT in supported_efforts
@@ -333,7 +344,7 @@ def live_options_contract() -> dict[str, object]:
         "help": {
             "model": "The shared client route used by every LLM-modeled person and by the narrator. Exact mechanisms make no model call.",
             "agent_reasoning_effort": "How much reasoning effort each modeled person may use. It does not change their position, dispositions, memory, or observations.",
-            "max_total_cost": "The maximum authorized provider spend across people and narration. A new call starts only when its full per-call ceiling still fits.",
+            "max_total_cost": "The hard authorization for observed provider spend across people and narration. There is no hidden overage; if a provider reports an over-cap cost after a call, the run fails loudly and retains its evidence.",
             "scenario_condition": "A concrete change to world state or a mechanism—not an instruction inserted into a person's mind.",
             "live_execution": "Live mode lets LLM-modeled people orient and act. Reference mode uses fixed zero-cost policies.",
             "map_projection": "Spatial and causal layouts are two projections of the same retained world and trace.",

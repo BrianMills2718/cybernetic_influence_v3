@@ -29,7 +29,7 @@ Stage: MVP/PoC.
 
 V0.13 is implemented and deployed as a release candidate on the private Mac
 development host at simulator commit
-`a51b13d6c959bdad3bc9b137b568d6e243b49cf2` with shared-client revision
+`a919777af6803f8dc1e9c4b3820667feac6bcea9` with shared-client revision
 `9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`. It adds typed model/reasoning/spend
 configuration, model-specific reasoning choices, accessible explanations,
 scenario assumptions and omissions, retained effective configuration, and
@@ -42,12 +42,12 @@ React Flow build, and launcher syntax. The shared-client certification seam has
 environment; seven async-only tests are uncollected there because that
 environment does not install `pytest-asyncio`.
 
-Only `openrouter/openai/gpt-5.6-terra` is currently advertised. Its exact
-participant and narrator schema observations are
-`routeobs1_a7a692e9a6893e15d36f30ab` and
-`routeobs1_8d61ca73ab6c08249e5cdf59`. The catalog exposes low, medium, and high
-agent reasoning for Terra, defaults to medium, and retains low narrator
-reasoning. Exact scenario mechanisms still make no model call.
+Terra and DeepSeek V4 Flash are currently in the selectable catalog. Terra's
+current participant and narrator schema observations are
+`routeobs1_cfe8e9cc144d22be087e848a` and
+`routeobs1_a11d208c426f16940ee43c4b`; it defaults to medium agent reasoning
+and retains low narrator reasoning. Exact scenario mechanisms still make no
+model call.
 
 The exact-revision deployed canary `run_feb8ed10258d` completed the Service Desk
 baseline and reached `closed_confirmed` in eight causal moments. Seven Terra
@@ -59,10 +59,12 @@ events retained in their causal moment; the silent eighth cites its validated
 synthetic silence marker. The retained configuration names the selected model,
 reasoning levels, `$0.55` authorization, and exact shared-client revision.
 
-DeepSeek V4 Flash is now advertised only at `none` reasoning. The shared-client
-policy rejects `medium`; high-reasoning probes had previously exhausted their
-output allowance without structured content, so high is not offered. Fresh
-current-revision participant and narrator observations are
+DeepSeek V4 Flash is certified at `none` reasoning. The shared-client policy
+rejects `medium`. At the operator's request, `high` and `xhigh` are also
+selectable as clearly labeled experiments, not certified configurations: a
+focused current-revision participant probe did not produce valid structured
+output. Fresh current-revision participant and narrator observations for the
+certified `none` setting are
 `routeobs1_811669be15ab4d6dda51c296` and
 `routeobs1_82ba91498a4ea780e31b00d3`. The complete Service Desk canary
 `run_164fee2c564f` finished with nine participant and ten narrator calls for

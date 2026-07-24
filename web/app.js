@@ -76,7 +76,7 @@ async function loadConfig() {
   $('#max-cost').max = liveOptions.limits?.server_max_total_cost || config.maximum_live_cost
   const help = liveOptions.help || {}
   $('#model-help').textContent = help.model || ''
-  $('#reasoning-help').textContent = help.agent_reasoning_effort || ''
+  updateReasoningHelp()
   $('#max-cost-help').textContent = help.max_total_cost || ''
   $('#map-help').textContent = help.map_projection || ''
   $('#moment-help').textContent = help.causal_moment || ''
@@ -133,12 +133,27 @@ function selectedModelChoice() {
 function configureReasoningChoices(preferred = null) {
   const choice = selectedModelChoice()
   const efforts = choice?.agent_reasoning_efforts || ['low', 'medium', 'high']
+  const experimental = new Set(choice?.experimental_agent_reasoning_efforts || [])
   $('#reasoning').innerHTML = efforts.map((effort) =>
-    `<option value="${html(effort)}">${html(effort[0].toUpperCase() + effort.slice(1))}</option>`
+    `<option value="${html(effort)}">${html(formatReasoningEffort(effort))}${experimental.has(effort) ? ' (experimental)' : ''}</option>`
   ).join('')
   $('#reasoning').value = efforts.includes(preferred)
     ? preferred
     : choice?.default_agent_reasoning_effort || efforts[0]
+  updateReasoningHelp()
+}
+
+function formatReasoningEffort(effort) {
+  return effort === 'xhigh' ? 'X-high' : effort[0].toUpperCase() + effort.slice(1)
+}
+
+function updateReasoningHelp() {
+  const base = runtimeConfig.live_options?.help?.agent_reasoning_effort || ''
+  const experimental = new Set(selectedModelChoice()?.experimental_agent_reasoning_efforts || [])
+  const effort = $('#reasoning')?.value
+  $('#reasoning-help').textContent = experimental.has(effort)
+    ? `${base} ${formatReasoningEffort(effort)} is experimental for this simulator: a focused structured-output probe did not complete reliably. Inspect the retained call trace after use.`
+    : base
 }
 
 function updateAuthorizationPreview() {
@@ -964,7 +979,10 @@ $('#model').onchange = () => {
   configureReasoningChoices()
   updateAuthorizationPreview()
 }
-$('#reasoning').onchange = updateAuthorizationPreview
+$('#reasoning').onchange = () => {
+  updateReasoningHelp()
+  updateAuthorizationPreview()
+}
 $('#max-cost').oninput = updateAuthorizationPreview
 document.querySelectorAll('.help-button').forEach((button) => {
   button.onclick = () => {

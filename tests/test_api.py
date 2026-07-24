@@ -55,6 +55,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "openrouter/openai/gpt-5.6-terra",
         "openrouter/deepseek/deepseek-v4-flash",
     ]
+    deepseek = config.json()["live_options"]["models"][1]
+    assert deepseek["agent_reasoning_efforts"] == ["none", "high", "xhigh"]
+    assert deepseek["experimental_agent_reasoning_efforts"] == ["high", "xhigh"]
     assert config.json()["scenarios"]["service_desk"]["assumptions"]
     assert config.json()["scenarios"]["service_desk"]["known_omissions"]
     assert config.json()["scenarios"]["service_desk"]["fidelity_questions"]
