@@ -22,7 +22,9 @@ participant records and does not call either one a turn.
 
 The closed Service Desk fidelity-report harness retains its original fixed
 nine-activation schedule because its microstate comparison contract is indexed
-to that schedule. The user-facing simulator uses the event-driven scheduler.
+to that schedule. The user-facing Service Desk uses the event-driven scheduler;
+other scenarios retain their explicitly documented scheduling semantics until
+they are migrated under ADR 010.
 
 ## Why
 

@@ -10,7 +10,8 @@ programs.
 
 Current direction and MVP boundaries are maintained in
 [docs/ROADMAP.md](docs/ROADMAP.md). Binding architectural decisions live under
-[`docs/adr/`](docs/adr/).
+[`docs/adr/`](docs/adr/README.md), and the roadmap links the sole active packet indexed
+under [`docs/plans/`](docs/plans/README.md).
 
 ## Working simulator
 
@@ -28,9 +29,9 @@ The simulator currently includes:
   links whose existence never implies permission or successful traversal;
 - personal-disposition plus remembered-position cognition;
 - an explicit procedural control profile;
-- autonomous multirate causal moments: each person or exact process may wake
-  from delivered information or retained internal timing, and everyone due at
-  one timestamp receives the same frozen pre-moment state;
+- autonomous multirate causal moments in the Service Desk: each person or exact
+  process may wake from delivered information or retained internal timing, and
+  everyone due at one timestamp receives the same frozen pre-moment state;
 - an exact three-phase remediation process that advances without model calls,
   including one moment shared with a triager reconsidering without new input;
 - zero-cost scripted reference runs;

@@ -1,3 +1,10 @@
+---
+doc_role: historical_evidence
+authority: evidence
+status: complete
+updated: 2026-07-23
+---
+
 # Slice 2: Durable Temporal Inspection
 
 **Status: Complete — 2026-07-23.**
@@ -116,7 +123,10 @@ The exploratory readout passes: a selected human action steps directly down to
 its exact event, focused entities, and matching person activation without
 searching unrelated panels.
 
-## Next Slice
+## Historical Next-Slice Direction
+
+Implemented by [Slice 3](003-private-mac-host.md). This section records the
+contemporaneous handoff and is not a current instruction.
 
 ### Slice 3 — Private development host
 

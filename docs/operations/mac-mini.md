@@ -30,6 +30,13 @@ narration adds at most $0.02 per bounded moment; the UI advertises the
 conservative combined $0.74 envelope. Typical Service Desk runs quiesce well
 before that bound. Only one live run may execute at a time.
 
+Purchase-to-payment uses the same explicit model at medium human reasoning and
+low narrator reasoning. Its current authored four-activation path allows at
+most four human and four narrator calls under a conservative $0.38 combined
+envelope. The active next plan replaces those manual activations with
+observation-driven due-set continuation; the model and budget boundary do not
+change.
+
 ## Inspect
 
 ```bash

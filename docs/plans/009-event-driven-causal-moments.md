@@ -1,3 +1,10 @@
+---
+doc_role: historical_evidence
+authority: evidence
+status: complete
+updated: 2026-07-23
+---
+
 # Slice 9: Event-Driven Causal Moments
 
 **Status: Complete — 2026-07-23.**

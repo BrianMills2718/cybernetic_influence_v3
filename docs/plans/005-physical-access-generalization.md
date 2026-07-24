@@ -1,3 +1,10 @@
+---
+doc_role: historical_evidence
+authority: evidence
+status: complete
+updated: 2026-07-23
+---
+
 # Slice 5: Physical Access Generalization
 
 **Status: Complete — 2026-07-23.**
@@ -119,7 +126,10 @@ jammed-latch sample with synchronized scenario controls, narrative, timeline,
 nodes, routes, and person trace. Private file modes and unrelated Tailscale
 routes remained unchanged.
 
-## Next Slice Direction
+## Historical Next-Slice Direction
+
+Implemented by [Slice 6](006-reversible-multiscale-graph.md). This section
+records the contemporaneous handoff and is not a current instruction.
 
 Add the first execution-inert multiscale graph view over grounded scenario
 members:

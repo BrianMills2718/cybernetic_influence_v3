@@ -88,6 +88,10 @@ The purchase-to-payment probe currently uses four authored
 authorization, and coarse-subsystem replacement—not autonomous scheduling or
 calibrated organizational timing.
 
+Technical execution is established for V0.11, and the deployed simulator is
+stakeholder-reviewable. Stakeholder observation of the next autonomous
+purchase-to-payment representative vertical has not yet occurred.
+
 ## Canonical MVP Probe
 
 Starting state: one stale-session login incident, concrete people, policy and
@@ -162,11 +166,26 @@ The bounded live settled run and full agent/narrator trace inspection passed.
 No generalized surrogate library or stock-market implementation is justified
 by this concrete slice.
 
-### 4. Expand multiscale agency only through concrete pressure
+### 4. Extend autonomous causality to purchase-to-payment — next
+
+Replace the purchase scenario's four manual activations with one authored
+requester start followed by the existing due-set scheduler. Preserve causal
+moment order without inventing elapsed route latency: equal logical timestamps
+mean that purchase-workflow timing is omitted at this representation depth.
+
+The bounded design is [Slice 12](plans/012-event-driven-purchase-payment.md).
+It reuses the existing runtime and UI, preserves all authorization and
+processor-fidelity behavior, and stops at quiescence. No new scheduler,
+periodic polling, or random human activity is justified.
+
+### 5. Expand multiscale agency only through concrete pressure
 
 Add overlapping/nested aggregate views, richer composite analysis, additional
 process implementations, or representation refinement only when a scenario
 requires them to answer an analyst question that current contracts cannot.
+
+The autonomous purchase vertical must return to the deployed analyst workflow
+before another substrate or ontology packet starts.
 
 ## Explicit MVP Deferrals
 

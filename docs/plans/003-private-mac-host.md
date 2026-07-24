@@ -1,3 +1,10 @@
+---
+doc_role: historical_evidence
+authority: evidence
+status: complete
+updated: 2026-07-23
+---
+
 # Slice 3: Private Mac Mini Development Host
 
 **Status: Complete — 2026-07-23.**
@@ -63,7 +70,11 @@ The exploratory readout passes: the remote path creates and reopens retained
 evidence without starting a development shell, while the local checkout remains
 the sole source-editing workflow.
 
-## Next Slice Direction
+## Historical Next-Slice Direction
+
+Implemented by [Slice 5](005-physical-access-generalization.md) after the
+[evidence-boundary repair](004-evidence-boundary-repair.md). This section
+records the contemporaneous direction and is not a current instruction.
 
 Add one small non-service-desk scenario that exercises a physical boundary,
 credential-bearing person, exact access controller, policy representation, and

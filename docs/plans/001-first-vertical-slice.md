@@ -1,3 +1,10 @@
+---
+doc_role: historical_evidence
+authority: evidence
+status: complete
+updated: 2026-07-23
+---
+
 # First Vertical Slice
 
 **Status: Slice 1 complete — 2026-07-23.**
