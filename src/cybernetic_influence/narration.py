@@ -36,6 +36,7 @@ def narrate_live_moments(
     model: str,
     trace_id_prefix: str,
     max_total_cost: float = 0.74,
+    reasoning_effort: str = NARRATOR_REASONING_EFFORT,
     structured_call: StructuredCall | None = None,
 ) -> dict[str, object]:
     """Narrate each retained causal moment without giving the narrator authority.
@@ -104,7 +105,7 @@ def narrate_live_moments(
                 trace_id=trace_id,
                 max_budget=NARRATOR_MAX_BUDGET,
                 max_tokens=NARRATOR_MAX_TOKENS,
-                reasoning_effort=NARRATOR_REASONING_EFFORT,
+                reasoning_effort=reasoning_effort,
             )
             cost = _observed_cost(meta)
             cost_source = str(getattr(meta, "cost_source", "unavailable"))
@@ -146,7 +147,7 @@ def narrate_live_moments(
                     "trace_id": trace_id,
                     "model": model,
                     "task": NARRATOR_TASK,
-                    "reasoning_effort": NARRATOR_REASONING_EFFORT,
+                    "reasoning_effort": reasoning_effort,
                     "cost": cost,
                     "cost_source": cost_source,
                 }
@@ -158,7 +159,7 @@ def narrate_live_moments(
                     "trace_id": trace_id,
                     "model": model,
                     "task": NARRATOR_TASK,
-                    "reasoning_effort": NARRATOR_REASONING_EFFORT,
+                    "reasoning_effort": reasoning_effort,
                     "cost": cost if meta is not None else None,
                     "cost_source": cost_source,
                     "error_type": type(error).__name__,

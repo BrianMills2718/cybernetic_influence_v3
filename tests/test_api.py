@@ -212,8 +212,10 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
         model: str,
         trace_id_prefix: str,
         max_total_cost: float,
+        reasoning_effort: str,
     ) -> dict[str, object]:
         del document, trace_id_prefix
+        assert reasoning_effort == "high"
         captured_narration.append((model, max_total_cost))
         return {
             "status": "completed",
@@ -268,7 +270,7 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
     assert body["llm_configuration"] == {
         "model": "openrouter/deepseek/deepseek-v4-flash",
         "agent_reasoning_effort": "high",
-        "narrator_reasoning_effort": "low",
+        "narrator_reasoning_effort": "high",
         "max_total_cost": 0.31,
         "participant_per_call_ceiling": 0.05,
         "narrator_per_call_ceiling": 0.02,
@@ -277,6 +279,41 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
         "selection_basis": "operator_selected",
         "llm_client_revision": "test-client-revision",
     }
+
+
+def test_model_specific_reasoning_is_rejected_before_dispatch(
+    tmp_path: Path,
+) -> None:
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
+            },
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+    ):
+        api = client(tmp_path)
+        response = api.post(
+            "/api/runs",
+            json={
+                "execution": "live",
+                "llm_options": {
+                    "model": "openrouter/deepseek/deepseek-v4-flash",
+                    "agent_reasoning_effort": "medium",
+                    "max_total_cost": 0.20,
+                },
+            },
+        )
+        history = api.get("/api/runs").json()["runs"]
+    assert response.status_code == 422
+    assert "does not support agent reasoning effort" in response.json()["detail"]
+    assert history == []
 
 
 def test_unadvertised_live_model_is_rejected_without_retained_run(

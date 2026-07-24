@@ -11,7 +11,10 @@ from llm_client.route_certification import (
 )
 from pytest import MonkeyPatch
 
-from cybernetic_influence.run_configuration import model_catalog
+from cybernetic_influence.run_configuration import (
+    _current_schema_digests,
+    model_catalog,
+)
 
 
 MODEL = "openrouter/openai/gpt-5.6-terra"
@@ -22,6 +25,8 @@ def _observation(
     *,
     observed_at: datetime,
 ) -> RouteCertificationObservation:
+    schema_digests = _current_schema_digests()
+    assert schema_digests is not None
     return RouteCertificationObservation.build(
         requested_model=MODEL,
         resolved_model=MODEL,
@@ -29,7 +34,7 @@ def _observation(
         upstream_provider_endpoint="test-endpoint",
         execution_mode="native_json_schema",
         schema_class=schema_class,
-        schema_sha256="a" * 64,
+        schema_sha256=schema_digests[schema_class],
         outcome="parseable",
         failure_stage="none",
         logical_call_id=f"logical-{schema_class}",
@@ -59,7 +64,11 @@ def test_model_catalog_requires_two_current_replayed_schema_observations(
         f"{participant.observation_id},{narrator.observation_id}",
     )
 
-    assert [item["model"] for item in model_catalog()] == [MODEL]
+    catalog = model_catalog()
+    assert [item["model"] for item in catalog] == [MODEL]
+    assert catalog[0]["agent_reasoning_efforts"] == ["low", "medium", "high"]
+    assert catalog[0]["default_agent_reasoning_effort"] == "medium"
+    assert catalog[0]["narrator_reasoning_effort"] == "low"
 
     monkeypatch.setenv(
         "CYBERNETIC_INFLUENCE_CERT_TERRA",

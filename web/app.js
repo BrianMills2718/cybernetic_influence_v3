@@ -62,7 +62,9 @@ async function loadConfig() {
     `<option value="${html(choice.model)}">${html(choice.label)}</option>`
   ).join('')
   $('#model').value = liveOptions.defaults?.model || config.model
-  $('#reasoning').value = liveOptions.defaults?.agent_reasoning_effort || config.reasoning_effort
+  configureReasoningChoices(
+    liveOptions.defaults?.agent_reasoning_effort || config.reasoning_effort
+  )
   $('#max-cost').value = Number(liveOptions.defaults?.max_total_cost || config.maximum_live_cost).toFixed(2)
   $('#max-cost').max = liveOptions.limits?.server_max_total_cost || config.maximum_live_cost
   const help = liveOptions.help || {}
@@ -120,6 +122,22 @@ function configureLiveControls() {
   updateAuthorizationPreview()
 }
 
+function selectedModelChoice() {
+  const choices = runtimeConfig.live_options?.models || []
+  return choices.find((choice) => choice.model === $('#model').value)
+}
+
+function configureReasoningChoices(preferred = null) {
+  const choice = selectedModelChoice()
+  const efforts = choice?.agent_reasoning_efforts || ['low', 'medium', 'high']
+  $('#reasoning').innerHTML = efforts.map((effort) =>
+    `<option value="${html(effort)}">${html(effort[0].toUpperCase() + effort.slice(1))}</option>`
+  ).join('')
+  $('#reasoning').value = efforts.includes(preferred)
+    ? preferred
+    : choice?.default_agent_reasoning_effort || efforts[0]
+}
+
 function updateAuthorizationPreview() {
   const limits = runtimeConfig.live_options?.limits || {}
   if (!$('#live').checked) {
@@ -128,9 +146,10 @@ function updateAuthorizationPreview() {
   }
   const modelLabel = $('#model').selectedOptions[0]?.textContent || 'No eligible model'
   const reasoning = $('#reasoning').value || 'medium'
+  const narratorReasoning = selectedModelChoice()?.narrator_reasoning_effort || 'low'
   const authorized = Number($('#max-cost').value || 0)
   $('#cost-details').textContent =
-    `${modelLabel} · ${reasoning} agent reasoning · participants ≤ ${limits.maximum_participant_calls ?? 0} calls at $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} each · narrator ≤ ${limits.maximum_narrator_calls ?? 0} calls at $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} each · $${authorized.toFixed(2)} total authorized.`
+    `${modelLabel} · ${reasoning} agent reasoning · ${narratorReasoning} narrator reasoning · participants ≤ ${limits.maximum_participant_calls ?? 0} calls at $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} each · narrator ≤ ${limits.maximum_narrator_calls ?? 0} calls at $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} each · $${authorized.toFixed(2)} total authorized.`
 }
 
 function describeCondition() {
@@ -917,7 +936,10 @@ $('#live').onchange = () => {
   $('#run').textContent = $('#live').checked ? 'Play live simulation' : 'Play reference simulation'
   configureLiveControls()
 }
-$('#model').onchange = updateAuthorizationPreview
+$('#model').onchange = () => {
+  configureReasoningChoices()
+  updateAuthorizationPreview()
+}
 $('#reasoning').onchange = updateAuthorizationPreview
 $('#max-cost').oninput = updateAuthorizationPreview
 document.querySelectorAll('.help-button').forEach((button) => {

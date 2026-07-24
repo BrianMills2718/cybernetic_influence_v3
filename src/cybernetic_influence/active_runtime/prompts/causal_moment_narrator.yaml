@@ -36,7 +36,7 @@ user: |
   Current causal moment:
   {{ moment | tojson }}
 
-  Write one to three sentences and at most 600 characters explaining the
+  Write one to three sentences and at most 450 characters explaining the
   meaningful development. State the simulated time and use the retained
   activation-cause labels exactly: scenario_start is an authored initial
   trigger, observation_delivery is newly available input, and internal_wake is

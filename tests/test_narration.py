@@ -52,6 +52,7 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
         document,
         model="test-model",
         trace_id_prefix="run_test",
+        reasoning_effort="high",
         structured_call=fake_call,
     )
 
@@ -65,9 +66,13 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     assert any(len(moment["participants"]) > 1 for moment in moments)
     assert "Earlier causal-moment narratives, in order:\n[]" in prompts[0]
     assert "Never describe scenario_start as an internal" in prompts[0]
-    assert "at most 600 characters" in prompts[0]
+    assert "at most 450 characters" in prompts[0]
     assert "Narrated causal moment 1." in prompts[1]
     assert all(item["max_tokens"] == 512 for item in call_options)
+    assert all(item["reasoning_effort"] == "high" for item in call_options)
+    calls = narration["calls"]
+    assert isinstance(calls, list)
+    assert all(item["reasoning_effort"] == "high" for item in calls)
     exact_event_ids = {event["event_id"] for event in document["timeline"]}
     assert all(
         set(moment["source_event_ids"]) <= exact_event_ids

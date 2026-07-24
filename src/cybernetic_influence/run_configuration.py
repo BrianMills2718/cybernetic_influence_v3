@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from importlib.metadata import PackageNotFoundError, version
 from math import isfinite
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -31,10 +31,12 @@ _ADVERTISEMENT = {
     "openrouter/openai/gpt-5.6-terra": {
         "label": "OpenAI GPT-5.6 Terra",
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_TERRA",
+        "narrator_reasoning_effort": "low",
     },
     "openrouter/deepseek/deepseek-v4-flash": {
         "label": "DeepSeek V4 Flash",
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH",
+        "narrator_reasoning_effort": "high",
     },
 }
 
@@ -70,7 +72,7 @@ class EffectiveRunLlmConfiguration(BaseModel):
 
     model: str
     agent_reasoning_effort: ReasoningEffort
-    narrator_reasoning_effort: Literal["low"] = NARRATOR_REASONING_EFFORT
+    narrator_reasoning_effort: ReasoningEffort
     max_total_cost: float
     participant_per_call_ceiling: float = PARTICIPANT_PER_CALL_CEILING
     narrator_per_call_ceiling: float = NARRATOR_PER_CALL_CEILING
@@ -88,6 +90,7 @@ def model_catalog() -> list[dict[str, object]]:
             evaluate_model_execution_policy,
             list_models,
         )
+        from llm_client.core.errors import LLMConfigurationError
     except ImportError:
         return []
 
@@ -113,18 +116,41 @@ def model_catalog() -> list[dict[str, object]]:
             or not certification_basis
         ):
             continue
-        justification = None if model.endswith("deepseek-v4-flash") else (
-            "Operator selected an advertised simulator route."
-        )
-        evaluate_model_execution_policy(
-            [model],
-            justification=justification,
-        )
+        justification = _model_justification(model)
+        supported_efforts = []
+        for effort in ("low", "medium", "high"):
+            try:
+                evaluate_model_execution_policy(
+                    [model],
+                    justification=justification,
+                    reasoning_effort=effort,
+                )
+            except LLMConfigurationError:
+                continue
+            supported_efforts.append(effort)
+        narrator_effort = str(advertisement["narrator_reasoning_effort"])
+        try:
+            evaluate_model_execution_policy(
+                [model],
+                justification=justification,
+                reasoning_effort=narrator_effort,
+            )
+        except LLMConfigurationError:
+            continue
+        if not supported_efforts:
+            continue
         choices.append(
             {
                 "model": model,
                 "label": advertisement["label"],
                 "default": model == DEFAULT_MODEL,
+                "agent_reasoning_efforts": supported_efforts,
+                "default_agent_reasoning_effort": (
+                    DEFAULT_REASONING_EFFORT
+                    if DEFAULT_REASONING_EFFORT in supported_efforts
+                    else supported_efforts[0]
+                ),
+                "narrator_reasoning_effort": narrator_effort,
                 "structured_output": True,
                 "availability_basis": (
                     f"configured credential: {info['api_key_env']}"
@@ -133,6 +159,12 @@ def model_catalog() -> list[dict[str, object]]:
             }
         )
     return choices
+
+
+def _model_justification(model: str) -> str | None:
+    if model.endswith("deepseek-v4-flash"):
+        return None
+    return "Operator selected an advertised simulator route."
 
 
 def _validated_certification_basis(
@@ -167,14 +199,20 @@ def _validated_certification_basis(
         return None
     now = datetime.now(timezone.utc)
     required_schemas = {"LlmDecision", "CausalMomentNarration"}
+    expected_schema_digests = _current_schema_digests()
     revision = llm_client_revision()
     typed = [item for item in selected if item is not None]
     if (
         {item.schema_class.rsplit(".", maxsplit=1)[-1] for item in typed}
         != required_schemas
+        or expected_schema_digests is None
         or any(
             item.requested_model != model
             or not item.transport_certifies
+            or item.schema_sha256
+            != expected_schema_digests[
+                item.schema_class.rsplit(".", maxsplit=1)[-1]
+            ]
             or item.llm_client_revision != revision
             or item.observed_at > now
             or now - item.observed_at > CERTIFICATION_MAX_AGE
@@ -183,6 +221,29 @@ def _validated_certification_basis(
     ):
         return None
     return ",".join(sorted(observation_ids))
+
+
+def _current_schema_digests() -> dict[str, str] | None:
+    """Reproduce the shared runtime's exact OpenRouter provider schemas."""
+    try:
+        from llm_client import (
+            openrouter_native_provider_schema,
+            route_schema_sha256,
+        )
+        from cybernetic_influence.active_runtime.llm import LlmDecision
+        from cybernetic_influence.narration import CausalMomentNarration
+    except ImportError:
+        return None
+    schemas = {
+        "LlmDecision": LlmDecision,
+        "CausalMomentNarration": CausalMomentNarration,
+    }
+    return {
+        name: route_schema_sha256(
+            openrouter_native_provider_schema(schema)
+        )
+        for name, schema in schemas.items()
+    }
 
 
 def resolve_live_configuration(
@@ -194,12 +255,30 @@ def resolve_live_configuration(
         agent_reasoning_effort=DEFAULT_REASONING_EFFORT,
         max_total_cost=DEFAULT_MAX_TOTAL_COST,
     )
-    advertised = {str(choice["model"]) for choice in model_catalog()}
-    if selected.model not in advertised:
+    advertised = {
+        str(choice["model"]): choice
+        for choice in model_catalog()
+    }
+    choice = advertised.get(selected.model)
+    if choice is None:
         raise ValueError("model is not currently advertised for simulator execution")
+    supported_efforts = {
+        str(effort)
+        for effort in cast(list[object], choice["agent_reasoning_efforts"])
+    }
+    if selected.agent_reasoning_effort not in supported_efforts:
+        raise ValueError(
+            f"{selected.model} does not support agent reasoning effort "
+            f"{selected.agent_reasoning_effort!r}; choose one of "
+            f"{', '.join(sorted(supported_efforts))}"
+        )
     return EffectiveRunLlmConfiguration(
         model=selected.model,
         agent_reasoning_effort=selected.agent_reasoning_effort,
+        narrator_reasoning_effort=cast(
+            ReasoningEffort,
+            choice["narrator_reasoning_effort"],
+        ),
         max_total_cost=selected.max_total_cost,
         selection_basis=(
             "server_default" if options is None else "operator_selected"

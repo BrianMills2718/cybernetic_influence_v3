@@ -578,6 +578,7 @@ def _attach_narration(
                 effective_llm.max_total_cost
                 - _nonnegative_float(narrated.get("cost")),
             ),
+            reasoning_effort=effective_llm.narrator_reasoning_effort,
         )
         if live and effective_llm is not None
         else reference_narration()
