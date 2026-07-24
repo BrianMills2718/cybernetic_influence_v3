@@ -107,3 +107,68 @@ def test_narrator_citation_outside_current_moment_is_retained_as_unavailable(
     assert isinstance(calls, list)
     assert isinstance(calls[0], Mapping)
     assert calls[0]["error_type"] == "ValueError"
+
+
+def test_narrator_receives_representation_scope_and_private_update_evidence(
+    tmp_path: Path,
+) -> None:
+    document = TestClient(create_app(ROOT / "web", tmp_path)).post(
+        "/api/runs",
+        json={
+            "scenario": "purchase_payment",
+            "arm_id": "settled",
+            "execution": "scripted",
+        },
+    ).json()
+    prompts: list[tuple[str, str]] = []
+
+    def fake_call(
+        _model: str,
+        messages: list[dict[str, str]],
+        response_model: type[CausalMomentNarration],
+        **_kwargs: Any,
+    ) -> tuple[CausalMomentNarration, object]:
+        system, user = messages
+        prompts.append((system["content"], user["content"]))
+        source_ids = re.findall(
+            r'"event_id":\s*"([^"]+)"',
+            user["content"],
+        )
+        return (
+            response_model(
+                narrative=f"Narrated causal moment {len(prompts)}.",
+                source_event_ids=[source_ids[-1]],
+            ),
+            SimpleNamespace(cost=0.01, cost_source="provider_reported"),
+        )
+
+    narration = narrate_live_moments(
+        document,
+        model="test-model",
+        trace_id_prefix="run_purchase_narration_test",
+        structured_call=fake_call,
+    )
+
+    assert narration["status"] == "completed"
+    system_prompt = prompts[0][0]
+    normalized_system_prompt = " ".join(system_prompt.split())
+    rendered_moments = "\n".join(user for _, user in prompts)
+    assert (
+        "A stipulated or coarse external subsystem must never be called an "
+        "exact subsystem"
+    ) in normalized_system_prompt
+    assert (
+        "Never broaden “no external action” into “no process state changed.”"
+        in normalized_system_prompt
+    )
+    assert '"mechanism_kind": "coarse_external_processor"' in rendered_moments
+    assert (
+        '"representation_abstraction": "Stipulated '
+        "instruction-to-status behavior"
+    ) in rendered_moments
+    assert "Exact mechanism coarse_payment_processor" not in rendered_moments
+    assert '"private_state_updated": true' in prompts[-1][1]
+    assert (
+        "Protected private state changed for ap_clerk."
+        in prompts[-1][1]
+    )

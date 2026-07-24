@@ -515,11 +515,24 @@ def purchase_payment_summary(
             "the available approval, policy, request, invoice, or signer "
             "evidence before any processor instruction was emitted.",
         )
+    if readout.approval_status == "denied":
+        return (
+            "Purchase was not approved",
+            "The approver recorded a denial from the delivered package and "
+            "copied policy context. No payment request or external processor "
+            "execution followed.",
+        )
+    if readout.approval_status == "signer_rejected":
+        return (
+            "Approval authority was unavailable",
+            "The attempted decision could not be recorded because the declared "
+            "signer was inactive. No payment request or external processor "
+            "execution followed.",
+        )
     return (
-        "Purchase was not approved",
-        "The approver recorded a denial from the delivered package and copied "
-        "policy context. No payment request or external processor execution "
-        "followed.",
+        "Payment did not proceed",
+        "The workflow ended before any approval decision was recorded. No "
+        "payment request or external processor execution followed.",
     )
 
 

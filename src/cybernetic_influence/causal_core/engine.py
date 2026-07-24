@@ -770,7 +770,7 @@ class CausalSession:
             logical_time=effect.logical_time,
             causal_parent_event_ids=[routed_event.event_id],
             summary=(
-                f"Exact mechanism {mechanism.mechanism_id} produced outcome "
+                f"Mechanism {mechanism.mechanism_id} produced outcome "
                 f"{outcome.outcome_code}."
             ),
             variance_source="exact",
@@ -799,7 +799,7 @@ class CausalSession:
             logical_time=effect.logical_time,
             causal_parent_event_ids=[mechanism_event.event_id],
             summary=(
-                f"Committed exact mechanism {mechanism.mechanism_id} as state "
+                f"Committed mechanism {mechanism.mechanism_id} as state "
                 f"revision {patch.after_revision}."
             ),
             variance_source="exact",

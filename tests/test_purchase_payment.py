@@ -224,6 +224,12 @@ def test_mismatched_documents_and_inactive_signer_fail_before_payment() -> None:
     mismatch_readout = build_purchase_payment_readout(mismatch)
     assert mismatch_readout.approval_status == "not_recorded"
     assert mismatch_readout.processor_executed is False
+    mismatch_headline, mismatch_summary = purchase_payment_summary(
+        mismatch_readout
+    )
+    assert mismatch_headline == "Payment did not proceed"
+    assert "before any approval decision was recorded" in mismatch_summary
+    assert "approver recorded a denial" not in mismatch_summary
     assert mismatch.core_result.final_state.fact("purchase_17.status").value == (
         "submission_rejected"
     )
@@ -243,6 +249,9 @@ def test_mismatched_documents_and_inactive_signer_fail_before_payment() -> None:
     signer_readout = build_purchase_payment_readout(signer)
     assert signer_readout.approval_status == "signer_rejected"
     assert signer_readout.processor_executed is False
+    signer_headline, signer_summary = purchase_payment_summary(signer_readout)
+    assert signer_headline == "Approval authority was unavailable"
+    assert "declared signer was inactive" in signer_summary
     assert [
         attempt.declared_active_system_ids for attempt in signer.attempts
     ] == [["requester"], ["approver"], ["ap_clerk"]]
@@ -261,6 +270,17 @@ def test_processor_fidelity_and_lineage_bound_the_claim() -> None:
     assert any(
         "cannot answer why" in omission
         for omission in processor.fidelity.known_omissions
+    )
+    processor_events = [
+        event
+        for event in result.core_result.events
+        if event.mechanism_id == "coarse_payment_processor"
+    ]
+    assert processor_events
+    assert all(
+        not event.summary.startswith("Exact mechanism")
+        and not event.summary.startswith("Committed exact mechanism")
+        for event in processor_events
     )
     final = result.core_result.final_state
     result_token = next(
@@ -403,6 +423,32 @@ def test_purchase_payment_is_a_closed_inspectable_api_scenario(
         assert any(
             "cannot answer why" in omission
             for omission in processor["state"]["fidelity"]["known_omissions"]
+        )
+        coarse_events = [
+            event
+            for event in body["timeline"]
+            if event.get("mechanism_id") == "coarse_payment_processor"
+        ]
+        if arm_id != "approval_denied":
+            assert coarse_events
+            assert {
+                event["mechanism_kind"] for event in coarse_events
+            } == {"coarse_external_processor"}
+            assert all(
+                event["transition_contract"] == "exact"
+                and event["representation_abstraction"].startswith(
+                    "Stipulated instruction-to-status behavior"
+                )
+                for event in coarse_events
+            )
+        silent_traces = [
+            trace
+            for trace in body["traces"]
+            if not trace["actions"]
+        ]
+        assert all(
+            isinstance(trace["private_state_updated"], bool)
+            for trace in silent_traces
         )
     assert outcomes == {
         "settled": "settled",

@@ -730,22 +730,41 @@ def analyst_timeline(
                         spatial_link.substrate_entity_ids
                     )
         activation, person = event_activation.get(event.event_id, (None, None))
-        timeline.append(
-            {
-                "event_id": event.event_id,
-                "sequence": event.sequence,
-                "logical_time": event.logical_time,
-                "state_revision": event.state_revision,
-                "kind": event.event_kind,
-                "summary": event.summary,
-                "activation": activation,
-                "person": person,
-                "focus_ids": sorted(focus_ids),
-                "focus_edges": sorted(focus_edges),
-                "spatial_focus_ids": sorted(spatial_focus_ids),
-                "spatial_link_ids": sorted(spatial_link_ids),
-            }
+        projected_event: dict[str, object] = {
+            "event_id": event.event_id,
+            "sequence": event.sequence,
+            "logical_time": event.logical_time,
+            "state_revision": event.state_revision,
+            "kind": event.event_kind,
+            "summary": event.summary,
+            "activation": activation,
+            "person": person,
+            "focus_ids": sorted(focus_ids),
+            "focus_edges": sorted(focus_edges),
+            "spatial_focus_ids": sorted(spatial_focus_ids),
+            "spatial_link_ids": sorted(spatial_link_ids),
+        }
+        mechanism = (
+            state.mechanisms.get(event.mechanism_id)
+            if event.mechanism_id is not None
+            else None
         )
+        if mechanism is not None:
+            projected_event.update(
+                {
+                    "mechanism_id": mechanism.mechanism_id,
+                    "mechanism_kind": mechanism.mechanism_kind,
+                    "mechanism_description": mechanism.description,
+                    "transition_contract": mechanism.mode,
+                    "representation_abstraction": (
+                        mechanism.fidelity.abstraction
+                    ),
+                    "representation_known_omissions": list(
+                        mechanism.fidelity.known_omissions
+                    ),
+                }
+            )
+        timeline.append(projected_event)
     return timeline
 
 
@@ -807,6 +826,11 @@ def analyst_traces(result: ActiveRuntimeResult) -> list[dict[str, object]]:
                         else None
                     ),
                     "model_call_count": len(participant.call_evidence),
+                    "private_state_updated": (
+                        participant.proposal is not None
+                        and participant.input.private_state
+                        != participant.proposal.private_state
+                    ),
                     "actions": actions,
                     "observations": [
                         observation.model_dump(mode="json")

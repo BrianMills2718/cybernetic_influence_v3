@@ -167,7 +167,19 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
             events_by_activation.setdefault(activation, []).append(
                 {
                     key: event[key]
-                    for key in ("event_id", "kind", "summary", "logical_time", "state_revision")
+                    for key in (
+                        "event_id",
+                        "kind",
+                        "summary",
+                        "logical_time",
+                        "state_revision",
+                        "mechanism_id",
+                        "mechanism_kind",
+                        "mechanism_description",
+                        "transition_contract",
+                        "representation_abstraction",
+                        "representation_known_omissions",
+                    )
                     if key in event
                 }
             )
@@ -184,10 +196,24 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
         logical_time = activation_traces[0]["logical_time"]
         events = events_by_activation.get(activation, [])
         if not events:
+            private_updates = [
+                str(trace["person"])
+                for trace in activation_traces
+                if trace.get("private_state_updated") is True
+            ]
+            private_summary = (
+                "Protected private state changed for "
+                f"{', '.join(private_updates)}."
+                if private_updates
+                else "Protected private state did not change."
+            )
             events = [{
                 "event_id": f"{activation}:silence",
-                "kind": "no_action",
-                "summary": "No participant committed an action during this causal moment.",
+                "kind": "no_external_action",
+                "summary": (
+                    "No participant committed an external action or world-state "
+                    f"effect during this causal moment. {private_summary}"
+                ),
                 "logical_time": logical_time,
                 "state_revision": None,
             }]
@@ -207,6 +233,7 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
                             "scheduled_update_before",
                             "update_schedule",
                             "model_call_count",
+                            "private_state_updated",
                             "orientation",
                             "actions",
                             "observations",
