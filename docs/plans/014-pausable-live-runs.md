@@ -41,13 +41,24 @@ zero retries or validation errors, a complete 0-through-11 prior-narrative
 chain, and an exact match between 23 provider-reported receipts and the retained
 `$0.0054597981` total. The pause occurred in the causal phase, so no narration
 prefix existed to replay; all 12 accounts were generated after continuation
-with the complete prior-account chain. The current desktop interaction pass
-remains open below.
+with the complete prior-account chain.
 
 Behavioral note: after confirmed closure, the supervisor made two redundant
 closure attempts. The exact mechanism denied both as already closed, and the
 narratives exposed the attempts. This is participant judgment to assess during
 the usability/fidelity review, not evidence of checkpoint replay.
+
+The current desktop flow passed on deployed simulator
+`997ce39890bdc9c0e222e6b029704623df10b848`. Browser-driven run
+`run_251610100415` selected the default DeepSeek route, paused after one
+provider call, resumed, and completed with 19 calls, ten narratives, and
+`$0.003879` observed cost. The rendered product showed 9 spatial nodes/2
+physical edges, 34 causal nodes/43 causal edges, five participant/composite
+tabs, stable causal-moment controls, and retained-history readback. Projection
+and moment changes preserved page position; a reproduced participant-trace jump
+was repaired, and the exact regression remained at `scrollY=3359` across
+triager, supervisor, and composite selections. Browser console, exceptions,
+failed requests, HTTP errors, and backend errors were empty.
 
 ## Demo completion gate
 
@@ -63,7 +74,7 @@ scenario fidelity.
 - [x] Inspect the resumed run's full causal and provider-call trace: no repeated
   pre-pause event IDs or provider logical calls, a continuous narrative prefix,
   and observed cost supported by terminal receipts.
-- [ ] Exercise the current desktop path—choose scenario, Play, map, narrative,
+- [x] Exercise the current desktop path—choose scenario, Play, map, narrative,
   traces, pause, resume, and Run history—with no blocking console/network error,
   disruptive scroll jump, or misleading lifecycle control.
 - [x] Confirm the roadmap, plan index, README, Mac operations page, and deployed

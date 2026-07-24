@@ -23,7 +23,7 @@ stored in the repository or LaunchAgent plist.
 
 Last verified 2026-07-24:
 
-- simulator: `1be312441fcc934ab2fb72e044db3b5dc14f7985`;
+- simulator: `997ce39890bdc9c0e222e6b029704623df10b848`;
 - shared client: `9f61bd7c9419c93961a722a7ef6209adcf593382`;
 - advertised routes: Terra and DeepSeek V4 Flash;
 - Terra certification:
@@ -42,8 +42,13 @@ Last verified 2026-07-24:
   every call has one start and completion, native JSON-schema output, no retry,
   error, warning, or validation failure, and the receipt sum exactly matches
   retained cost;
-- open limitation: current-revision rendered desktop browser verification
-  remains unproven; mobile is out of scope for this private PoC.
+- rendered desktop canary: `run_251610100415` paused after one live call,
+  resumed, and completed with 19 calls, ten narratives, both map projections,
+  participant/composite traces, causal-moment controls, and history readback;
+  no browser console/network or backend error remained, and the reproduced
+  trace-selection scroll jump is fixed;
+- open limitation: operator usability judgment remains pending; mobile is out
+  of scope for this private PoC.
 
 The default live route is
 `openrouter/deepseek/deepseek-v4-flash` at `none` reasoning for participants

@@ -29,7 +29,7 @@ Stage: MVP/PoC.
 
 V0.13 plus live checkpoint continuation is implemented and deployed as the
 current private demo candidate on the Mac development host at simulator
-`1be312441fcc934ab2fb72e044db3b5dc14f7985` with shared-client revision
+`997ce39890bdc9c0e222e6b029704623df10b848` with shared-client revision
 `9f61bd7c9419c93961a722a7ef6209adcf593382`. The API reports DeepSeek V4
 Flash with `none` reasoning as the default and Terra as the other certified
 route. DeepSeek `high` and `xhigh` remain explicitly experimental; `medium` is
@@ -54,11 +54,13 @@ Technical execution is therefore observed for the configured live path and for
 one live checkpoint continuation. Full-trace inspection found no duplicated
 causal event or provider logical call, preserved the complete sequential
 narrative context, and reconciled every provider-reported receipt to retained
-cost. A current-revision desktop workflow pass remains open. Stakeholder
-reviewability is established; the final operator usability judgment for this
-demo candidate is not yet recorded.
+cost. The current-revision desktop workflow also passes through real Play,
+pause, resume, both maps, narratives, participant/composite traces,
+causal-moment controls, and history readback without console/network errors or
+page-position jumps. Stakeholder reviewability is established; the final
+operator usability judgment for this demo candidate is not yet recorded.
 
-V0.12.2 remains the last fully narrated and browser-certified release. It adds
+V0.12.2 is retained as the earlier narrated and browser-certified baseline. It adds
 the separate run-history workspace and stable in-place scale/time inspection
 from UI repair commit `c55dddd7de0abb66cf615511a11842a3f0c743e7`,
 while preserving the earlier event-driven and narrative-fidelity behavior.
@@ -197,13 +199,13 @@ North Star or a production simulator. The sole active packet is
 3. the current desktop path—choose scenario, Play, map, narrative, traces,
    pause/resume, and Run history—has no demo-blocking error, scroll jump, or
    misleading lifecycle control;
-4. the roadmap, plan index, README, and deployed configuration agree; and
+4. the roadmap, plan index, README, Mac operations page, and deployed
+   configuration agree; and
 5. the operator uses the current build for five to ten minutes and finds no
    remaining demo-blocking comprehension or control defect.
 
-The live run/data portion of check 1 and all of check 2 have current deployed
-evidence. The integrated desktop presentation pass and final operator judgment
-remain open. Once those pass, mark Slice 14 and the current demo complete. Do
+Checks 1 through 4 have current deployed evidence. The final operator judgment
+remains open. Once it passes, mark Slice 14 and the current demo complete. Do
 not add another substrate or feature packet to this gate.
 
 ## Approved Outcome Extension
@@ -304,8 +306,7 @@ active packet.
 
 [Slice 14](plans/014-pausable-live-runs.md) is the sole active packet. Live
 pause/resume is implemented and one retained run completed from its checkpoint.
-The shortest remaining path is one current desktop workflow pass and the
-operator's short usability judgment. Passing the
+The shortest remaining path is the operator's short usability judgment. Passing the
 [Current Demo Completion Boundary](#current-demo-completion-boundary) ends this
 PoC demo stage.
 
