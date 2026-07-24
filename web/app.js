@@ -1,4 +1,12 @@
 const $ = (selector) => document.querySelector(selector)
+
+function updateInPlace(update) {
+  const left = window.scrollX
+  const top = window.scrollY
+  update()
+  window.scrollTo(left, top)
+  requestAnimationFrame(() => window.scrollTo(left, top))
+}
 const html = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
   '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
 })[character])
@@ -945,7 +953,9 @@ function render(run) {
     `<button data-person="${html(boundary.id)}" title="Analytical composite; it summarizes members but does not act">${html(boundary.label)} · composite</button>`
   )
   $('#trace-tabs').innerHTML = [...participantTabs, ...compositeTabs].join('')
-  document.querySelectorAll('#trace-tabs button').forEach((button) => button.onclick = () => showTrace(button.dataset.person))
+  document.querySelectorAll('#trace-tabs button').forEach((button) => {
+    button.onclick = () => updateInPlace(() => showTrace(button.dataset.person))
+  })
   if (people.length) showTrace(people[0])
   else $('#trace').innerHTML = '<p class="muted">No completed participant traces were retained.</p>'
   renderTimeline(current)

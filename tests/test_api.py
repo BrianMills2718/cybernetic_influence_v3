@@ -120,6 +120,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"#result { overflow-anchor:none; }" in app_styles.content
     assert b"Causal flow shows retained information routes" in app_script.content
     assert b"aria-pressed" in app_script.content
+    assert b"updateInPlace(() => showTrace(button.dataset.person))" in app_script.content
     assert b"kind:edge.kind || 'connection'" in app_script.content
 
 
