@@ -37,6 +37,95 @@ The canonical state, event log, and exact graph remain unchanged. Aggregate
 identities are namespaced operator-view IDs and cannot collide with runtime
 referents.
 
+## Deferred Research Question: Systemic Influence Without Reification
+
+An aggregate need not be an additional executor or mind for the aggregate
+scale to support a meaningful causal question. A future analyst may ask, for
+example:
+
+> To what extent was an outcome controlled by particular people, and to what
+> extent was it controlled by the organizational or economic system in which
+> they acted?
+
+Here, “systemic influence” would not mean that an organization, state, market,
+or capitalism secretly emitted an action. It would refer to the outcome
+constraint produced by concrete distributed structures such as:
+
+- policies, incentives, ownership, and resource-allocation rules;
+- information topology, records, interfaces, and access controls;
+- software, machines, and other exact or coarsely represented processes;
+- selection, replacement, competition, and feedback dynamics that persist
+  while individual participants change.
+
+The claim that a system behaves like a powerful composite cybernetic agent can
+therefore be treated as an operational hypothesis rather than an ontological
+axiom. Evidence might include persistent objective-like regularities,
+feedback, memory, error correction, adaptation, and outcome stability under
+member replacement. The realized trajectory would still be generated only by
+the system's concrete components.
+
+A defensible influence comparison would require explicit counterfactuals:
+vary the distributed structure while holding participant dispositions as
+stable as practical; vary or replace participants while retaining the
+structure; interrupt particular feedback paths; and measure which changes
+alter the outcome distribution. “System versus humans” may not admit an
+additive percentage because people and structures interact, so any future
+attribution method must declare its intervention, scale, readout, and treatment
+of interaction effects.
+
+### Research Grounding and Deferred Measurement Contract
+
+Michael Levin's TAME research program supplies a useful experimental framing,
+not a ready-made organization-agency score. It treats a higher-scale Self as a
+testable control model: a coherent system whose goal pursuit, compound memory,
+and credit assignment occur at a scale unavailable to its parts alone. Its
+relevant operational ideas are:
+
+- an **axis of persuadability**: compare intervention strategies by the
+  prediction and control obtained relative to the effort and detailed knowledge
+  they require;
+- a **cognitive light cone**: characterize the spatial, temporal, and
+  state-space scope of outcomes a system can represent and work to change;
+- **collective glue**: identify concrete communication, memory, and feedback
+  mechanisms that bind component competencies into a larger control loop;
+- **perturbation assays**: test whether a candidate collective restores an
+  outcome after shocks, reaches it from varied starts, or retains it while
+  members change.
+
+This framing is grounded in biological work on distributed bioelectric control
+of regeneration, where interventions can alter and reset persistent target
+morphologies. Its direct empirical support is strongest in biology, not in
+organizations or economies. Applying it to social systems is therefore a
+future hypothesis, not a validated conclusion. Sources: [Levin,
+2019](https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2019.02688/full),
+[Levin, 2022](https://www.frontiersin.org/journals/systems-neuroscience/articles/10.3389/fnsys.2022.768201/full),
+[McMillen and Levin, 2024](https://www.nature.com/articles/s42003-024-06037-4),
+and [Durant et al., 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC5443973/).
+
+If a future scenario creates concrete pressure for this capability, its
+measurement contract must name:
+
+1. a candidate outcome or target variable without presuming a unified system
+   intention;
+2. the proposed aggregate boundary and its concrete control, memory, and
+   feedback substrate;
+3. component-level, structural, and feedback-disruption interventions;
+4. repeated outcome distributions, including recovery after shocks and member
+   replacement; and
+5. an intervention-specific influence profile, not an unjustified additive
+   percentage of “system” versus “human” causation.
+
+The first plausible test of systemic influence is thus whether a structural
+intervention—such as changing an incentive, policy, information route, or
+market mechanism—redirects outcomes more reliably or efficiently than
+individual-by-individual changes. That supports a useful higher-scale control
+model; it does not add a hidden executor to the runtime or establish
+consciousness.
+
+This ADR records the question but does not authorize organization-level
+executors, agency scores, causal-attribution machinery, or a new MVP scenario.
+Those require a concrete analyst question and a bounded measurement contract.
+
 ## Borrow Versus Build
 
 Borrow the existing analytical-boundary contract, event focus identities,

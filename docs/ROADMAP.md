@@ -209,6 +209,9 @@ another substrate or ontology packet starts.
 - stock exchanges, HFT systems, or market calibration;
 - treating an organization, market, policy, or incentive system as an
   ungrounded acting mind;
+- systemic-influence attribution or aggregate-agency scoring; the open question
+  is retained in [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md)
+  without changing the component-grounded execution model;
 - production hosting, public access, and multi-user operations.
 
 ## Decision Rule
