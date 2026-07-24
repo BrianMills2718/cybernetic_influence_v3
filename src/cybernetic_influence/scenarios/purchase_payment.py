@@ -20,6 +20,7 @@ from cybernetic_influence.active_runtime import (
     ActiveSystemInput,
     ActiveSystemSpec,
     ActionIntent,
+    ActivationCause,
     NativeLlmActiveSystem,
     bound_native_llm_implementation_id,
 )
@@ -53,12 +54,7 @@ from cybernetic_influence.causal_core.models import (
 PURCHASE_PAYMENT_MODEL = "openrouter/openai/gpt-5.6-terra"
 PURCHASE_PAYMENT_REASONING_EFFORT = "medium"
 PURCHASE_PAYMENT_TASK = "cybernetic_influence_v3_purchase_payment_step"
-PURCHASE_PAYMENT_SCHEDULE: tuple[tuple[int, str], ...] = (
-    (0, "requester"),
-    (1, "approver"),
-    (2, "ap_clerk"),
-    (3, "ap_clerk"),
-)
+PURCHASE_PAYMENT_MAX_CAUSAL_MOMENTS = 8
 
 PURCHASE_REQUEST_ENCODING = "application/vnd.cybernetic.purchase-request+json"
 INVOICE_ENCODING = "application/vnd.cybernetic.invoice+json"
@@ -430,8 +426,33 @@ def run_purchase_payment(
         run_id=run_id,
         config=purchase_payment_runtime_config(),
     )
-    for logical_time, participant_id in PURCHASE_PAYMENT_SCHEDULE:
-        session.activate([participant_id], logical_time=logical_time)
+    session.activate(
+        ["requester"],
+        logical_time=0,
+        activation_causes={
+            "requester": [
+                ActivationCause(
+                    kind="scenario_start",
+                    scheduled_for=0,
+                    description=(
+                        "The authored scenario began with the purchase request "
+                        "and invoice retained by the requester."
+                    ),
+                )
+            ]
+        },
+    )
+    while (due := session.next_due_activation()) is not None:
+        if len(session.attempts) >= PURCHASE_PAYMENT_MAX_CAUSAL_MOMENTS:
+            raise RuntimeError(
+                "purchase-payment event scheduler exceeded its "
+                "causal-moment bound"
+            )
+        session.activate(
+            due.active_system_ids,
+            logical_time=due.logical_time,
+            activation_causes=due.causes,
+        )
     return session.complete()
 
 

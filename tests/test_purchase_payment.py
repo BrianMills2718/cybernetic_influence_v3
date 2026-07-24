@@ -7,8 +7,16 @@ from pathlib import Path
 from typing import Any, cast
 
 from fastapi.testclient import TestClient
+import pytest
 
-from cybernetic_influence.active_runtime import ActiveRuntimeResult
+from cybernetic_influence.active_runtime import (
+    ActiveRuntimeResult,
+    ActiveStepResult,
+    ActiveSystemBinding,
+    ActiveSystemInput,
+    ScriptedActiveSystem,
+    UpdateScheduleDirective,
+)
 from cybernetic_influence.api import create_app
 from cybernetic_influence.causal_core.replay import (
     replay_committed_trajectory,
@@ -91,6 +99,93 @@ def test_purchase_payment_arms_separate_internal_and_external_outcomes() -> None
         event.mechanism_id == "coarse_payment_processor"
         for event in declined_result.core_result.events
     )
+    assert len(settled_result.attempts) == 4
+    assert len(denied_result.attempts) == 3
+    assert len(declined_result.attempts) == 4
+
+
+def test_purchase_payment_activations_follow_delivered_information() -> None:
+    _, settled_result, _ = _run("settled")
+    assert [
+        attempt.declared_active_system_ids
+        for attempt in settled_result.attempts
+    ] == [["requester"], ["approver"], ["ap_clerk"], ["ap_clerk"]]
+    assert [attempt.logical_time for attempt in settled_result.attempts] == [
+        0,
+        0,
+        0,
+        0,
+    ]
+
+    first, *later = settled_result.attempts
+    assert [
+        cause.kind
+        for cause in first.participants[0].input.activation_causes
+    ] == ["scenario_start"]
+    assert first.participants[0].input.observations == []
+
+    for attempt in later:
+        assert len(attempt.participants) == 1
+        participant = attempt.participants[0]
+        assert [
+            cause.kind for cause in participant.input.activation_causes
+        ] == ["observation_delivery"]
+        caused_observation_ids = {
+            observation_id
+            for cause in participant.input.activation_causes
+            for observation_id in cause.observation_ids
+        }
+        assert caused_observation_ids == {
+            observation.observation_id
+            for observation in participant.input.observations
+        }
+
+    assert not any(
+        cause.kind == "manual_schedule"
+        for attempt in settled_result.attempts
+        for participant in attempt.participants
+        for cause in participant.input.activation_causes
+    )
+
+
+def test_purchase_payment_stops_a_self_scheduling_binding_at_its_bound() -> None:
+    fixture = purchase_payment_fixture(_arms()["settled"])
+    bindings = purchase_payment_scripted_bindings(fixture)
+    original = bindings["ap_clerk"]
+
+    def self_scheduling(active_input: ActiveSystemInput) -> ActiveStepResult:
+        result = ActiveStepResult.model_validate(
+            original.implementation.step(active_input)
+        )
+        return result.model_copy(
+            update={
+                "proposal": result.proposal.model_copy(
+                    update={
+                        "update_schedule": UpdateScheduleDirective(
+                            mode="schedule",
+                            next_update_at=active_input.logical_time + 1,
+                        )
+                    }
+                )
+            }
+        )
+
+    bindings["ap_clerk"] = ActiveSystemBinding(
+        original.implementation_id,
+        ScriptedActiveSystem(
+            original.implementation_id,
+            self_scheduling,
+        ),
+    )
+    with pytest.raises(
+        RuntimeError,
+        match="purchase-payment event scheduler exceeded its causal-moment bound",
+    ):
+        run_purchase_payment(
+            fixture,
+            bindings,
+            run_id="purchase_payment_self_scheduling_bound",
+        )
 
 
 def test_exact_gate_denies_forced_payment_after_human_denial() -> None:
@@ -110,6 +205,9 @@ def test_exact_gate_denies_forced_payment_after_human_denial() -> None:
     assert json.loads(denial.content)["reason_code"] == (
         "recorded_decision_not_approved"
     )
+    assert [
+        attempt.declared_active_system_ids for attempt in result.attempts
+    ] == [["requester"], ["approver"], ["ap_clerk"], ["ap_clerk"]]
 
 
 def test_mismatched_documents_and_inactive_signer_fail_before_payment() -> None:
@@ -129,6 +227,9 @@ def test_mismatched_documents_and_inactive_signer_fail_before_payment() -> None:
     assert mismatch.core_result.final_state.fact("purchase_17.status").value == (
         "submission_rejected"
     )
+    assert [
+        attempt.declared_active_system_ids for attempt in mismatch.attempts
+    ] == [["requester"]]
 
     signer_fixture = purchase_payment_fixture(
         settled,
@@ -142,6 +243,9 @@ def test_mismatched_documents_and_inactive_signer_fail_before_payment() -> None:
     signer_readout = build_purchase_payment_readout(signer)
     assert signer_readout.approval_status == "signer_rejected"
     assert signer_readout.processor_executed is False
+    assert [
+        attempt.declared_active_system_ids for attempt in signer.attempts
+    ] == [["requester"], ["approver"], ["ap_clerk"]]
 
 
 def test_processor_fidelity_and_lineage_bound_the_claim() -> None:
