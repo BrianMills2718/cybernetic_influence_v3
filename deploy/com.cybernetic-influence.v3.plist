@@ -44,6 +44,8 @@
     <string>on</string>
     <key>LLM_CLIENT_PROJECT</key>
     <string>cybernetic_influence_v3</string>
+    <key>LLM_CLIENT_TIMEOUT_POLICY</key>
+    <string>allow</string>
     <key>PYTHONUNBUFFERED</key>
     <string>1</string>
   </dict>

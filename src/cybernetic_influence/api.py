@@ -340,6 +340,12 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
         def retain_checkpoint(checkpoint: ActiveRuntimeCheckpoint) -> None:
             nonlocal latest_checkpoint
             latest_checkpoint = checkpoint.model_copy(deep=True)
+            runs.save(
+                {
+                    **initial,
+                    **_checkpoint_progress_projection(latest_checkpoint),
+                }
+            )
 
         try:
             if service_arm is not None:
@@ -642,6 +648,33 @@ def _checkpoint_failure_projection(
         "failure_boundary": {
             "kind": "active_runtime",
             "attempt_index": checkpoint.next_attempt_index,
+            "logical_time": checkpoint.core_checkpoint.state.logical_time,
+        },
+    }
+
+
+def _checkpoint_progress_projection(
+    checkpoint: ActiveRuntimeCheckpoint,
+) -> dict[str, object]:
+    """Persist priced provider progress without manufacturing a partial world."""
+    return {
+        "model_calls": sum(
+            len(participant.call_evidence)
+            for attempt in checkpoint.attempts
+            for participant in attempt.participants
+        ),
+        "cost": checkpoint.total_observed_cost,
+        "cost_fully_observable": checkpoint.cost_fully_observable,
+        "model_call_summaries": _attempt_call_summaries(checkpoint.attempts),
+        "progress": {
+            "completed_attempts": sum(
+                attempt.status == "committed"
+                for attempt in checkpoint.attempts
+            ),
+            "failed_attempts": sum(
+                attempt.status == "failed"
+                for attempt in checkpoint.attempts
+            ),
             "logical_time": checkpoint.core_checkpoint.state.logical_time,
         },
     }

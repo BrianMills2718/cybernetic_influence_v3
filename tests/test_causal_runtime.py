@@ -20,6 +20,7 @@ from cybernetic_influence.active_runtime import (
     UpdateScheduleDirective,
 )
 from cybernetic_influence.active_runtime.llm import render_llm_prompts
+from cybernetic_influence.api import _checkpoint_progress_projection
 from cybernetic_influence.causal_core.engine import (
     CausalSession,
     ExactMechanismBinding,
@@ -236,6 +237,14 @@ def test_provider_call_requires_full_ceiling_but_retains_prior_spend() -> None:
     assert checkpoints[-1].total_observed_cost == pytest.approx(0.01)
     assert checkpoints[-1].attempts[0].status == "committed"
     assert checkpoints[-1].attempts[-1].status == "failed"
+    progress = _checkpoint_progress_projection(checkpoints[-1])
+    assert progress["model_calls"] == 1
+    assert progress["cost"] == pytest.approx(0.01)
+    assert progress["progress"] == {
+        "completed_attempts": 1,
+        "failed_attempts": 1,
+        "logical_time": 0,
+    }
 
 
 def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state() -> None:
