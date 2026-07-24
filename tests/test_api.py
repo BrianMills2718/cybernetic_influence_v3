@@ -222,7 +222,7 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
         reasoning_effort: str,
     ) -> dict[str, object]:
         del document, trace_id_prefix
-        assert reasoning_effort == "high"
+        assert reasoning_effort == "none"
         captured_narration.append((model, max_total_cost))
         return {
             "status": "completed",
@@ -261,7 +261,7 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
                 "execution": "live",
                 "llm_options": {
                     "model": "openrouter/deepseek/deepseek-v4-flash",
-                    "agent_reasoning_effort": "high",
+                    "agent_reasoning_effort": "none",
                     "max_total_cost": 0.31,
                 },
             },
@@ -269,15 +269,15 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
     assert response.status_code == 200, response.text
     body = response.json()
     assert captured_bindings == [
-        ("openrouter/deepseek/deepseek-v4-flash", "high")
+        ("openrouter/deepseek/deepseek-v4-flash", "none")
     ]
     assert captured_narration == [
         ("openrouter/deepseek/deepseek-v4-flash", 0.31)
     ]
     assert body["llm_configuration"] == {
         "model": "openrouter/deepseek/deepseek-v4-flash",
-        "agent_reasoning_effort": "high",
-        "narrator_reasoning_effort": "high",
+        "agent_reasoning_effort": "none",
+        "narrator_reasoning_effort": "none",
         "max_total_cost": 0.31,
         "participant_per_call_ceiling": 0.05,
         "narrator_per_call_ceiling": 0.02,

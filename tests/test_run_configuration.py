@@ -66,7 +66,7 @@ def test_model_catalog_requires_two_current_replayed_schema_observations(
 
     catalog = model_catalog()
     assert [item["model"] for item in catalog] == [MODEL]
-    assert catalog[0]["agent_reasoning_efforts"] == ["low", "medium", "high"]
+    assert catalog[0]["agent_reasoning_efforts"] == ["none", "low", "medium", "high"]
     assert catalog[0]["default_agent_reasoning_effort"] == "medium"
     assert catalog[0]["narrator_reasoning_effort"] == "low"
 

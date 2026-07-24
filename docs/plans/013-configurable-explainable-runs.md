@@ -266,7 +266,7 @@ Strict Pydantic request value:
 
 ```text
 model: nonempty canonical model identifier
-agent_reasoning_effort: low | medium | high
+agent_reasoning_effort: none | low | medium | high
 max_total_cost: finite positive number
 ```
 

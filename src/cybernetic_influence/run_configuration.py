@@ -7,12 +7,12 @@ from datetime import datetime, timedelta, timezone
 from importlib.metadata import PackageNotFoundError, version
 from math import isfinite
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal, NotRequired, TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-ReasoningEffort = Literal["low", "medium", "high"]
+ReasoningEffort = Literal["none", "low", "medium", "high"]
 DEFAULT_MODEL = "openrouter/openai/gpt-5.6-terra"
 DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium"
 NARRATOR_REASONING_EFFORT: Literal["low"] = "low"
@@ -24,10 +24,19 @@ MAXIMUM_PARTICIPANT_CALLS = 48
 MAXIMUM_NARRATOR_CALLS = 12
 CERTIFICATION_MAX_AGE = timedelta(days=7)
 
+class _RouteAdvertisement(TypedDict):
+    """Simulator-owned policy layered over shared-client capabilities."""
+
+    label: str
+    certification_env: str
+    narrator_reasoning_effort: ReasoningEffort
+    agent_reasoning_efforts: NotRequired[tuple[ReasoningEffort, ...]]
+
+
 # This is a simulator-owned advertisement set, not a provider capability matrix.
 # A route enters this set only after the exact participant and narrator schemas
 # have been exercised in the deployment environment.
-_ADVERTISEMENT = {
+_ADVERTISEMENT: dict[str, _RouteAdvertisement] = {
     "openrouter/openai/gpt-5.6-terra": {
         "label": "OpenAI GPT-5.6 Terra",
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_TERRA",
@@ -36,7 +45,11 @@ _ADVERTISEMENT = {
     "openrouter/deepseek/deepseek-v4-flash": {
         "label": "DeepSeek V4 Flash",
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH",
-        "narrator_reasoning_effort": "high",
+        # This route's exact simulator schemas have only been evidenced with
+        # reasoning disabled.  Do not turn registry support for another effort
+        # into an advertised simulator promise.
+        "agent_reasoning_efforts": ("none",),
+        "narrator_reasoning_effort": "none",
     },
 }
 
@@ -117,8 +130,11 @@ def model_catalog() -> list[dict[str, object]]:
         ):
             continue
         justification = _model_justification(model)
+        candidate_efforts = advertisement.get(
+            "agent_reasoning_efforts", ("none", "low", "medium", "high")
+        )
         supported_efforts = []
-        for effort in ("low", "medium", "high"):
+        for effort in candidate_efforts:
             try:
                 evaluate_model_execution_policy(
                     [model],
@@ -128,7 +144,7 @@ def model_catalog() -> list[dict[str, object]]:
             except LLMConfigurationError:
                 continue
             supported_efforts.append(effort)
-        narrator_effort = str(advertisement["narrator_reasoning_effort"])
+        narrator_effort = advertisement["narrator_reasoning_effort"]
         try:
             evaluate_model_execution_policy(
                 [model],
