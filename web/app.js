@@ -3,9 +3,11 @@ const $ = (selector) => document.querySelector(selector)
 function updateInPlace(update) {
   const left = window.scrollX
   const top = window.scrollY
+  const restore = () => window.scrollTo(left, top)
   update()
-  window.scrollTo(left, top)
-  requestAnimationFrame(() => window.scrollTo(left, top))
+  restore()
+  requestAnimationFrame(restore)
+  setTimeout(restore, 50)
 }
 const html = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
   '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',

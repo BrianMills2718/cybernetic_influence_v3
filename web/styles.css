@@ -1,5 +1,6 @@
 :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background:#0b1017; color:#e8eef7; --surface:#121a24; --surface2:#182230; --border:#2a394b; --accent:#54a8ff; --muted:#8fa0b5; }
 * { box-sizing:border-box; }
+html { overflow-anchor:none; }
 [hidden] { display:none !important; }
 body { margin:0; }
 header { position:sticky; top:0; z-index:2; display:flex; justify-content:space-between; align-items:center; padding:18px 28px; border-bottom:1px solid var(--border); background:#0b1017ee; backdrop-filter:blur(10px); }
@@ -137,7 +138,6 @@ summary { cursor:pointer; font-weight:700; }
 .node.event-focus { outline:3px solid #fff; transform:translateY(-2px); }
 .node.selected { box-shadow:0 0 0 3px var(--accent); }
 .node.not-present { opacity:.28; filter:saturate(.25); }
-#result { overflow-anchor:none; }
 #inspector,#trace { padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--surface); overflow:auto; }
 .aggregate-facts { display:grid; gap:7px; }
 .aggregate-facts div { display:flex; justify-content:space-between; gap:12px; padding-bottom:7px; border-bottom:1px solid var(--border); }
