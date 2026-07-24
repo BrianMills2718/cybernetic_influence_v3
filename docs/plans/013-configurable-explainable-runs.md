@@ -17,8 +17,11 @@ The configurable-run vertical is implemented and deployed at simulator
 `a919777af6803f8dc1e9c4b3820667feac6bcea9` with shared `llm_client`
 `9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`.
 
-- Linux and Mac gates pass: mypy, 59 tests, production graph build, and launcher
-  syntax.
+- Current Linux validation passes mypy for the changed server boundary, all 59
+  tests, the JavaScript syntax check, and a whitespace/error diff check. The
+  current Mac deployment probe returns this slice's build revision and the
+  expected model catalog; a rendered desktop browser pass remains separately
+  open.
 - Terra's current exact participant and narrator observations are
   `routeobs1_cfe8e9cc144d22be087e848a` and
   `routeobs1_a11d208c426f16940ee43c4b`; it remains selectable at its

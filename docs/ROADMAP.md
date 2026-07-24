@@ -36,11 +36,13 @@ scenario assumptions and omissions, retained effective configuration, and
 pre-call total-budget admission while preserving the V0.12.2 history and
 in-place inspection repairs.
 
-The complete Linux and Mac simulator gates pass: mypy, 57 tests, the production
-React Flow build, and launcher syntax. The shared-client certification seam has
-44 relevant synchronous policy/attempt/route tests passing on the simulator
-environment; seven async-only tests are uncollected there because that
-environment does not install `pytest-asyncio`.
+Current local validation passes mypy for the changed server boundary, all 59
+tests, JavaScript syntax, and the whitespace/error diff check. The private Mac
+deployment API reports the deployed build revision and model catalog. A
+current-revision rendered desktop browser pass remains open. The shared-client
+certification seam previously had 44 relevant synchronous policy/attempt/route
+tests passing on the simulator environment; seven async-only tests were
+uncollected there because that environment does not install `pytest-asyncio`.
 
 Terra and DeepSeek V4 Flash are currently in the selectable catalog. Terra's
 current participant and narrator schema observations are
