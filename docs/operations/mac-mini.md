@@ -23,16 +23,18 @@ stored in the repository or LaunchAgent plist.
 
 Last verified 2026-07-24:
 
-- simulator: `374b2a50d168fb4c16a9ed834157890f89159384`;
+- simulator: `00ea2342a6c5e3125366e59820f1e49b12dec17c`;
 - shared client: `07b168ffc10ab28834d8571fdf48aa9b775d57bc`;
 - advertised route: Terra only;
 - Terra certification:
   `routeobs1_a7a692e9a6893e15d36f30ab,routeobs1_8d61ca73ab6c08249e5cdf59`;
-- final causal canary: `run_7666035b2c17`, completed
-  `closed_confirmed`, seven participant calls, `$0.033916875`;
-- open limitations: narrator call refused by OpenRouter key-total-limit 403,
-  and the run's retained revision label was miscopied even though the checkout
-  itself was on the correct commit. A new run is required for acceptance.
+- exact-revision complete canary: `run_feb8ed10258d`, completed
+  `closed_confirmed`, seven participant calls plus eight causal-moment narrator
+  calls, `$0.103861875` fully provider-observed;
+- provider trace: all 15 calls completed through native structured output with
+  zero retries, warnings, or validation errors;
+- open limitation: current-revision rendered desktop/mobile browser
+  verification remains unproven.
 
 The currently advertised live route is
 `openrouter/openai/gpt-5.6-terra`. The explicit provider prefix is required

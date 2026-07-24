@@ -14,7 +14,7 @@ predecessor: 012-event-driven-purchase-payment.md
 ## Current implementation and acceptance state
 
 The configurable-run vertical is implemented and deployed at simulator
-`374b2a50d168fb4c16a9ed834157890f89159384` with shared `llm_client`
+`00ea2342a6c5e3125366e59820f1e49b12dec17c` with shared `llm_client`
 `07b168ffc10ab28834d8571fdf48aa9b775d57bc`.
 
 - Linux and Mac gates pass: mypy, 57 tests, production graph build, and launcher
@@ -22,13 +22,14 @@ The configurable-run vertical is implemented and deployed at simulator
 - Terra is the only advertised route. Its exact current-revision participant
   and narrator observations are `routeobs1_a7a692e9a6893e15d36f30ab` and
   `routeobs1_8d61ca73ab6c08249e5cdf59`.
-- The deployed causal canary `run_7666035b2c17` completed and reached
-  `closed_confirmed` with seven medium-reasoning Terra calls for
-  `$0.033916875`; selected settings and calls were retained, but a miscopied
-  `LLM_CLIENT_REVISION` binding makes its retained revision label invalid for
-  exact-revision acceptance.
-- Narration then stopped explicitly on an OpenRouter key-total-limit 403. This
-  is retained as unavailable rather than substituted with programmatic prose.
+- The exact-revision deployed canary `run_feb8ed10258d` reached
+  `closed_confirmed` across eight causal moments. Seven participant calls used
+  Terra at medium reasoning and eight narrator calls used Terra at low
+  reasoning for a fully observed `$0.103861875`.
+- All 15 provider records completed through native structured output with zero
+  retries, warnings, or validation errors. Each narrated moment cites only its
+  retained moment events or, for the one silent moment, its validated synthetic
+  silence marker.
 - DeepSeek V4 Flash remains unadvertised. Final-revision high-reasoning probes
   repeatedly returned empty structured content at both 384 and 512 output
   tokens.
@@ -40,11 +41,9 @@ tested: malformed received JSON now produces a complete validation-retry
 lifecycle (`4e0780d`), and the public certification schema helper now exactly
 matches the runtime provider schema (`07b168f`).
 
-The remaining acceptance packet is deliberately small: fund or replace the
-OpenRouter service key, run and inspect one complete narrated Terra baseline,
-then perform one current-revision desktop/mobile browser pass. A second model
-is not a blocker to honest single-route use; it becomes selectable only after
-its own exact schema and complete canary evidence pass.
+The remaining acceptance packet is one current-revision desktop/mobile browser
+pass. A second model is not a blocker to honest single-route use; it becomes
+selectable only after its own exact schema and complete canary evidence pass.
 
 ## Route and Outcome
 

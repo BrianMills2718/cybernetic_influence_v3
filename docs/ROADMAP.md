@@ -29,7 +29,7 @@ Stage: MVP/PoC.
 
 V0.13 is implemented and deployed as a release candidate on the private Mac
 development host at simulator commit
-`374b2a50d168fb4c16a9ed834157890f89159384` with shared-client revision
+`00ea2342a6c5e3125366e59820f1e49b12dec17c` with shared-client revision
 `07b168ffc10ab28834d8571fdf48aa9b775d57bc`. It adds typed model/reasoning/spend
 configuration, model-specific reasoning choices, accessible explanations,
 scenario assumptions and omissions, retained effective configuration, and
@@ -49,15 +49,15 @@ participant and narrator schema observations are
 agent reasoning for Terra, defaults to medium, and retains low narrator
 reasoning. Exact scenario mechanisms still make no model call.
 
-The final deployed causal canary `run_7666035b2c17` completed the Service Desk
-baseline with seven medium-reasoning Terra participant calls for
-`$0.033916875`, reached `closed_confirmed` in eight causal moments, and retained
-the selected model, reasoning, authorization, and each call summary. The Mac
-checkout was on the correct shared-client commit, but the LaunchAgent's
-`LLM_CLIENT_REVISION` value was miscopied; the run therefore retains the wrong
-revision label and cannot count as exact revision-bound acceptance. Its first
-narration call was also refused by OpenRouter with a key-total-limit 403. This
-is useful causal/configuration evidence, not a final canary.
+The exact-revision deployed canary `run_feb8ed10258d` completed the Service Desk
+baseline and reached `closed_confirmed` in eight causal moments. Seven Terra
+participant calls used medium reasoning and all eight moment narrations used
+low reasoning for a fully provider-observed total of `$0.103861875`. Every one
+of the 15 retained provider records completed on the native-schema path with
+zero retries, warnings, or validation errors. Seven narratives cite only
+events retained in their causal moment; the silent eighth cites its validated
+synthetic silence marker. The retained configuration names the selected model,
+reasoning levels, `$0.55` authorization, and exact shared-client revision.
 
 DeepSeek V4 Flash is deliberately absent. On the final shared-client revision,
 high-reasoning certification attempts repeatedly consumed their output
@@ -290,12 +290,11 @@ supports changing them.
 The active bounded design is
 [Slice 13](plans/013-configurable-explainable-runs.md). Its implementation and
 deterministic gates are complete. Terra passes route/schema certification and
-the deployed causal run, while final narration is blocked by OpenRouter key
-capacity. DeepSeek remains unadvertised after unstable structured output.
-Current-revision rendered browser verification is also open. Slice 13 remains
-the sole active packet until one complete narrated Terra run and a rendered
-desktop/mobile pass are inspected; a second model is promoted only when it
-independently passes the same gates.
+the complete deployed participant-plus-narrator canary. DeepSeek remains
+unadvertised after unstable structured output. Current-revision rendered
+browser verification is still open. Slice 13 remains the sole active packet
+until a desktop/mobile pass is inspected; a second model is promoted only when
+it independently passes the same gates.
 
 ### 6. Add conversational scenario drafting behind a typed compiler — next
 
