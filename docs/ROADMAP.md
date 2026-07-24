@@ -29,8 +29,8 @@ Stage: MVP/PoC.
 
 V0.13 is implemented and deployed as a release candidate on the private Mac
 development host at simulator commit
-`00ea2342a6c5e3125366e59820f1e49b12dec17c` with shared-client revision
-`07b168ffc10ab28834d8571fdf48aa9b775d57bc`. It adds typed model/reasoning/spend
+`a51b13d6c959bdad3bc9b137b568d6e243b49cf2` with shared-client revision
+`9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`. It adds typed model/reasoning/spend
 configuration, model-specific reasoning choices, accessible explanations,
 scenario assumptions and omissions, retained effective configuration, and
 pre-call total-budget admission while preserving the V0.12.2 history and
@@ -59,12 +59,16 @@ events retained in their causal moment; the silent eighth cites its validated
 synthetic silence marker. The retained configuration names the selected model,
 reasoning levels, `$0.55` authorization, and exact shared-client revision.
 
-DeepSeek V4 Flash is deliberately absent. On the final shared-client revision,
-high-reasoning certification attempts repeatedly consumed their output
-allowance without returning structured content at both 384 and 512 tokens.
-Earlier observations on superseded revisions do not qualify. Do not advertise
-DeepSeek until fresh exact-schema observations and one complete
-participant-plus-narrator canary pass.
+DeepSeek V4 Flash is now advertised only at `none` reasoning. The shared-client
+policy rejects `medium`; high-reasoning probes had previously exhausted their
+output allowance without structured content, so high is not offered. Fresh
+current-revision participant and narrator observations are
+`routeobs1_811669be15ab4d6dda51c296` and
+`routeobs1_82ba91498a4ea780e31b00d3`. The complete Service Desk canary
+`run_164fee2c564f` finished with nine participant and ten narrator calls for
+`$0.004636731`. One narrator first attempt exceeded the 360-character schema
+limit and succeeded on retry; this is retained as a schema-compliance finding,
+not misclassified as empty provider output.
 
 Rendered desktop certification is also still open: production assets
 build, API/static checks pass, and prior V0.12 browser evidence exists, but both
@@ -290,8 +294,9 @@ supports changing them.
 The active bounded design is
 [Slice 13](plans/013-configurable-explainable-runs.md). Its implementation and
 deterministic gates are complete. Terra passes route/schema certification and
-the complete deployed participant-plus-narrator canary. DeepSeek remains
-unadvertised after unstable structured output. Current-revision rendered
+the complete deployed participant-plus-narrator canary. DeepSeek is advertised
+only at the successfully exercised `none` setting; its schema-compliance
+behavior still needs monitoring. Current-revision rendered
 browser verification is still open. Slice 13 remains the sole active packet
 until a desktop pass is inspected; a second model is promoted only when
 it independently passes the same gates.

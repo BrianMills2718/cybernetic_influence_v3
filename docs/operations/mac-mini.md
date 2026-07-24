@@ -23,11 +23,13 @@ stored in the repository or LaunchAgent plist.
 
 Last verified 2026-07-24:
 
-- simulator: `00ea2342a6c5e3125366e59820f1e49b12dec17c`;
-- shared client: `07b168ffc10ab28834d8571fdf48aa9b775d57bc`;
-- advertised route: Terra only;
+- simulator: `a51b13d6c959bdad3bc9b137b568d6e243b49cf2`;
+- shared client: `9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`;
+- advertised routes: Terra and DeepSeek V4 Flash;
 - Terra certification:
-  `routeobs1_a7a692e9a6893e15d36f30ab,routeobs1_8d61ca73ab6c08249e5cdf59`;
+  `routeobs1_cfe8e9cc144d22be087e848a,routeobs1_a11d208c426f16940ee43c4b`;
+- DeepSeek certification:
+  `routeobs1_811669be15ab4d6dda51c296,routeobs1_82ba91498a4ea780e31b00d3`;
 - exact-revision complete canary: `run_feb8ed10258d`, completed
   `closed_confirmed`, seven participant calls plus eight causal-moment narrator
   calls, `$0.103861875` fully provider-observed;
@@ -49,11 +51,13 @@ bounded moment. The UI advertises the conservative combined $0.74 envelope.
 Typical Service Desk runs quiesce well before that bound. Only one live run may
 execute at a time.
 
-DeepSeek V4 Flash is a configured candidate, not an advertised route. The
-shared policy supports high reasoning for the exposed DeepSeek agent/narrator
-path, but final-revision structured probes repeatedly returned empty content.
-Do not add `CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH` until fresh exact
-participant and narrator observations plus a complete canary pass.
+DeepSeek V4 Flash is advertised only with reasoning set to `none`. The shared
+client rejects `medium` for that route; prior high-reasoning probes exhausted
+their output allowance without structured content, so high is deliberately not
+offered. The current-revision Service Desk canary `run_164fee2c564f` completed
+at `none`: nine participant calls and ten narrator calls cost `$0.004636731`.
+One narrator first attempt exceeded the 360-character schema field limit and
+was retried successfully; it was not an empty-output or provider failure.
 
 Purchase-to-payment uses the same explicit model at medium human reasoning and
 low narrator reasoning. Its observation-driven settled and processor-declined
