@@ -70,7 +70,7 @@ def test_model_catalog_requires_two_current_replayed_schema_observations(
     assert [item["model"] for item in catalog] == [MODEL]
     assert catalog[0]["agent_reasoning_efforts"] == ["none", "low", "medium", "high"]
     assert catalog[0]["experimental_agent_reasoning_efforts"] == []
-    assert catalog[0]["default_agent_reasoning_effort"] == "medium"
+    assert catalog[0]["default_agent_reasoning_effort"] == "none"
     assert catalog[0]["narrator_reasoning_effort"] == "low"
 
     monkeypatch.setenv(

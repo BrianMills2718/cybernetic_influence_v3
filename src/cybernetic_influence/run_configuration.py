@@ -13,8 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh"]
-DEFAULT_MODEL = "openrouter/openai/gpt-5.6-terra"
-DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium"
+DEFAULT_MODEL = "openrouter/deepseek/deepseek-v4-flash"
+DEFAULT_REASONING_EFFORT: ReasoningEffort = "none"
 NARRATOR_REASONING_EFFORT: Literal["low"] = "low"
 PARTICIPANT_PER_CALL_CEILING = 0.05
 NARRATOR_PER_CALL_CEILING = 0.02

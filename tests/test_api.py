@@ -52,8 +52,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert config.status_code == 200
     assert config.json()["version"] == "0.13.0"
     assert config.json()["build_commit"] == "development"
-    assert config.json()["model"] == "openrouter/openai/gpt-5.6-terra"
-    assert config.json()["reasoning_effort"] == "medium"
+    assert config.json()["model"] == "openrouter/deepseek/deepseek-v4-flash"
+    assert config.json()["reasoning_effort"] == "none"
     assert config.json()["profiles"] == ["position_context", "procedural_control"]
     assert set(config.json()["scenarios"]) == {
         "service_desk",
@@ -348,6 +348,7 @@ def test_unadvertised_live_model_is_rejected_without_retained_run(
                 "OPENROUTER_API_KEY": "test-key",
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary-deepseek",
             },
         ),
         patch(
@@ -798,6 +799,7 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
                 "OPENROUTER_API_KEY": "test-key",
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary-deepseek",
             },
         ),
         patch(
