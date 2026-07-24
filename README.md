@@ -8,6 +8,10 @@ boundaries—not hidden minds or executors. Occupied positions are external
 social context remembered and interpreted by people, not intrinsic behavioral
 programs.
 
+Current direction and MVP boundaries are maintained in
+[docs/ROADMAP.md](docs/ROADMAP.md). Binding architectural decisions live under
+[`docs/adr/`](docs/adr/).
+
 ## Working simulator
 
 The simulator currently includes:
@@ -62,6 +66,12 @@ because their place in a rotation arrived. The older fixed nine-activation
 schedule remains only inside the closed fidelity-report harness so historical
 comparison evidence retains its original sampling contract.
 
+This observation-triggered scheduler is a transitional MVP implementation. The
+accepted direction is autonomous multirate process time: agents and other
+stateful processes can update from internal as well as external causes, each at
+its own meaningful timescale. See
+[ADR 010](docs/adr/010-autonomous-multirate-process-time.md).
+
 Runs are retained under `artifacts/runs/`. Override that location with
 `CYBERNETIC_INFLUENCE_RUNS_DIR`. A shared development host can bind another
 interface explicitly:
@@ -80,8 +90,8 @@ export CYBERNETIC_INFLUENCE_ALLOWED_TAILSCALE_USERS="operator@example.com"
 
 The comma-separated allowlist is optional for a local-only process. The Mac
 development host enables it. Live execution also requires
-`CYBERNETIC_INFLUENCE_LIVE=1`; the Mac host deliberately leaves live execution
-off.
+`CYBERNETIC_INFLUENCE_LIVE=1`; the private Mac development host currently
+enables it behind the allowlist.
 
 `requirements-dev.lock` pins the accepted application and test environment.
 The shared `llm_client` checkout remains a separately versioned optional

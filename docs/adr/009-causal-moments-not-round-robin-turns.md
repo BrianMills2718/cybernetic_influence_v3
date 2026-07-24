@@ -1,6 +1,11 @@
 # ADR 009: Causal Moments, Not Round-Robin Turns
 
-**Status:** Accepted — 2026-07-23.
+**Status:** Superseded in part — 2026-07-23 by
+[ADR 010](010-autonomous-multirate-process-time.md).
+
+The causal-moment batching, frozen participant set, narration, and forensic
+activation semantics remain accepted. External-observation-only activation and
+quiescence are transitional V0.9 behavior, not the target temporal model.
 
 ## Decision
 
@@ -49,5 +54,7 @@ that were made from the same state.
 
 Internal clocks, spontaneous reconsideration, continuous processes, exogenous
 events, priority queues, and conflict policies richer than the runtime's
-canonical proposal application order remain scenario-driven extensions. They
-should be added only when a representative scenario requires them.
+canonical proposal application order were deferred in V0.9. ADR 010 now accepts
+internal autonomous updates and multirate scheduled time as the next temporal
+substrate while continuing to defer continuous solvers and generalized conflict
+languages.
