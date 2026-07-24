@@ -81,9 +81,10 @@ summary { cursor:pointer; font-weight:700; }
 .turn-narrative small { color:var(--muted); }
 .turn-narrative.active { border-color:#fff; background:#203b56; }
 .flow-controls { padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
-.scale-toolbar .tabs { margin:0; }
+.map-section > .scale-toolbar { margin:0 0 14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); }
+.scale-toolbar .tabs { margin:7px 0 0; }
 .canvas-replaced { display:none !important; }
-.scale-loss { max-width:75ch; margin:4px 0 0; color:var(--muted); font-size:12px; text-align:right; }
+.scale-loss { max-width:90ch; margin:7px 0 0; color:var(--muted); font-size:12px; }
 .workspace { display:grid; grid-template-columns:minmax(0,2fr) minmax(300px,.7fr); gap:16px; min-height:520px; }
 .routes { display:flex; gap:8px; overflow-x:auto; margin:12px 0; padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
 .route { flex:0 0 auto; padding:7px 10px; border-radius:999px; background:var(--surface2); color:var(--muted); font-size:11px; }

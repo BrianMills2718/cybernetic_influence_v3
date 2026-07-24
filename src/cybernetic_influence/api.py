@@ -50,6 +50,15 @@ from cybernetic_influence.scenarios.physical_access import (
     physical_access_summary,
     run_physical_access,
 )
+from cybernetic_influence.scenarios.purchase_payment import (
+    build_purchase_payment_readout,
+    purchase_payment_arm_configurations,
+    purchase_payment_fixture,
+    purchase_payment_native_bindings,
+    purchase_payment_scripted_bindings,
+    purchase_payment_summary,
+    run_purchase_payment,
+)
 
 
 class RunRequest(BaseModel):
@@ -57,7 +66,11 @@ class RunRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    scenario: Literal["service_desk", "physical_access"] = "service_desk"
+    scenario: Literal[
+        "service_desk",
+        "physical_access",
+        "purchase_payment",
+    ] = "service_desk"
     cognition_profile: ServiceDeskCognitionProfile = "position_context"
     arm_id: str = "baseline"
     execution: Literal["scripted", "live"] = "scripted"
@@ -134,6 +147,35 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                         for arm in physical_access_arm_configurations()
                     ],
                 },
+                "purchase_payment": {
+                    "label": "Purchase to payment",
+                    "profiles": ["position_context"],
+                    "model": "openrouter/openai/gpt-5.6-terra",
+                    "reasoning_effort": "medium",
+                    "maximum_live_calls": 8,
+                    "maximum_live_cost": 0.38,
+                    "arms": [
+                        {
+                            "id": arm.arm_id,
+                            "label": arm.arm_id.replace("_", " "),
+                            "description": {
+                                "settled": (
+                                    "The human approval and exact internal "
+                                    "control pass; the coarse processor settles."
+                                ),
+                                "approval_denied": (
+                                    "The amount exceeds the copied approval "
+                                    "limit; no processor instruction is emitted."
+                                ),
+                                "processor_declined": (
+                                    "Internal approval passes, but the coarse "
+                                    "external processor returns declined."
+                                ),
+                            }[arm.arm_id],
+                        }
+                        for arm in purchase_payment_arm_configurations()
+                    ],
+                },
             },
             "profiles": ["position_context", "procedural_control"],
             "arms": [arm.arm_id for arm in service_desk_arm_configurations()],
@@ -180,6 +222,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
         _require_access(request)
         service_arm = None
         physical_arm = None
+        purchase_arm = None
         selected_profile: str = request_body.cognition_profile
         if request_body.scenario == "service_desk":
             service_arm = next(
@@ -195,7 +238,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                     status_code=422,
                     detail="unknown service-desk intervention arm",
                 )
-        else:
+        elif request_body.scenario == "physical_access":
             physical_arm = next(
                 (
                     item
@@ -208,6 +251,21 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 raise HTTPException(
                     status_code=422,
                     detail="unknown physical-access intervention arm",
+                )
+            selected_profile = "position_context"
+        else:
+            purchase_arm = next(
+                (
+                    item
+                    for item in purchase_payment_arm_configurations()
+                    if item.arm_id == request_body.arm_id
+                ),
+                None,
+            )
+            if purchase_arm is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="unknown purchase-payment intervention arm",
                 )
             selected_profile = "position_context"
         live = request_body.execution == "live"
@@ -296,6 +354,40 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                     execution=request_body.execution,
                     created_at=created_at,
                     outcome=physical_readout.model_dump(mode="json"),
+                    headline=headline,
+                    summary=summary,
+                )
+            elif purchase_arm is not None:
+                purchase_fixture = purchase_payment_fixture(purchase_arm)
+                purchase_bindings = (
+                    purchase_payment_native_bindings(
+                        purchase_fixture,
+                        trace_id_prefix=run_id,
+                    )
+                    if live
+                    else purchase_payment_scripted_bindings(purchase_fixture)
+                )
+                result = run_purchase_payment(
+                    purchase_fixture,
+                    purchase_bindings,
+                    run_id=run_id,
+                )
+                purchase_readout = build_purchase_payment_readout(result)
+                headline, summary = purchase_payment_summary(
+                    purchase_readout
+                )
+                document = build_analyst_document(
+                    initial_state=purchase_fixture.scenario.initial_state,
+                    analytical_boundaries=(
+                        purchase_fixture.scenario.analytical_boundaries
+                    ),
+                    result=result,
+                    scenario="purchase_payment",
+                    profile=selected_profile,
+                    arm_id=purchase_arm.arm_id,
+                    execution=request_body.execution,
+                    created_at=created_at,
+                    outcome=purchase_readout.model_dump(mode="json"),
                     headline=headline,
                     summary=summary,
                 )

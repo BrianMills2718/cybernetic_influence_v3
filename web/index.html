@@ -45,6 +45,11 @@
           </div>
           <p id="projection-help" class="muted"></p>
         </div>
+        <div class="scale-toolbar">
+          <span class="eyebrow">Analytical scale</span>
+          <div id="scale-tabs" class="tabs" aria-label="Graph scale"></div>
+          <p id="scale-loss" class="scale-loss"></p>
+        </div>
         <div class="workspace">
           <div id="graph" class="graph" aria-label="Connected causal graph"></div>
           <aside id="inspector"><p class="muted">Select a node.</p></aside>
@@ -88,11 +93,7 @@
       </section>
 
       <section class="flow-controls">
-        <span class="eyebrow">Map detail</span>
-        <div class="scale-toolbar">
-          <div id="scale-tabs" class="tabs" aria-label="Graph scale"></div>
-          <p id="scale-loss" class="scale-loss"></p>
-        </div>
+        <span class="eyebrow">Declared connections</span>
         <div id="routes" class="routes" aria-label="Declared information routes"></div>
       </section>
 

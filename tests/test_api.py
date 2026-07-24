@@ -26,7 +26,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     api = client(tmp_path)
     config = api.get("/api/config")
     assert config.status_code == 200
-    assert config.json()["version"] == "0.10.0"
+    assert config.json()["version"] == "0.11.0"
     assert config.json()["build_commit"] == "development"
     assert config.json()["model"] == "openrouter/openai/gpt-5.6-terra"
     assert config.json()["reasoning_effort"] == "medium"
@@ -34,6 +34,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert set(config.json()["scenarios"]) == {
         "service_desk",
         "physical_access",
+        "purchase_payment",
     }
     assert config.json()["scenarios"]["physical_access"]["arms"][0]["description"]
     page = api.get("/")

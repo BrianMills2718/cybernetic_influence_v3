@@ -27,10 +27,12 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-V0.10 is implemented, verified, and deployed on the private Mac development
-host:
+V0.10 is deployed on the private Mac development host. V0.11 has completed its
+deterministic implementation and local verification; its bounded live canary
+and exact-revision deployment are the remaining release checks.
 
-- two concrete scenario families: Service Desk and physical access;
+- three concrete scenario families: Service Desk, physical access, and
+  purchase to payment;
 - exact mechanisms separated from LLM-modeled people;
 - typed information carriers, declared routes, protected values, and replay;
 - spatial topology separated from communication, capability, and permission;
@@ -42,6 +44,14 @@ host:
   no model calls;
 - one frozen simulated-second-1 activation set shared by that person and
   process.
+- a purchase-to-payment probe that separates human approval, copied policy and
+  signing evidence, exact internal payment authorization, and a declared coarse
+  external processor;
+- three execution-inert purchase views—operating unit, finance operations, and
+  end to end—with all exact components still selectable after expansion;
+- deterministic settled, human-denied, and externally-declined arms, including
+  negative checks proving that a forced unauthorized request is stopped before
+  the processor.
 
 The bounded live baseline `run_3be342635ebb` exercised behavior commit
 `1e7a99e0cd0949f9f2e79f02f65c24284d9f4a8c` with seven human cognition calls
@@ -123,16 +133,18 @@ and exact events without invented information access. This is an integrated
 outcome proof for the stipulated scenario, not a claim of calibrated human
 timing or general fidelity.
 
-### 3. Introduce a surrogate boundary only on demand
+### 3. Introduce a coarse subsystem boundary only on demand — deterministic proof complete
 
-When a second concrete scenario genuinely needs an unmodeled subsystem, expose
-one declared surrogate behind the same typed boundary a finer implementation
-could later use. Its fidelity note must state preserved readouts, omissions,
-provenance, uncertainty, and invalid questions.
+The purchase-to-payment scenario now exposes one coarse external processor
+behind the same typed payment-instruction/result boundary a finer
+implementation could later use. Its fidelity note states preserved behavior,
+assumptions, omissions, validation basis, and the invalid question it cannot
+answer: why an external decline occurred. Exact internal authorization remains
+separate and no processor call occurs after a human denial.
 
-No stock-market implementation is currently on the critical path. A stochastic
-price process is a useful future example, not sufficient justification for a
-generalized framework today.
+The remaining V0.11 gate is one bounded live settled run with full agent and
+narrator trace inspection. No generalized surrogate library or stock-market
+implementation is justified by this concrete slice.
 
 ### 4. Expand multiscale agency only through concrete pressure
 

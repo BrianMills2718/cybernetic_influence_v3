@@ -21,6 +21,9 @@ The simulator currently includes:
   remains separate from digital communication and authority;
 - a physical-access scenario that keeps credential proof, policy
   authorization, latch operability, crossing, and sensor feedback distinct;
+- a purchase-to-payment scenario that keeps a person's approval attempt,
+  concrete policy and signing records, exact internal authorization, and a
+  deliberately coarse external processor result distinct;
 - authoritative topological places, entity placements, and concrete spatial
   links whose existence never implies permission or successful traversal;
 - personal-disposition plus remembered-position cognition;
@@ -38,9 +41,10 @@ The simulator currently includes:
   objects, mechanisms, and concrete declared routes;
 - a synchronized world-topology graph with place containers, event-time
   occupants, pathway substrates, and one-click return to exact causal flow;
-- reversible execution-inert aggregate views with explicit information-loss
-  counts, expanded composite hulls, and one-step return to exact evidence at
-  the same revision;
+- reversible execution-inert aggregate views—including separate operating,
+  finance, and end-to-end purchase views—with explicit information-loss counts,
+  expanded composite hulls, and one-step return to exact evidence at the same
+  revision;
 - event-focused graph nodes, routes, and participant traces;
 - event-revision snapshots rather than final-state leakage into earlier events;
 - analyst-safe evidence that redacts mechanism-only values and protected

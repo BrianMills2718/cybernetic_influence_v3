@@ -12,6 +12,7 @@ let selectedGraphView = 'causal'
 let selectedNodeId = null
 let selectedEdgeId = null
 let scenarioCatalog = {}
+let runtimeConfig = {}
 
 function simulatedTime(value) {
   const unit = current?.time_unit || 'step'
@@ -39,14 +40,13 @@ async function request(url, options = {}) {
 
 async function loadConfig() {
   const config = await request('/api/config')
+  runtimeConfig = config
   scenarioCatalog = config.scenarios || {}
   $('#scenario').innerHTML = Object.entries(scenarioCatalog).map(([id, item]) =>
     `<option value="${html(id)}">${html(item.label)}</option>`
   ).join('')
   $('#scenario').value = config.scenario
   configureScenario(config.scenario)
-  $('#cost-details').textContent =
-    `${config.model} · ${config.reasoning_effort} reasoning · up to ${config.maximum_live_calls} calls · $${config.maximum_live_cost.toFixed(2)} cap. Scripted reference runs cost $0.`
   $('#live').disabled = !config.live_authorized
   $('#live').checked = config.live_authorized
   $('#run').textContent = config.live_authorized ? 'Play live simulation' : 'Play reference simulation'
@@ -62,7 +62,15 @@ function configureScenario(scenarioId) {
   $('#scenario-title').textContent = selected.label
   $('#scenario-description').textContent = scenarioId === 'physical_access'
     ? 'Separate credential proof, policy authorization, latch operation, physical crossing, and observed feedback.'
-    : 'Run people, information, records, connections, and exact mechanisms together.'
+    : scenarioId === 'purchase_payment'
+      ? 'Follow one purchase across human decisions, exact internal control, and a deliberately coarse external processor.'
+      : 'Run people, information, records, connections, and exact mechanisms together.'
+  const model = selected.model || runtimeConfig.model
+  const reasoning = selected.reasoning_effort || runtimeConfig.reasoning_effort
+  const calls = selected.maximum_live_calls || runtimeConfig.maximum_live_calls
+  const cost = selected.maximum_live_cost || runtimeConfig.maximum_live_cost
+  $('#cost-details').textContent =
+    `${model} · ${reasoning} reasoning · up to ${calls} calls · $${Number(cost).toFixed(2)} cap. Scripted reference runs cost $0.`
   describeCondition()
 }
 
@@ -233,7 +241,6 @@ function graphProjection() {
 
 function renderScaleControls() {
   const boundaries = current?.boundaries || []
-  $('#scale-tabs').classList.toggle('canvas-replaced', Boolean(window.CyberneticGraph))
   if (selectedScale !== 'exact' && !boundaries.some((item) => item.id === selectedScale)) {
     selectedScale = 'exact'
   }
@@ -763,7 +770,9 @@ function render(run) {
   selectedMomentIndex = 0
   selectedPerson = null
   selectedScale = 'exact'
-  selectedGraphView = current.world ? 'world' : 'causal'
+  selectedGraphView = current.world && current.scenario !== 'purchase_payment'
+    ? 'world'
+    : 'causal'
   selectedNodeId = null
   selectedEdgeId = null
   if (scenarioCatalog[current.scenario]) {
