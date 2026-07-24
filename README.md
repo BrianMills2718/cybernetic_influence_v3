@@ -29,9 +29,10 @@ The simulator currently includes:
   links whose existence never implies permission or successful traversal;
 - personal-disposition plus remembered-position cognition;
 - an explicit procedural control profile;
-- autonomous multirate causal moments in the Service Desk: each person or exact
-  process may wake from delivered information or retained internal timing, and
-  everyone due at one timestamp receives the same frozen pre-moment state;
+- autonomous causal moments in the Service Desk and purchase-to-payment
+  scenarios: each person or exact process may wake from delivered information
+  or retained internal timing, and everyone due at one timestamp receives the
+  same frozen pre-moment state;
 - an exact three-phase remediation process that advances without model calls,
   including one moment shared with a triager reconsidering without new input;
 - zero-cost scripted reference runs;

@@ -1,7 +1,7 @@
 ---
-doc_role: active_executable_plan
-authority: scoped
-status: proposed
+doc_role: historical_evidence
+authority: evidence
+status: complete
 created: 2026-07-23
 updated: 2026-07-23
 predecessor: 011-purchase-payment-representation-boundary.md
@@ -9,7 +9,7 @@ predecessor: 011-purchase-payment-representation-boundary.md
 
 # Slice 12: Event-Driven Purchase-to-Payment Causal Chain
 
-**Status: Proposed and ready for review; implementation has not started.**
+**Status: Complete — 2026-07-23.**
 
 ## Outcome
 
@@ -23,9 +23,9 @@ This is a representative vertical of the same analyst job as the canonical
 Service Desk probe. It extends autonomous scheduling to a second scenario while
 preserving the purchase scenario's distinct representation-depth question.
 
-## Current and Target Delta
+## Pre-Slice and Target Delta
 
-Current behavior:
+Pre-slice behavior:
 
 - `run_purchase_payment` directly activates requester, approver, AP clerk, and
   AP clerk again at authored times 0–3;
@@ -200,6 +200,51 @@ desktop/narrow browser flow pass.
 causally ordered moments at logical time 0, all structured calls validate, the
 exact revision is deployed, and the roadmap records the bounded evidence and
 remaining non-claims.
+
+## Completion Evidence
+
+Behavior commit `e6c935f6352e937f2307342757f2f04ddaa02285` replaced the
+purchase runner's manual schedule with one requester `scenario_start` followed
+by bounded `next_due_activation()` continuation.
+
+Deterministic evidence:
+
+- all settled, approval-denied, processor-declined, mismatched-document,
+  inactive-signer, and forced-request controls passed;
+- settled and processor-declined paths contain four moments, ordinary denial
+  contains three, and mismatched documents quiesce after only the requester;
+- every later cause names exactly the delivered observation exposed to that
+  activation, and no purchase cause is `manual_schedule`;
+- a deliberately self-scheduling test binding fails at the eight-moment bound;
+- strict typing, 46 tests, the production frontend build, and deployment
+  script validation passed on Linux and the Mac;
+- rendered desktop and narrow browser flows showed four selectable settled
+  moments, three participant trace tabs, synchronized layouts, no horizontal
+  overflow, and no console or network errors. The same pass also corrected a
+  pre-existing CSS rule that exposed an empty result map before Play.
+
+The bounded live canary `run_609b4503dda6` ran the settled arm on the exact
+deployed behavior revision with four human calls at medium reasoning and four
+narrator calls at low reasoning for `$0.04058125`. All eight structured calls
+used `openrouter/openai/gpt-5.6-terra`, validated with zero retries, and carried
+provider-reported cost.
+
+Full-trace inspection confirmed:
+
+- the requester received only its retained request/invoice and owned submission
+  interface;
+- the approver received the delivered review package plus remembered policy;
+- the AP clerk received the delivered recorded approval and later settlement;
+- all actions used only exposed interfaces and permitted representations;
+- the exact gate authorized the instruction and the coarse processor made no
+  LLM call;
+- every narrator received the complete prior account chain plus only its
+  current moment, and all citations remained inside that moment.
+
+The deployed run reopened with four narratives, four analytical scales, both
+layout controls, and exact participant traces. Elapsed organizational timing,
+operator comprehension, and fidelity outside this synthetic workflow remain
+unproven.
 
 ## Acceptance, Disproof, and Failure Behavior
 

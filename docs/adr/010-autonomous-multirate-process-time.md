@@ -1,6 +1,7 @@
 # ADR 010: Autonomous Multirate Process Time
 
-**Status:** Accepted and implemented for the Service Desk MVP — 2026-07-23.
+**Status:** Accepted and implemented for the Service Desk and
+purchase-to-payment MVP probes — 2026-07-23.
 
 ## Decision
 
@@ -64,6 +65,12 @@ The representative trajectory includes a human internal wake with no new
 observation and a three-phase exact remediation process with no model calls.
 The exact trace, replay, budgets, causal graph, participant inspector, and
 sequential narration retain the simulated time and reason for each activation.
+
+V0.12 applies the same scheduler to purchase-to-payment. Only the requester is
+an authored `scenario_start`; the approver and AP clerk become due from
+unconsumed delivered observations, and the runner stops at quiescence. Its
+zero-delay routes preserve causal ancestry while leaving elapsed workflow
+latency explicitly unmodeled.
 
 The causal core still drains the complete typed cascade from one accepted
 action before accepting another. Therefore this slice does not claim arbitrary

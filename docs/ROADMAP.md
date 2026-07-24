@@ -27,9 +27,9 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-V0.11 is implemented, verified, and deployed on the private Mac development
+V0.12 is implemented, verified, and deployed on the private Mac development
 host from behavior commit
-`d504c48669d5dd2220ce92a3e56b613a2d222e3d`.
+`e6c935f6352e937f2307342757f2f04ddaa02285`.
 
 - three concrete scenario families: Service Desk, physical access, and
   purchase to payment;
@@ -51,7 +51,10 @@ host from behavior commit
   end to end—with all exact components still selectable after expansion;
 - deterministic settled, human-denied, and externally-declined arms, including
   negative checks proving that a forced unauthorized request is stopped before
-  the processor.
+  the processor;
+- one authored purchase requester start followed only by
+  observation-delivery activations, bounded quiescence, and no
+  `manual_schedule` causes.
 
 The bounded live baseline `run_3be342635ebb` exercised behavior commit
 `1e7a99e0cd0949f9f2e79f02f65c24284d9f4a8c` with seven human cognition calls
@@ -77,20 +80,27 @@ LLM call. The retained run reopened in the deployed UI with four narratives,
 all three analytical scales, spatial and causal projections, and exact
 participant traces.
 
+The autonomous purchase-to-payment canary `run_609b4503dda6` exercised V0.12
+behavior commit `e6c935f6352e937f2307342757f2f04ddaa02285` with four human
+calls at medium reasoning and four narrator calls at low reasoning for
+$0.04058125. It began only with the requester, then activated the approver and
+AP clerk from delivered observations; all four moments remained causally
+ordered at logical time 0 because route latency is deliberately unmodeled.
+All eight structured calls validated with zero retries. Full-trace inspection
+confirmed bounded information/interface access, complete prior-narrative
+context, current-moment-only citations, exact-gate authorization, and zero
+processor LLM calls. The deployed run reopened with four narratives, four
+analytical scales, both layouts, exact traces, and no browser errors.
+
 The causal core still drains one action's complete routed cascade before
 accepting another; arbitrary interleaving within nonzero-delay routes is not
 yet supported. The UI is technically reviewable; operator comprehension and
 analytical usefulness remain under iterative stakeholder review rather than
 being treated as proven.
 
-The purchase-to-payment probe currently uses four authored
-`manual_schedule` activations. It demonstrates representation depth, exact
-authorization, and coarse-subsystem replacement—not autonomous scheduling or
-calibrated organizational timing.
-
-Technical execution is established for V0.11, and the deployed simulator is
-stakeholder-reviewable. Stakeholder observation of the next autonomous
-purchase-to-payment representative vertical has not yet occurred.
+Technical execution is established for V0.12, and the deployed simulator is
+stakeholder-reviewable. Stakeholder comprehension and analytical usefulness of
+the autonomous purchase-to-payment vertical have not yet been observed.
 
 ## Canonical MVP Probe
 
@@ -166,17 +176,18 @@ The bounded live settled run and full agent/narrator trace inspection passed.
 No generalized surrogate library or stock-market implementation is justified
 by this concrete slice.
 
-### 4. Extend autonomous causality to purchase-to-payment — next
+### 4. Extend autonomous causality to purchase-to-payment — complete
 
-Replace the purchase scenario's four manual activations with one authored
-requester start followed by the existing due-set scheduler. Preserve causal
-moment order without inventing elapsed route latency: equal logical timestamps
-mean that purchase-workflow timing is omitted at this representation depth.
+The purchase scenario now uses one authored requester start followed by the
+existing due-set scheduler. Causal moment order is preserved without inventing
+elapsed route latency: equal logical timestamps mean that purchase-workflow
+timing is omitted at this representation depth.
 
 The bounded design is [Slice 12](plans/012-event-driven-purchase-payment.md).
 It reuses the existing runtime and UI, preserves all authorization and
-processor-fidelity behavior, and stops at quiescence. No new scheduler,
-periodic polling, or random human activity is justified.
+processor-fidelity behavior, and stops at quiescence. Deterministic controls,
+full live traces, deployed UI reopening, and fail-closed credential/access
+checks passed.
 
 ### 5. Expand multiscale agency only through concrete pressure
 
@@ -184,8 +195,8 @@ Add overlapping/nested aggregate views, richer composite analysis, additional
 process implementations, or representation refinement only when a scenario
 requires them to answer an analyst question that current contracts cannot.
 
-The autonomous purchase vertical must return to the deployed analyst workflow
-before another substrate or ontology packet starts.
+Return to stakeholder observation of the deployed analyst workflow before
+another substrate or ontology packet starts.
 
 ## Explicit MVP Deferrals
 

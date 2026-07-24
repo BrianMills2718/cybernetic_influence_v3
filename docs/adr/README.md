@@ -22,5 +22,5 @@ plans provide scoped execution and historical evidence.
 | [007](007-borrow-react-flow-for-multiscale-canvas.md) | React Flow multiscale canvas | accepted |
 | [008](008-separate-spatial-topology-from-routing-and-permission.md) | Spatial topology is separate from routing and permission | accepted |
 | [009](009-causal-moments-not-round-robin-turns.md) | Causal moments replace round-robin turns | superseded in part by ADR 010 |
-| [010](010-autonomous-multirate-process-time.md) | Autonomous multirate process time | accepted; implemented in Service Desk |
+| [010](010-autonomous-multirate-process-time.md) | Autonomous multirate process time | accepted; implemented in Service Desk and purchase-to-payment |
 | [011](011-declared-representation-depth.md) | Declared subsystem representation depth | accepted direction; general framework deferred |

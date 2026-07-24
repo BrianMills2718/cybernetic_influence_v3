@@ -14,8 +14,8 @@ instructions to continue their former “next slice” sections.
 
 ## Active packet
 
-- [Slice 12: Event-Driven Purchase-to-Payment Causal Chain](012-event-driven-purchase-payment.md)
-  — proposed and ready for review; implementation has not started.
+None. Return to stakeholder observation of the deployed analyst workflow before
+selecting another implementation packet.
 
 ## Completed evidence
 
@@ -32,6 +32,7 @@ instructions to continue their former “next slice” sections.
 | [009](009-event-driven-causal-moments.md) | Observation-driven causal moments |
 | [010](010-autonomous-multirate-substrate.md) | Autonomous multirate process time |
 | [011](011-purchase-payment-representation-boundary.md) | Coarse processor and representation depth |
+| [012](012-event-driven-purchase-payment.md) | Event-driven purchase-to-payment causal chain |
 
 No completed plan is archived or deleted: each contains unique acceptance
 evidence and design lineage, while this index and explicit completion statuses
