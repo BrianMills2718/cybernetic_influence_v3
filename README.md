@@ -51,7 +51,7 @@ The simulator currently includes:
 - event-revision snapshots rather than final-state leakage into earlier events;
 - analyst-safe evidence that redacts mechanism-only values and protected
   representation content;
-- retained run history that survives refreshes and server restarts;
+- a separate run-history workspace that survives refreshes and server restarts;
 - recoverable deletion and visible failed/interrupted records.
 
 ## Run

@@ -27,10 +27,12 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-V0.12.1 is implemented, verified, and deployed on the private Mac development
-host from narrative-fidelity repair commit
-`fc985ac89d11a649b1afd232b6620fa05966d8e7`, preserving the V0.12 event-driven
-behavior introduced by `e6c935f6352e937f2307342757f2f04ddaa02285`.
+V0.12.2 is implemented and verified locally. It adds the separate run-history
+workspace and stable in-place scale/time inspection from UI repair commit
+`c55dddd7de0abb66cf615511a11842a3f0c743e7`, while preserving the V0.12.1
+narrative-fidelity repair from
+`fc985ac89d11a649b1afd232b6620fa05966d8e7` and the V0.12 event-driven behavior
+introduced by `e6c935f6352e937f2307342757f2f04ddaa02285`.
 
 - three concrete scenario families: Service Desk, physical access, and
   purchase to payment;
@@ -106,14 +108,21 @@ update from the absence of an external action or world-state effect. Desktop
 and mobile browser checks reopened the run with four narratives, both layouts,
 no horizontal overflow, and no console or network errors.
 
+V0.12.2 desktop and mobile browser checks measured zero page-scroll movement
+after analytical-scale and causal-moment changes. They also opened the separate
+run-history view, reopened a legacy retained run, and found no console or
+network errors. The repair removes an unintended trace-card auto-scroll and
+normalizes legacy untyped routes at the graph presentation boundary.
+
 The causal core still drains one action's complete routed cascade before
 accepting another; arbitrary interleaving within nonzero-delay routes is not
 yet supported. The UI is technically reviewable; operator comprehension and
 analytical usefulness remain under iterative stakeholder review rather than
 being treated as proven.
 
-Technical execution is established for V0.12.1, and the deployed simulator is
-stakeholder-reviewable. Stakeholder comprehension and analytical usefulness of
+Technical execution is established locally for V0.12.2. Deployment freshness
+must be verified separately before the private Mac simulator is described as
+running this version. Stakeholder comprehension and analytical usefulness of
 the autonomous purchase-to-payment vertical have not yet been observed.
 
 ## Canonical MVP Probe
