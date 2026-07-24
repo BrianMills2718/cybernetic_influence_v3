@@ -30,7 +30,7 @@ Stage: MVP/PoC.
 V0.13 is implemented and deployed as a release candidate on the private Mac
 development host at simulator commit
 `374b2a50d168fb4c16a9ed834157890f89159384` with shared-client revision
-`07b168ff616b079da5be5f7a71555467439a9be5`. It adds typed model/reasoning/spend
+`07b168ffc10ab28834d8571fdf48aa9b775d57bc`. It adds typed model/reasoning/spend
 configuration, model-specific reasoning choices, accessible explanations,
 scenario assumptions and omissions, retained effective configuration, and
 pre-call total-budget admission while preserving the V0.12.2 history and
@@ -44,8 +44,8 @@ environment does not install `pytest-asyncio`.
 
 Only `openrouter/openai/gpt-5.6-terra` is currently advertised. Its exact
 participant and narrator schema observations are
-`routeobs1_d9cdaf56c225479422018a8f` and
-`routeobs1_360219087d7a8109c385c817`. The catalog exposes low, medium, and high
+`routeobs1_a7a692e9a6893e15d36f30ab` and
+`routeobs1_8d61ca73ab6c08249e5cdf59`. The catalog exposes low, medium, and high
 agent reasoning for Terra, defaults to medium, and retains low narrator
 reasoning. Exact scenario mechanisms still make no model call.
 

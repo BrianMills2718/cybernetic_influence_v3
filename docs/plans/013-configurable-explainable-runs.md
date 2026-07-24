@@ -15,13 +15,13 @@ predecessor: 012-event-driven-purchase-payment.md
 
 The configurable-run vertical is implemented and deployed at simulator
 `374b2a50d168fb4c16a9ed834157890f89159384` with shared `llm_client`
-`07b168ff616b079da5be5f7a71555467439a9be5`.
+`07b168ffc10ab28834d8571fdf48aa9b775d57bc`.
 
 - Linux and Mac gates pass: mypy, 57 tests, production graph build, and launcher
   syntax.
 - Terra is the only advertised route. Its exact current-revision participant
-  and narrator observations are `routeobs1_d9cdaf56c225479422018a8f` and
-  `routeobs1_360219087d7a8109c385c817`.
+  and narrator observations are `routeobs1_a7a692e9a6893e15d36f30ab` and
+  `routeobs1_8d61ca73ab6c08249e5cdf59`.
 - The deployed causal canary `run_7666035b2c17` completed and reached
   `closed_confirmed` with seven medium-reasoning Terra calls for
   `$0.033916875`; all effective settings and calls were retained.
@@ -129,7 +129,7 @@ Design-time current:
   configuration;
 - the original design began with divergent shared-client revisions; both
   environments now use
-  `07b168ff616b079da5be5f7a71555467439a9be5`.
+  `07b168ffc10ab28834d8571fdf48aa9b775d57bc`.
 
 Implemented target:
 
@@ -453,7 +453,7 @@ Dependency: current shared-client execution policy on the Mac.
   `ALLOWED_EXECUTION_MODELS`, structured-output metadata, execution-policy
   validation, and `LLM_CLIENT_REVISION`.
 - **Resolved state:** Linux and Mac use clean shared-client revision
-  `07b168ff616b079da5be5f7a71555467439a9be5`.
+  `07b168ffc10ab28834d8571fdf48aa9b775d57bc`.
 - **Resolution:** advance the Mac editable checkout to one approved clean main
   revision, install it into the simulator environment, bind
   `LLM_CLIENT_REVISION`, and run the shared-client policy tests plus simulator
