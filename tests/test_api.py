@@ -58,6 +58,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert config.json()["scenarios"]["service_desk"]["assumptions"]
     assert config.json()["scenarios"]["service_desk"]["known_omissions"]
     assert config.json()["scenarios"]["service_desk"]["fidelity_questions"]
+    assert config.json()["scenarios"]["service_desk"]["representation_summary"].startswith(
+        "A customer cannot log in after resetting a password."
+    )
     assert "No authored spatial topology is present." not in config.json()["scenarios"]["service_desk"]["known_omissions"]
     assert "authored topology" in config.json()["scenarios"]["service_desk"]["known_omissions"][0]
     page = api.get("/")

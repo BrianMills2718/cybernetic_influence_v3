@@ -91,7 +91,6 @@ interface CanvasOptions {
   onSelectNode: (nodeId: string) => void
   onSelectEdge: (edge: AnalystEdge) => void
   onToggleBoundary: (boundaryId: string) => void
-  onSetViewMode: (viewMode: 'world' | 'causal') => void
 }
 
 interface CanvasNodeData {
@@ -612,24 +611,6 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
             : ''}
         </span>
         <div className="cy-graph-actions">
-          {options.world && (
-            <div className="cy-view-tabs" aria-label="Graph projection">
-              <button
-                className={worldMode ? 'active' : ''}
-                aria-pressed={worldMode}
-                onClick={() => options.onSetViewMode('world')}
-              >
-                World topology
-              </button>
-              <button
-                className={!worldMode ? 'active' : ''}
-                aria-pressed={!worldMode}
-                onClick={() => options.onSetViewMode('causal')}
-              >
-                Causal flow
-              </button>
-            </div>
-          )}
           {!worldMode && boundaryId && (
           <button
             title={options.analyticalScaleHelp}

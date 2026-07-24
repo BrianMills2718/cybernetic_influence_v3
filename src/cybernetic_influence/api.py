@@ -686,9 +686,10 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
         "service_desk": {
             "help": "Inspect how information routes and exact gates shape one incident workflow.",
             "representation_summary": (
-                "A bounded incident workflow with people, copied information, "
-                "a ticket record, declared routes, and exact remediation and "
-                "closure mechanisms."
+                "A customer cannot log in after resetting a password. The "
+                "triager routes the report to a specialist, the system clears "
+                "the stale login session, and the incident closes only after "
+                "the customer confirms that access works."
             ),
             "assumptions": [
                 "People act only from retained memory and delivered observations.",

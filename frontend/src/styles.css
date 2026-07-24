@@ -25,29 +25,10 @@
   padding: 5px 9px;
 }
 
-.cy-graph-actions,
-.cy-view-tabs {
+.cy-graph-actions {
   display: flex;
   align-items: center;
   gap: 7px;
-}
-
-.cy-view-tabs {
-  padding: 3px;
-  border: 1px solid #34465b;
-  border-radius: 8px;
-  background: #101823;
-}
-
-.cy-view-tabs button {
-  border: 0;
-  background: transparent;
-  color: #9baabd;
-}
-
-.cy-view-tabs button.active {
-  background: #dce9f7;
-  color: #0b1017;
 }
 
 .cy-graph-canvas {
@@ -216,5 +197,4 @@
   .cy-graph-canvas { min-height: 490px; }
   .cy-graph-bar { align-items: stretch; flex-direction: column; }
   .cy-graph-actions { align-items: stretch; flex-direction: column; }
-  .cy-view-tabs button { flex: 1; }
 }

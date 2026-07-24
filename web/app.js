@@ -610,13 +610,6 @@ function renderGraph() {
         renderScaleControls()
         selectEvent(selectedEventIndex)
       },
-      onSetViewMode:(viewMode) => {
-        selectedGraphView = viewMode
-        selectedNodeId = null
-        selectedEdgeId = null
-        renderProjectionControls()
-        renderGraph()
-      },
     })
     return
   }
