@@ -24,7 +24,9 @@ The configurable-run vertical is implemented and deployed at simulator
   `routeobs1_8d61ca73ab6c08249e5cdf59`.
 - The deployed causal canary `run_7666035b2c17` completed and reached
   `closed_confirmed` with seven medium-reasoning Terra calls for
-  `$0.033916875`; all effective settings and calls were retained.
+  `$0.033916875`; selected settings and calls were retained, but a miscopied
+  `LLM_CLIENT_REVISION` binding makes its retained revision label invalid for
+  exact-revision acceptance.
 - Narration then stopped explicitly on an OpenRouter key-total-limit 403. This
   is retained as unavailable rather than substituted with programmatic prose.
 - DeepSeek V4 Flash remains unadvertised. Final-revision high-reasoning probes

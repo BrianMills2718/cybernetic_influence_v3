@@ -52,11 +52,12 @@ reasoning. Exact scenario mechanisms still make no model call.
 The final deployed causal canary `run_7666035b2c17` completed the Service Desk
 baseline with seven medium-reasoning Terra participant calls for
 `$0.033916875`, reached `closed_confirmed` in eight causal moments, and retained
-the selected model, reasoning, authorization, shared-client revision, and each
-call summary. Its first narration call was refused by OpenRouter with a
-key-total-limit 403, so the run truthfully retains narration as unavailable.
-This proves the causal/configuration path but is not a fully narrated final
-canary.
+the selected model, reasoning, authorization, and each call summary. The Mac
+checkout was on the correct shared-client commit, but the LaunchAgent's
+`LLM_CLIENT_REVISION` value was miscopied; the run therefore retains the wrong
+revision label and cannot count as exact revision-bound acceptance. Its first
+narration call was also refused by OpenRouter with a key-total-limit 403. This
+is useful causal/configuration evidence, not a final canary.
 
 DeepSeek V4 Flash is deliberately absent. On the final shared-client revision,
 high-reasoning certification attempts repeatedly consumed their output

@@ -30,7 +30,9 @@ Last verified 2026-07-24:
   `routeobs1_a7a692e9a6893e15d36f30ab,routeobs1_8d61ca73ab6c08249e5cdf59`;
 - final causal canary: `run_7666035b2c17`, completed
   `closed_confirmed`, seven participant calls, `$0.033916875`;
-- open limitation: narrator call refused by OpenRouter key-total-limit 403.
+- open limitations: narrator call refused by OpenRouter key-total-limit 403,
+  and the run's retained revision label was miscopied even though the checkout
+  itself was on the correct commit. A new run is required for acceptance.
 
 The currently advertised live route is
 `openrouter/openai/gpt-5.6-terra`. The explicit provider prefix is required
