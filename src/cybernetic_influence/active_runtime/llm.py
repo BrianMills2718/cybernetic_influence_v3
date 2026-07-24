@@ -426,6 +426,10 @@ class NativeLlmActiveSystem:
                 "trace_id": trace_id,
                 "max_budget": validated_input.budget.max_call_cost,
                 "max_tokens": self.max_output_tokens,
+                "model_justification": (
+                    "Use the model bound into this native active-system "
+                    "implementation as an explicit simulation condition."
+                ),
             }
             if self.reasoning_effort is not None:
                 call_kwargs["reasoning_effort"] = self.reasoning_effort

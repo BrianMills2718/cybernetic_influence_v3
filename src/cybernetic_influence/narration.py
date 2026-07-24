@@ -71,6 +71,10 @@ def narrate_live_moments(
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
+                model_justification=(
+                    "Use the run-configured narration model to generate the "
+                    "bounded analyst-facing causal-moment account."
+                ),
                 response_model=CausalMomentNarration,
                 task=NARRATOR_TASK,
                 trace_id=trace_id,
