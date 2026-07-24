@@ -253,6 +253,8 @@ def purchase_payment_fixture(
     invoice_request_id: str = "purchase_17",
     invoice_amount_cents: int | None = None,
     signer_active: bool = True,
+    model: str = PURCHASE_PAYMENT_MODEL,
+    reasoning_effort: str = PURCHASE_PAYMENT_REASONING_EFFORT,
 ) -> PurchasePaymentFixture:
     selected = PurchasePaymentArmConfiguration.model_validate(
         arm.model_dump(mode="json")
@@ -331,7 +333,11 @@ def purchase_payment_fixture(
         arm=selected,
         scenario=scenario,
         exact_bindings=_exact_bindings(),
-        active_specs=_active_specs(selected),
+        active_specs=_active_specs(
+            selected,
+            model=model,
+            reasoning_effort=reasoning_effort,
+        ),
     )
 
 
@@ -1088,6 +1094,9 @@ def _carriers() -> dict[str, CarrierState]:
 
 def _active_specs(
     arm: PurchasePaymentArmConfiguration,
+    *,
+    model: str,
+    reasoning_effort: str,
 ) -> tuple[ActiveSystemSpec, ...]:
     request = PurchaseRequest(amount_cents=arm.amount_cents)
     invoice = Invoice(
@@ -1107,9 +1116,9 @@ def _active_specs(
                 f"native_purchase_{active_system_id}_v1"
             ),
             persona=personas[active_system_id],
-            model=PURCHASE_PAYMENT_MODEL,
+            model=model,
             task=PURCHASE_PAYMENT_TASK,
-            reasoning_effort=PURCHASE_PAYMENT_REASONING_EFFORT,
+            reasoning_effort=reasoning_effort,
             max_memory_entries=20,
             max_output_tokens=768,
             decision_wire_contract="openai-json-payload-wire.v2",

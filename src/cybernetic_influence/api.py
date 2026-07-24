@@ -52,6 +52,8 @@ from cybernetic_influence.scenarios.service_desk import (
     service_desk_scripted_bindings,
 )
 from cybernetic_influence.scenarios.physical_access import (
+    PHYSICAL_ACCESS_MODEL,
+    PHYSICAL_ACCESS_REASONING_EFFORT,
     build_physical_access_readout,
     physical_access_arm_configurations,
     physical_access_fixture,
@@ -62,6 +64,8 @@ from cybernetic_influence.scenarios.physical_access import (
     physical_access_runtime_config,
 )
 from cybernetic_influence.scenarios.purchase_payment import (
+    PURCHASE_PAYMENT_MODEL,
+    PURCHASE_PAYMENT_REASONING_EFFORT,
     build_purchase_payment_readout,
     purchase_payment_arm_configurations,
     purchase_payment_fixture,
@@ -342,10 +346,15 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 service_fixture = service_desk_fixture(
                     service_arm,
                     cognition_profile=request_body.cognition_profile,
+                    model=(
+                        effective_llm.model
+                        if effective_llm is not None
+                        else PHYSICAL_ACCESS_MODEL
+                    ),
                     reasoning_effort=(
                         effective_llm.agent_reasoning_effort
                         if effective_llm is not None
-                        else SERVICE_DESK_SCAFFOLD_REASONING_EFFORT
+                        else PHYSICAL_ACCESS_REASONING_EFFORT
                     ),
                 )
                 service_bindings = (
@@ -382,7 +391,19 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                     created_at=created_at,
                 )
             elif physical_arm is not None:
-                physical_fixture = physical_access_fixture(physical_arm)
+                physical_fixture = physical_access_fixture(
+                    physical_arm,
+                    model=(
+                        effective_llm.model
+                        if effective_llm is not None
+                        else PURCHASE_PAYMENT_MODEL
+                    ),
+                    reasoning_effort=(
+                        effective_llm.agent_reasoning_effort
+                        if effective_llm is not None
+                        else PURCHASE_PAYMENT_REASONING_EFFORT
+                    ),
+                )
                 physical_bindings = (
                     physical_access_native_bindings(
                         physical_fixture,
@@ -424,7 +445,19 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                     summary=summary,
                 )
             elif purchase_arm is not None:
-                purchase_fixture = purchase_payment_fixture(purchase_arm)
+                purchase_fixture = purchase_payment_fixture(
+                    purchase_arm,
+                    model=(
+                        effective_llm.model
+                        if effective_llm is not None
+                        else SERVICE_DESK_MODEL
+                    ),
+                    reasoning_effort=(
+                        effective_llm.agent_reasoning_effort
+                        if effective_llm is not None
+                        else SERVICE_DESK_SCAFFOLD_REASONING_EFFORT
+                    ),
+                )
                 purchase_bindings = (
                     purchase_payment_native_bindings(
                         purchase_fixture,

@@ -38,6 +38,8 @@
     <string>__LLM_CLIENT_DATA_ROOT__</string>
     <key>LLM_CLIENT_REVISION</key>
     <string>__LLM_CLIENT_REVISION__</string>
+    <key>LLM_ROUTE_CERTIFICATION_ROOT</key>
+    <string>__LLM_ROUTE_CERTIFICATION_ROOT__</string>
     <key>LLM_CLIENT_OPENROUTER_ROUTING</key>
     <string>on</string>
     <key>LLM_CLIENT_PROJECT</key>

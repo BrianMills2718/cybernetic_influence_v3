@@ -375,12 +375,15 @@ def service_desk_fixture(
     *,
     boundary_label: str = "Service desk analytical view",
     cognition_profile: ServiceDeskCognitionProfile = "procedural_control",
+    model: str = SERVICE_DESK_MODEL,
     reasoning_effort: str = SERVICE_DESK_REASONING_EFFORT,
     multirate: bool = True,
 ) -> ServiceDeskFixture:
     """Build one grounded service-desk arm without an organization executor."""
     if not reasoning_effort.strip():
         raise ValueError("service-desk reasoning effort must be nonempty")
+    if not model.strip():
+        raise ValueError("service-desk model must be nonempty")
     selected = ServiceDeskArmConfiguration.model_validate(arm.model_dump(mode="json"))
     report = CustomerReport()
     policy = EscalationPolicyStatement()
@@ -507,6 +510,7 @@ def service_desk_fixture(
         active_specs=_active_specs(
             selected,
             cognition_profile,
+            model,
             reasoning_effort,
             multirate=multirate,
         ),
@@ -1312,6 +1316,7 @@ def _carriers(*, multirate: bool) -> dict[str, CarrierState]:
 def _active_specs(
     arm: ServiceDeskArmConfiguration,
     cognition_profile: ServiceDeskCognitionProfile,
+    model: str,
     reasoning_effort: str,
     *,
     multirate: bool,
@@ -1322,7 +1327,7 @@ def _active_specs(
         return bound_native_llm_implementation_id(
             implementation_family_id=f"native_service_{active_system_id}_v1",
             persona=personas[active_system_id],
-            model=SERVICE_DESK_MODEL,
+            model=model,
             task=SERVICE_DESK_TASK,
             reasoning_effort=reasoning_effort,
             max_memory_entries=32,

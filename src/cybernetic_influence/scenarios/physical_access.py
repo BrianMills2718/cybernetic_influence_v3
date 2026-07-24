@@ -200,6 +200,8 @@ def physical_access_fixture(
     arm: PhysicalAccessArmConfiguration,
     *,
     badge_candidate: str = _BADGE_SECRET,
+    model: str = PHYSICAL_ACCESS_MODEL,
+    reasoning_effort: str = PHYSICAL_ACCESS_REASONING_EFFORT,
 ) -> PhysicalAccessFixture:
     selected = PhysicalAccessArmConfiguration.model_validate(
         arm.model_dump(mode="json")
@@ -264,7 +266,7 @@ def physical_access_fixture(
         arm=selected,
         scenario=scenario,
         exact_bindings=_exact_bindings(),
-        active_specs=(_active_spec(),),
+        active_specs=(_active_spec(model, reasoning_effort),),
     )
 
 
@@ -758,11 +760,14 @@ def _carriers() -> dict[str, CarrierState]:
     }
 
 
-def _active_spec() -> ActiveSystemSpec:
+def _active_spec(model: str, reasoning_effort: str) -> ActiveSystemSpec:
     return ActiveSystemSpec(
         active_system_id="technician",
         entity_id="technician",
-        implementation_id=_technician_implementation_id(),
+        implementation_id=_technician_implementation_id(
+            model=model,
+            reasoning_effort=reasoning_effort,
+        ),
         description="Bounded maintenance-person decision process.",
         observation_port_ids=[
             "technician_access_result_in",
@@ -1260,13 +1265,17 @@ def _scripted_technician(item: ActiveSystemInput) -> ActiveStepResult:
     )
 
 
-def _technician_implementation_id() -> str:
+def _technician_implementation_id(
+    *,
+    model: str = PHYSICAL_ACCESS_MODEL,
+    reasoning_effort: str = PHYSICAL_ACCESS_REASONING_EFFORT,
+) -> str:
     return bound_native_llm_implementation_id(
         implementation_family_id="native_physical_technician_v1",
         persona=TECHNICIAN_PERSONA,
-        model=PHYSICAL_ACCESS_MODEL,
+        model=model,
         task=PHYSICAL_ACCESS_TASK,
-        reasoning_effort=PHYSICAL_ACCESS_REASONING_EFFORT,
+        reasoning_effort=reasoning_effort,
         max_memory_entries=16,
         max_output_tokens=768,
         decision_wire_contract="openai-json-payload-wire.v2",

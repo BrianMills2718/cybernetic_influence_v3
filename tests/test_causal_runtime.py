@@ -40,6 +40,7 @@ from cybernetic_influence.scenarios.physical_access import (
     build_physical_access_readout,
     physical_access_arm_configurations,
     physical_access_fixture,
+    physical_access_native_bindings,
     physical_access_scripted_bindings,
     run_physical_access,
 )
@@ -48,9 +49,18 @@ from cybernetic_influence.scenarios.service_desk import (
     run_service_desk,
     service_desk_arm_configurations,
     service_desk_fixture,
+    service_desk_native_bindings,
     service_desk_personas,
     service_desk_scripted_bindings,
 )
+from cybernetic_influence.scenarios.purchase_payment import (
+    purchase_payment_arm_configurations,
+    purchase_payment_fixture,
+    purchase_payment_native_bindings,
+)
+
+
+ALTERNATE_MODEL = "openrouter/deepseek/deepseek-v4-flash"
 
 
 def _crossing_attempt_after_badge(
@@ -112,6 +122,60 @@ def test_service_desk_replay_reconstructs_exact_final_state() -> None:
     )
     replayed = replay_committed_trajectory(fixture.scenario, result.core_result)
     assert replayed == result.core_result.final_state
+
+
+def test_nondefault_model_is_bound_into_every_scenario_implementation_id() -> None:
+    service = service_desk_fixture(
+        service_desk_arm_configurations()[0],
+        cognition_profile="position_context",
+        model=ALTERNATE_MODEL,
+        reasoning_effort="medium",
+    )
+    physical = physical_access_fixture(
+        physical_access_arm_configurations()[0],
+        model=ALTERNATE_MODEL,
+        reasoning_effort="medium",
+    )
+    purchase = purchase_payment_fixture(
+        purchase_payment_arm_configurations()[0],
+        model=ALTERNATE_MODEL,
+        reasoning_effort="medium",
+    )
+    registries = [
+        (
+            service.active_specs,
+            service_desk_native_bindings(
+                service,
+                trace_id_prefix="alternate-service",
+                model=ALTERNATE_MODEL,
+                reasoning_effort="medium",
+            ),
+        ),
+        (
+            physical.active_specs,
+            physical_access_native_bindings(
+                physical,
+                trace_id_prefix="alternate-physical",
+                model=ALTERNATE_MODEL,
+                reasoning_effort="medium",
+            ),
+        ),
+        (
+            purchase.active_specs,
+            purchase_payment_native_bindings(
+                purchase,
+                trace_id_prefix="alternate-purchase",
+                model=ALTERNATE_MODEL,
+                reasoning_effort="medium",
+            ),
+        ),
+    ]
+    assert all(
+        bindings[spec.active_system_id].implementation_id
+        == spec.implementation_id
+        for specs, bindings in registries
+        for spec in specs
+    )
 
 
 def test_provider_call_requires_full_ceiling_but_retains_prior_spend() -> None:
