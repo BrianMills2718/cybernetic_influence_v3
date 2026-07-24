@@ -636,6 +636,14 @@ def run_service_desk(
     return session.complete()
 
 
+class RuntimePaused(RuntimeError):
+    """Signal a validated, quiescent service-desk continuation boundary."""
+
+    def __init__(self, checkpoint: ActiveRuntimeCheckpoint) -> None:
+        super().__init__("service-desk run paused at a causal boundary")
+        self.checkpoint = checkpoint
+
+
 def run_event_driven_service_desk(
     fixture: ServiceDeskFixture,
     bindings: Mapping[str, ActiveSystemBinding],
@@ -643,6 +651,8 @@ def run_event_driven_service_desk(
     run_id: str,
     checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
     runtime_config: ActiveRuntimeConfig | None = None,
+    checkpoint: ActiveRuntimeCheckpoint | None = None,
+    pause_requested: Callable[[], bool] | None = None,
 ) -> ActiveRuntimeResult:
     """Run due-set moments until no observation or internal wake remains.
 
@@ -650,37 +660,53 @@ def run_event_driven_service_desk(
     exact process due at the earliest integer timestamp is activated against
     one frozen state. The bound catches zero-time and self-scheduling loops.
     """
-    session = ActiveRuntimeSession(
-        fixture.scenario,
-        fixture.exact_bindings,
-        fixture.active_specs,
-        bindings,
-        run_id=run_id,
-        config=runtime_config or service_desk_runtime_config(),
-    )
-    try:
-        session.activate(
-            ["triager"],
-            logical_time=0,
-            activation_causes={
-                "triager": [
-                    ActivationCause(
-                        kind="scenario_start",
-                        scheduled_for=0,
-                        description=(
-                            "The authored scenario began with the customer "
-                            "report already retained by the triager."
-                        ),
-                    )
-                ]
-            },
+    session = (
+        ActiveRuntimeSession.restore(
+            fixture.scenario,
+            fixture.exact_bindings,
+            bindings,
+            checkpoint,
         )
-    except Exception:
+        if checkpoint is not None
+        else ActiveRuntimeSession(
+            fixture.scenario,
+            fixture.exact_bindings,
+            fixture.active_specs,
+            bindings,
+            run_id=run_id,
+            config=runtime_config or service_desk_runtime_config(),
+        )
+    )
+
+    def observe() -> None:
+        current_checkpoint = session.checkpoint()
         if checkpoint_observer is not None:
-            checkpoint_observer(session.checkpoint())
-        raise
-    if checkpoint_observer is not None:
-        checkpoint_observer(session.checkpoint())
+            checkpoint_observer(current_checkpoint)
+        if pause_requested is not None and pause_requested():
+            raise RuntimePaused(current_checkpoint)
+
+    if checkpoint is None:
+        try:
+            session.activate(
+                ["triager"],
+                logical_time=0,
+                activation_causes={
+                    "triager": [
+                        ActivationCause(
+                            kind="scenario_start",
+                            scheduled_for=0,
+                            description=(
+                                "The authored scenario began with the customer "
+                                "report already retained by the triager."
+                            ),
+                        )
+                    ]
+                },
+            )
+        except Exception:
+            observe()
+            raise
+        observe()
 
     while (due := session.next_due_activation()) is not None:
         if len(session.attempts) >= SERVICE_DESK_MAX_CAUSAL_MOMENTS:
@@ -694,11 +720,9 @@ def run_event_driven_service_desk(
                 activation_causes=due.causes,
             )
         except Exception:
-            if checkpoint_observer is not None:
-                checkpoint_observer(session.checkpoint())
+            observe()
             raise
-        if checkpoint_observer is not None:
-            checkpoint_observer(session.checkpoint())
+        observe()
     return session.complete()
 
 

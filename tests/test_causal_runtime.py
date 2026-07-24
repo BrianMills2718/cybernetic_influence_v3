@@ -46,6 +46,7 @@ from cybernetic_influence.scenarios.physical_access import (
     run_physical_access,
 )
 from cybernetic_influence.scenarios.service_desk import (
+    RuntimePaused,
     run_event_driven_service_desk,
     run_service_desk,
     service_desk_arm_configurations,
@@ -314,6 +315,49 @@ def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state()
     assert result.core_result.final_state.fact(
         "incident_17.status"
     ).value == "closed_confirmed"
+
+
+def test_event_driven_service_desk_resumes_one_validated_prefix_without_duplicates() -> None:
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0],
+        cognition_profile="position_context",
+        reasoning_effort="medium",
+    )
+    bindings = service_desk_scripted_bindings(fixture)
+    observed: list[ActiveRuntimeCheckpoint] = []
+
+    with pytest.raises(RuntimePaused) as paused:
+        run_event_driven_service_desk(
+            fixture,
+            bindings,
+            run_id="service_desk_pause_resume_gate",
+            checkpoint_observer=observed.append,
+            pause_requested=lambda: len(observed) == 3,
+        )
+
+    checkpoint = paused.value.checkpoint
+    assert checkpoint == observed[-1]
+    assert len(checkpoint.attempts) == 3
+
+    resumed = run_event_driven_service_desk(
+        fixture,
+        bindings,
+        run_id="service_desk_pause_resume_gate",
+        checkpoint=checkpoint,
+    )
+    uninterrupted = run_event_driven_service_desk(
+        fixture,
+        bindings,
+        run_id="service_desk_pause_resume_reference",
+    )
+
+    assert [attempt.activation_id for attempt in resumed.attempts] == [
+        attempt.activation_id for attempt in uninterrupted.attempts
+    ]
+    assert [event.event_id for event in resumed.core_result.events] == [
+        event.event_id for event in uninterrupted.core_result.events
+    ]
+    assert resumed.core_result.final_state == uninterrupted.core_result.final_state
 
 
 def test_multirate_scheduler_rejects_nonfuture_process_update() -> None:

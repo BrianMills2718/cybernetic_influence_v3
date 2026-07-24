@@ -8,7 +8,17 @@ predecessor: 013-configurable-explainable-runs.md
 
 # Slice 14: Pausable Live Runs
 
-**Status: designed, not implemented.**
+**Status: implementation started; not yet user-facing.**
+
+## Current implementation evidence
+
+The service-desk event scheduler can now stop only after a validated quiescent
+`ActiveRuntimeCheckpoint` and restore that checkpoint into the same event-driven
+schedule. The focused scripted test pauses after three causal moments and
+proves that the resumed run has the same activation IDs, event IDs, and final
+state as an uninterrupted reference. This is the continuation seam for Slice
+14A; it is deliberately not advertised as pause/resume yet because no API/UI
+control or durable checkpoint envelope exists.
 
 ## Decision packet
 
