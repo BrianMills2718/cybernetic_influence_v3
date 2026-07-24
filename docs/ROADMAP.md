@@ -27,7 +27,8 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-V0.10 candidate behavior observed locally:
+V0.10 is implemented, verified, and deployed on the private Mac development
+host:
 
 - two concrete scenario families: Service Desk and physical access;
 - exact mechanisms separated from LLM-modeled people;
@@ -42,13 +43,24 @@ V0.10 candidate behavior observed locally:
 - one frozen simulated-second-1 activation set shared by that person and
   process.
 
-The private Mac remains on the last verified V0.9 build until the V0.10
-candidate completes its bounded live canary and exact-revision deployment
-checks. The causal core also still drains one action's complete routed cascade
-before accepting another; arbitrary interleaving within nonzero-delay routes is
-not yet supported. The UI is technically reviewable; operator comprehension
-and analytical usefulness remain under iterative stakeholder review rather
-than being treated as proven.
+The bounded live baseline `run_3be342635ebb` exercised behavior commit
+`1e7a99e0cd0949f9f2e79f02f65c24284d9f4a8c` with seven human cognition calls
+at medium reasoning and eight causal-moment narration calls at low reasoning.
+All 15 structured calls validated on their first provider attempt. The run
+reached confirmed closure in eight causal moments and ten participant
+activations, including three autonomous wakes and three exact-process
+activations, for $0.085632375. Full-trace inspection confirmed that each human
+acted only through supplied interfaces and representations, each narrator saw
+the exact prior narrative chain plus the current moment, all citations remained
+inside the cited moment, and the exact process made no model call. The retained
+run reopened through the operator-facing tailnet URL with all eight narratives
+and the exact process visible in the graph and participant traces.
+
+The causal core still drains one action's complete routed cascade before
+accepting another; arbitrary interleaving within nonzero-delay routes is not
+yet supported. The UI is technically reviewable; operator comprehension and
+analytical usefulness remain under iterative stakeholder review rather than
+being treated as proven.
 
 ## Canonical MVP Probe
 
@@ -89,25 +101,27 @@ workflow.
 
 ## Critical Path
 
-### 1. Autonomous multirate temporal substrate — candidate implemented
+### 1. Autonomous multirate temporal substrate — complete for the MVP probe
 
 Integer scenario time, scheduled process wakes, recorded observation-arrival
 times, activation causes, and due-set causal moments now exist in the Service
-Desk candidate. Exact mechanism adjudication, replay, budgets, and narrative
+Desk MVP. Exact mechanism adjudication, replay, budgets, and narrative
 evidence remain in place.
 
-Local acceptance demonstrates a person acting from a retained scheduled
-intention without an external delivery, while a faster state-machine process
-updates three times without model calls. Promotion awaits the bounded live
-trace and Mac deployment check.
+Scripted and live acceptance demonstrate a person acting from a retained
+scheduled intention without an external delivery, while a faster state-machine
+process updates three times without model calls. Deterministic arm checks,
+desktop/mobile browser checks, full live-trace inspection, and exact-revision
+Mac deployment are complete.
 
-### 2. Validate one autonomous representative scenario
+### 2. Validate one autonomous representative scenario — complete
 
-Run the autonomous Service Desk with live people and sequential live narration.
-Inspect whether the exact retained trace distinguishes simulated time, internal
-wakes, process updates, causal moments, and exact events without invented
-information access. This remains an integrated outcome check, not a scheduler
-bakeoff.
+The autonomous Service Desk has run with live people and sequential live
+narration. Its retained evidence distinguishes simulated time, initial triggers,
+internal wakes, delivered observations, exact process updates, causal moments,
+and exact events without invented information access. This is an integrated
+outcome proof for the stipulated scenario, not a claim of calibrated human
+timing or general fidelity.
 
 ### 3. Introduce a surrogate boundary only on demand
 

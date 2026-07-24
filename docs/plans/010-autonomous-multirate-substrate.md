@@ -1,6 +1,6 @@
 # Slice 10: Autonomous Multirate Process Time
 
-**Status: Implemented; live and UI acceptance pending — 2026-07-23.**
+**Status: Complete — 2026-07-23.**
 
 ## Outcome
 
@@ -68,6 +68,34 @@ remain non-authoritative projections.
   time, and citations remain confined to the current moment.
 - The rendered desktop and mobile UI expose time and cause without breaking the
   map/trace workflow or producing console errors.
+
+## Completion Evidence
+
+- `make check` passed: mypy, 38 Python tests, the production frontend build,
+  and shell lint.
+- Scripted baseline, missing-direct-path, and speed-pressure arms retained
+  distinct outcomes. The baseline has eight causal moments, ten participant
+  activations, three autonomous wakes, and three exact-process activations;
+  remediation occurs at moment 5 and confirmed closure at moment 7.
+- Desktop and mobile browser checks retained the synchronized causal map,
+  participant traces, simulated time, and activation causes without console
+  errors or viewport overflow.
+- The private Mac development host passed its Python type/test gate and served
+  behavior commit `1e7a99e0cd0949f9f2e79f02f65c24284d9f4a8c`.
+- Live baseline `run_3be342635ebb` completed with seven human cognition calls
+  at medium reasoning and eight narrator calls at low reasoning using
+  `openrouter/openai/gpt-5.6-terra`. All 15 structured calls validated on
+  attempt zero, with no execution or validation errors, for a reconciled total
+  cost of $0.085632375.
+- Full-trace inspection matched every human response to its retained
+  activation, observations, exposed interfaces, and committed action. The
+  exact remediation process made zero model calls. Every narration prompt
+  contained the exact earlier retained narrative chain and only the current
+  causal moment; every cited source belonged to that moment and no account
+  mislabeled `scenario_start` as an internal wake.
+- The retained live run reopened through the tailnet UI with all eight
+  causal-moment narratives, the remediation process in both graph and
+  participant traces, and no browser console or page errors.
 
 ## Non-goals and Non-claims
 
