@@ -1,13 +1,10 @@
 const $ = (selector) => document.querySelector(selector)
 
-function updateInPlace(update) {
-  const left = window.scrollX
-  const top = window.scrollY
-  const restore = () => window.scrollTo(left, top)
-  update()
-  restore()
-  requestAnimationFrame(restore)
-  setTimeout(restore, 50)
+function showTraceInPlace(person) {
+  const trace = $('#trace')
+  const retainedHeight = Math.ceil(trace.getBoundingClientRect().height)
+  if (retainedHeight > 0) trace.style.minHeight = `${retainedHeight}px`
+  showTrace(person)
 }
 const html = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
   '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
@@ -783,8 +780,8 @@ function selectEvent(index, momentActivation = null) {
     button.onclick = () => showNode(button.dataset.nodeId)
   })
 
-  if (event.person) showTrace(event.person)
-  else if (selectedPerson) showTrace(selectedPerson)
+  if (event.person) showTraceInPlace(event.person)
+  else if (selectedPerson) showTraceInPlace(selectedPerson)
 }
 
 function renderStepAccount(event) {
@@ -955,8 +952,9 @@ function render(run) {
     `<button data-person="${html(boundary.id)}" title="Analytical composite; it summarizes members but does not act">${html(boundary.label)} · composite</button>`
   )
   $('#trace-tabs').innerHTML = [...participantTabs, ...compositeTabs].join('')
+  $('#trace').style.minHeight = ''
   document.querySelectorAll('#trace-tabs button').forEach((button) => {
-    button.onclick = () => updateInPlace(() => showTrace(button.dataset.person))
+    button.onclick = () => showTraceInPlace(button.dataset.person)
   })
   if (people.length) showTrace(people[0])
   else $('#trace').innerHTML = '<p class="muted">No completed participant traces were retained.</p>'

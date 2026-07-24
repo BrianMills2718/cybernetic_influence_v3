@@ -117,10 +117,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert len(graph_script.content) > 250_000
     assert b".react-flow" in graph_styles.content
     assert b".scrollIntoView" not in app_script.content
-    assert b"html { overflow-anchor:none; }" in app_styles.content
     assert b"Causal flow shows retained information routes" in app_script.content
     assert b"aria-pressed" in app_script.content
-    assert b"updateInPlace(() => showTrace(button.dataset.person))" in app_script.content
+    assert b"showTraceInPlace(button.dataset.person)" in app_script.content
+    assert b"trace.style.minHeight" in app_script.content
     assert b"kind:edge.kind || 'connection'" in app_script.content
 
 
