@@ -13,6 +13,7 @@ let selectedNodeId = null
 let selectedEdgeId = null
 let scenarioCatalog = {}
 let runtimeConfig = {}
+let activeRunId = null
 
 function setWorkspaceView(view) {
   const simulation = view === 'simulation'
@@ -996,6 +997,9 @@ document.querySelectorAll('.help-button').forEach((button) => {
 $('#run').onclick = async () => {
   $('#run').disabled = true
   $('#run-status').textContent = 'Running…'
+  activeRunId = `run_${crypto.getRandomValues(new Uint32Array(3)).join('').slice(0, 12)}`
+  const pausable = !$('#live').checked && $('#scenario').value === 'service_desk'
+  $('#pause').hidden = !pausable
   try {
     const body = await request('/api/runs', {
       method:'POST',
@@ -1005,6 +1009,7 @@ $('#run').onclick = async () => {
         cognition_profile:'position_context',
         arm_id:$('#arm').value,
         execution:$('#live').checked ? 'live' : 'scripted',
+        run_id:activeRunId,
         ...($('#live').checked ? {
           llm_options:{
             model:$('#model').value,
@@ -1019,12 +1024,42 @@ $('#run').onclick = async () => {
     url.searchParams.set('run', body.run_id)
     window.history.replaceState({}, '', url)
     await loadHistory()
-    $('#run-status').textContent = 'Completed'
+    $('#run-status').textContent = body.status === 'paused' ? 'Paused' : 'Completed'
+    $('#resume').hidden = body.status !== 'paused'
   } catch (error) {
     $('#run-status').textContent = error.message
     await loadHistory()
   } finally {
     $('#run').disabled = false
+    $('#pause').hidden = true
+  }
+}
+
+$('#pause').onclick = async () => {
+  if (!activeRunId) return
+  $('#pause').disabled = true
+  try {
+    await request(`/api/runs/${activeRunId}/pause`, {method:'POST'})
+    $('#run-status').textContent = 'Pause requested; finishing this causal moment…'
+  } catch (error) {
+    $('#run-status').textContent = error.message
+  }
+}
+
+$('#resume').onclick = async () => {
+  if (!current?.run_id) return
+  $('#resume').disabled = true
+  $('#run-status').textContent = 'Resuming…'
+  try {
+    const body = await request(`/api/runs/${current.run_id}/resume`, {method:'POST'})
+    render(body)
+    $('#run-status').textContent = 'Completed'
+    $('#resume').hidden = true
+    await loadHistory()
+  } catch (error) {
+    $('#run-status').textContent = error.message
+  } finally {
+    $('#resume').disabled = false
   }
 }
 

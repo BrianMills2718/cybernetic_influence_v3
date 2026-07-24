@@ -617,6 +617,61 @@ def test_failed_run_retains_its_full_validated_continuation(tmp_path: Path) -> N
     assert continuation["checkpoint"]["attempts"]
 
 
+def test_scripted_service_desk_pauses_at_a_boundary_and_resumes(
+    tmp_path: Path,
+) -> None:
+    entered = Event()
+    release = Event()
+
+    def pauseable_run(*args: Any, **kwargs: Any) -> Any:
+        observer = kwargs["checkpoint_observer"]
+        blocked = False
+
+        def block_after_first_checkpoint(checkpoint: Any) -> None:
+            nonlocal blocked
+            observer(checkpoint)
+            if not blocked:
+                blocked = True
+                entered.set()
+                assert release.wait(timeout=5)
+
+        kwargs["checkpoint_observer"] = block_after_first_checkpoint
+        return original_run_service_desk(*args, **kwargs)
+
+    with patch(
+        "cybernetic_influence.api.run_event_driven_service_desk",
+        side_effect=pauseable_run,
+    ):
+        api = client(tmp_path)
+        responses: list[Any] = []
+        run_id = "run_fade00000000"
+        thread = Thread(
+            target=lambda: responses.append(
+                api.post(
+                    "/api/runs",
+                    json={"execution": "scripted", "run_id": run_id},
+                )
+            )
+        )
+        thread.start()
+        assert entered.wait(timeout=5)
+        requested = api.post(f"/api/runs/{run_id}/pause")
+        assert requested.status_code == 200
+        release.set()
+        thread.join(timeout=5)
+
+    assert len(responses) == 1
+    assert responses[0].status_code == 200
+    assert responses[0].json()["status"] == "paused"
+    paused = api.get(f"/api/runs/{run_id}").json()
+    assert paused["continuation"]["lifecycle"] == "paused"
+    assert len(paused["continuation"]["checkpoint"]["attempts"]) == 1
+    resumed = api.post(f"/api/runs/{run_id}/resume")
+    assert resumed.status_code == 200, resumed.text
+    assert resumed.json()["status"] == "completed"
+    assert resumed.json()["outcome"]["final_status"] == "closed_confirmed"
+
+
 def test_optional_tailscale_identity_allowlist_guards_run_evidence(
     tmp_path: Path,
 ) -> None:

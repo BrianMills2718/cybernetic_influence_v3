@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from threading import Lock
+from threading import Event, Lock
 from typing import Literal
 from uuid import uuid4
 
@@ -41,6 +41,7 @@ from cybernetic_influence.run_configuration import (
     resolve_live_configuration,
 )
 from cybernetic_influence.scenarios.service_desk import (
+    RuntimePaused,
     SERVICE_DESK_MODEL,
     SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
     ServiceDeskCognitionProfile,
@@ -91,6 +92,7 @@ class RunRequest(BaseModel):
     arm_id: str = "baseline"
     execution: Literal["scripted", "live"] = "scripted"
     llm_options: RunLlmOptions | None = None
+    run_id: str | None = None
 
 
 def create_app(web_root: Path | None = None, run_root: Path | None = None) -> FastAPI:
@@ -104,6 +106,8 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
     )
     runs.mark_incomplete_interrupted()
     live_lock = Lock()
+    pause_requests: dict[str, Event] = {}
+    pause_lock = Lock()
 
     @app.middleware("http")
     async def security_headers(
@@ -240,6 +244,58 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             raise HTTPException(status_code=404, detail="run not found") from error
         return {"run_id": run_id, "status": "trashed", "recoverable": True}
 
+    @app.post("/api/runs/{run_id}/pause")
+    def pause_run(run_id: str, request: Request) -> dict[str, object]:
+        _require_access(request)
+        try:
+            document = runs.get(run_id)
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except RunNotFoundError as error:
+            raise HTTPException(status_code=404, detail="run not found") from error
+        with pause_lock:
+            pause = pause_requests.get(run_id)
+        if document.get("scenario") != "service_desk" or document.get("execution") != "scripted" or pause is None:
+            raise HTTPException(status_code=409, detail="this run cannot be paused")
+        if document.get("status") not in {"running", "pause_requested"}:
+            raise HTTPException(status_code=409, detail="run is not active")
+        pause.set()
+        document["status"] = "pause_requested"
+        document["pause_message"] = "Pause will take effect after the current causal moment."
+        runs.save(document)
+        return {"run_id": run_id, "status": "pause_requested"}
+
+    @app.post("/api/runs/{run_id}/resume")
+    def resume_run(run_id: str, request: Request) -> dict[str, object]:
+        _require_access(request)
+        try:
+            paused = runs.get(run_id)
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except RunNotFoundError as error:
+            raise HTTPException(status_code=404, detail="run not found") from error
+        if paused.get("status") != "paused" or paused.get("scenario") != "service_desk" or paused.get("execution") != "scripted":
+            raise HTTPException(status_code=409, detail="this run cannot be resumed")
+        continuation = paused.get("continuation")
+        if not isinstance(continuation, dict):
+            raise HTTPException(status_code=422, detail="paused run has no continuation")
+        try:
+            checkpoint = ActiveRuntimeCheckpoint.model_validate(continuation["checkpoint"])
+        except (KeyError, TypeError, ValueError) as error:
+            raise HTTPException(status_code=422, detail="paused checkpoint is invalid") from error
+        arm = next((item for item in service_desk_arm_configurations() if item.arm_id == paused.get("arm")), None)
+        if arm is None:
+            raise HTTPException(status_code=422, detail="paused run has an unknown scenario arm")
+        profile = paused.get("profile")
+        if profile not in {"position_context", "procedural_control"}:
+            raise HTTPException(status_code=422, detail="paused run has an invalid cognition profile")
+        fixture = service_desk_fixture(arm, cognition_profile=profile, reasoning_effort=SERVICE_DESK_SCAFFOLD_REASONING_EFFORT)
+        resumed = run_event_driven_service_desk(fixture, service_desk_scripted_bindings(fixture), run_id=run_id, checkpoint=checkpoint)
+        readout = event_driven_service_desk_outcome(resumed)
+        document = build_service_desk_analyst_document(fixture=fixture, result=resumed, readout=readout, profile=profile, arm_id=arm.arm_id, execution="scripted", created_at=str(paused["created_at"]))
+        document["continuation"] = {"schema_version": 1, "phase": "causal", "lifecycle": "completed_from_checkpoint", "checkpoint_digest": checkpoint.record_digest}
+        return runs.save(_attach_narration(document, live=False, run_id=run_id, effective_llm=None))
+
     @app.post("/api/runs")
     def run(request_body: RunRequest, request: Request) -> dict[str, object]:
         _require_access(request)
@@ -317,7 +373,15 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 detail="another live run is already active",
             )
 
-        run_id = f"run_{uuid4().hex[:12]}"
+        run_id = request_body.run_id or f"run_{uuid4().hex[:12]}"
+        try:
+            runs.get(run_id)
+        except RunNotFoundError:
+            pass
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        else:
+            raise HTTPException(status_code=409, detail="run ID already exists")
         created_at = now_iso()
         initial: dict[str, object] = {
             "run_id": run_id,
@@ -336,6 +400,9 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             ),
         }
         runs.save(initial)
+        pause = Event()
+        with pause_lock:
+            pause_requests[run_id] = pause
         latest_checkpoint: ActiveRuntimeCheckpoint | None = None
 
         def retain_checkpoint(checkpoint: ActiveRuntimeCheckpoint) -> None:
@@ -347,8 +414,9 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                     **_checkpoint_progress_projection(latest_checkpoint),
                     "continuation": _checkpoint_continuation(
                         latest_checkpoint,
-                        lifecycle="running",
+                        lifecycle="paused" if pause.is_set() else "running",
                     ),
+                    "status": "pause_requested" if pause.is_set() else "running",
                 }
             )
 
@@ -390,6 +458,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                         else None
                     ),
                     checkpoint_observer=retain_checkpoint,
+                    pause_requested=pause.is_set,
                 )
                 readout = event_driven_service_desk_outcome(result)
                 document = build_service_desk_analyst_document(
@@ -522,6 +591,9 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             narrated["llm_configuration"] = initial["llm_configuration"]
             narrated["model_call_summaries"] = _result_call_summaries(result)
             return runs.save(narrated)
+        except RuntimePaused as paused_error:
+            paused_document = {**initial, "status": "paused", "pause_message": "Paused after a completed causal moment.", **_checkpoint_progress_projection(paused_error.checkpoint), "continuation": _checkpoint_continuation(paused_error.checkpoint, lifecycle="paused")}
+            return runs.save(paused_document)
         except Exception as error:
             failed = {
                 **initial,
@@ -545,6 +617,8 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 detail="simulation failed; retained for inspection",
             ) from error
         finally:
+            with pause_lock:
+                pause_requests.pop(run_id, None)
             if lock_acquired:
                 live_lock.release()
 

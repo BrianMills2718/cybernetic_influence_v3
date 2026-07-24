@@ -8,7 +8,7 @@ predecessor: 013-configurable-explainable-runs.md
 
 # Slice 14: Pausable Live Runs
 
-**Status: implementation started; not yet user-facing.**
+**Status: scripted Service Desk pause/resume implemented; live pause/resume deferred.**
 
 ## Current implementation evidence
 
@@ -21,8 +21,11 @@ boundary, the API now atomically retains the full validated checkpoint under a
 private continuation envelope as well as its analyst-safe progress summary.
 The failure path preserves that envelope with lifecycle `interrupted`; a
 focused API test verifies its checkpoint digest rather than trusting a progress
-summary. This is the continuation seam for Slice 14A; it is deliberately not
-advertised as pause/resume yet because no API/UI control exists.
+summary. The scripted Service Desk control now accepts a concurrent pause
+request, stops after its current causal moment, and resumes the retained
+checkpoint to a completed analyst document. The browser exposes those controls
+only for that zero-cost scripted scenario. Live pause/resume remains deferred:
+an in-flight provider call must not be replayed or mis-accounted.
 
 ## Decision packet
 
