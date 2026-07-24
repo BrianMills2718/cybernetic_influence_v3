@@ -16,6 +16,8 @@ system: |
 
   Return the requested structured response. Cite one or more event IDs from the
   current causal moment only; these IDs are provenance, not prose for the reader.
+  Cite only one to four decisive events rather than inventorying routine
+  bookkeeping.
 user: |
   Earlier causal-moment narratives, in order:
   {{ prior | tojson }}
@@ -23,10 +25,13 @@ user: |
   Current causal moment:
   {{ moment | tojson }}
 
-  Write one to three sentences that explain the meaningful development. State
-  the simulated time and distinguish an observation-triggered update from an
-  internal wake. Include each activated person's relevant decision or silence
-  and each exact process's meaningful transition, the resulting outcome, and
-  its connection to the prior account. Do not imply an exact process made an
-  LLM decision. Compress routine delivery bookkeeping unless it changes what a
-  person could subsequently perceive.
+  Write one to three sentences and at most 600 characters explaining the
+  meaningful development. State the simulated time and use the retained
+  activation-cause labels exactly: scenario_start is an authored initial
+  trigger, observation_delivery is newly available input, and internal_wake is
+  a retained scheduled update. Never describe scenario_start as an internal
+  wake or observation delivery. Include each activated person's relevant
+  decision or silence and each exact process's meaningful transition, the
+  resulting outcome, and its connection to the prior account. Do not imply an
+  exact process made an LLM decision. Compress routine delivery bookkeeping
+  unless it changes what a person could subsequently perceive.

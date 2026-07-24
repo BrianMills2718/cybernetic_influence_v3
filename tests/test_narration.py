@@ -61,6 +61,8 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     assert moments[0]["source_event_ids"]
     assert any(len(moment["participants"]) > 1 for moment in moments)
     assert "Earlier causal-moment narratives, in order:\n[]" in prompts[0]
+    assert "Never describe scenario_start as an internal" in prompts[0]
+    assert "at most 600 characters" in prompts[0]
     assert "Narrated causal moment 1." in prompts[1]
     exact_event_ids = {event["event_id"] for event in document["timeline"]}
     assert all(
