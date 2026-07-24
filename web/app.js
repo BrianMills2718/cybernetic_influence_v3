@@ -669,9 +669,13 @@ function renderProjectionControls() {
   $('#spatial-layout').disabled = !hasWorld
   $('#spatial-layout').classList.toggle('active', selectedGraphView === 'world')
   $('#causal-layout').classList.toggle('active', selectedGraphView === 'causal')
-  $('#projection-help').textContent = hasWorld
-    ? 'Spatial layout is an authored world projection: adjacency does not itself grant permission or traversal.'
-    : 'This scenario has no authored places or spatial topology yet, so only its causal flow can be shown.'
+  $('#spatial-layout').setAttribute('aria-pressed', String(selectedGraphView === 'world'))
+  $('#causal-layout').setAttribute('aria-pressed', String(selectedGraphView === 'causal'))
+  $('#projection-help').textContent = !hasWorld
+    ? 'This scenario has no authored places or spatial topology yet, so only its causal flow can be shown.'
+    : selectedGraphView === 'world'
+      ? 'Spatial layout shows authored places, occupants, and physical links. Adjacency does not itself grant permission or traversal.'
+      : 'Causal flow shows retained information routes, actions, records, and mechanisms. It does not imply physical proximity.'
 }
 
 function causalMoments() {

@@ -105,15 +105,21 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     graph_script = api.get("/assets/graph-canvas.js")
     graph_styles = api.get("/assets/graph-canvas.css")
     app_script = api.get("/assets/app.js")
+    app_styles = api.get("/assets/styles.css")
     assert graph_script.status_code == 200
     assert graph_styles.status_code == 200
     assert app_script.status_code == 200
+    assert app_styles.status_code == 200
     assert graph_script.headers["cache-control"] == "no-cache"
     assert graph_styles.headers["cache-control"] == "no-cache"
     assert app_script.headers["cache-control"] == "no-cache"
+    assert app_styles.headers["cache-control"] == "no-cache"
     assert len(graph_script.content) > 250_000
     assert b".react-flow" in graph_styles.content
     assert b".scrollIntoView" not in app_script.content
+    assert b"#result { overflow-anchor:none; }" in app_styles.content
+    assert b"Causal flow shows retained information routes" in app_script.content
+    assert b"aria-pressed" in app_script.content
     assert b"kind:edge.kind || 'connection'" in app_script.content
 
 
