@@ -998,7 +998,7 @@ $('#run').onclick = async () => {
   $('#run').disabled = true
   $('#run-status').textContent = 'Running…'
   activeRunId = `run_${crypto.getRandomValues(new Uint32Array(3)).join('').slice(0, 12)}`
-  const pausable = !$('#live').checked && $('#scenario').value === 'service_desk'
+  const pausable = $('#scenario').value === 'service_desk'
   $('#pause').hidden = !pausable
   try {
     const body = await request('/api/runs', {

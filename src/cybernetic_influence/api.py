@@ -38,6 +38,7 @@ from cybernetic_influence.run_configuration import (
     EffectiveRunLlmConfiguration,
     RunLlmOptions,
     live_options_contract,
+    llm_client_revision,
     resolve_live_configuration,
 )
 from cybernetic_influence.scenarios.service_desk import (
@@ -255,7 +256,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             raise HTTPException(status_code=404, detail="run not found") from error
         with pause_lock:
             pause = pause_requests.get(run_id)
-        if document.get("scenario") != "service_desk" or document.get("execution") != "scripted" or pause is None:
+        if document.get("scenario") != "service_desk" or document.get("execution") not in {"scripted", "live"} or pause is None:
             raise HTTPException(status_code=409, detail="this run cannot be paused")
         if document.get("status") not in {"running", "pause_requested"}:
             raise HTTPException(status_code=409, detail="run is not active")
@@ -274,7 +275,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             raise HTTPException(status_code=422, detail=str(error)) from error
         except RunNotFoundError as error:
             raise HTTPException(status_code=404, detail="run not found") from error
-        if paused.get("status") != "paused" or paused.get("scenario") != "service_desk" or paused.get("execution") != "scripted":
+        if paused.get("status") != "paused" or paused.get("scenario") != "service_desk" or paused.get("execution") not in {"scripted", "live"}:
             raise HTTPException(status_code=409, detail="this run cannot be resumed")
         continuation = paused.get("continuation")
         if not isinstance(continuation, dict):
@@ -289,12 +290,34 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
         profile = paused.get("profile")
         if profile not in {"position_context", "procedural_control"}:
             raise HTTPException(status_code=422, detail="paused run has an invalid cognition profile")
-        fixture = service_desk_fixture(arm, cognition_profile=profile, reasoning_effort=SERVICE_DESK_SCAFFOLD_REASONING_EFFORT)
-        resumed = run_event_driven_service_desk(fixture, service_desk_scripted_bindings(fixture), run_id=run_id, checkpoint=checkpoint)
+        live = paused.get("execution") == "live"
+        effective_llm: EffectiveRunLlmConfiguration | None = None
+        if live:
+            try:
+                effective_llm = EffectiveRunLlmConfiguration.model_validate(paused["llm_configuration"])
+            except (KeyError, TypeError, ValueError) as error:
+                raise HTTPException(status_code=422, detail="paused live run has invalid LLM configuration") from error
+            if effective_llm.llm_client_revision != llm_client_revision():
+                raise HTTPException(status_code=409, detail="paused live run requires its original shared-client revision")
+            if not live_lock.acquire(blocking=False):
+                raise HTTPException(status_code=409, detail="another live run is already active")
+        try:
+            fixture = service_desk_fixture(
+                arm,
+                cognition_profile=profile,
+                model=effective_llm.model if effective_llm else SERVICE_DESK_MODEL,
+                reasoning_effort=effective_llm.agent_reasoning_effort if effective_llm else SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
+            )
+            bindings = service_desk_native_bindings(fixture, trace_id_prefix=run_id, model=effective_llm.model, reasoning_effort=effective_llm.agent_reasoning_effort) if effective_llm else service_desk_scripted_bindings(fixture)
+            resumed = run_event_driven_service_desk(fixture, bindings, run_id=run_id, checkpoint=checkpoint)
+        finally:
+            if live:
+                live_lock.release()
         readout = event_driven_service_desk_outcome(resumed)
-        document = build_service_desk_analyst_document(fixture=fixture, result=resumed, readout=readout, profile=profile, arm_id=arm.arm_id, execution="scripted", created_at=str(paused["created_at"]))
+        document = build_service_desk_analyst_document(fixture=fixture, result=resumed, readout=readout, profile=profile, arm_id=arm.arm_id, execution="live" if live else "scripted", created_at=str(paused["created_at"]))
+        document["llm_configuration"] = paused.get("llm_configuration")
         document["continuation"] = {"schema_version": 1, "phase": "causal", "lifecycle": "completed_from_checkpoint", "checkpoint_digest": checkpoint.record_digest}
-        return runs.save(_attach_narration(document, live=False, run_id=run_id, effective_llm=None))
+        return runs.save(_attach_narration(document, live=live, run_id=run_id, effective_llm=effective_llm))
 
     @app.post("/api/runs")
     def run(request_body: RunRequest, request: Request) -> dict[str, object]:
