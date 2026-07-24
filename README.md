@@ -37,6 +37,11 @@ The simulator currently includes:
   including one moment shared with a triager reconsidering without new input;
 - zero-cost scripted reference runs;
 - live LLM runs behind `CYBERNETIC_INFLUENCE_LIVE=1`;
+- typed live-run controls for deployment-certified model routes, model-supported
+  agent reasoning, and a total spend authorization, with the effective policy
+  retained on success or failure;
+- inline explanations of scenario assumptions, known omissions, fidelity
+  questions, maps, analytical scales, narratives, and exact evidence;
 - sequential live-LLM causal-moment narratives grounded in exact causal event
   IDs and informed by the prior moment narratives;
 - a pannable, zoomable, selectable causal graph of people, information, world
@@ -66,6 +71,8 @@ Open <http://127.0.0.1:8620>.
 
 The native LLM path uses the shared `llm_client` checkout installed in the
 environment. Scripted runs require no provider and make no model calls.
+The private Mac host currently advertises only the exact-schema-certified Terra
+route; configured candidates that fail route or full-run evidence stay absent.
 
 The user-facing Service Desk simulation is autonomous and event driven. Its
 initial customer report starts the triager; thereafter, newly delivered

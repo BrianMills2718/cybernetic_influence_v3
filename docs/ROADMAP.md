@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-07-23
+updated: 2026-07-24
 ---
 
 # Cybernetic Influence V3 Roadmap
@@ -27,13 +27,54 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-V0.12.2 is implemented, verified, and deployed on the private Mac development
-host. It adds the separate run-history workspace and stable in-place scale/time
-inspection from UI repair commit
-`c55dddd7de0abb66cf615511a11842a3f0c743e7`, while preserving the V0.12.1
-narrative-fidelity repair from
-`fc985ac89d11a649b1afd232b6620fa05966d8e7` and the V0.12 event-driven behavior
-introduced by `e6c935f6352e937f2307342757f2f04ddaa02285`.
+V0.13 is implemented and deployed as a release candidate on the private Mac
+development host at simulator commit
+`374b2a50d168fb4c16a9ed834157890f89159384` with shared-client revision
+`07b168ff616b079da5be5f7a71555467439a9be5`. It adds typed model/reasoning/spend
+configuration, model-specific reasoning choices, accessible explanations,
+scenario assumptions and omissions, retained effective configuration, and
+pre-call total-budget admission while preserving the V0.12.2 history and
+in-place inspection repairs.
+
+The complete Linux and Mac simulator gates pass: mypy, 57 tests, the production
+React Flow build, and launcher syntax. The shared-client certification seam has
+44 relevant synchronous policy/attempt/route tests passing on the simulator
+environment; seven async-only tests are uncollected there because that
+environment does not install `pytest-asyncio`.
+
+Only `openrouter/openai/gpt-5.6-terra` is currently advertised. Its exact
+participant and narrator schema observations are
+`routeobs1_d9cdaf56c225479422018a8f` and
+`routeobs1_360219087d7a8109c385c817`. The catalog exposes low, medium, and high
+agent reasoning for Terra, defaults to medium, and retains low narrator
+reasoning. Exact scenario mechanisms still make no model call.
+
+The final deployed causal canary `run_7666035b2c17` completed the Service Desk
+baseline with seven medium-reasoning Terra participant calls for
+`$0.033916875`, reached `closed_confirmed` in eight causal moments, and retained
+the selected model, reasoning, authorization, shared-client revision, and each
+call summary. Its first narration call was refused by OpenRouter with a
+key-total-limit 403, so the run truthfully retains narration as unavailable.
+This proves the causal/configuration path but is not a fully narrated final
+canary.
+
+DeepSeek V4 Flash is deliberately absent. On the final shared-client revision,
+high-reasoning certification attempts repeatedly consumed their output
+allowance without returning structured content at both 384 and 512 tokens.
+Earlier observations on superseded revisions do not qualify. Do not advertise
+DeepSeek until fresh exact-schema observations and one complete
+participant-plus-narrator canary pass.
+
+Rendered desktop/mobile certification is also still open: production assets
+build, API/static checks pass, and prior V0.12 browser evidence exists, but both
+headless Chrome and Safari automation hung from the current SSH session. Do not
+upgrade this to a visual pass without a successful current-revision browser
+run.
+
+V0.12.2 remains the last fully narrated and browser-certified release. It adds
+the separate run-history workspace and stable in-place scale/time inspection
+from UI repair commit `c55dddd7de0abb66cf615511a11842a3f0c743e7`,
+while preserving the earlier event-driven and narrative-fidelity behavior.
 
 - three concrete scenario families: Service Desk, physical access, and
   purchase to payment;
@@ -235,7 +276,7 @@ processor-fidelity behavior, and stops at quiescence. Deterministic controls,
 full live traces, deployed UI reopening, and fail-closed credential/access
 checks passed.
 
-### 5. Make one run configurable and self-explanatory — active
+### 5. Make one run configurable and self-explanatory — implemented, acceptance open
 
 Expose model, agent reasoning, and a bounded total-spend authorization through
 one typed request contract and the existing simulator screen. The shared
@@ -246,15 +287,18 @@ explained but remain read-only unless an authored scenario contract actually
 supports changing them.
 
 The active bounded design is
-[Slice 13](plans/013-configurable-explainable-runs.md). It must preserve the
-zero-cost scripted path, apply selected settings to every LLM-modeled person
-and the narrator while leaving exact processes unchanged, retain effective
-configuration and spend evidence, fail before dispatch on invalid settings,
-and pass a deployed live canary for each initially advertised model.
+[Slice 13](plans/013-configurable-explainable-runs.md). Its implementation and
+deterministic gates are complete. Terra passes route/schema certification and
+the deployed causal run, while final narration is blocked by OpenRouter key
+capacity. DeepSeek remains unadvertised after unstable structured output.
+Current-revision rendered browser verification is also open. Slice 13 remains
+the sole active packet until one complete narrated Terra run and a rendered
+desktop/mobile pass are inspected; a second model is promoted only when it
+independently passes the same gates.
 
 ### 6. Add conversational scenario drafting behind a typed compiler — next
 
-After Slice 13 is observed in use, design one representative authoring
+After Slice 13 is completely observed in use, design one representative authoring
 vertical:
 
 ```text

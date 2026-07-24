@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-07-23
+updated: 2026-07-24
 ---
 
 # Implementation Plans
@@ -15,8 +15,11 @@ instructions to continue their former “next slice” sections.
 ## Active packet
 
 [Slice 13: Configurable, explainable runs](013-configurable-explainable-runs.md).
-This is the sole executable next packet. Conversational scenario authoring is
-sequenced in the roadmap but has no active implementation plan yet.
+Its implementation is deployed, but its final narrated Terra canary and
+current-revision rendered browser pass remain open; DeepSeek is intentionally
+unadvertised after failed final-revision probes. This remains the sole active
+packet. Conversational scenario authoring is sequenced in the roadmap but has
+no active implementation plan yet.
 
 ## Completed evidence
 

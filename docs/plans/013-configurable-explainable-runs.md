@@ -3,13 +3,46 @@ doc_role: active_plan
 authority: implementation_plan
 status: active
 created: 2026-07-23
-updated: 2026-07-23
+updated: 2026-07-24
 predecessor: 012-event-driven-purchase-payment.md
 ---
 
 # Slice 13: Configurable, Explainable Runs
 
-**Status: Active design — approved 2026-07-23.**
+**Status: Implemented; deployed acceptance remains open.**
+
+## Current implementation and acceptance state
+
+The configurable-run vertical is implemented and deployed at simulator
+`374b2a50d168fb4c16a9ed834157890f89159384` with shared `llm_client`
+`07b168ff616b079da5be5f7a71555467439a9be5`.
+
+- Linux and Mac gates pass: mypy, 57 tests, production graph build, and launcher
+  syntax.
+- Terra is the only advertised route. Its exact current-revision participant
+  and narrator observations are `routeobs1_d9cdaf56c225479422018a8f` and
+  `routeobs1_360219087d7a8109c385c817`.
+- The deployed causal canary `run_7666035b2c17` completed and reached
+  `closed_confirmed` with seven medium-reasoning Terra calls for
+  `$0.033916875`; all effective settings and calls were retained.
+- Narration then stopped explicitly on an OpenRouter key-total-limit 403. This
+  is retained as unavailable rather than substituted with programmatic prose.
+- DeepSeek V4 Flash remains unadvertised. Final-revision high-reasoning probes
+  repeatedly returned empty structured content at both 384 and 512 output
+  tokens.
+- Current-revision rendered desktop/mobile verification is unproven because
+  both available browser-automation paths hung from the SSH session.
+
+Two shared-client defects found by deployment certification were fixed and
+tested: malformed received JSON now produces a complete validation-retry
+lifecycle (`4e0780d`), and the public certification schema helper now exactly
+matches the runtime provider schema (`07b168f`).
+
+The remaining acceptance packet is deliberately small: fund or replace the
+OpenRouter service key, run and inspect one complete narrated Terra baseline,
+then perform one current-revision desktop/mobile browser pass. A second model
+is not a blocker to honest single-route use; it becomes selectable only after
+its own exact schema and complete canary evidence pass.
 
 ## Route and Outcome
 
@@ -41,7 +74,7 @@ simulator rather than an isolated settings component.
 ## Frozen Target and Critical Flow
 
 Starting state: the deployed Service Desk baseline, live authorization enabled,
-and at least two structured-output routes that have passed the same simulator
+and at least one structured-output route that has passed the same simulator
 agent/narrator schemas in the deployment environment.
 
 Operator flow:
@@ -83,7 +116,7 @@ Non-claims:
 
 ## Current and Target Delta
 
-Current:
+Design-time current:
 
 - `RunRequest` selects only scenario, condition, cognition profile, and
   scripted/live execution;
@@ -94,11 +127,11 @@ Current:
 - the UI uses one prose paragraph for settings and assumptions;
 - retained documents do not expose one normalized effective run-LLM
   configuration;
-- the Linux environment uses `llm_client` main at
-  `de0d2adbfdfb04654ad557a810e6602052f7c5b5`; the deployed Mac uses older
-  ancestor `954a0dd93e4fc19b4165d40ae935d6f6d3887b64`.
+- the original design began with divergent shared-client revisions; both
+  environments now use
+  `07b168ff616b079da5be5f7a71555467439a9be5`.
 
-Target:
+Implemented target:
 
 - one strict `RunLlmOptions` object is accepted by the API and threaded through
   every human binding and sequential narrator call;
@@ -119,7 +152,7 @@ Target:
 |---|---|---|---|
 | Select only eligible models | Shared registry and execution allowlist, deployment model choices, configured credential, structured-output requirement | API model-catalog projection | Positive advertised models; disallowed/unconfigured models rejected before run creation or dispatch |
 | Apply one selected model | Effective run options | Scenario binding factories and narrator | Every retained agent/narrator call names the selected model; exact processes have zero calls |
-| Apply agent reasoning | Effective run options | Native human binding factory | Every human call snapshot records selected reasoning; narrator remains low |
+| Apply agent reasoning | Effective run options and shared model reasoning policy | Native human binding factory and model catalog | Every human call snapshot records a model-supported selected effort; narrator uses the route-specific retained effort |
 | Bound total authorization | Scenario call ceilings, observed cumulative cost, requested total | Run budget coordinator | No next call starts unless its full per-call ceiling fits inside remaining authorization |
 | Explain configuration | API-owned field help and scenario fidelity metadata | Existing run screen | Mouse, touch, and keyboard users can reveal help without leaving the control |
 | Preserve provenance | Requested/effective options, call evidence, observed cost | Run store document | Running, completed, and failed records retain configuration and cost |
@@ -158,10 +191,10 @@ advertised model
   ∩ simulator-schema canary passed
 ```
 
-The deployment-selected set is operator configuration. Initially advertise only
-the current Terra route and DeepSeek V4 Flash after both pass the exact
-simulator schemas on the Mac. Do not expose an arbitrary model text box in this
-slice.
+The deployment-selected set is operator configuration. Treat Terra and
+DeepSeek V4 Flash as candidates, but advertise each independently only after it
+passes the exact simulator schemas on the Mac. Currently only Terra passes. Do
+not expose an arbitrary model text box in this slice.
 
 ### Scenario binding factories
 
@@ -234,7 +267,7 @@ Persist before dispatch:
 ```text
 model
 agent_reasoning_effort
-narrator_reasoning_effort = low
+narrator_reasoning_effort
 max_total_cost
 participant_per_call_ceiling
 narrator_per_call_ceiling
@@ -259,6 +292,9 @@ API projection:
 model
 label
 default
+agent_reasoning_efforts
+default_agent_reasoning_effort
+narrator_reasoning_effort
 structured_output
 availability_basis
 certification_basis
@@ -366,8 +402,8 @@ Implement contract fixtures before UI wiring:
 
 End-to-end acceptance:
 
-- default Terra and DeepSeek V4 Flash each complete one bounded Service Desk
-  baseline on the exact deployed simulator and shared-client revisions;
+- each advertised model completes one bounded Service Desk baseline on the
+  exact deployed simulator and shared-client revisions;
 - every agent and narrator trace records the selected model and expected
   reasoning; exact remediation makes no call;
 - total observed cost is within the selected authorization;
@@ -416,9 +452,8 @@ Dependency: current shared-client execution policy on the Mac.
 - **Known contract:** the simulator consumes public `list_models`,
   `ALLOWED_EXECUTION_MODELS`, structured-output metadata, execution-policy
   validation, and `LLM_CLIENT_REVISION`.
-- **Current discrepancy:** Linux uses clean main
-  `de0d2adbfdfb04654ad557a810e6602052f7c5b5`; the Mac uses ancestor
-  `954a0dd93e4fc19b4165d40ae935d6f6d3887b64`.
+- **Resolved state:** Linux and Mac use clean shared-client revision
+  `07b168ff616b079da5be5f7a71555467439a9be5`.
 - **Resolution:** advance the Mac editable checkout to one approved clean main
   revision, install it into the simulator environment, bind
   `LLM_CLIENT_REVISION`, and run the shared-client policy tests plus simulator
@@ -428,17 +463,16 @@ Dependency: current shared-client execution policy on the Mac.
 
 Dependency: initial advertised route evidence.
 
-- **Blocks:** showing Terra and DeepSeek V4 Flash as selectable rather than
-  merely configured candidates.
+- **Blocks:** showing any configured candidate as selectable.
 - **Known contract:** route certification binds resolved model, upstream
   endpoint, execution mode, schema class/digest, client revision, and retained
   call evidence.
 - **Instrument:** run one bounded native structured probe for the Service Desk
   human decision schema and one for the narrator schema through each candidate
   on the Mac.
-- **Readout:** both schema routes produce parseable validated output with
-  retained provider/attempt evidence; any failing candidate remains absent from
-  the advertised set.
+- **Readout:** both exact schemas for one candidate produce parseable validated
+  output with retained provider/attempt evidence; any failing candidate remains
+  absent from the advertised set.
 - **Promotion:** record the certification basis in `ModelChoice`, then exercise
   the complete simulator canary after UI/API integration.
 
@@ -465,7 +499,8 @@ Do not stop or declare outcome progress here; return directly to Packet B.
 
 - Extend the run card, preview, help disclosures, and retained settings readout.
 - Verify API parity and all UI states.
-- Certify and advertise only Terra and DeepSeek V4 Flash initially.
+- Certify Terra and DeepSeek V4 Flash as candidates, but advertise each only
+  after its own exact-schema evidence passes.
 - Run bounded live canaries, inspect full traces, deploy the exact revision, and
   conduct the stakeholder handoff.
 

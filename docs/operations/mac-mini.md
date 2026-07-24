@@ -21,14 +21,35 @@ service `cybernetic-influence-v3-openrouter`, then an owner-only raw secret file
 when the Keychain is locked to noninteractive services. The credential is not
 stored in the repository or LaunchAgent plist.
 
-The advertised service-desk live path uses the explicit
-`openrouter/openai/gpt-5.6-terra` identity at medium reasoning. The explicit
-provider prefix is required because bare `gpt-5.6-terra` intentionally selects
-the direct OpenAI route in `llm_client`. Runtime contracts cap each participant
-call at $0.05 and participant calls for one run at $0.50. Causal-moment
-narration adds at most $0.02 per bounded moment; the UI advertises the
-conservative combined $0.74 envelope. Typical Service Desk runs quiesce well
-before that bound. Only one live run may execute at a time.
+Last verified 2026-07-24:
+
+- simulator: `374b2a50d168fb4c16a9ed834157890f89159384`;
+- shared client: `07b168ff616b079da5be5f7a71555467439a9be5`;
+- advertised route: Terra only;
+- Terra certification:
+  `routeobs1_d9cdaf56c225479422018a8f,routeobs1_360219087d7a8109c385c817`;
+- final causal canary: `run_7666035b2c17`, completed
+  `closed_confirmed`, seven participant calls, `$0.033916875`;
+- open limitation: narrator call refused by OpenRouter key-total-limit 403.
+
+The currently advertised live route is
+`openrouter/openai/gpt-5.6-terra`. The explicit provider prefix is required
+because bare `gpt-5.6-terra` intentionally selects the direct OpenAI route in
+`llm_client`. The UI exposes Terra agent reasoning at low, medium, or high,
+defaults to medium, and retains low narrator reasoning. Scenario participant
+and narrator calls use a 384-token structured-output ceiling; retained
+successful evidence peaked at 169 and 191 tokens respectively.
+
+Runtime contracts cap each participant call at $0.05 and narration at $0.02 per
+bounded moment. The UI advertises the conservative combined $0.74 envelope.
+Typical Service Desk runs quiesce well before that bound. Only one live run may
+execute at a time.
+
+DeepSeek V4 Flash is a configured candidate, not an advertised route. The
+shared policy supports high reasoning for the exposed DeepSeek agent/narrator
+path, but final-revision structured probes repeatedly returned empty content.
+Do not add `CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH` until fresh exact
+participant and narrator observations plus a complete canary pass.
 
 Purchase-to-payment uses the same explicit model at medium human reasoning and
 low narrator reasoning. Its observation-driven settled and processor-declined
@@ -79,6 +100,27 @@ Install the accepted `llm_client` revision into the simulator environment:
 .venv/bin/python -m pip install -e /Users/b/code/llm_client
 ```
 
+The installed LaunchAgent binds route evidence explicitly:
+
+```text
+LLM_CLIENT_REVISION=<exact shared-client commit>
+LLM_ROUTE_CERTIFICATION_ROOT=/Users/b/Library/Application Support/LLMClient/route_certification
+LLM_CLIENT_TIMEOUT_POLICY=allow
+CYBERNETIC_INFLUENCE_CERT_TERRA=<participant observation>,<narrator observation>
+```
+
+An observation is accepted only when its requested model, exact provider-schema
+digest, shared-client revision, successful transport evidence, and seven-day
+freshness all replay successfully. Registry membership or a configured key is
+not enough.
+
+OpenRouter's generation metadata endpoint is eventually consistent. A
+successful model call may be followed by repeated
+`GET /api/v1/generation?id=...` 404s. This does not invalidate the model
+response, but it prevents route advertisement until the retained logical call,
+generation ID, exact schema, and later metadata are joined. Re-query metadata;
+do not pay to repeat a successful call solely because this lookup lagged.
+
 Provision or replace the provider credential through the Keychain prompt:
 
 ```bash
@@ -106,6 +148,11 @@ sleep 1
 launchctl bootstrap "gui/$(id -u)" \
   ~/Library/LaunchAgents/com.cybernetic-influence.v3.plist
 ```
+
+On this host the first immediate `bootstrap` after `bootout` has intermittently
+returned error 5 while the old job finishes exiting. Wait two seconds and retry
+once, then require `launchctl print` to show `state = running`; do not interpret
+the first error or an empty command result as success.
 
 Reopen an existing retained run after restart before considering the update
 complete. Before advertising live execution, make one bounded provider-backed
