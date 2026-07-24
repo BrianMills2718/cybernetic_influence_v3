@@ -6,11 +6,21 @@ from typing import Any
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
+import pytest
 
+from cybernetic_influence.active_runtime import (
+    ActiveStepResult,
+    ActiveSystemBinding,
+    ScriptedActiveSystem,
+)
 from cybernetic_influence.api import create_app
 from cybernetic_influence.run_store import RunStore
 from cybernetic_influence.scenarios.service_desk import (
+    RuntimePaused,
     run_event_driven_service_desk as original_run_service_desk,
+    service_desk_arm_configurations,
+    service_desk_fixture,
+    service_desk_native_bindings,
     service_desk_scripted_bindings,
 )
 
@@ -670,6 +680,71 @@ def test_scripted_service_desk_pauses_at_a_boundary_and_resumes(
     assert resumed.status_code == 200, resumed.text
     assert resumed.json()["status"] == "completed"
     assert resumed.json()["outcome"]["final_status"] == "closed_confirmed"
+
+
+def test_live_service_desk_resume_reuses_retained_llm_configuration(
+    tmp_path: Path,
+) -> None:
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0],
+        cognition_profile="position_context",
+        model="openrouter/deepseek/deepseek-v4-flash",
+        reasoning_effort="none",
+    )
+    def native_identity_scripted_bindings(item: Any, **kwargs: Any) -> Any:
+        native = service_desk_native_bindings(item, **kwargs)
+        scripted = service_desk_scripted_bindings(item)
+        adapted: dict[str, ActiveSystemBinding] = {}
+        for active_system_id, native_binding in native.items():
+            scripted_binding = scripted[active_system_id]
+
+            def controller(
+                active_input: Any,
+                *,
+                source: Any = scripted_binding,
+                implementation_id: str = native_binding.implementation_id,
+            ) -> ActiveStepResult:
+                result = ActiveStepResult.model_validate(source.implementation.step(active_input))
+                return result.model_copy(update={"proposal": result.proposal.model_copy(update={"implementation_id": implementation_id})})
+
+            adapted[active_system_id] = ActiveSystemBinding(
+                native_binding.implementation_id,
+                ScriptedActiveSystem(native_binding.implementation_id, controller),
+            )
+        return adapted
+
+    bindings = native_identity_scripted_bindings(
+        fixture,
+        trace_id_prefix="run_feed00000000",
+        model="openrouter/deepseek/deepseek-v4-flash",
+        reasoning_effort="none",
+    )
+    with pytest.raises(RuntimePaused) as paused:
+        original_run_service_desk(
+            fixture,
+            bindings,
+            run_id="run_feed00000000",
+            checkpoint_observer=lambda _checkpoint: None,
+            pause_requested=lambda: True,
+        )
+    retained_checkpoint = paused.value.checkpoint
+    RunStore(tmp_path).save({
+        "run_id": "run_feed00000000", "created_at": "2026-07-24T00:00:00+00:00",
+        "status": "paused", "scenario": "service_desk", "arm": "baseline",
+        "profile": "position_context", "execution": "live",
+        "llm_configuration": {"model": "openrouter/deepseek/deepseek-v4-flash", "agent_reasoning_effort": "none", "narrator_reasoning_effort": "none", "max_total_cost": 0.20, "participant_per_call_ceiling": 0.05, "narrator_per_call_ceiling": 0.02, "maximum_participant_calls": 48, "maximum_narrator_calls": 12, "selection_basis": "operator_selected", "llm_client_revision": "test-client"},
+        "continuation": {"checkpoint": retained_checkpoint.model_dump(mode="json")},
+    })
+    captured: list[tuple[str, str]] = []
+    with (
+        patch.dict("os.environ", {"LLM_CLIENT_REVISION": "test-client"}),
+        patch("cybernetic_influence.api.service_desk_native_bindings", side_effect=lambda item, **kwargs: (captured.append((kwargs["model"], kwargs["reasoning_effort"])) or native_identity_scripted_bindings(item, **kwargs))),
+        patch("cybernetic_influence.api.narrate_live_moments", return_value={"status": "completed", "model_calls": 0, "cost": 0.0, "moments": [], "calls": []}),
+    ):
+        response = client(tmp_path).post("/api/runs/run_feed00000000/resume")
+    assert response.status_code == 200, response.text
+    assert captured == [("openrouter/deepseek/deepseek-v4-flash", "none")]
+    assert response.json()["status"] == "completed"
 
 
 def test_optional_tailscale_identity_allowlist_guards_run_evidence(
