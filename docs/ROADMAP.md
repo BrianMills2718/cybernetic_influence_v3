@@ -27,8 +27,9 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-V0.12.2 is implemented and verified locally. It adds the separate run-history
-workspace and stable in-place scale/time inspection from UI repair commit
+V0.12.2 is implemented, verified, and deployed on the private Mac development
+host. It adds the separate run-history workspace and stable in-place scale/time
+inspection from UI repair commit
 `c55dddd7de0abb66cf615511a11842a3f0c743e7`, while preserving the V0.12.1
 narrative-fidelity repair from
 `fc985ac89d11a649b1afd232b6620fa05966d8e7` and the V0.12 event-driven behavior
@@ -120,10 +121,9 @@ yet supported. The UI is technically reviewable; operator comprehension and
 analytical usefulness remain under iterative stakeholder review rather than
 being treated as proven.
 
-Technical execution is established locally for V0.12.2. Deployment freshness
-must be verified separately before the private Mac simulator is described as
-running this version. Stakeholder comprehension and analytical usefulness of
-the autonomous purchase-to-payment vertical have not yet been observed.
+Technical execution is established for V0.12.2 locally and on the private Mac
+development host. Stakeholder comprehension and analytical usefulness of the
+autonomous purchase-to-payment vertical have not yet been observed.
 
 ## Canonical MVP Probe
 
