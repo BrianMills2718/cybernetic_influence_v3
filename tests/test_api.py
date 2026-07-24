@@ -26,7 +26,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     api = client(tmp_path)
     config = api.get("/api/config")
     assert config.status_code == 200
-    assert config.json()["version"] == "0.9.0"
+    assert config.json()["version"] == "0.10.0"
     assert config.json()["build_commit"] == "development"
     assert config.json()["model"] == "openrouter/openai/gpt-5.6-terra"
     assert config.json()["reasoning_effort"] == "medium"
@@ -82,8 +82,11 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
     assert body["outcome"]["causal_moment_count"] < body["outcome"][
         "participant_activation_count"
     ]
-    assert body["outcome"]["remediation_moment"] == 2
-    assert body["outcome"]["confirmed_closure_moment"] == 4
+    assert body["time_unit"] == "second"
+    assert body["outcome"]["remediation_moment"] == 5
+    assert body["outcome"]["confirmed_closure_moment"] == 7
+    assert body["outcome"]["autonomous_activation_count"] == 3
+    assert body["outcome"]["exact_process_activation_count"] == 3
     assert any(
         len({trace["person"] for trace in body["traces"] if trace["activation"] == activation})
         > 1
@@ -94,7 +97,36 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
         "triager",
         "specialist",
         "supervisor",
+        "remediation_process",
     }
+    autonomous_triager = next(
+        trace
+        for trace in body["traces"]
+        if trace["person"] == "triager"
+        and any(
+            cause["kind"] == "internal_wake"
+            for cause in trace["activation_causes"]
+        )
+    )
+    assert autonomous_triager["observations"] == []
+    process_traces = [
+        trace
+        for trace in body["traces"]
+        if trace["person"] == "remediation_process"
+    ]
+    assert len(process_traces) == 3
+    assert all(
+        trace["participant_kind"] == "state_machine"
+        and trace["model_call_count"] == 0
+        for trace in process_traces
+    )
+    process_action = next(
+        event
+        for event in body["timeline"]
+        if event["summary"]
+        == "Exact remediation process advanced the invalidation."
+    )
+    assert process_action["person"] == "remediation_process"
     assert any(node["id"] == "incident_17" for node in body["nodes"])
     assert body["events"]
     assert body["snapshots"]

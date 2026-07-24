@@ -27,7 +27,7 @@ claim to reproduce every omitted computation or predict a real system.
 
 Stage: MVP/PoC.
 
-Technically observed on the private Mac development host:
+V0.10 candidate behavior observed locally:
 
 - two concrete scenario families: Service Desk and physical access;
 - exact mechanisms separated from LLM-modeled people;
@@ -35,14 +35,20 @@ Technically observed on the private Mac development host:
 - spatial topology separated from communication, capability, and permission;
 - execution-inert aggregate graph views;
 - retained causal traces and sequential LLM causal-moment narration;
-- live Service Desk baseline with five causal moments, including one frozen
-  two-person activation set.
+- autonomous due-set scheduling with scenario-declared integer time;
+- a Service Desk baseline with eight causal moments, including a human
+  internal wake with no new observation and a three-phase exact process with
+  no model calls;
+- one frozen simulated-second-1 activation set shared by that person and
+  process.
 
-Current limitation: the V0.9 Service Desk activates people initially or after a
-new external observation. It does not yet support autonomous internal wakes,
-ongoing activities, or heterogeneous process timescales. The UI is technically
-reviewable; operator comprehension and analytical usefulness remain under
-iterative stakeholder review rather than being treated as proven.
+The private Mac remains on the last verified V0.9 build until the V0.10
+candidate completes its bounded live canary and exact-revision deployment
+checks. The causal core also still drains one action's complete routed cascade
+before accepting another; arbitrary interleaving within nonzero-delay routes is
+not yet supported. The UI is technically reviewable; operator comprehension
+and analytical usefulness remain under iterative stakeholder review rather
+than being treated as proven.
 
 ## Canonical MVP Probe
 
@@ -66,8 +72,9 @@ than invented access; speed pressure may produce an attempted unsafe action but
 exact mechanisms must still deny it.
 
 Non-claims: this probe does not establish realistic organizations, general
-human psychology, autonomous unsignaled behavior, continuous time, or fidelity
-outside its stipulated service workflow.
+human psychology, calibrated human timing, arbitrary delayed-route
+interleaving, continuous time, or fidelity outside its stipulated service
+workflow.
 
 ## Binding Architectural Direction
 
@@ -82,22 +89,25 @@ outside its stipulated service workflow.
 
 ## Critical Path
 
-### 1. Autonomous multirate temporal substrate — next
+### 1. Autonomous multirate temporal substrate — candidate implemented
 
-Add integer scenario time, scheduled process wakes, delayed arrivals, activation
-causes, and due-set causal moments to one existing scenario. Preserve exact
-mechanism adjudication, replay, budgets, and narrative evidence.
+Integer scenario time, scheduled process wakes, recorded observation-arrival
+times, activation causes, and due-set causal moments now exist in the Service
+Desk candidate. Exact mechanism adjudication, replay, budgets, and narrative
+evidence remain in place.
 
-Success means a person can act because of a retained intention or elapsed time
-without an external delivery, while a faster state-machine process can update
-many times without causing human-scale LLM calls at its frequency.
+Local acceptance demonstrates a person acting from a retained scheduled
+intention without an external delivery, while a faster state-machine process
+updates three times without model calls. Promotion awaits the bounded live
+trace and Mac deployment check.
 
 ### 2. Validate one autonomous representative scenario
 
-Extend an existing scenario with an ongoing activity, an internally scheduled
-reconsideration, and at least two process timescales. Inspect whether the trace
-clearly distinguishes simulated time, process updates, causal moments, and exact
-events. This remains an integrated outcome check, not a scheduler bakeoff.
+Run the autonomous Service Desk with live people and sequential live narration.
+Inspect whether the exact retained trace distinguishes simulated time, internal
+wakes, process updates, causal moments, and exact events without invented
+information access. This remains an integrated outcome check, not a scheduler
+bakeoff.
 
 ### 3. Introduce a surrogate boundary only on demand
 

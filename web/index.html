@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=causal-moments-v1">
-  <link rel="stylesheet" href="/assets/graph-canvas.css?v=causal-moments-v1">
+  <link rel="stylesheet" href="/assets/styles.css?v=multirate-time-v1">
+  <link rel="stylesheet" href="/assets/graph-canvas.css?v=multirate-time-v1">
 </head>
 <body>
   <header>
@@ -54,7 +54,7 @@
       <section class="timeline-panel">
         <span class="eyebrow">Causal time</span>
         <h2>Choose a moment</h2>
-        <p class="muted">The map, account, and inspector stay synchronized with this selected causal step.</p>
+        <p class="muted">The map, account, and inspector stay synchronized with this moment. Simulated time may advance unevenly because each process follows its own cadence.</p>
         <div class="timeline-controls">
           <button id="previous-event" aria-label="Previous event">←</button>
           <input id="event-slider" type="range" min="0" value="0" aria-label="Selected causal event">
@@ -97,8 +97,8 @@
       </section>
 
       <section>
-        <span class="eyebrow">Person traces</span>
-        <h2>What each person perceived and did</h2>
+        <span class="eyebrow">Participant traces</span>
+        <h2>What each person or exact process received and did</h2>
         <div id="trace-tabs" class="tabs"></div>
         <div id="trace"></div>
       </section>
@@ -116,7 +116,7 @@
       <p id="storage-warning" class="warning" hidden></p>
     </details>
   </main>
-  <script src="/assets/graph-canvas.js?v=causal-moments-v1"></script>
-  <script src="/assets/app.js?v=causal-moments-v1"></script>
+  <script src="/assets/graph-canvas.js?v=multirate-time-v1"></script>
+  <script src="/assets/app.js?v=multirate-time-v1"></script>
 </body>
 </html>

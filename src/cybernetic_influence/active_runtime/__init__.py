@@ -28,10 +28,12 @@ from cybernetic_influence.active_runtime.models import (
     ActiveSystemInput,
     ActiveSystemSpec,
     ActiveSystemState,
+    ActivationCause,
     ActivationAttemptRecord,
     ModelCallEvidence,
     RUNTIME_CONTRACT,
     SCHEMA_VERSION,
+    UpdateScheduleDirective,
 )
 from cybernetic_influence.active_runtime.protocol import (
     ActiveSystemBinding,
@@ -54,6 +56,7 @@ __all__ = [
     "ActiveSystemInput",
     "ActiveSystemSpec",
     "ActiveSystemState",
+    "ActivationCause",
     "ActivationAttemptRecord",
     "LlmDecision",
     "LlmActionDecision",
@@ -67,6 +70,7 @@ __all__ = [
     "RUNTIME_CONTRACT",
     "SCHEMA_VERSION",
     "ScriptedActiveSystem",
+    "UpdateScheduleDirective",
     "bound_native_llm_implementation_id",
     "native_llm_configuration_digest",
     "render_llm_prompts",

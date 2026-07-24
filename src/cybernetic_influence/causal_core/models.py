@@ -600,6 +600,7 @@ class CausalScenario(_StrictModel):
     schema_version: Literal[2] = 2
     scenario_id: str = Field(pattern=_ID_PATTERN)
     description: str = Field(min_length=1)
+    time_unit: str = Field(default="step", pattern=_ID_PATTERN)
     initial_state: CausalState
     analytical_boundaries: list[AnalyticalBoundary] = Field(default_factory=list)
     fidelity_questions: list[str] = Field(min_length=1)
@@ -971,6 +972,7 @@ class CausalCheckpoint(_StrictModel):
     scenario_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
     scenario_execution_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
     run_id: str = Field(pattern=_ID_PATTERN)
+    time_unit: str = Field(pattern=_ID_PATTERN)
     max_effects: int = Field(ge=1)
     max_zero_time_depth: int = Field(ge=0)
     state: CausalState
@@ -993,6 +995,7 @@ class CausalCheckpoint(_StrictModel):
             self.events,
             scenario_id=self.scenario_id,
             scenario_execution_fingerprint=self.scenario_execution_fingerprint,
+            time_unit=self.time_unit,
             max_effects=self.max_effects,
             max_zero_time_depth=self.max_zero_time_depth,
         )
@@ -1040,6 +1043,7 @@ class CausalRunResult(_StrictModel):
     scenario_id: str = Field(pattern=_ID_PATTERN)
     scenario_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
     scenario_execution_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
+    time_unit: str = Field(pattern=_ID_PATTERN)
     max_effects: int = Field(ge=1)
     max_zero_time_depth: int = Field(ge=0)
     status: Literal["completed"] = "completed"
@@ -1061,6 +1065,7 @@ class CausalRunResult(_StrictModel):
             self.events,
             scenario_id=self.scenario_id,
             scenario_execution_fingerprint=self.scenario_execution_fingerprint,
+            time_unit=self.time_unit,
             max_effects=self.max_effects,
             max_zero_time_depth=self.max_zero_time_depth,
         )
@@ -1309,6 +1314,7 @@ def _validate_run_binding(
     *,
     scenario_id: str,
     scenario_execution_fingerprint: str,
+    time_unit: str,
     max_effects: int,
     max_zero_time_depth: int,
 ) -> None:
@@ -1318,6 +1324,7 @@ def _validate_run_binding(
         "scenario_id": scenario_id,
         "runtime_contract": RUNTIME_CONTRACT,
         "scenario_execution_fingerprint": scenario_execution_fingerprint,
+        "time_unit": time_unit,
         "max_effects": max_effects,
         "max_zero_time_depth": max_zero_time_depth,
     }

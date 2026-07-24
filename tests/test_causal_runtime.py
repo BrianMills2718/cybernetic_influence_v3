@@ -2,10 +2,19 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 
 import pytest
 
+from cybernetic_influence.active_runtime import (
+    ActiveSystemBinding,
+    ActiveStepResult,
+    ActiveSystemInput,
+    ParticipantContractError,
+    ScriptedActiveSystem,
+    UpdateScheduleDirective,
+)
 from cybernetic_influence.active_runtime.llm import render_llm_prompts
 from cybernetic_influence.causal_core.engine import (
     CausalSession,
@@ -90,6 +99,7 @@ def test_service_desk_replay_reconstructs_exact_final_state() -> None:
         service_desk_arm_configurations()[0],
         cognition_profile="position_context",
         reasoning_effort="medium",
+        multirate=False,
     )
     result = run_service_desk(
         fixture,
@@ -112,7 +122,9 @@ def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state()
         run_id="service_desk_event_driven_gate",
     )
     joint = next(
-        attempt for attempt in result.attempts if len(attempt.participants) == 2
+        attempt
+        for attempt in result.attempts
+        if attempt.declared_active_system_ids == ["supervisor", "triager"]
     )
     assert joint.declared_active_system_ids == ["supervisor", "triager"]
     observations = {
@@ -131,9 +143,115 @@ def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state()
         and participant.input.logical_time == joint.logical_time
         for participant in joint.participants
     )
+    autonomous_joint = next(
+        attempt
+        for attempt in result.attempts
+        if attempt.declared_active_system_ids
+        == ["remediation_process", "triager"]
+    )
+    assert autonomous_joint.logical_time == 1
+    assert all(
+        participant.input.observations == []
+        and [
+            cause.kind for cause in participant.input.activation_causes
+        ]
+        == ["internal_wake"]
+        for participant in autonomous_joint.participants
+    )
+    assert len(
+        {
+            participant.input.logical_time
+            for participant in autonomous_joint.participants
+        }
+    ) == 1
+    process_attempts = [
+        participant
+        for attempt in result.attempts
+        for participant in attempt.participants
+        if participant.requested_active_system_id
+        == "remediation_process"
+    ]
+    assert len(process_attempts) == 3
+    assert all(not participant.call_evidence for participant in process_attempts)
+    assert result.final_states["remediation_process"].next_update_at is None
     assert result.core_result.final_state.fact(
         "incident_17.status"
     ).value == "closed_confirmed"
+
+
+def test_multirate_scheduler_rejects_nonfuture_process_update() -> None:
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0],
+        cognition_profile="position_context",
+        reasoning_effort="medium",
+    )
+    bindings = service_desk_scripted_bindings(fixture)
+    original = bindings["triager"]
+
+    def bad_schedule(active_input: ActiveSystemInput) -> ActiveStepResult:
+        result = ActiveStepResult.model_validate(
+            original.implementation.step(active_input)
+        )
+        proposal = result.proposal.model_copy(
+            update={
+                "update_schedule": UpdateScheduleDirective(
+                    mode="schedule",
+                    next_update_at=0,
+                )
+            }
+        )
+        return result.model_copy(update={"proposal": proposal})
+
+    bindings["triager"] = ActiveSystemBinding(
+        original.implementation_id,
+        ScriptedActiveSystem(
+            original.implementation_id,
+            bad_schedule,
+        ),
+    )
+    with pytest.raises(
+        ParticipantContractError,
+        match="scheduled a non-future update",
+    ):
+        run_event_driven_service_desk(
+            fixture,
+            bindings,
+            run_id="service_desk_bad_internal_schedule",
+        )
+def test_future_delivery_waits_for_its_recorded_arrival_time() -> None:
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0],
+        cognition_profile="position_context",
+        reasoning_effort="medium",
+    )
+    scenario = fixture.scenario.model_copy(deep=True)
+    scenario.initial_state.connections[
+        "specialist_to_remediation"
+    ].delay = 5
+    delayed_fixture = replace(fixture, scenario=scenario)
+    result = run_event_driven_service_desk(
+        delayed_fixture,
+        service_desk_scripted_bindings(delayed_fixture),
+        run_id="service_desk_delayed_remediation",
+    )
+    first_process = next(
+        participant
+        for attempt in result.attempts
+        for participant in attempt.participants
+        if participant.requested_active_system_id
+        == "remediation_process"
+    )
+    assert first_process.input.logical_time == 5
+    assert [
+        observation.logical_time
+        for observation in first_process.input.observations
+    ] == [5]
+    assert all(
+        observation.logical_time <= participant.input.logical_time
+        for attempt in result.attempts
+        for participant in attempt.participants
+        for observation in participant.input.observations
+    )
 
 
 def test_mechanism_credentials_do_not_enter_agent_prompts() -> None:
@@ -141,6 +259,7 @@ def test_mechanism_credentials_do_not_enter_agent_prompts() -> None:
         service_desk_arm_configurations()[0],
         cognition_profile="position_context",
         reasoning_effort="medium",
+        multirate=False,
     )
     result = run_service_desk(
         fixture,

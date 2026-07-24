@@ -121,6 +121,7 @@ pre { max-height:520px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywh
 .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
 .tabs button.active { border-color:var(--accent); color:var(--accent); }
 .trace-step { margin:10px 0; padding:12px; border-left:3px solid var(--accent); background:var(--surface2); }
+.trace-step > small { display:block; color:var(--muted); margin:2px 0 8px; }
 .trace-step p { color:var(--muted); }
 .trace-step.event-match { border-color:#fff; background:#203b56; }
 .advanced { padding:18px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }

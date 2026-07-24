@@ -1,6 +1,6 @@
 # ADR 010: Autonomous Multirate Process Time
 
-**Status:** Accepted direction — 2026-07-23. Implementation planned.
+**Status:** Accepted and implemented for the Service Desk MVP — 2026-07-23.
 
 ## Decision
 
@@ -56,14 +56,22 @@ agency.
   clocks. Concrete people, documents, records, software, and mechanisms change;
   organizational-scale dynamics are derived from those changes.
 
-## MVP Boundary
+## Implemented MVP Boundary
 
-The next temporal slice should add only integer simulation time,
-`next_update_at`, `arrives_at`, activation causes, and due-set scheduling to one
-existing scenario. It should retain the current exact trace and narration
-step-down.
+V0.10 adds integer scenario time, `next_update_at`, recorded observation arrival
+times, explicit activation causes, and due-set scheduling to the Service Desk.
+The representative trajectory includes a human internal wake with no new
+observation and a three-phase exact remediation process with no model calls.
+The exact trace, replay, budgets, causal graph, participant inspector, and
+sequential narration retain the simulated time and reason for each activation.
+
+The causal core still drains the complete typed cascade from one accepted
+action before accepting another. Therefore this slice does not claim arbitrary
+interleaving of unrelated processes inside a nonzero-delay route cascade; the
+representative scenario uses zero-delay routes and scheduled process wakes.
+Adding a resumable future-effect queue is a separate bounded change if a
+concrete scenario requires that interleaving.
 
 Do not yet add continuous-time solvers, speculative parallel execution,
 rollback, generalized process algebra, automatic attention models, or a
-universal library of clocks. The current observation-triggered Service Desk
-remains usable until this bounded replacement is implemented.
+universal library of clocks.

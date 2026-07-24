@@ -19,6 +19,7 @@ from cybernetic_influence.active_runtime.models import (
     ActiveSystemInput,
     ActiveSystemSpec,
     ActiveSystemState,
+    ActivationCause,
     ActivationAttemptRecord,
     ExecutionBudget,
     ModelCallEvidence,
@@ -68,6 +69,19 @@ class _CollectedParticipant:
     assigned_action_ids: list[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class DueActivation:
+    """One derived earliest timestamp and every process due at that time."""
+
+    logical_time: int
+    causes: dict[str, tuple[ActivationCause, ...]]
+
+    @property
+    def active_system_ids(self) -> list[str]:
+        """Return the due participant set in canonical order."""
+        return sorted(self.causes)
+
+
 class ActiveRuntimeSession:
     """One canonical active run composing a single exact causal-core session."""
 
@@ -104,6 +118,7 @@ class ActiveRuntimeSession:
                 entity_id=spec.entity_id,
                 implementation_id=spec.implementation_id,
                 private_state=spec.initial_private_state,
+                next_update_at=spec.initial_next_update_at,
             )
             for active_system_id, spec in self._specs.items()
         }
@@ -155,6 +170,91 @@ class ActiveRuntimeSession:
                     pending.append(active_system_id)
             return sorted(pending)
 
+    def next_due_activation(self) -> DueActivation | None:
+        """Return the earliest observation or internal wake as one frozen set."""
+        with self._lock:
+            due_candidates: dict[str, int] = {}
+            pending_observations: dict[str, list[ActiveObservation]] = {}
+            core_state = self._core.state
+            for active_system_id, spec in self._specs.items():
+                state = self._states[active_system_id]
+                consumed = set(state.consumed_observation_ids)
+                declared_ports = set(spec.observation_port_ids)
+                observations = [
+                    ActiveObservation(
+                        observation_id=observation.observation_id,
+                        via_port_id=observation.via_port_id,
+                        apparent_content=observation.apparent_content,
+                        apparent_source_ref=observation.apparent_source_ref,
+                        representation_id=observation.representation_id,
+                        logical_time=observation.logical_time,
+                    )
+                    for observation_id in core_state.inboxes.get(
+                        spec.entity_id, []
+                    )
+                    if observation_id not in consumed
+                    and (
+                        observation := core_state.observations[observation_id]
+                    ).via_port_id
+                    in declared_ports
+                ]
+                pending_observations[active_system_id] = observations
+                times = [item.logical_time for item in observations]
+                if state.next_update_at is not None:
+                    times.append(state.next_update_at)
+                if times:
+                    due_candidates[active_system_id] = min(times)
+            if not due_candidates:
+                return None
+
+            earliest = min(due_candidates.values())
+            logical_time = max(earliest, core_state.logical_time)
+            causes: dict[str, tuple[ActivationCause, ...]] = {}
+            for active_system_id in sorted(due_candidates):
+                state = self._states[active_system_id]
+                observations = [
+                    item
+                    for item in pending_observations[active_system_id]
+                    if item.logical_time <= logical_time
+                ]
+                due_for_observation = bool(observations)
+                due_for_wake = (
+                    state.next_update_at is not None
+                    and state.next_update_at <= logical_time
+                )
+                if not due_for_observation and not due_for_wake:
+                    continue
+                participant_causes: list[ActivationCause] = []
+                if observations:
+                    participant_causes.append(
+                        ActivationCause(
+                            kind="observation_delivery",
+                            scheduled_for=logical_time,
+                            observation_ids=sorted(
+                                item.observation_id for item in observations
+                            ),
+                            description=(
+                                "One or more declared observations became "
+                                "available to this process."
+                            ),
+                        )
+                    )
+                if due_for_wake:
+                    participant_causes.append(
+                        ActivationCause(
+                            kind="internal_wake",
+                            scheduled_for=logical_time,
+                            description=(
+                                "A retained internal update became due without "
+                                "requiring a new external observation."
+                            ),
+                        )
+                    )
+                causes[active_system_id] = tuple(participant_causes)
+            if not causes:  # pragma: no cover - guarded by candidate construction
+                raise AssertionError("due activation has no due participants")
+            return DueActivation(logical_time=logical_time, causes=causes)
+
     @property
     def attempts(self) -> list[ActivationAttemptRecord]:
         """Return defensive protected activation-attempt evidence."""
@@ -178,6 +278,9 @@ class ActiveRuntimeSession:
         active_system_ids: Sequence[str],
         *,
         logical_time: int,
+        activation_causes: Mapping[
+            str, Sequence[ActivationCause]
+        ] | None = None,
     ) -> ActivationAttemptRecord:
         """Collect one frozen participant set and atomically commit all proposals."""
         with self._lock:
@@ -196,6 +299,40 @@ class ActiveRuntimeSession:
                 )
             if logical_time < self._core.state.logical_time:
                 raise ParticipantContractError("activation logical time regresses")
+            if activation_causes is None:
+                validated_causes = {
+                    active_system_id: [
+                        ActivationCause(
+                            kind="manual_schedule",
+                            scheduled_for=logical_time,
+                            description=(
+                                "A caller explicitly requested this legacy or "
+                                "scenario-authored activation."
+                            ),
+                        )
+                    ]
+                    for active_system_id in supplied_ids
+                }
+            else:
+                if set(activation_causes) != set(supplied_ids):
+                    raise ParticipantContractError(
+                        "activation-cause registry does not match participant set"
+                    )
+                validated_causes = {
+                    active_system_id: [
+                        ActivationCause.model_validate(
+                            cause.model_dump(mode="json")
+                            if isinstance(cause, ActivationCause)
+                            else cause
+                        )
+                        for cause in activation_causes[active_system_id]
+                    ]
+                    for active_system_id in supplied_ids
+                }
+                if any(not causes for causes in validated_causes.values()):
+                    raise ParticipantContractError(
+                        "every participant requires an activation cause"
+                    )
             self._require_spend_observable()
 
             canonical_ids = sorted(supplied_ids)
@@ -209,6 +346,7 @@ class ActiveRuntimeSession:
                         pre_core,
                         activation_id=activation_id,
                         logical_time=logical_time,
+                        activation_causes=validated_causes[active_system_id],
                     )
                 )
                 for active_system_id in canonical_ids
@@ -471,6 +609,7 @@ class ActiveRuntimeSession:
         *,
         activation_id: str,
         logical_time: int,
+        activation_causes: Sequence[ActivationCause],
     ) -> ActiveSystemInput:
         """Project only declared, agent-visible data from the frozen checkpoint."""
         consumed = set(active_state.consumed_observation_ids)
@@ -481,6 +620,8 @@ class ActiveRuntimeSession:
             for observation_id in observation_ids
             if observation_id not in consumed
             and core.state.observations[observation_id].via_port_id in declared_ports
+            and core.state.observations[observation_id].logical_time
+            <= logical_time
         ]
         if len(observations) > self._config.max_observations_per_system:
             raise ParticipantContractError(
@@ -504,6 +645,9 @@ class ActiveRuntimeSession:
             active_system_id=spec.active_system_id,
             entity_id=spec.entity_id,
             logical_time=logical_time,
+            time_unit=self._scenario.time_unit,
+            activation_causes=list(activation_causes),
+            next_update_at=active_state.next_update_at,
             observations=active_observations,
             action_interfaces=project_action_interfaces(
                 spec,
@@ -619,6 +763,18 @@ class ActiveRuntimeSession:
                 raise ParticipantContractError(
                     f"active system {active_system_id!r} private state exceeds limit"
                 )
+            if (
+                proposal.update_schedule.mode == "schedule"
+                and (
+                    proposal.update_schedule.next_update_at is None
+                    or proposal.update_schedule.next_update_at
+                    <= item.active_input.logical_time
+                )
+            ):
+                raise ParticipantContractError(
+                    f"active system {active_system_id!r} scheduled a non-future "
+                    "update"
+                )
             interfaces = {
                 surface.output_port_id: surface
                 for surface in item.active_input.action_interfaces
@@ -667,8 +823,35 @@ class ActiveRuntimeSession:
                 activation_count=before.activation_count + 1,
                 private_state=proposal.private_state,
                 consumed_observation_ids=consumed,
+                next_update_at=self._resolve_next_update_at(
+                    before.next_update_at,
+                    proposal,
+                    logical_time=item.active_input.logical_time,
+                ),
             )
         return output
+
+    @staticmethod
+    def _resolve_next_update_at(
+        prior: int | None,
+        proposal: ActiveProposal,
+        *,
+        logical_time: int,
+    ) -> int | None:
+        """Apply a proposal's scheduling directive after consuming a due wake."""
+        directive = proposal.update_schedule
+        if directive.mode == "schedule":
+            if (
+                directive.next_update_at is None
+                or directive.next_update_at <= logical_time
+            ):
+                raise ParticipantContractError(
+                    "scheduled update must be strictly in the future"
+                )
+            return directive.next_update_at
+        if directive.mode == "dormant":
+            return None
+        return prior if prior is not None and prior > logical_time else None
 
     @staticmethod
     def _materialize_action(

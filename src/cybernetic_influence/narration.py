@@ -198,6 +198,11 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
                         key: trace[key]
                         for key in (
                             "person",
+                            "participant_kind",
+                            "activation_causes",
+                            "scheduled_update_before",
+                            "update_schedule",
+                            "model_call_count",
                             "orientation",
                             "actions",
                             "observations",

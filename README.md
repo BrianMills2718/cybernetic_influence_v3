@@ -25,9 +25,11 @@ The simulator currently includes:
   links whose existence never implies permission or successful traversal;
 - personal-disposition plus remembered-position cognition;
 - an explicit procedural control profile;
-- event-triggered causal moments: everyone with newly delivered observations
-  decides from the same frozen pre-moment state, while individual activations
-  remain inspectable;
+- autonomous multirate causal moments: each person or exact process may wake
+  from delivered information or retained internal timing, and everyone due at
+  one timestamp receives the same frozen pre-moment state;
+- an exact three-phase remediation process that advances without model calls,
+  including one moment shared with a triager reconsidering without new input;
 - zero-cost scripted reference runs;
 - live LLM runs behind `CYBERNETIC_INFLUENCE_LIVE=1`;
 - sequential live-LLM causal-moment narratives grounded in exact causal event
@@ -39,7 +41,7 @@ The simulator currently includes:
 - reversible execution-inert aggregate views with explicit information-loss
   counts, expanded composite hulls, and one-step return to exact evidence at
   the same revision;
-- event-focused graph nodes, routes, and person traces;
+- event-focused graph nodes, routes, and participant traces;
 - event-revision snapshots rather than final-state leakage into earlier events;
 - analyst-safe evidence that redacts mechanism-only values and protected
   representation content;
@@ -59,17 +61,21 @@ Open <http://127.0.0.1:8620>.
 The native LLM path uses the shared `llm_client` checkout installed in the
 environment. Scripted runs require no provider and make no model calls.
 
-The user-facing Service Desk simulation is event driven. Its initial customer
-report activates the triager; thereafter, newly delivered observations trigger
-the next frozen activation set. Agents without a trigger are not called merely
-because their place in a rotation arrived. The older fixed nine-activation
+The user-facing Service Desk simulation is autonomous and event driven. Its
+initial customer report starts the triager; thereafter, newly delivered
+observations and retained `next_update_at` intentions form the next frozen
+activation set. A person can therefore reconsider without a new message, while
+an exact state-machine controller can advance more often without paying for an
+LLM call. The UI and narrator expose each moment's simulated time, time unit,
+participant kind, and activation cause. The older fixed nine-activation
 schedule remains only inside the closed fidelity-report harness so historical
 comparison evidence retains its original sampling contract.
 
-This observation-triggered scheduler is a transitional MVP implementation. The
-accepted direction is autonomous multirate process time: agents and other
-stateful processes can update from internal as well as external causes, each at
-its own meaningful timescale. See
+This MVP does not yet interleave unrelated processes inside one exact action's
+nonzero-delay causal cascade; the representative Service Desk uses zero-delay
+message routes and explicit scheduled process wakes. General asynchronous
+channel interleaving is a future causal-core extension, not a claimed result of
+this slice. See
 [ADR 010](docs/adr/010-autonomous-multirate-process-time.md).
 
 Runs are retained under `artifacts/runs/`. Override that location with

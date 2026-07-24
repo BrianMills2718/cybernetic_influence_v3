@@ -585,6 +585,12 @@ def render_llm_prompts(
         "active_system_id": validated.active_system_id,
         "entity_id": validated.entity_id,
         "logical_time": validated.logical_time,
+        "time_unit": validated.time_unit,
+        "activation_causes": [
+            item.model_dump(mode="json")
+            for item in validated.activation_causes
+        ],
+        "next_update_at": validated.next_update_at,
         "persona": persona,
         "memory": [item.model_dump(mode="json") for item in private_memory.memory],
         "observations": [

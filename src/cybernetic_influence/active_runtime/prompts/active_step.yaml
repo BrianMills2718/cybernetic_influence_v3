@@ -20,7 +20,16 @@ system: |
   actor, action, event, and time identities after validating all participants.
   Do not invent those identities. Respond only with JSON matching the schema.
 user: |
-  Logical time: {{ logical_time }}
+  Simulated time: {{ logical_time }} {{ time_unit }}(s)
+
+  Why you are active now:
+  {% for cause in activation_causes %}
+  - {{ cause.kind }}: {{ cause.description }}
+    {% if cause.observation_ids %}observations: {{ cause.observation_ids | join(", ") }}{% endif %}
+  {% endfor %}
+
+  Your currently retained next update:
+  {% if next_update_at is not none %}{{ next_update_at }} {{ time_unit }}(s){% else %}(none){% endif %}
 
   Your committed private memory:
   {% for entry in memory %}

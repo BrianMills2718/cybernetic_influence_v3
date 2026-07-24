@@ -32,6 +32,12 @@ _ID_PATTERN = r"^[a-z][a-z0-9_]*$"
 _DIGEST_PATTERN = r"^[0-9a-f]{64}$"
 _ACTIVATION_PATTERN = r"^activation_[0-9]{6}$"
 _UNPRICED_COST_SOURCES = frozenset({"unavailable", "unspecified"})
+ActivationCauseKind = Literal[
+    "scenario_start",
+    "observation_delivery",
+    "internal_wake",
+    "manual_schedule",
+]
 
 
 class _StrictModel(BaseModel):
@@ -78,6 +84,7 @@ class ActiveSystemSpec(_StrictModel):
     """
     initial_representation_ids: list[str] = Field(default_factory=list)
     initial_private_state: dict[str, JsonValue] = Field(default_factory=dict)
+    initial_next_update_at: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def validate_unique_surfaces(self) -> "ActiveSystemSpec":
@@ -166,6 +173,7 @@ class ActiveSystemState(_StrictModel):
     activation_count: int = Field(default=0, ge=0)
     private_state: dict[str, JsonValue] = Field(default_factory=dict)
     consumed_observation_ids: list[str] = Field(default_factory=list)
+    next_update_at: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def validate_cursor(self) -> "ActiveSystemState":
@@ -212,6 +220,30 @@ class ExecutionBudget(_StrictModel):
     max_actions: int = Field(ge=0)
 
 
+class ActivationCause(_StrictModel):
+    """One retained reason a stateful process was due at this timestamp."""
+
+    kind: ActivationCauseKind
+    scheduled_for: int = Field(ge=0)
+    observation_ids: list[str] = Field(default_factory=list)
+    description: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> "ActivationCause":
+        """Bind observation causes to observations and other causes to none."""
+        _require_unique(self.observation_ids, "activation-cause observation ids")
+        if self.kind == "observation_delivery":
+            if not self.observation_ids:
+                raise ValueError(
+                    "observation-delivery activation cause requires observations"
+                )
+        elif self.observation_ids:
+            raise ValueError(
+                "only observation-delivery activation causes may name observations"
+            )
+        return self
+
+
 class ActiveSystemInput(_StrictModel):
     """Complete bounded input built from one frozen pre-activation snapshot."""
 
@@ -221,6 +253,9 @@ class ActiveSystemInput(_StrictModel):
     active_system_id: str = Field(pattern=_ID_PATTERN)
     entity_id: str = Field(pattern=_ID_PATTERN)
     logical_time: int = Field(ge=0)
+    time_unit: str = Field(pattern=_ID_PATTERN)
+    activation_causes: list[ActivationCause] = Field(min_length=1)
+    next_update_at: int | None = Field(default=None, ge=0)
     observations: list[ActiveObservation] = Field(default_factory=list)
     action_interfaces: list[ActionInterfaceSurface] = Field(default_factory=list)
     private_state: dict[str, JsonValue] = Field(default_factory=dict)
@@ -237,6 +272,30 @@ class ActiveSystemInput(_StrictModel):
             [item.output_port_id for item in self.action_interfaces],
             "input output-port ids",
         )
+        if any(
+            cause.scheduled_for != self.logical_time
+            for cause in self.activation_causes
+        ):
+            raise ValueError("activation cause timestamp disagrees with input")
+        caused_observations = [
+            observation_id
+            for cause in self.activation_causes
+            for observation_id in cause.observation_ids
+        ]
+        _require_unique(
+            caused_observations,
+            "activation-cause observation ids",
+        )
+        input_observations = {
+            observation.observation_id for observation in self.observations
+        }
+        if not set(caused_observations).issubset(input_observations):
+            raise ValueError("activation cause names an unavailable observation")
+        if any(
+            observation.logical_time > self.logical_time
+            for observation in self.observations
+        ):
+            raise ValueError("active input exposes a future observation")
         return self
 
 
@@ -315,6 +374,24 @@ class ActionIntent(_StrictModel):
     public_summary: str = Field(min_length=1)
 
 
+class UpdateScheduleDirective(_StrictModel):
+    """One explicit post-activation scheduling choice."""
+
+    mode: Literal["preserve", "schedule", "dormant"] = "preserve"
+    next_update_at: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_directive(self) -> "UpdateScheduleDirective":
+        """Require a timestamp only for an explicit schedule operation."""
+        if self.mode == "schedule" and self.next_update_at is None:
+            raise ValueError("schedule directive requires next_update_at")
+        if self.mode != "schedule" and self.next_update_at is not None:
+            raise ValueError(
+                "only a schedule directive may carry next_update_at"
+            )
+        return self
+
+
 class ActiveProposal(_StrictModel):
     """One participant's private-state and action proposal."""
 
@@ -322,6 +399,9 @@ class ActiveProposal(_StrictModel):
     implementation_id: str = Field(pattern=_ID_PATTERN)
     private_state: dict[str, JsonValue] = Field(default_factory=dict)
     actions: list[ActionIntent] = Field(default_factory=list)
+    update_schedule: UpdateScheduleDirective = Field(
+        default_factory=UpdateScheduleDirective
+    )
 
 
 class ModelCallEvidence(_StrictModel):
@@ -698,6 +778,10 @@ def _validate_specs_and_states(
                 raise ValueError("inactive private state differs from its initial spec")
             if state.consumed_observation_ids:
                 raise ValueError("inactive system cannot have consumed observations")
+            if state.next_update_at != spec.initial_next_update_at:
+                raise ValueError(
+                    "inactive system schedule differs from its initial spec"
+                )
 
 
 def _validate_attempt_ledger(
@@ -760,9 +844,16 @@ def _validate_attempt_ledger(
         active_system_id: [] for active_system_id in states
     }
     expected_revisions = {active_system_id: 0 for active_system_id in states}
+    expected_next_update_at = {
+        active_system_id: spec.initial_next_update_at
+        for active_system_id, spec in spec_by_id.items()
+    }
     core_state = (
         core.state if isinstance(core, CausalCheckpoint) else core.final_state
     )
+    time_unit = core.events[0].details.get("time_unit")
+    if not isinstance(time_unit, str):
+        raise ValueError("causal run lacks its scenario time unit")
     guarded_fact_ids = {
         fact_id
         for spec in specs
@@ -797,6 +888,14 @@ def _validate_attempt_ledger(
                 participant.input.private_state
             ) != private_state_digest(expected_private[active_system_id]):
                 raise ValueError("attempt input private state is not the prior commit")
+            if participant.input.next_update_at != expected_next_update_at[
+                active_system_id
+            ]:
+                raise ValueError(
+                    "attempt input schedule is not the prior committed schedule"
+                )
+            if participant.input.time_unit != time_unit:
+                raise ValueError("attempt input time unit disagrees with scenario")
             if (
                 not _same_float(
                     participant.input.budget.max_call_cost,
@@ -856,6 +955,13 @@ def _validate_attempt_ledger(
                 if proposal.implementation_id != spec.implementation_id:
                     raise ValueError("committed implementation identity mismatch")
                 expected_private[active_system_id] = dict(proposal.private_state)
+                expected_next_update_at[active_system_id] = (
+                    _next_update_after_proposal(
+                        expected_next_update_at[active_system_id],
+                        proposal,
+                        logical_time=participant.input.logical_time,
+                    )
+                )
                 expected_consumed[active_system_id].extend(
                     observation.observation_id
                     for observation in participant.input.observations
@@ -881,6 +987,8 @@ def _validate_attempt_ledger(
             raise ValueError("final private state disagrees with activation ledger")
         if state.consumed_observation_ids != expected_consumed[active_system_id]:
             raise ValueError("observation cursor disagrees with activation ledger")
+        if state.next_update_at != expected_next_update_at[active_system_id]:
+            raise ValueError("active-state schedule disagrees with activation ledger")
 
     _validate_core_attempt_slices(attempts, core)
     expected_cost = sum(item.observed_cost for item in attempts)
@@ -904,6 +1012,26 @@ def _validate_consumed_observations(
                 raise ValueError("active state consumed an unknown observation")
             if observation.target_entity_id != state.entity_id:
                 raise ValueError("active state consumed another entity's observation")
+
+
+def _next_update_after_proposal(
+    prior: int | None,
+    proposal: ActiveProposal,
+    *,
+    logical_time: int,
+) -> int | None:
+    """Replay one scheduling directive without importing the runtime engine."""
+    directive = proposal.update_schedule
+    if directive.mode == "schedule":
+        if (
+            directive.next_update_at is None
+            or directive.next_update_at <= logical_time
+        ):
+            raise ValueError("scheduled update is not strictly in the future")
+        return directive.next_update_at
+    if directive.mode == "dormant":
+        return None
+    return prior if prior is not None and prior > logical_time else None
 
 
 def _validate_enclosing_core(

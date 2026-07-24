@@ -295,6 +295,7 @@ class CausalSession:
             details={
                 "scenario_id": scenario.scenario_id,
                 "runtime_contract": scenario.runtime_contract,
+                "time_unit": scenario.time_unit,
                 "scenario_execution_fingerprint": scenario_execution_fingerprint(
                     self._scenario
                 ),
@@ -376,6 +377,7 @@ class CausalSession:
                             scenario_execution_fingerprint(self._scenario)
                         ),
                         "run_id": self._run_id,
+                        "time_unit": self._scenario.time_unit,
                         "max_effects": self._limits.max_effects,
                         "max_zero_time_depth": self._limits.max_zero_time_depth,
                         "state": self.state.model_dump(mode="json"),
@@ -407,6 +409,8 @@ class CausalSession:
         )
         if validated.scenario_id != scenario.scenario_id:
             raise ValueError("checkpoint scenario id does not match")
+        if validated.time_unit != scenario.time_unit:
+            raise ValueError("checkpoint scenario time unit does not match")
         if (
             validated.scenario_execution_fingerprint
             != scenario_execution_fingerprint(scenario)
@@ -486,6 +490,7 @@ class CausalSession:
                                 self._limits.max_zero_time_depth
                             ),
                             "status": "completed",
+                            "time_unit": self._scenario.time_unit,
                             "initial_state_digest": state_digest(
                                 self._scenario.initial_state
                             ),

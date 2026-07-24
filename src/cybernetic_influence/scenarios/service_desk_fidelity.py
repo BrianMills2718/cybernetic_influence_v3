@@ -582,7 +582,7 @@ def _trial_readout(
     trial_index: Literal[0, 1],
     source: ActiveRuntimeResult,
 ) -> ServiceDeskTrialReadout:
-    fixture = service_desk_fixture(arm)
+    fixture = service_desk_fixture(arm, multirate=False)
     if source.scenario_fingerprint != scenario_fingerprint(fixture.scenario):
         raise ValueError("service-desk source scenario fingerprint mismatch")
     if source.scenario_execution_fingerprint != scenario_execution_fingerprint(

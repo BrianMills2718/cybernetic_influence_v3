@@ -105,6 +105,26 @@ def event_driven_service_desk_outcome(
         "participant_activation_count": sum(
             len(attempt.participants) for attempt in result.attempts
         ),
+        "autonomous_activation_count": sum(
+            1
+            for attempt in result.attempts
+            for participant in attempt.participants
+            if any(
+                cause.kind == "internal_wake"
+                for cause in participant.input.activation_causes
+            )
+        ),
+        "exact_process_activation_count": sum(
+            1
+            for attempt in result.attempts
+            for participant in attempt.participants
+            if result.core_result.final_state.entities[
+                participant.input.entity_id
+            ].entity_kind
+            == "state_machine"
+        ),
+        "final_simulation_time": result.core_result.final_state.logical_time,
+        "time_unit": result.core_result.time_unit,
         "model_calls": result.model_calls,
         "accepted_action_count": len(result.core_result.accepted_action_ids),
         "closure_attempt_count": final.fact(
@@ -160,6 +180,7 @@ def build_analyst_document(
         "profile": profile,
         "arm": arm_id,
         "execution": execution,
+        "time_unit": result.core_result.time_unit,
         "model_calls": result.model_calls,
         "cost": result.total_observed_cost,
         "cost_fully_observable": result.cost_fully_observable,
@@ -191,6 +212,10 @@ def analyst_moments(
     }
     last_event_index = 0
     moments: list[dict[str, object]] = []
+    entity_kinds = {
+        entity_id: entity.entity_kind
+        for entity_id, entity in result.core_result.final_state.entities.items()
+    }
     for moment_number, attempt in enumerate(result.attempts, start=1):
         event_indices = [
             timeline_ids[event_id]
@@ -208,6 +233,19 @@ def analyst_moments(
                     participant.requested_active_system_id
                     for participant in attempt.participants
                 ],
+                "participant_kinds": {
+                    participant.requested_active_system_id: entity_kinds[
+                        participant.input.entity_id
+                    ]
+                    for participant in attempt.participants
+                },
+                "activation_causes": {
+                    participant.requested_active_system_id: [
+                        cause.model_dump(mode="json")
+                        for cause in participant.input.activation_causes
+                    ]
+                    for participant in attempt.participants
+                },
                 "event_ids": [
                     str(timeline[index]["event_id"])
                     for index in event_indices
@@ -582,14 +620,34 @@ def analyst_timeline(
     state = result.core_result.final_state
     node_ids = {str(node["id"]) for node in analyst_nodes(state)}
     event_activation: dict[str, tuple[str, str | None]] = {}
+    events_by_id = {
+        event.event_id: event for event in result.core_result.events
+    }
     for attempt in result.attempts:
-        people = {
-            participant.requested_active_system_id
+        action_owner = {
+            action_id: participant.requested_active_system_id
             for participant in attempt.participants
+            for action_id in participant.assigned_action_ids
         }
-        person = next(iter(people)) if len(people) == 1 else None
+        event_owner: dict[str, str] = {}
         for event_id in attempt.core_event_ids:
-            event_activation[event_id] = (attempt.activation_id, person)
+            event = events_by_id[event_id]
+            owner = (
+                action_owner.get(event.action_id)
+                if event.action_id is not None
+                else None
+            )
+            if owner is None:
+                parent_owners = {
+                    event_owner[parent_id]
+                    for parent_id in event.causal_parent_event_ids
+                    if parent_id in event_owner
+                }
+                if len(parent_owners) == 1:
+                    owner = next(iter(parent_owners))
+            if owner is not None:
+                event_owner[event_id] = owner
+            event_activation[event_id] = (attempt.activation_id, owner)
 
     timeline: list[dict[str, object]] = []
     for event in result.core_result.events:
@@ -692,7 +750,7 @@ def analyst_timeline(
 
 
 def analyst_traces(result: ActiveRuntimeResult) -> list[dict[str, object]]:
-    """Project person activations while redacting protected action payloads."""
+    """Project active people and exact processes with protected payloads redacted."""
     state = result.core_result.final_state
     traces: list[dict[str, object]] = []
     for attempt in result.attempts:
@@ -715,6 +773,9 @@ def analyst_traces(result: ActiveRuntimeResult) -> list[dict[str, object]]:
                     "activation": attempt.activation_id,
                     "logical_time": attempt.logical_time,
                     "person": participant.requested_active_system_id,
+                    "participant_kind": state.entities[
+                        participant.input.entity_id
+                    ].entity_kind,
                     "status": attempt.status,
                     "orientation": (
                         (
@@ -722,8 +783,30 @@ def analyst_traces(result: ActiveRuntimeResult) -> list[dict[str, object]]:
                             or {}
                         ).get("orientation")
                         if participant.call_evidence
-                        else "Scripted zero-cost reference action."
+                        else (
+                            "Deterministic exact process transition."
+                            if state.entities[
+                                participant.input.entity_id
+                            ].entity_kind
+                            == "state_machine"
+                            else "Scripted zero-cost reference action."
+                        )
                     ),
+                    "activation_causes": [
+                        cause.model_dump(mode="json")
+                        for cause in participant.input.activation_causes
+                    ],
+                    "scheduled_update_before": (
+                        participant.input.next_update_at
+                    ),
+                    "update_schedule": (
+                        participant.proposal.update_schedule.model_dump(
+                            mode="json"
+                        )
+                        if participant.proposal is not None
+                        else None
+                    ),
+                    "model_call_count": len(participant.call_evidence),
                     "actions": actions,
                     "observations": [
                         observation.model_dump(mode="json")

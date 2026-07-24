@@ -13,6 +13,23 @@ let selectedNodeId = null
 let selectedEdgeId = null
 let scenarioCatalog = {}
 
+function simulatedTime(value) {
+  const unit = current?.time_unit || 'step'
+  const plural = Number(value) === 1 ? unit : `${unit}s`
+  return `time ${value} ${plural}`
+}
+
+function causeSummary(causes = []) {
+  return causes.map((cause) => {
+    if (cause.kind === 'internal_wake') return 'internal wake'
+    if (cause.kind === 'observation_delivery') {
+      const count = cause.observation_ids?.length || 0
+      return `${count} delivered observation${count === 1 ? '' : 's'}`
+    }
+    return String(cause.kind || 'unknown').replaceAll('_', ' ')
+  }).join(' + ')
+}
+
 async function request(url, options = {}) {
   const response = await fetch(url, options)
   const body = await response.json()
@@ -375,11 +392,18 @@ function showTrace(person) {
     const matches = selectedEvent?.activation === entry.activation
     return `
       <article class="trace-step ${matches ? 'event-match' : ''}">
-        <strong>${html(entry.activation)} · time ${html(entry.logical_time)} · ${html(entry.status)}</strong>
+        <strong>${html(entry.activation)} · ${html(simulatedTime(entry.logical_time))} · ${html(entry.status)}</strong>
+        <small>${html(String(entry.participant_kind || 'person').replaceAll('_',' '))} · activated by ${html(causeSummary(entry.activation_causes) || 'legacy schedule')} · ${html(entry.model_call_count || 0)} model call(s)</small>
         <p>${html(entry.orientation || 'No private orientation was recorded.')}</p>
         <details>
           <summary>${entry.observations.length} observations · ${entry.actions.length} actions</summary>
-          <pre>${html(JSON.stringify({observations:entry.observations, actions:entry.actions}, null, 2))}</pre>
+          <pre>${html(JSON.stringify({
+            activation_causes:entry.activation_causes,
+            scheduled_update_before:entry.scheduled_update_before,
+            update_schedule:entry.update_schedule,
+            observations:entry.observations,
+            actions:entry.actions,
+          }, null, 2))}</pre>
         </details>
       </article>`
   }).join('') || '<p class="muted">No retained activations for this person.</p>'
@@ -567,15 +591,15 @@ function selectEvent(index, momentActivation = null) {
   const moment = moments[momentIndex]
   selectedMomentIndex = momentIndex
   $('#event-slider').value = selectedMomentIndex
-  $('#event-count').textContent = `${selectedMomentIndex + 1} / ${moments.length} moments`
+  $('#event-count').textContent = `${selectedMomentIndex + 1} / ${moments.length} moments · ${simulatedTime(moment?.logical_time)}`
   $('#previous-event').disabled = selectedMomentIndex === 0
   $('#next-event').disabled = selectedMomentIndex === moments.length - 1
   const exactBelongsToMoment = event.activation === activation
   $('#event-detail').innerHTML = exactBelongsToMoment ? `
-    <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>time ${html(event.logical_time)}</span><span>revision ${html(event.state_revision)}</span>${event.activation ? `<span>${html(event.activation)}</span>` : ''}</div>
+    <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>${html(simulatedTime(event.logical_time))}</span><span>revision ${html(event.state_revision)}</span>${event.activation ? `<span>${html(event.activation)}</span>` : ''}</div>
     <h3>${html(event.summary)}</h3>
     <small>${html(event.event_id)}</small>` : `
-    <div><span class="event-kind">No committed event</span><span>time ${html(moment?.logical_time)}</span><span>${html(activation)}</span></div>
+    <div><span class="event-kind">No committed event</span><span>${html(simulatedTime(moment?.logical_time))}</span><span>${html(activation)}</span></div>
     <h3>Every participant remained silent in this causal moment.</h3>
     <small>The map remains at the latest preceding exact event.</small>`
   const accountEvent = exactBelongsToMoment ? event : {...event, activation, person:null}
@@ -634,8 +658,9 @@ function renderStepAccount(event) {
     ? current.traces.find((entry) => entry.person === event.person && entry.activation === event.activation)
     : null
   const person = event.person?.replaceAll('_', ' ')
+  const exactProcess = trace?.participant_kind === 'state_machine'
   const title = {
-    action_attempted:'A person chose an action',
+    action_attempted:exactProcess ? 'An exact process emitted an action' : 'A person chose an action',
     mechanism_executed:'An exact mechanism evaluated it',
     effect_routed:'An effect moved along a declared route',
     observation_delivered:'Someone received an observation',
@@ -644,9 +669,14 @@ function renderStepAccount(event) {
   if (narration) {
     const momentNumber = narration.moment || narration.turn
     const participants = narration.participants || [narration.person || 'system']
-    $('#step-account-title').textContent = `Causal moment ${momentNumber} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
+    $('#step-account-title').textContent = `Causal moment ${momentNumber} · ${simulatedTime(narration.logical_time)} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
     $('#step-account-body').textContent = narration.narrative
     $('#step-account-source').textContent = `Live LLM narrator · grounded in ${narration.source_event_ids.join(', ')}. It received this moment’s trace and the earlier moment narratives.`
+  } else if (exactProcess) {
+    $('#step-account-title').textContent = title
+    const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The exact process'
+    $('#step-account-body').textContent = `${name} advanced from retained exact process state. ${event.summary}`
+    $('#step-account-source').textContent = 'This transition came from the deterministic process controller and exact mechanism trace; it made no LLM call.'
   } else if (trace?.orientation && current.execution === 'live') {
     $('#step-account-title').textContent = title
     const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The active person'
@@ -679,7 +709,7 @@ function renderTurnNarratives() {
       const participants = moment.participants || [moment.person || 'system']
       return `
       <button class="turn-narrative" data-activation="${html(moment.activation)}">
-        <span>Causal moment ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
+        <span>Causal moment ${html(momentNumber)} · ${html(simulatedTime(moment.logical_time))} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
         <p>${html(moment.narrative)}</p>
         <small>${html((moment.source_event_ids || []).join(' · '))}</small>
       </button>`
@@ -706,7 +736,8 @@ function renderTimeline(run) {
     marker.className = 'timeline-marker'
     marker.dataset.index = index
     const people = moment.participants.map((person) => person.replaceAll('_',' ')).join(' + ')
-    marker.title = `Causal moment ${index + 1}: ${people}${moment.silent ? ' (silent)' : ''}`
+    const causes = Object.values(moment.activation_causes || {}).flat()
+    marker.title = `Causal moment ${index + 1}, ${simulatedTime(moment.logical_time)}: ${people}; ${causeSummary(causes)}${moment.silent ? ' (silent)' : ''}`
     marker.setAttribute('aria-label', marker.title)
     marker.onclick = () => selectMoment(index)
     $('#timeline-track').append(marker)
@@ -766,10 +797,14 @@ function render(run) {
   renderScaleControls()
   renderTurnNarratives()
   const people = [...new Set(current.traces.map((entry) => entry.person))]
-  $('#trace-tabs').innerHTML = people.map((person) => `<button data-person="${html(person)}">${html(person.replaceAll('_',' '))}</button>`).join('')
+  $('#trace-tabs').innerHTML = people.map((person) => {
+    const kind = current.traces.find((entry) => entry.person === person)?.participant_kind
+    const suffix = kind === 'state_machine' ? ' · exact process' : ''
+    return `<button data-person="${html(person)}">${html(person.replaceAll('_',' '))}${html(suffix)}</button>`
+  }).join('')
   document.querySelectorAll('#trace-tabs button').forEach((button) => button.onclick = () => showTrace(button.dataset.person))
   if (people.length) showTrace(people[0])
-  else $('#trace').innerHTML = '<p class="muted">No completed person traces were retained.</p>'
+  else $('#trace').innerHTML = '<p class="muted">No completed participant traces were retained.</p>'
   renderTimeline(current)
   $('#raw').textContent = JSON.stringify(current, null, 2)
 }

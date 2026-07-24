@@ -20,8 +20,10 @@ from cybernetic_influence.active_runtime import (
     ActiveSystemBinding,
     ActiveSystemInput,
     ActiveSystemSpec,
+    ActivationCause,
     ActionIntent,
     NativeLlmActiveSystem,
+    UpdateScheduleDirective,
     bound_native_llm_implementation_id,
 )
 from cybernetic_influence.causal_core.engine import (
@@ -68,6 +70,7 @@ SERVICE_DESK_SCHEDULE: tuple[tuple[int, str], ...] = (
     (8, "supervisor"),
 )
 SERVICE_DESK_MAX_CAUSAL_MOMENTS = 12
+REMEDIATION_PROCESS_IMPLEMENTATION_ID = "exact_remediation_process_controller_v1"
 
 CUSTOMER_REPORT_ENCODING = "application/vnd.cybernetic.customer-report+json"
 POLICY_ENCODING = "application/vnd.cybernetic.escalation-policy+json"
@@ -199,6 +202,13 @@ class RemediationRequest(_StrictModel):
     remediation: Literal["invalidate_stale_session"] = "invalidate_stale_session"
 
 
+class RemediationProcessStep(_StrictModel):
+    """One exact controller request to advance its retained remediation job."""
+
+    ticket_id: Literal["incident_17"] = "incident_17"
+    phase: Literal[0, 1, 2]
+
+
 class RemediationReceipt(_StrictModel):
     """Exact evidence that the stipulated remediation committed."""
 
@@ -296,6 +306,7 @@ class ServiceDeskFixture:
     active_specs: tuple[ActiveSystemSpec, ...]
     cognition_profile: ServiceDeskCognitionProfile = "procedural_control"
     reasoning_effort: str = SERVICE_DESK_REASONING_EFFORT
+    multirate: bool = True
 
 
 @dataclass(frozen=True)
@@ -361,6 +372,7 @@ def service_desk_fixture(
     boundary_label: str = "Service desk analytical view",
     cognition_profile: ServiceDeskCognitionProfile = "procedural_control",
     reasoning_effort: str = SERVICE_DESK_REASONING_EFFORT,
+    multirate: bool = True,
 ) -> ServiceDeskFixture:
     """Build one grounded service-desk arm without an organization executor."""
     if not reasoning_effort.strip():
@@ -382,10 +394,10 @@ def service_desk_fixture(
         places=_places(),
         placements=_placements(),
         spatial_links=_spatial_links(),
-        ports=_ports(),
-        connections=_connections(selected),
-        mechanisms=_mechanisms(),
-        carriers=_carriers(),
+        ports=_ports(multirate=multirate),
+        connections=_connections(selected, multirate=multirate),
+        mechanisms=_mechanisms(multirate=multirate),
+        carriers=_carriers(multirate=multirate),
         representations={
             "customer_report": _token(
                 "customer_report",
@@ -461,6 +473,7 @@ def service_desk_fixture(
             "incident across an authored service-operations center and remote "
             "customer site."
         ),
+        time_unit="second",
         initial_state=state,
         analytical_boundaries=[
             AnalyticalBoundary(
@@ -486,12 +499,14 @@ def service_desk_fixture(
         cognition_profile=cognition_profile,
         reasoning_effort=reasoning_effort,
         scenario=scenario,
-        exact_bindings=_exact_bindings(),
+        exact_bindings=_exact_bindings(multirate=multirate),
         active_specs=_active_specs(
             selected,
             cognition_profile,
             reasoning_effort,
+            multirate=multirate,
         ),
+        multirate=multirate,
     )
 
 
@@ -511,10 +526,20 @@ def service_desk_native_bindings(
     *,
     trace_id_prefix: str,
 ) -> dict[str, ActiveSystemBinding]:
-    """Bind the three retained direct-OpenAI policies through the shared adapter."""
+    """Bind LLM people plus the zero-call exact process controller."""
     personas = service_desk_personas(fixture.cognition_profile)
-    return {
-        spec.active_system_id: ActiveSystemBinding(
+    bindings: dict[str, ActiveSystemBinding] = {}
+    for spec in fixture.active_specs:
+        if spec.active_system_id == "remediation_process":
+            bindings[spec.active_system_id] = ActiveSystemBinding(
+                spec.implementation_id,
+                _ScriptedImplementation(
+                    spec.implementation_id,
+                    _scripted_remediation_process,
+                ),
+            )
+            continue
+        bindings[spec.active_system_id] = ActiveSystemBinding(
             spec.implementation_id,
             NativeLlmActiveSystem.from_bound_configuration(
                 implementation_family_id=f"native_service_{spec.active_system_id}_v1",
@@ -528,8 +553,7 @@ def service_desk_native_bindings(
                 decision_wire_contract="openai-json-payload-wire.v2",
             ),
         )
-        for spec in fixture.active_specs
-    }
+    return bindings
 
 
 def service_desk_scripted_bindings(
@@ -540,6 +564,7 @@ def service_desk_scripted_bindings(
         "triager": _scripted_triager,
         "specialist": _scripted_specialist,
         "supervisor": _scripted_supervisor,
+        "remediation_process": _scripted_remediation_process,
     }
     bindings: dict[str, ActiveSystemBinding] = {}
     for spec in fixture.active_specs:
@@ -573,6 +598,11 @@ def run_service_desk(
     checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
 ) -> ActiveRuntimeResult:
     """Execute the fixed schedule and optionally expose each forensic prefix."""
+    if fixture.multirate:
+        raise ValueError(
+            "fixed historical schedule requires a fixture built with "
+            "multirate=False"
+        )
     session = ActiveRuntimeSession(
         fixture.scenario,
         fixture.exact_bindings,
@@ -600,12 +630,11 @@ def run_event_driven_service_desk(
     run_id: str,
     checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
 ) -> ActiveRuntimeResult:
-    """Run causal moments until no person has a newly delivered observation.
+    """Run due-set moments until no observation or internal wake remains.
 
-    The initial customer report triggers the triager explicitly.  Thereafter,
-    every person with newly delivered input is activated in one frozen set.
-    The bound prevents a faulty scenario from manufacturing an endless
-    observation/activation loop.
+    The scenario starts the triager explicitly. Thereafter, every person or
+    exact process due at the earliest integer timestamp is activated against
+    one frozen state. The bound catches zero-time and self-scheduling loops.
     """
     session = ActiveRuntimeSession(
         fixture.scenario,
@@ -615,23 +644,47 @@ def run_event_driven_service_desk(
         run_id=run_id,
         config=service_desk_runtime_config(),
     )
-    active_system_ids = ["triager"]
-    logical_time = 0
-    while active_system_ids:
-        if logical_time >= SERVICE_DESK_MAX_CAUSAL_MOMENTS:
+    try:
+        session.activate(
+            ["triager"],
+            logical_time=0,
+            activation_causes={
+                "triager": [
+                    ActivationCause(
+                        kind="scenario_start",
+                        scheduled_for=0,
+                        description=(
+                            "The authored scenario began with the customer "
+                            "report already retained by the triager."
+                        ),
+                    )
+                ]
+            },
+        )
+    except Exception:
+        if checkpoint_observer is not None:
+            checkpoint_observer(session.checkpoint())
+        raise
+    if checkpoint_observer is not None:
+        checkpoint_observer(session.checkpoint())
+
+    while (due := session.next_due_activation()) is not None:
+        if len(session.attempts) >= SERVICE_DESK_MAX_CAUSAL_MOMENTS:
             raise RuntimeError(
                 "service-desk event scheduler exceeded its causal-moment bound"
             )
         try:
-            session.activate(active_system_ids, logical_time=logical_time)
+            session.activate(
+                due.active_system_ids,
+                logical_time=due.logical_time,
+                activation_causes=due.causes,
+            )
         except Exception:
             if checkpoint_observer is not None:
                 checkpoint_observer(session.checkpoint())
             raise
         if checkpoint_observer is not None:
             checkpoint_observer(session.checkpoint())
-        active_system_ids = session.pending_active_system_ids
-        logical_time += 1
     return session.complete()
 
 
@@ -714,8 +767,15 @@ def _entities(arm: ServiceDeskArmConfiguration) -> dict[str, EntityState]:
         ),
         "remediation_service": EntityState(
             entity_id="remediation_service",
-            entity_kind="service",
-            description="Exact stale-session invalidation mechanism substrate.",
+            entity_kind="state_machine",
+            description=(
+                "Deterministic remediation process that updates on its own "
+                "one-second cadence without an LLM."
+            ),
+            attributes={
+                "job_status": FactState(value="idle"),
+                "phase": FactState(value=0),
+            },
         ),
         "incentive_ledger": EntityState(
             entity_id="incentive_ledger",
@@ -812,7 +872,22 @@ def _spatial_links() -> dict[str, SpatialLinkState]:
     }
 
 
-def _ports() -> dict[str, PortState]:
+def _ports(*, multirate: bool) -> dict[str, PortState]:
+    remediation_specifications = (
+        (
+            ("remediation_request_in", "remediation_service", "input", "remediation_request"),
+            ("remediation_process_out", "remediation_service", "output", "remediation_process_step"),
+            ("remediation_process_in", "exact_remediation_process", "input", "remediation_process_step"),
+            ("remediation_status_out", "exact_remediation_process", "output", "remediation_status"),
+            ("customer_feedback_out", "exact_remediation_process", "output", "customer_feedback"),
+        )
+        if multirate
+        else (
+            ("remediation_request_in", "remediation_service", "input", "remediation_request"),
+            ("remediation_status_out", "exact_remediation", "output", "remediation_status"),
+            ("customer_feedback_out", "exact_remediation", "output", "customer_feedback"),
+        )
+    )
     specifications = (
         ("triager_route_out", "triager", "output", "routing_request"),
         ("routing_request_in", "compiled_authority", "input", "routing_request"),
@@ -827,10 +902,8 @@ def _ports() -> dict[str, PortState]:
         ("ticket_details_out", "exact_ticket_update", "output", "incident_details"),
         ("specialist_ticket_details_in", "specialist", "input", "incident_details"),
         ("specialist_remediation_out", "specialist", "output", "remediation_request"),
-        ("remediation_request_in", "remediation_service", "input", "remediation_request"),
-        ("remediation_status_out", "exact_remediation", "output", "remediation_status"),
+        *remediation_specifications,
         ("supervisor_remediation_in", "supervisor", "input", "remediation_status"),
-        ("customer_feedback_out", "exact_remediation", "output", "customer_feedback"),
         ("triager_customer_feedback_in", "triager", "input", "customer_feedback"),
         ("ticket_confirmation_out", "exact_ticket_update", "output", "ticket_confirmation"),
         ("supervisor_confirmation_in", "supervisor", "input", "ticket_confirmation"),
@@ -851,7 +924,21 @@ def _ports() -> dict[str, PortState]:
     }
 
 
-def _connections(arm: ServiceDeskArmConfiguration) -> dict[str, ConnectionState]:
+def _connections(
+    arm: ServiceDeskArmConfiguration,
+    *,
+    multirate: bool,
+) -> dict[str, ConnectionState]:
+    remediation_specifications = (
+        (
+            ("specialist_to_remediation", "specialist_remediation_out", "remediation_request_in", True),
+            ("remediation_process_cycle", "remediation_process_out", "remediation_process_in", True),
+        )
+        if multirate
+        else (
+            ("specialist_to_remediation", "specialist_remediation_out", "remediation_request_in", True),
+        )
+    )
     specifications = (
         ("triager_to_routing", "triager_route_out", "routing_request_in", True),
         ("routing_to_specialist", "assignment_notice_out", "specialist_assignment_in", True),
@@ -864,7 +951,7 @@ def _connections(arm: ServiceDeskArmConfiguration) -> dict[str, ConnectionState]
         ("specialist_request_to_triager", "specialist_detail_request_out", "triager_detail_request_in", True),
         ("triager_to_ticket", "triager_ticket_update_out", "ticket_update_in", True),
         ("ticket_details_to_specialist", "ticket_details_out", "specialist_ticket_details_in", True),
-        ("specialist_to_remediation", "specialist_remediation_out", "remediation_request_in", True),
+        *remediation_specifications,
         ("remediation_to_supervisor", "remediation_status_out", "supervisor_remediation_in", True),
         ("feedback_to_triager", "customer_feedback_out", "triager_customer_feedback_in", True),
         ("confirmation_to_supervisor", "ticket_confirmation_out", "supervisor_confirmation_in", True),
@@ -883,7 +970,7 @@ def _connections(arm: ServiceDeskArmConfiguration) -> dict[str, ConnectionState]
     }
 
 
-def _mechanisms() -> dict[str, MechanismSpec]:
+def _mechanisms(*, multirate: bool) -> dict[str, MechanismSpec]:
     delivery_specs = {
         "exact_assignment_delivery": (
             "specialist_assignment_in",
@@ -1008,32 +1095,6 @@ def _mechanisms() -> dict[str, MechanismSpec]:
                 invariant_ids=["ticket_update_valid"],
                 fidelity=_fidelity("Exact update of two declared ticket evidence fields."),
             ),
-            "exact_remediation": MechanismSpec(
-                mechanism_id="exact_remediation",
-                mechanism_kind="incident_remediation",
-                implementation_id="exact_remediation_v1",
-                description="Apply one stipulated stale-session invalidation after grounded evidence.",
-                input_port_ids=["remediation_request_in"],
-                output_port_ids=["remediation_status_out", "customer_feedback_out"],
-                read_fact_ids=[
-                    "incident_17.assigned_to",
-                    "incident_17.status",
-                    "incident_17.remediated",
-                ],
-                write_fact_ids=["incident_17.status", "incident_17.remediated"],
-                write_carrier_ids=[
-                    "remediation_receipt_buffer",
-                    "customer_feedback_buffer",
-                ],
-                substrate_refs=[
-                    "incident_17",
-                    "remediation_service",
-                    "remediation_receipt_buffer",
-                    "customer_feedback_buffer",
-                ],
-                invariant_ids=["remediation_valid"],
-                fidelity=_fidelity("Exact discrete stale-session invalidation."),
-            ),
             "exact_ticket_closure": MechanismSpec(
                 mechanism_id="exact_ticket_closure",
                 mechanism_kind="authenticated_ticket_closure",
@@ -1076,10 +1137,125 @@ def _mechanisms() -> dict[str, MechanismSpec]:
             ),
         }
     )
+    mechanisms.update(_remediation_mechanisms(multirate=multirate))
     return mechanisms
 
 
-def _carriers() -> dict[str, CarrierState]:
+def _remediation_mechanisms(
+    *,
+    multirate: bool,
+) -> dict[str, MechanismSpec]:
+    if not multirate:
+        return {
+            "exact_remediation": MechanismSpec(
+                mechanism_id="exact_remediation",
+                mechanism_kind="incident_remediation",
+                implementation_id="exact_remediation_v1",
+                description=(
+                    "Apply one stipulated stale-session invalidation after "
+                    "grounded evidence."
+                ),
+                input_port_ids=["remediation_request_in"],
+                output_port_ids=[
+                    "remediation_status_out",
+                    "customer_feedback_out",
+                ],
+                read_fact_ids=[
+                    "incident_17.assigned_to",
+                    "incident_17.status",
+                    "incident_17.remediated",
+                ],
+                write_fact_ids=[
+                    "incident_17.status",
+                    "incident_17.remediated",
+                ],
+                write_carrier_ids=[
+                    "remediation_receipt_buffer",
+                    "customer_feedback_buffer",
+                ],
+                substrate_refs=[
+                    "incident_17",
+                    "remediation_service",
+                    "remediation_receipt_buffer",
+                    "customer_feedback_buffer",
+                ],
+                invariant_ids=["remediation_valid"],
+                fidelity=_fidelity(
+                    "Exact discrete stale-session invalidation."
+                ),
+            )
+        }
+    return {
+        "exact_remediation": MechanismSpec(
+            mechanism_id="exact_remediation",
+            mechanism_kind="remediation_intake",
+            implementation_id="exact_remediation_intake_v1",
+            description=(
+                "Validate and queue one grounded stale-session remediation "
+                "request for the autonomous exact process."
+            ),
+            input_port_ids=["remediation_request_in"],
+            read_fact_ids=[
+                "incident_17.assigned_to",
+                "incident_17.remediated",
+                "remediation_service.job_status",
+                "remediation_service.phase",
+            ],
+            write_fact_ids=[
+                "remediation_service.job_status",
+                "remediation_service.phase",
+            ],
+            observation_target_ids=["remediation_service"],
+            substrate_refs=["incident_17", "remediation_service"],
+            invariant_ids=["remediation_intake_valid"],
+            fidelity=_fidelity(
+                "Exact grounded intake for one retained remediation job."
+            ),
+        ),
+        "exact_remediation_process": MechanismSpec(
+            mechanism_id="exact_remediation_process",
+            mechanism_kind="remediation_state_transition",
+            implementation_id="exact_remediation_process_v1",
+            description=(
+                "Advance one queued remediation job through three exact "
+                "one-second process states."
+            ),
+            input_port_ids=["remediation_process_in"],
+            output_port_ids=[
+                "remediation_status_out",
+                "customer_feedback_out",
+            ],
+            read_fact_ids=[
+                "incident_17.assigned_to",
+                "incident_17.remediated",
+                "remediation_service.job_status",
+                "remediation_service.phase",
+            ],
+            write_fact_ids=[
+                "incident_17.status",
+                "incident_17.remediated",
+                "remediation_service.job_status",
+                "remediation_service.phase",
+            ],
+            write_carrier_ids=[
+                "remediation_receipt_buffer",
+                "customer_feedback_buffer",
+            ],
+            substrate_refs=[
+                "incident_17",
+                "remediation_service",
+                "remediation_receipt_buffer",
+                "customer_feedback_buffer",
+            ],
+            invariant_ids=["remediation_process_valid"],
+            fidelity=_fidelity(
+                "Exact three-state stale-session invalidation process."
+            ),
+        ),
+    }
+
+
+def _carriers(*, multirate: bool) -> dict[str, CarrierState]:
     owners = {
         "triager_customer_report_carrier": "triager",
         "triager_policy_carrier": "triager",
@@ -1096,9 +1272,13 @@ def _carriers() -> dict[str, CarrierState]:
         "triager_detail_request_buffer": "exact_detail_request_delivery",
         "ticket_details_buffer": "exact_ticket_update",
         "specialist_ticket_details_buffer": "exact_ticket_details_delivery",
-        "remediation_receipt_buffer": "exact_remediation",
+        "remediation_receipt_buffer": (
+            "exact_remediation_process" if multirate else "exact_remediation"
+        ),
         "supervisor_remediation_buffer": "exact_remediation_status_delivery",
-        "customer_feedback_buffer": "exact_remediation",
+        "customer_feedback_buffer": (
+            "exact_remediation_process" if multirate else "exact_remediation"
+        ),
         "triager_feedback_buffer": "exact_feedback_delivery",
         "ticket_confirmation_buffer": "exact_ticket_update",
         "supervisor_confirmation_buffer": "exact_confirmation_delivery",
@@ -1123,6 +1303,8 @@ def _active_specs(
     arm: ServiceDeskArmConfiguration,
     cognition_profile: ServiceDeskCognitionProfile,
     reasoning_effort: str,
+    *,
+    multirate: bool,
 ) -> tuple[ActiveSystemSpec, ...]:
     personas = service_desk_personas(cognition_profile)
 
@@ -1195,7 +1377,7 @@ def _active_specs(
                 }
             ],
         }
-    return (
+    people = (
         ActiveSystemSpec(
             active_system_id="triager",
             entity_id="triager",
@@ -1243,8 +1425,17 @@ def _active_specs(
                         "kind": "customer_report",
                         "content": _render(CustomerReport()),
                     },
+                    {
+                        "logical_time": 0,
+                        "kind": "retained_intention",
+                        "content": (
+                            "I intend to reconsider incident_17 at simulated "
+                            "time 1 even if no new message arrives."
+                        ),
+                    },
                 ]
             },
+            initial_next_update_at=1 if multirate else None,
         ),
         ActiveSystemSpec(
             active_system_id="specialist",
@@ -1299,9 +1490,25 @@ def _active_specs(
             },
         ),
     )
+    if not multirate:
+        return people
+    return (
+        *people,
+        ActiveSystemSpec(
+            active_system_id="remediation_process",
+            entity_id="remediation_service",
+            implementation_id=REMEDIATION_PROCESS_IMPLEMENTATION_ID,
+            description=(
+                "Deterministic one-second remediation process controller."
+            ),
+            observation_port_ids=["remediation_request_in"],
+            output_port_ids=["remediation_process_out"],
+            initial_private_state={"phase": 0},
+        ),
+    )
 
 
-def _exact_bindings() -> dict[str, ExactMechanismBinding]:
+def _exact_bindings(*, multirate: bool) -> dict[str, ExactMechanismBinding]:
     bindings = {
         mechanism_id: ExactMechanismBinding(
             implementation_id="exact_service_delivery_v1",
@@ -1335,11 +1542,6 @@ def _exact_bindings() -> dict[str, ExactMechanismBinding]:
                 handler=_exact_ticket_update,
                 invariant_checkers={"ticket_update_valid": _ticket_update_valid},
             ),
-            "exact_remediation": ExactMechanismBinding(
-                implementation_id="exact_remediation_v1",
-                handler=_exact_remediation,
-                invariant_checkers={"remediation_valid": _remediation_valid},
-            ),
             "exact_ticket_closure": ExactMechanismBinding(
                 implementation_id="exact_ticket_closure_v1",
                 handler=_exact_ticket_closure,
@@ -1347,6 +1549,35 @@ def _exact_bindings() -> dict[str, ExactMechanismBinding]:
             ),
         }
     )
+    if multirate:
+        bindings.update(
+            {
+                "exact_remediation": ExactMechanismBinding(
+                    implementation_id="exact_remediation_intake_v1",
+                    handler=_exact_remediation,
+                    invariant_checkers={
+                        "remediation_intake_valid": (
+                            _remediation_intake_valid
+                        )
+                    },
+                ),
+                "exact_remediation_process": ExactMechanismBinding(
+                    implementation_id="exact_remediation_process_v1",
+                    handler=_exact_remediation_process,
+                    invariant_checkers={
+                        "remediation_process_valid": (
+                            _remediation_process_valid
+                        )
+                    },
+                ),
+            }
+        )
+    else:
+        bindings["exact_remediation"] = ExactMechanismBinding(
+            implementation_id="exact_remediation_v1",
+            handler=_exact_remediation_immediate,
+            invariant_checkers={"remediation_valid": _remediation_valid},
+        )
     return bindings
 
 
@@ -1518,15 +1749,24 @@ def _exact_ticket_update(context: MechanismContext) -> MechanismOutcome:
     )
 
 
-def _exact_remediation(context: MechanismContext) -> MechanismOutcome:
-    report = _parse_representation(context, CUSTOMER_REPORT_ENCODING, CustomerReport)
+def _exact_remediation_immediate(
+    context: MechanismContext,
+) -> MechanismOutcome:
+    """Retain the original single-transition historical fidelity mechanism."""
+    report = _parse_representation(
+        context,
+        CUSTOMER_REPORT_ENCODING,
+        CustomerReport,
+    )
     request = RemediationRequest.model_validate(context.effect.payload)
     if report.ticket_id != request.ticket_id:
         raise ValueError("remediation report and request ticket differ")
     if context.read("incident_17.assigned_to") != "specialist":
         raise ValueError("remediation requires specialist assignment")
     if context.read("incident_17.remediated") is True:
-        return MechanismOutcome(outcome_code="remediation_denied_already_applied")
+        return MechanismOutcome(
+            outcome_code="remediation_denied_already_applied"
+        )
     receipt = RemediationReceipt()
     feedback = CustomerFeedback()
     receipt_id = f"remediation_receipt_{context.route_event_id}"
@@ -1554,6 +1794,123 @@ def _exact_remediation(context: MechanismContext) -> MechanismOutcome:
                 content=_render(feedback),
                 actual_source_ref="customer",
                 parent_representation_ids=[parent_id],
+            ),
+        ],
+        effects=[
+            EffectDraft(
+                output_port_id="remediation_status_out",
+                effect_type="remediation_status",
+                representation_id=receipt_id,
+                payload={},
+            ),
+            EffectDraft(
+                output_port_id="customer_feedback_out",
+                effect_type="customer_feedback",
+                representation_id=feedback_id,
+                payload={},
+            ),
+        ],
+    )
+
+
+def _exact_remediation(context: MechanismContext) -> MechanismOutcome:
+    report = _parse_representation(context, CUSTOMER_REPORT_ENCODING, CustomerReport)
+    request = RemediationRequest.model_validate(context.effect.payload)
+    if report.ticket_id != request.ticket_id:
+        raise ValueError("remediation report and request ticket differ")
+    if context.read("incident_17.assigned_to") != "specialist":
+        raise ValueError("remediation requires specialist assignment")
+    if context.read("incident_17.remediated") is True:
+        return MechanismOutcome(
+            outcome_code="remediation_intake_denied_already_applied"
+        )
+    if context.read("remediation_service.job_status") != "idle":
+        return MechanismOutcome(
+            outcome_code="remediation_intake_denied_job_exists"
+        )
+    return MechanismOutcome(
+        outcome_code="remediation_queued",
+        updates=[
+            FactUpdate(
+                fact_id="remediation_service.job_status",
+                value="queued",
+            ),
+            FactUpdate(fact_id="remediation_service.phase", value=0),
+        ],
+        observations=[
+            ObservationDraft(
+                target_entity_id="remediation_service",
+                via_port_id="remediation_request_in",
+                apparent_content=_render(request),
+                apparent_source_ref="specialist",
+                representation_id=_representation(context).representation_id,
+            )
+        ],
+    )
+
+
+def _exact_remediation_process(context: MechanismContext) -> MechanismOutcome:
+    """Advance one deterministic remediation phase from exact retained state."""
+    request = RemediationProcessStep.model_validate(context.effect.payload)
+    phase = _int_value(context.read("remediation_service.phase"))
+    status = context.read("remediation_service.job_status")
+    if request.phase != phase:
+        raise ValueError("remediation process request phase disagrees with state")
+    if context.read("incident_17.assigned_to") != "specialist":
+        raise ValueError("remediation process requires specialist assignment")
+    if context.read("incident_17.remediated") is True:
+        return MechanismOutcome(
+            outcome_code="remediation_process_denied_already_applied"
+        )
+    if phase == 0 and status == "queued":
+        return MechanismOutcome(
+            outcome_code="remediation_process_started",
+            updates=[
+                FactUpdate(
+                    fact_id="remediation_service.job_status",
+                    value="running",
+                ),
+                FactUpdate(fact_id="remediation_service.phase", value=1),
+            ],
+        )
+    if phase == 1 and status == "running":
+        return MechanismOutcome(
+            outcome_code="remediation_process_advanced",
+            updates=[
+                FactUpdate(fact_id="remediation_service.phase", value=2)
+            ],
+        )
+    if phase != 2 or status != "running":
+        raise ValueError("remediation process is not in an advanceable state")
+    receipt = RemediationReceipt()
+    feedback = CustomerFeedback()
+    receipt_id = f"remediation_receipt_{context.route_event_id}"
+    feedback_id = f"customer_feedback_{context.route_event_id}"
+    return MechanismOutcome(
+        outcome_code="remediation_applied",
+        updates=[
+            FactUpdate(fact_id="incident_17.remediated", value=True),
+            FactUpdate(fact_id="incident_17.status", value="remediated"),
+            FactUpdate(
+                fact_id="remediation_service.job_status",
+                value="applied",
+            ),
+            FactUpdate(fact_id="remediation_service.phase", value=3),
+        ],
+        representations=[
+            RepresentationDraft(
+                representation_id=receipt_id,
+                carrier_id="remediation_receipt_buffer",
+                encoding=REMEDIATION_ENCODING,
+                content=_render(receipt),
+                actual_source_ref="remediation_service",
+            ),
+            RepresentationDraft(
+                representation_id=feedback_id,
+                carrier_id="customer_feedback_buffer",
+                encoding=FEEDBACK_ENCODING,
+                content=_render(feedback),
+                actual_source_ref="customer",
             ),
         ],
         effects=[
@@ -1751,19 +2108,127 @@ def _ticket_update_valid(context: MechanismContext, outcome: MechanismOutcome) -
     )
 
 
-def _remediation_valid(context: MechanismContext, outcome: MechanismOutcome) -> bool:
+def _remediation_intake_valid(
+    context: MechanismContext,
+    outcome: MechanismOutcome,
+) -> bool:
     try:
         _parse_representation(context, CUSTOMER_REPORT_ENCODING, CustomerReport)
         RemediationRequest.model_validate(context.effect.payload)
     except (ValueError, TypeError):
         return False
     if context.read("incident_17.remediated") is True:
-        return outcome.outcome_code == "remediation_denied_already_applied" and not outcome.updates
+        return (
+            outcome.outcome_code
+            == "remediation_intake_denied_already_applied"
+            and not outcome.updates
+            and not outcome.observations
+        )
+    if context.read("remediation_service.job_status") != "idle":
+        return (
+            outcome.outcome_code == "remediation_intake_denied_job_exists"
+            and not outcome.updates
+            and not outcome.observations
+        )
+    return (
+        context.read("incident_17.assigned_to") == "specialist"
+        and outcome.outcome_code == "remediation_queued"
+        and {item.fact_id: item.value for item in outcome.updates}
+        == {
+            "remediation_service.job_status": "queued",
+            "remediation_service.phase": 0,
+        }
+        and not outcome.representations
+        and not outcome.effects
+        and len(outcome.observations) == 1
+        and outcome.observations[0].target_entity_id
+        == "remediation_service"
+        and outcome.observations[0].via_port_id
+        == "remediation_request_in"
+    )
+
+
+def _remediation_valid(
+    context: MechanismContext,
+    outcome: MechanismOutcome,
+) -> bool:
+    """Retain the original historical single-transition invariant."""
+    try:
+        _parse_representation(
+            context,
+            CUSTOMER_REPORT_ENCODING,
+            CustomerReport,
+        )
+        RemediationRequest.model_validate(context.effect.payload)
+    except (ValueError, TypeError):
+        return False
+    if context.read("incident_17.remediated") is True:
+        return (
+            outcome.outcome_code == "remediation_denied_already_applied"
+            and not outcome.updates
+        )
     return (
         context.read("incident_17.assigned_to") == "specialist"
         and outcome.outcome_code == "remediation_applied"
         and {item.fact_id: item.value for item in outcome.updates}
-        == {"incident_17.remediated": True, "incident_17.status": "remediated"}
+        == {
+            "incident_17.remediated": True,
+            "incident_17.status": "remediated",
+        }
+        and len(outcome.representations) == 2
+        and {item.output_port_id for item in outcome.effects}
+        == {"remediation_status_out", "customer_feedback_out"}
+    )
+
+
+def _remediation_process_valid(
+    context: MechanismContext,
+    outcome: MechanismOutcome,
+) -> bool:
+    try:
+        request = RemediationProcessStep.model_validate(context.effect.payload)
+        phase = _int_value(context.read("remediation_service.phase"))
+    except (ValueError, TypeError):
+        return False
+    status = context.read("remediation_service.job_status")
+    if request.phase != phase:
+        return False
+    updates = {item.fact_id: item.value for item in outcome.updates}
+    if context.read("incident_17.remediated") is True:
+        return (
+            outcome.outcome_code
+            == "remediation_process_denied_already_applied"
+            and not outcome.updates
+        )
+    if phase == 0 and status == "queued":
+        return (
+            outcome.outcome_code == "remediation_process_started"
+            and updates
+            == {
+                "remediation_service.job_status": "running",
+                "remediation_service.phase": 1,
+            }
+            and not outcome.representations
+            and not outcome.effects
+        )
+    if phase == 1 and status == "running":
+        return (
+            outcome.outcome_code == "remediation_process_advanced"
+            and updates == {"remediation_service.phase": 2}
+            and not outcome.representations
+            and not outcome.effects
+        )
+    return (
+        phase == 2
+        and status == "running"
+        and outcome.outcome_code == "remediation_applied"
+        and updates
+        == {
+            "incident_17.remediated": True,
+            "incident_17.status": "remediated",
+            "remediation_service.job_status": "applied",
+            "remediation_service.phase": 3,
+        }
         and len(outcome.representations) == 2
         and {item.output_port_id for item in outcome.effects}
         == {"remediation_status_out", "customer_feedback_out"}
@@ -1791,7 +2256,16 @@ def _ticket_closure_valid(context: MechanismContext, outcome: MechanismOutcome) 
 
 def _scripted_triager(item: ActiveSystemInput) -> ActiveStepResult:
     actions: list[ActionIntent] = []
-    if item.logical_time == 0:
+    if any(
+        cause.kind == "scenario_start"
+        for cause in item.activation_causes
+    ) or (
+        item.logical_time == 0
+        and any(
+            cause.kind == "manual_schedule"
+            for cause in item.activation_causes
+        )
+    ):
         actions = [
             ActionIntent(
                 output_port_id="triager_route_out",
@@ -1889,6 +2363,51 @@ def _scripted_supervisor(item: ActiveSystemInput) -> ActiveStepResult:
         else []
     )
     return _scripted_result(item, actions, "Supervisor separated attempted closure from mechanism outcome.")
+
+
+def _scripted_remediation_process(
+    item: ActiveSystemInput,
+) -> ActiveStepResult:
+    """Advance the exact controller without a provider or hidden world read."""
+    phase = item.private_state.get("phase")
+    if not isinstance(phase, int) or isinstance(phase, bool) or phase not in {
+        0,
+        1,
+        2,
+    }:
+        raise TypeError("remediation process phase must be 0, 1, or 2")
+    if phase == 0 and not item.observations:
+        raise ValueError("remediation process cannot start without queued input")
+    summaries = {
+        0: "Exact remediation process started the queued invalidation.",
+        1: "Exact remediation process advanced the invalidation.",
+        2: "Exact remediation process completed the invalidation.",
+    }
+    directive = (
+        UpdateScheduleDirective(
+            mode="schedule",
+            next_update_at=item.logical_time + 1,
+        )
+        if phase < 2
+        else UpdateScheduleDirective(mode="dormant")
+    )
+    return ActiveStepResult(
+        proposal=ActiveProposal(
+            active_system_id="remediation_process",
+            implementation_id=REMEDIATION_PROCESS_IMPLEMENTATION_ID,
+            private_state={"phase": phase + 1},
+            actions=[
+                ActionIntent(
+                    output_port_id="remediation_process_out",
+                    payload=RemediationProcessStep(
+                        phase=cast(Literal[0, 1, 2], phase)
+                    ).model_dump(mode="json"),
+                    public_summary=summaries[phase],
+                )
+            ],
+            update_schedule=directive,
+        )
+    )
 
 
 def _scripted_result(
@@ -2079,6 +2598,11 @@ def _port_description(port_id: str) -> str:
             "Request the stipulated stale-session remediation using the selected "
             "customer_report representation. Required payload: "
             '{"ticket_id":"incident_17","remediation":"invalidate_stale_session"}.'
+        ),
+        "remediation_process_out": (
+            "Advance the retained exact remediation job by one phase. Required "
+            'payload: {"ticket_id":"incident_17","phase":0}, 1, or 2 matching '
+            "the process controller's retained phase."
         ),
         "supervisor_close_out": (
             "Attempt authenticated closure using only the supervisor closure "
