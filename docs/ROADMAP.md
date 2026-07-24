@@ -51,10 +51,12 @@ live checkpoint with lifecycle `completed_from_checkpoint`, 12 causal moments,
 `$0.0054597981` observed cost.
 
 Technical execution is therefore observed for the configured live path and for
-one live checkpoint continuation. The continuation canary's full
-duplicate/cost-continuity trace inspection and a current-revision desktop
-workflow pass remain open. Stakeholder reviewability is established; the final
-operator usability judgment for this demo candidate is not yet recorded.
+one live checkpoint continuation. Full-trace inspection found no duplicated
+causal event or provider logical call, preserved the complete sequential
+narrative context, and reconciled every provider-reported receipt to retained
+cost. A current-revision desktop workflow pass remains open. Stakeholder
+reviewability is established; the final operator usability judgment for this
+demo candidate is not yet recorded.
 
 V0.12.2 remains the last fully narrated and browser-certified release. It adds
 the separate run-history workspace and stable in-place scale/time inspection
@@ -199,11 +201,10 @@ North Star or a production simulator. The sole active packet is
 5. the operator uses the current build for five to ten minutes and finds no
    remaining demo-blocking comprehension or control defect.
 
-The live run/data portion of check 1 and the pause/resume execution portion of
-check 2 have current deployed evidence. Full continuation-trace inspection, the
-integrated desktop presentation pass, and the final operator judgment remain
-open. Once those pass, mark Slice 14 and the current demo complete. Do not add
-another substrate or feature packet to this gate.
+The live run/data portion of check 1 and all of check 2 have current deployed
+evidence. The integrated desktop presentation pass and final operator judgment
+remain open. Once those pass, mark Slice 14 and the current demo complete. Do
+not add another substrate or feature packet to this gate.
 
 ## Approved Outcome Extension
 
@@ -303,8 +304,8 @@ active packet.
 
 [Slice 14](plans/014-pausable-live-runs.md) is the sole active packet. Live
 pause/resume is implemented and one retained run completed from its checkpoint.
-The shortest remaining path is full continuation-trace inspection, one current
-desktop workflow pass, and the operator's short usability judgment. Passing the
+The shortest remaining path is one current desktop workflow pass and the
+operator's short usability judgment. Passing the
 [Current Demo Completion Boundary](#current-demo-completion-boundary) ends this
 PoC demo stage.
 

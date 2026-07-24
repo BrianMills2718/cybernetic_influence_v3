@@ -35,8 +35,19 @@ run can complete from a retained checkpoint. It finished with lifecycle
 calls, 12 narrator calls, 12 narratives, and `$0.0054597981` observed cost on
 simulator `1be312441fcc934ab2fb72e044db3b5dc14f7985` and shared client
 `9f61bd7c9419c93961a722a7ef6209adcf593382`. This licenses the bounded
-completion claim only. Full duplicate/cost-continuity trace inspection and the
-current desktop interaction pass remain open below.
+completion claim. Full-trace inspection subsequently found 105 unique ordered
+events, 23 unique provider logical calls, one start and completion per call,
+zero retries or validation errors, a complete 0-through-11 prior-narrative
+chain, and an exact match between 23 provider-reported receipts and the retained
+`$0.0054597981` total. The pause occurred in the causal phase, so no narration
+prefix existed to replay; all 12 accounts were generated after continuation
+with the complete prior-account chain. The current desktop interaction pass
+remains open below.
+
+Behavioral note: after confirmed closure, the supervisor made two redundant
+closure attempts. The exact mechanism denied both as already closed, and the
+narratives exposed the attempts. This is participant judgment to assess during
+the usability/fidelity review, not evidence of checkpoint replay.
 
 ## Demo completion gate
 
@@ -49,14 +60,15 @@ scenario fidelity.
   configuration, and observed provider cost.
 - [x] A live run pauses at a validated causal boundary and later completes from
   that retained checkpoint.
-- [ ] Inspect the resumed run's full causal and provider-call trace: no repeated
+- [x] Inspect the resumed run's full causal and provider-call trace: no repeated
   pre-pause event IDs or provider logical calls, a continuous narrative prefix,
   and observed cost supported by terminal receipts.
 - [ ] Exercise the current desktop path—choose scenario, Play, map, narrative,
   traces, pause, resume, and Run history—with no blocking console/network error,
   disruptive scroll jump, or misleading lifecycle control.
-- [x] Confirm the roadmap, plan index, README, and deployed configuration agree
-  on revisions, model defaults, supported controls, and explicit non-claims.
+- [x] Confirm the roadmap, plan index, README, Mac operations page, and deployed
+  configuration agree on revisions, model defaults, supported controls, and
+  explicit non-claims.
 - [ ] Have the operator use the current build for five to ten minutes. Fix only
   demo-blocking comprehension or control defects; otherwise record the judgment
   and mark this packet complete.

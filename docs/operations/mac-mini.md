@@ -23,47 +23,54 @@ stored in the repository or LaunchAgent plist.
 
 Last verified 2026-07-24:
 
-- simulator: `a51b13d6c959bdad3bc9b137b568d6e243b49cf2`;
-- shared client: `9b2a3beaef30d27d9ff278e79a78d397c6a24d5d`;
+- simulator: `1be312441fcc934ab2fb72e044db3b5dc14f7985`;
+- shared client: `9f61bd7c9419c93961a722a7ef6209adcf593382`;
 - advertised routes: Terra and DeepSeek V4 Flash;
 - Terra certification:
-  `routeobs1_cfe8e9cc144d22be087e848a,routeobs1_a11d208c426f16940ee43c4b`;
+  `routeobs1_7cc1c51f065c181a33ff422d,routeobs1_bb5643a65107960dadc76a36`;
 - DeepSeek certification:
-  `routeobs1_811669be15ab4d6dda51c296,routeobs1_82ba91498a4ea780e31b00d3`;
-- exact-revision complete canary: `run_feb8ed10258d`, completed
+  `routeobs1_029097c508a11554b6b9301f,routeobs1_ba61b37be133f07f47177352`;
+- default route: DeepSeek V4 Flash with `none` participant and narrator
+  reasoning;
+- exact-revision complete canary: `run_954220d513c3`, completed
   `closed_confirmed`, seven participant calls plus eight causal-moment narrator
-  calls, `$0.103861875` fully provider-observed;
-- provider trace: all 15 calls completed through native structured output with
-  zero retries, warnings, or validation errors;
+  calls, `$0.0034581043` provider-observed;
+- checkpoint-continuation canary: `run_abcd00000000`, completed from its
+  retained live checkpoint with 12 causal moments, 23 total model calls, and
+  `$0.0054597981` provider-observed;
+- continuation trace: 105 unique ordered events and 23 unique logical calls;
+  every call has one start and completion, native JSON-schema output, no retry,
+  error, warning, or validation failure, and the receipt sum exactly matches
+  retained cost;
 - open limitation: current-revision rendered desktop browser verification
   remains unproven; mobile is out of scope for this private PoC.
 
-The currently advertised live route is
-`openrouter/openai/gpt-5.6-terra`. The explicit provider prefix is required
-because bare `gpt-5.6-terra` intentionally selects the direct OpenAI route in
-`llm_client`. The UI exposes Terra agent reasoning at low, medium, or high,
-defaults to medium, and retains low narrator reasoning. Scenario participant
-and narrator calls use a 384-token structured-output ceiling; retained
-successful evidence peaked at 169 and 191 tokens respectively.
+The default live route is
+`openrouter/deepseek/deepseek-v4-flash` at `none` reasoning for participants
+and narration. DeepSeek `high` and `xhigh` are visible experiments rather than
+certified settings; shared-client policy rejects `medium`. Terra remains
+selectable as `openrouter/openai/gpt-5.6-terra` with `none`, `low`, `medium`,
+or `high` participant reasoning and `low` narrator reasoning. Explicit provider
+prefixes are required because bare model identifiers may select direct-provider
+routes in `llm_client`.
 
 Runtime contracts cap each participant call at $0.05 and narration at $0.02 per
 bounded moment. The UI advertises the conservative combined $0.74 envelope.
 Typical Service Desk runs quiesce well before that bound. Only one live run may
 execute at a time.
 
-DeepSeek V4 Flash is advertised only with reasoning set to `none`. The shared
-client rejects `medium` for that route; prior high-reasoning probes exhausted
-their output allowance without structured content, so high is deliberately not
-offered. The current-revision Service Desk canary `run_164fee2c564f` completed
-at `none`: nine participant calls and ten narrator calls cost `$0.004636731`.
-One narrator first attempt exceeded the 360-character schema field limit and
-was retried successfully; it was not an empty-output or provider failure.
+Service Desk scripted and live runs can pause only after a validated quiescent
+causal boundary. Resume requires the same scenario identity, effective LLM
+configuration, and shared-client revision; it appends from the retained
+checkpoint rather than replaying the committed prefix. The current PoC does not
+interrupt an in-flight provider request or automatically resume after a server
+restart.
 
-Purchase-to-payment uses the same explicit model at medium human reasoning and
-low narrator reasoning. Its observation-driven settled and processor-declined
-paths allow at most four human and four narrator calls under a conservative
-$0.38 combined envelope. Denied or malformed paths quiesce earlier; the model
-and budget boundary do not change.
+Purchase-to-payment uses the operator-selected effective live configuration;
+the server default is therefore also DeepSeek `none`. Its observation-driven
+settled and processor-declined paths allow at most four human and four narrator
+calls. Denied or malformed paths quiesce earlier. Pause/resume remains limited
+to Service Desk.
 
 ## Inspect
 
@@ -115,6 +122,7 @@ LLM_CLIENT_REVISION=<exact shared-client commit>
 LLM_ROUTE_CERTIFICATION_ROOT=/Users/b/Library/Application Support/LLMClient/route_certification
 LLM_CLIENT_TIMEOUT_POLICY=allow
 CYBERNETIC_INFLUENCE_CERT_TERRA=<participant observation>,<narrator observation>
+CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH=<participant observation>,<narrator observation>
 ```
 
 An observation is accepted only when its requested model, exact provider-schema
