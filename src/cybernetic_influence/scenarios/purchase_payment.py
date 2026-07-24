@@ -378,7 +378,7 @@ def purchase_payment_native_bindings(
                 trace_id_prefix=trace_id_prefix,
                 reasoning_effort=reasoning_effort,
                 max_memory_entries=20,
-                max_output_tokens=768,
+                max_output_tokens=384,
                 decision_wire_contract="openai-json-payload-wire.v2",
             ),
         )
@@ -1120,7 +1120,7 @@ def _active_specs(
             task=PURCHASE_PAYMENT_TASK,
             reasoning_effort=reasoning_effort,
             max_memory_entries=20,
-            max_output_tokens=768,
+            max_output_tokens=384,
             decision_wire_contract="openai-json-payload-wire.v2",
         )
 
@@ -1869,7 +1869,7 @@ def _implementation_id(active_system_id: str) -> str:
         task=PURCHASE_PAYMENT_TASK,
         reasoning_effort=PURCHASE_PAYMENT_REASONING_EFFORT,
         max_memory_entries=20,
-        max_output_tokens=768,
+        max_output_tokens=384,
         decision_wire_contract="openai-json-payload-wire.v2",
     )
 

@@ -561,7 +561,7 @@ def service_desk_native_bindings(
                 trace_id_prefix=trace_id_prefix,
                 reasoning_effort=reasoning_effort or fixture.reasoning_effort,
                 max_memory_entries=32,
-                max_output_tokens=1024,
+                max_output_tokens=384,
                 decision_wire_contract="openai-json-payload-wire.v2",
             ),
         )
@@ -1331,7 +1331,7 @@ def _active_specs(
             task=SERVICE_DESK_TASK,
             reasoning_effort=reasoning_effort,
             max_memory_entries=32,
-            max_output_tokens=1024,
+            max_output_tokens=384,
             decision_wire_contract="openai-json-payload-wire.v2",
         )
 
@@ -2460,7 +2460,7 @@ def _spec_implementation_id(active_system_id: str) -> str:
         task=SERVICE_DESK_TASK,
         reasoning_effort=SERVICE_DESK_REASONING_EFFORT,
         max_memory_entries=32,
-        max_output_tokens=1024,
+        max_output_tokens=384,
         decision_wire_contract="openai-json-payload-wire.v2",
     )
 

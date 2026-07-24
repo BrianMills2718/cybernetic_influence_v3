@@ -301,7 +301,7 @@ def physical_access_native_bindings(
                 trace_id_prefix=trace_id_prefix,
                 reasoning_effort=reasoning_effort,
                 max_memory_entries=16,
-                max_output_tokens=768,
+                max_output_tokens=384,
                 decision_wire_contract="openai-json-payload-wire.v2",
             ),
         )
@@ -1277,7 +1277,7 @@ def _technician_implementation_id(
         task=PHYSICAL_ACCESS_TASK,
         reasoning_effort=reasoning_effort,
         max_memory_entries=16,
-        max_output_tokens=768,
+        max_output_tokens=384,
         decision_wire_contract="openai-json-payload-wire.v2",
     )
 
