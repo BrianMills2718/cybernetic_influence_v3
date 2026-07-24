@@ -15,13 +15,20 @@ let scenarioCatalog = {}
 let runtimeConfig = {}
 
 function setWorkspaceView(view) {
+  const simulation = view === 'simulation'
   const history = view === 'history'
-  $('#simulation-view').hidden = history
+  const readme = view === 'readme'
+  $('#simulation-view').hidden = !simulation
   $('#history-view').hidden = !history
-  $('#simulation-tab').classList.toggle('active', !history)
-  $('#simulation-tab').setAttribute('aria-pressed', String(!history))
-  $('#history-tab').classList.toggle('active', history)
-  $('#history-tab').setAttribute('aria-pressed', String(history))
+  $('#readme-view').hidden = !readme
+  for (const [tab, active] of [
+    ['#simulation-tab', simulation],
+    ['#history-tab', history],
+    ['#readme-tab', readme],
+  ]) {
+    $(tab).classList.toggle('active', active)
+    $(tab).setAttribute('aria-pressed', String(active))
+  }
 }
 
 function simulatedTime(value) {
@@ -72,7 +79,6 @@ async function loadConfig() {
   $('#reasoning-help').textContent = help.agent_reasoning_effort || ''
   $('#max-cost-help').textContent = help.max_total_cost || ''
   $('#map-help').textContent = help.map_projection || ''
-  $('#scale-help').textContent = help.analytical_scale || ''
   $('#moment-help').textContent = help.causal_moment || ''
   $('#narrative-help').textContent = help.narrative || ''
   configureScenario(config.scenario)
@@ -97,11 +103,8 @@ function configureScenario(scenarioId) {
     `<option value="${html(arm.id)}">${html(arm.label)}</option>`
   ).join('')
   $('#scenario-title').textContent = selected.label
-  $('#scenario-description').textContent = scenarioId === 'physical_access'
-    ? 'Separate credential proof, policy authorization, latch operation, physical crossing, and observed feedback.'
-    : scenarioId === 'purchase_payment'
-      ? 'Follow one purchase across human decisions, exact internal control, and a deliberately coarse external processor.'
-      : 'Run people, information, records, connections, and exact mechanisms together.'
+  $('#scenario-description').textContent = selected.representation_summary ||
+    'Choose one bounded scenario, its concrete condition, and a live or reference execution.'
   $('#representation-summary').textContent = selected.representation_summary || ''
   fillList('#scenario-assumptions', selected.assumptions)
   fillList('#scenario-omissions', selected.known_omissions)
@@ -325,26 +328,6 @@ function renderScaleControls() {
   if (selectedScale !== 'exact' && !boundaries.some((item) => item.id === selectedScale)) {
     selectedScale = 'exact'
   }
-  $('#scale-tabs').innerHTML = [
-    `<button data-scale="exact" class="${selectedScale === 'exact' ? 'active' : ''}">Exact components</button>`,
-    ...boundaries.map((boundary) =>
-      `<button data-scale="${html(boundary.id)}" class="${selectedScale === boundary.id ? 'active' : ''}">${html(boundary.label)}</button>`
-    ),
-  ].join('')
-  document.querySelectorAll('#scale-tabs button').forEach((button) => {
-    button.onclick = () => {
-      selectedScale = button.dataset.scale
-      renderScaleControls()
-      renderGraph()
-      selectEvent(selectedEventIndex)
-    }
-  })
-  const snapshot = boundarySnapshot()
-  $('#scale-loss').textContent = snapshot
-    ? `Coarse analytical view: ${snapshot.selectable_member_count} selectable components and ${snapshot.internal_route_ids.length} internal routes are hidden; ${snapshot.hidden_fact_count} state facts and ${snapshot.hidden_information_count} information tokens are summarized. The boundary does not act.`
-    : boundaries.length
-      ? 'Exact view: every retained component and declared connection remains selectable.'
-      : 'Exact view: this older retained run has no authored analytical boundary.'
 }
 
 function showBoundary(boundaryId) {
@@ -472,11 +455,43 @@ function showEdge(edge) {
 }
 
 function showTrace(person) {
+  const boundary = (current?.boundaries || []).find((item) => item.id === person)
+  if (boundary) {
+    selectedPerson = person
+    document.querySelectorAll('#trace-tabs button').forEach((button) => button.classList.toggle('active', button.dataset.person === person))
+    const snapshot = boundarySnapshot(boundary)
+    const members = (snapshot?.member_ids || []).map((memberId) =>
+      nodesAtSelectedEvent().find((node) => node.id === memberId),
+    ).filter(Boolean)
+    const people = members.filter((member) => member.kind === 'person').map((member) => member.label)
+    const processes = members.filter((member) => member.kind === 'mechanism').map((member) => member.label)
+    $('#trace').innerHTML = `
+      <article class="trace-step composite-account">
+        <span class="eyebrow">Analytical composite · does not act</span>
+        <h3>${html(boundary.label)}</h3>
+        <p>${html(boundary.description)} At this selected moment it summarizes ${html(people.length)} people${people.length ? ` (${html(people.join(', '))})` : ''}${processes.length ? ` and ${html(processes.length)} exact mechanism${processes.length === 1 ? '' : 's'}` : ''}. Its members produce the actions and effects; the composite is only a way to inspect them together.</p>
+        <dl class="aggregate-facts">
+          <div><dt>Visible exact members</dt><dd>${html(snapshot?.member_ids?.length || 0)}</dd></div>
+          <div><dt>Internal routes</dt><dd>${html(snapshot?.internal_route_ids?.length || 0)}</dd></div>
+          <div><dt>World executor</dt><dd>No</dd></div>
+        </dl>
+        <button id="inspect-composite">Inspect this composite on the map</button>
+      </article>`
+    $('#inspect-composite').onclick = () => showBoundary(boundary.id)
+    return
+  }
   selectedPerson = person
   document.querySelectorAll('#trace-tabs button').forEach((button) => button.classList.toggle('active', button.dataset.person === person))
   const selectedEvent = current?.timeline?.[selectedEventIndex]
   const entries = (current?.traces || []).filter((entry) => entry.person === person)
-  $('#trace').innerHTML = entries.map((entry) => {
+  const totalActions = entries.reduce((count, entry) => count + (entry.actions?.length || 0), 0)
+  const totalObservations = entries.reduce((count, entry) => count + (entry.observations?.length || 0), 0)
+  const label = person.replaceAll('_', ' ')
+  $('#trace').innerHTML = entries.length ? `
+    <article class="trace-summary">
+      <span class="eyebrow">${html(String(entries[0].participant_kind || 'person').replaceAll('_', ' '))} account</span>
+      <p>${html(label)} was activated ${entries.length} time${entries.length === 1 ? '' : 's'}, received ${totalObservations} retained observation${totalObservations === 1 ? '' : 's'}, and made ${totalActions} proposed action${totalActions === 1 ? '' : 's'}. The retained moments below show what it knew and did without treating this account as access to the whole world.</p>
+    </article>` + entries.map((entry) => {
     const matches = selectedEvent?.activation === entry.activation
     return `
       <article class="trace-step ${matches ? 'event-match' : ''}">
@@ -494,7 +509,7 @@ function showTrace(person) {
           }, null, 2))}</pre>
         </details>
       </article>`
-  }).join('') || '<p class="muted">No retained activations for this person.</p>'
+  }).join('') : '<p class="muted">No retained activations for this participant.</p>'
 }
 
 function drawGraphLines(edges) {
@@ -572,6 +587,7 @@ function renderGraph() {
       event:current?.timeline?.[selectedEventIndex] || null,
       world:worldProjection(),
       viewMode:selectedGraphView,
+      analyticalScaleHelp:runtimeConfig.live_options?.help?.analytical_scale || 'Analytical scale collapses an execution-inert composite for inspection; it does not create another acting system.',
       boundary:authoredBoundary && snapshot ? {
         id:authoredBoundary.id,
         label:authoredBoundary.label,
@@ -897,11 +913,15 @@ function render(run) {
   renderScaleControls()
   renderTurnNarratives()
   const people = [...new Set(current.traces.map((entry) => entry.person))]
-  $('#trace-tabs').innerHTML = people.map((person) => {
+  const participantTabs = people.map((person) => {
     const kind = current.traces.find((entry) => entry.person === person)?.participant_kind
     const suffix = kind === 'state_machine' ? ' · exact process' : ''
     return `<button data-person="${html(person)}">${html(person.replaceAll('_',' '))}${html(suffix)}</button>`
-  }).join('')
+  })
+  const compositeTabs = (current.boundaries || []).map((boundary) =>
+    `<button data-person="${html(boundary.id)}" title="Analytical composite; it summarizes members but does not act">${html(boundary.label)} · composite</button>`
+  )
+  $('#trace-tabs').innerHTML = [...participantTabs, ...compositeTabs].join('')
   document.querySelectorAll('#trace-tabs button').forEach((button) => button.onclick = () => showTrace(button.dataset.person))
   if (people.length) showTrace(people[0])
   else $('#trace').innerHTML = '<p class="muted">No completed participant traces were retained.</p>'
@@ -914,6 +934,7 @@ $('#previous-event').onclick = () => selectMoment(selectedMomentIndex - 1)
 $('#next-event').onclick = () => selectMoment(selectedMomentIndex + 1)
 $('#simulation-tab').onclick = () => setWorkspaceView('simulation')
 $('#history-tab').onclick = () => setWorkspaceView('history')
+$('#readme-tab').onclick = () => setWorkspaceView('readme')
 $('#scenario').onchange = (event) => configureScenario(event.target.value)
 $('#arm').onchange = describeCondition
 $('#spatial-layout').onclick = () => {

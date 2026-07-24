@@ -696,7 +696,7 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
                 "Logical seconds express process cadence, not wall-clock duration.",
             ],
             "known_omissions": [
-                "No authored spatial topology is present.",
+                "The authored topology covers only the service-operations center and remote customer site; it does not model travel, building interiors, or network infrastructure in detail.",
                 "The customer and broader organization are not active participants.",
                 "The stipulated remediation abstracts away the underlying software stack.",
             ],

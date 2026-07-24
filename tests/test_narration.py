@@ -66,7 +66,7 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     assert any(len(moment["participants"]) > 1 for moment in moments)
     assert "Earlier causal-moment narratives, in order:\n[]" in prompts[0]
     assert "Never describe scenario_start as an internal" in prompts[0]
-    assert "at most 450 characters" in prompts[0]
+    assert "at most 360 characters" in prompts[0]
     assert "Narrated causal moment 1." in prompts[1]
     assert all(item["max_tokens"] == 384 for item in call_options)
     assert all(item["reasoning_effort"] == "high" for item in call_options)

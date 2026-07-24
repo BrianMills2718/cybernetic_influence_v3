@@ -33,8 +33,8 @@ Last verified 2026-07-24:
   calls, `$0.103861875` fully provider-observed;
 - provider trace: all 15 calls completed through native structured output with
   zero retries, warnings, or validation errors;
-- open limitation: current-revision rendered desktop/mobile browser
-  verification remains unproven.
+- open limitation: current-revision rendered desktop browser verification
+  remains unproven; mobile is out of scope for this private PoC.
 
 The currently advertised live route is
 `openrouter/openai/gpt-5.6-terra`. The explicit provider prefix is required

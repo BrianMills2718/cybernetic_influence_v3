@@ -84,6 +84,7 @@ interface CanvasOptions {
   boundary: BoundaryView | null
   world: WorldView | null
   viewMode: 'world' | 'causal'
+  analyticalScaleHelp: string
   collapsedBoundaryId: string | null
   selectedNodeId: string | null
   selectedEdgeId: string | null
@@ -630,8 +631,12 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
             </div>
           )}
           {!worldMode && boundaryId && (
-          <button onClick={() => options.onToggleBoundary(boundaryId)}>
-            {collapsed ? 'Expand' : 'Collapse'} {boundaryLabel}
+          <button
+            title={options.analyticalScaleHelp}
+            aria-label={`Analytical scale: ${collapsed ? 'expand' : 'collapse'} ${boundaryLabel}`}
+            onClick={() => options.onToggleBoundary(boundaryId)}
+          >
+            Analytical scale: {collapsed ? 'Expand' : 'Collapse'} {boundaryLabel}
           </button>
           )}
         </div>

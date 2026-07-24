@@ -66,7 +66,7 @@ Earlier observations on superseded revisions do not qualify. Do not advertise
 DeepSeek until fresh exact-schema observations and one complete
 participant-plus-narrator canary pass.
 
-Rendered desktop/mobile certification is also still open: production assets
+Rendered desktop certification is also still open: production assets
 build, API/static checks pass, and prior V0.12 browser evidence exists, but both
 headless Chrome and Safari automation hung from the current SSH session. Do not
 upgrade this to a visual pass without a successful current-revision browser
@@ -293,7 +293,7 @@ deterministic gates are complete. Terra passes route/schema certification and
 the complete deployed participant-plus-narrator canary. DeepSeek remains
 unadvertised after unstable structured output. Current-revision rendered
 browser verification is still open. Slice 13 remains the sole active packet
-until a desktop/mobile pass is inspected; a second model is promoted only when
+until a desktop pass is inspected; a second model is promoted only when
 it independently passes the same gates.
 
 ### 6. Add conversational scenario drafting behind a typed compiler — next

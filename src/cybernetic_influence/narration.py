@@ -26,7 +26,7 @@ class CausalMomentNarration(BaseModel):
 
     model_config = _FORBID
 
-    narrative: str = Field(min_length=1, max_length=600)
+    narrative: str = Field(min_length=1, max_length=360)
     source_event_ids: list[str] = Field(min_length=1, max_length=4)
 
 

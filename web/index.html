@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=configurable-runs-v1">
-  <link rel="stylesheet" href="/assets/graph-canvas.css?v=configurable-runs-v1">
+  <link rel="stylesheet" href="/assets/styles.css?v=readable-run-v1">
+  <link rel="stylesheet" href="/assets/graph-canvas.css?v=readable-run-v1">
 </head>
 <body>
   <header>
@@ -15,6 +15,7 @@
       <nav class="app-tabs" aria-label="Simulator workspace">
         <button id="simulation-tab" type="button" class="active" aria-pressed="true" aria-controls="simulation-view">Simulation</button>
         <button id="history-tab" type="button" aria-pressed="false" aria-controls="history-view">Run history</button>
+        <button id="readme-tab" type="button" aria-pressed="false" aria-controls="readme-view">Read me</button>
       </nav>
       <span id="run-status">Ready</span>
     </div>
@@ -25,7 +26,7 @@
         <div>
           <span class="eyebrow">Choose and play</span>
           <h2 id="scenario-title">Service desk</h2>
-          <p id="scenario-description">Run people, information, records, connections, and exact mechanisms together.</p>
+          <p id="scenario-description">A bounded incident workflow with an authored service-operations center, a remote customer site, and one login incident.</p>
         </div>
         <label>Scenario
           <select id="scenario"></select>
@@ -78,16 +79,10 @@
         <p class="muted">Choose a layout, then select a node or edge for its retained state. Spatial layout shows authored places, occupants, and physical topology; causal flow shows information, actions, and exact mechanisms.</p>
         <div class="projection-toolbar" aria-label="Map layout">
           <div class="tabs">
-            <button id="spatial-layout" type="button">Spatial layout</button>
-            <button id="causal-layout" type="button">Causal flow</button>
+            <button id="spatial-layout" type="button" title="Shows authored places, occupants, and physical links. It does not imply permission, communication, or access.">Spatial layout</button>
+            <button id="causal-layout" type="button" title="Shows declared information routes, actions, records, and exact mechanisms rather than spatial proximity.">Causal flow</button>
           </div>
           <p id="projection-help" class="muted"></p>
-        </div>
-        <div class="scale-toolbar">
-          <span class="eyebrow">Analytical scale <button class="help-button" type="button" data-help="scale-help" aria-expanded="false" aria-controls="scale-help">?</button></span>
-          <small id="scale-help" class="inline-help" hidden></small>
-          <div id="scale-tabs" class="tabs" aria-label="Graph scale"></div>
-          <p id="scale-loss" class="scale-loss"></p>
         </div>
         <div class="workspace">
           <div id="graph" class="graph" aria-label="Connected causal graph"></div>
@@ -95,42 +90,17 @@
         </div>
       </section>
 
-      <section class="timeline-panel">
-        <span class="eyebrow">Causal time</span>
-        <div class="heading-help"><h2>Choose a moment</h2><button class="help-button" type="button" data-help="moment-help" aria-expanded="false" aria-controls="moment-help">?</button></div>
-        <p id="moment-help" class="inline-help" hidden></p>
-        <p class="muted">The map, account, and inspector stay synchronized with this moment. Simulated time may advance unevenly because each process follows its own cadence.</p>
-        <div class="timeline-controls">
-          <button id="previous-event" aria-label="Previous event">←</button>
-          <input id="event-slider" type="range" min="0" value="0" aria-label="Selected causal event">
-          <button id="next-event" aria-label="Next event">→</button>
-          <span id="event-count"></span>
-        </div>
-        <div id="timeline-track" class="timeline-track"></div>
-      </section>
-
-      <section class="step-account">
-        <span class="eyebrow">Narrative for the selected causal moment</span>
-        <div class="heading-help"><h2 id="step-account-title"></h2><button class="help-button" type="button" data-help="narrative-help" aria-expanded="false" aria-controls="narrative-help">?</button></div>
-        <p id="narrative-help" class="inline-help" hidden></p>
-        <p id="step-account-body"></p>
-        <p id="step-account-source" class="muted"></p>
-        <div id="moment-events" class="moment-events" aria-label="Exact events in selected causal moment"></div>
-        <article id="event-detail" class="event-detail"></article>
-      </section>
-
       <section class="turn-narratives">
         <span class="eyebrow">Causal-moment narrative</span>
         <h2>How the run unfolded</h2>
-        <p class="muted">Each account combines everyone activated from the same frozen pre-moment state, then carries the prior narrative forward.</p>
+        <p class="muted">An LLM writes one concise account per causal moment from the retained trace. Each account carries the earlier story forward; exact evidence remains available below.</p>
         <div id="turn-narratives"></div>
-      </section>
-
-      <section class="story">
-        <span class="eyebrow">Run outcome</span>
-        <h2 id="story-headline"></h2>
-        <p id="story-summary"></p>
-        <ol id="story-steps"></ol>
+        <footer class="story" aria-label="Run outcome">
+          <span class="eyebrow">Outcome</span>
+          <h2 id="story-headline"></h2>
+          <p id="story-summary"></p>
+          <ol id="story-steps"></ol>
+        </footer>
       </section>
 
       <section class="flow-controls">
@@ -139,11 +109,39 @@
       </section>
 
       <section>
-        <span class="eyebrow">Participant traces</span>
-        <h2>What each person or exact process received and did</h2>
+        <span class="eyebrow">Participant accounts</span>
+        <h2>What people, processes, and analytical composites did</h2>
+        <p class="muted">Choose a person or exact process for its retained activations, or an analytical composite to see the bounded system it summarizes. A composite is a view, not another actor.</p>
         <div id="trace-tabs" class="tabs"></div>
         <div id="trace"></div>
       </section>
+
+      <details class="moment-inspector">
+        <summary>Choose a causal moment <span class="summary-help">Synchronize the map and inspect the exact evidence behind one account</span></summary>
+        <section class="timeline-panel">
+          <span class="eyebrow">Causal time</span>
+          <div class="heading-help"><h2>Choose a moment</h2><button class="help-button" type="button" data-help="moment-help" aria-expanded="false" aria-controls="moment-help">?</button></div>
+          <p id="moment-help" class="inline-help" hidden></p>
+          <p class="muted">The map, account, and inspector stay synchronized with this moment. Simulated time may advance unevenly because each process follows its own cadence.</p>
+          <div class="timeline-controls">
+            <button id="previous-event" aria-label="Previous event">←</button>
+            <input id="event-slider" type="range" min="0" value="0" aria-label="Selected causal event">
+            <button id="next-event" aria-label="Next event">→</button>
+            <span id="event-count"></span>
+          </div>
+          <div id="timeline-track" class="timeline-track"></div>
+        </section>
+
+        <section class="step-account">
+          <span class="eyebrow">Narrative for the selected causal moment</span>
+          <div class="heading-help"><h2 id="step-account-title"></h2><button class="help-button" type="button" data-help="narrative-help" aria-expanded="false" aria-controls="narrative-help">?</button></div>
+          <p id="narrative-help" class="inline-help" hidden></p>
+          <p id="step-account-body"></p>
+          <p id="step-account-source" class="muted"></p>
+          <div id="moment-events" class="moment-events" aria-label="Exact events in selected causal moment"></div>
+          <article id="event-detail" class="event-detail"></article>
+        </section>
+      </details>
 
       <details class="advanced">
         <summary>Advanced evidence <span class="summary-help">Exact retained state and provider-call summaries</span></summary>
@@ -160,8 +158,20 @@
       <div id="history" class="history"></div>
       <p id="storage-warning" class="warning" hidden></p>
     </section>
+
+    <section id="readme-view" class="app-view readme-card" hidden>
+      <span class="eyebrow">Read me</span>
+      <h2>How to read a cybernetic simulation</h2>
+      <p>This is a bounded causal model, not a claim that a real organization is a single mind. People and exact processes act; records, credentials, and mechanisms constrain what can happen; an organization is an analytical composite over those retained components.</p>
+      <div class="readme-grid">
+        <article><h3>Choose and play</h3><p>Select a scenario and condition, then run it. Live runs let LLM-modeled people act from their retained memory, position, observations, and interfaces. Reference runs use fixed zero-cost policies.</p></article>
+        <article><h3>Read the map</h3><p><strong>Spatial layout</strong> shows authored places, occupants, and physical links. <strong>Causal flow</strong> shows information, actions, records, and mechanisms. Spatial proximity does not grant authority or communication.</p></article>
+        <article><h3>Change analytical scale</h3><p>The graph’s analytical-scale control collapses or expands an execution-inert composite such as the service desk. It changes what is summarized, not what exists or acts in the simulation.</p></article>
+        <article><h3>Follow the account</h3><p>The narrative is an LLM-written account grounded in each moment’s retained trace. Use the rolled-up causal-moment inspector and advanced evidence when you need to step down to exact events and state.</p></article>
+      </div>
+    </section>
   </main>
-  <script src="/assets/graph-canvas.js?v=configurable-runs-v1"></script>
-  <script src="/assets/app.js?v=configurable-runs-v1"></script>
+  <script src="/assets/graph-canvas.js?v=readable-run-v1"></script>
+  <script src="/assets/app.js?v=readable-run-v1"></script>
 </body>
 </html>

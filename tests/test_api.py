@@ -58,6 +58,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert config.json()["scenarios"]["service_desk"]["assumptions"]
     assert config.json()["scenarios"]["service_desk"]["known_omissions"]
     assert config.json()["scenarios"]["service_desk"]["fidelity_questions"]
+    assert "No authored spatial topology is present." not in config.json()["scenarios"]["service_desk"]["known_omissions"]
+    assert "authored topology" in config.json()["scenarios"]["service_desk"]["known_omissions"][0]
     page = api.get("/")
     assert page.status_code == 200
     assert page.headers["content-security-policy"].startswith("default-src 'self'")
@@ -70,6 +72,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Causal-moment narrative" in page.text
     assert "Play simulation" in page.text
     assert "Run history" in page.text
+    assert "Read me" in page.text
+    assert "How to read a cybernetic simulation" in page.text
     assert 'id="model"' in page.text
     assert 'id="reasoning"' in page.text
     assert 'id="max-cost"' in page.text

@@ -33,17 +33,37 @@ The configurable-run vertical is implemented and deployed at simulator
 - DeepSeek V4 Flash remains unadvertised. Final-revision high-reasoning probes
   repeatedly returned empty structured content at both 384 and 512 output
   tokens.
-- Current-revision rendered desktop/mobile verification is unproven because
-  both available browser-automation paths hung from the SSH session.
+- Current-revision rendered desktop verification is unproven because the
+  available browser-automation paths hung from the SSH session. Mobile is not
+  an acceptance target for this private PoC.
 
 Two shared-client defects found by deployment certification were fixed and
 tested: malformed received JSON now produces a complete validation-retry
 lifecycle (`4e0780d`), and the public certification schema helper now exactly
 matches the runtime provider schema (`07b168f`).
 
-The remaining acceptance packet is one current-revision desktop/mobile browser
-pass. A second model is not a blocker to honest single-route use; it becomes
+The remaining acceptance packet is one current-revision desktop browser pass.
+A second model is not a blocker to honest single-route use; it becomes
 selectable only after its own exact schema and complete canary evidence pass.
+
+## UX correction: readable run flow
+
+The current Service Desk review exposed a presentation defect, not a runtime
+one: API metadata incorrectly said the scenario had no authored spatial
+topology, and the screen put an audit-style moment inspector ahead of the
+human-readable account. The PoC's analyst flow is now:
+
+1. choose a scenario and see its bounded representation summary immediately;
+2. inspect one map with spatial/causal projections and one in-place analytical
+   scale control for execution-inert composites;
+3. read the sequential LLM narrative and its outcome directly below the map;
+4. inspect people, exact processes, and composites; then optionally open the
+   causal-moment evidence inspector before advanced evidence.
+
+The narrator contract favors one or two plain-English sentences over repeated
+mechanism vocabulary and generic omission disclaimers. It remains constrained
+to current-moment evidence and prior accounts. The Read me tab defines the
+projection and composite terms without competing with the run flow.
 
 ## Route and Outcome
 
@@ -411,7 +431,7 @@ End-to-end acceptance:
 - reopening either run shows the effective settings and exact evidence;
 - a disallowed-model request and an underfunded continuation prove fail-closed
   behavior without an unauthorized next call;
-- desktop and mobile flows pass normal input, keyboard access, screenshot
+- desktop flow passes normal input, keyboard access, screenshot
   inspection, zero horizontal overflow, console/network checks, and backend-log
   inspection;
 - `make check` passes on Linux and the Mac.
