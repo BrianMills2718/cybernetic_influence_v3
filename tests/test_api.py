@@ -23,10 +23,24 @@ def client(run_root: Path) -> TestClient:
 
 
 def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
-    api = client(tmp_path)
-    config = api.get("/api/config")
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary-terra",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary-deepseek",
+            },
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+    ):
+        api = client(tmp_path)
+        config = api.get("/api/config")
     assert config.status_code == 200
-    assert config.json()["version"] == "0.12.2"
+    assert config.json()["version"] == "0.13.0"
     assert config.json()["build_commit"] == "development"
     assert config.json()["model"] == "openrouter/openai/gpt-5.6-terra"
     assert config.json()["reasoning_effort"] == "medium"
@@ -37,6 +51,13 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "purchase_payment",
     }
     assert config.json()["scenarios"]["physical_access"]["arms"][0]["description"]
+    assert [choice["model"] for choice in config.json()["live_options"]["models"]] == [
+        "openrouter/openai/gpt-5.6-terra",
+        "openrouter/deepseek/deepseek-v4-flash",
+    ]
+    assert config.json()["scenarios"]["service_desk"]["assumptions"]
+    assert config.json()["scenarios"]["service_desk"]["known_omissions"]
+    assert config.json()["scenarios"]["service_desk"]["fidelity_questions"]
     page = api.get("/")
     assert page.status_code == 200
     assert page.headers["content-security-policy"].startswith("default-src 'self'")
@@ -49,6 +70,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Causal-moment narrative" in page.text
     assert "Play simulation" in page.text
     assert "Run history" in page.text
+    assert 'id="model"' in page.text
+    assert 'id="reasoning"' in page.text
+    assert 'id="max-cost"' in page.text
+    assert 'aria-controls="model-help"' in page.text
     assert 'id="history-view"' in page.text
     assert 'id="simulation-view"' in page.text
     assert "/assets/graph-canvas.js" in page.text
@@ -146,6 +171,146 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
     routed = next(event for event in body["timeline"] if event["kind"] == "effect_routed")
     assert routed["focus_edges"]
     assert {step["kind"] for step in body["story"]["steps"]} == {"action_attempted"}
+    assert body["llm_configuration"] is None
+
+
+def test_scripted_run_rejects_live_options_before_dispatch(tmp_path: Path) -> None:
+    response = client(tmp_path).post(
+        "/api/runs",
+        json={
+            "execution": "scripted",
+            "llm_options": {
+                "model": "openrouter/openai/gpt-5.6-terra",
+                "agent_reasoning_effort": "medium",
+                "max_total_cost": 0.20,
+            },
+        },
+    )
+    assert response.status_code == 422
+    assert "only to live" in response.json()["detail"]
+    assert client(tmp_path).get("/api/runs").json()["runs"] == []
+
+
+def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
+    captured_bindings: list[tuple[str, str]] = []
+    captured_narration: list[tuple[str, float]] = []
+
+    def scripted_native(
+        fixture: Any,
+        *,
+        trace_id_prefix: str,
+        model: str,
+        reasoning_effort: str,
+    ) -> Any:
+        del trace_id_prefix
+        captured_bindings.append((model, reasoning_effort))
+        return service_desk_scripted_bindings(fixture)
+
+    def narrated(
+        document: object,
+        *,
+        model: str,
+        trace_id_prefix: str,
+        max_total_cost: float,
+    ) -> dict[str, object]:
+        del document, trace_id_prefix
+        captured_narration.append((model, max_total_cost))
+        return {
+            "status": "completed",
+            "model_calls": 0,
+            "cost": 0.0,
+            "moments": [],
+            "calls": [],
+        }
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
+                "LLM_CLIENT_REVISION": "test-client-revision",
+            },
+        ),
+        patch(
+            "cybernetic_influence.api.service_desk_native_bindings",
+            side_effect=scripted_native,
+        ),
+        patch(
+            "cybernetic_influence.api.narrate_live_moments",
+            side_effect=narrated,
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+    ):
+        response = client(tmp_path).post(
+            "/api/runs",
+            json={
+                "execution": "live",
+                "llm_options": {
+                    "model": "openrouter/deepseek/deepseek-v4-flash",
+                    "agent_reasoning_effort": "high",
+                    "max_total_cost": 0.31,
+                },
+            },
+        )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert captured_bindings == [
+        ("openrouter/deepseek/deepseek-v4-flash", "high")
+    ]
+    assert captured_narration == [
+        ("openrouter/deepseek/deepseek-v4-flash", 0.31)
+    ]
+    assert body["llm_configuration"] == {
+        "model": "openrouter/deepseek/deepseek-v4-flash",
+        "agent_reasoning_effort": "high",
+        "narrator_reasoning_effort": "low",
+        "max_total_cost": 0.31,
+        "participant_per_call_ceiling": 0.05,
+        "narrator_per_call_ceiling": 0.02,
+        "maximum_participant_calls": 48,
+        "maximum_narrator_calls": 12,
+        "selection_basis": "operator_selected",
+        "llm_client_revision": "test-client-revision",
+    }
+
+
+def test_unadvertised_live_model_is_rejected_without_retained_run(
+    tmp_path: Path,
+) -> None:
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary",
+            },
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+    ):
+        api = client(tmp_path)
+        response = api.post(
+            "/api/runs",
+            json={
+                "execution": "live",
+                "llm_options": {
+                    "model": "openrouter/openai/gpt-5.5",
+                    "agent_reasoning_effort": "medium",
+                    "max_total_cost": 0.20,
+                },
+            },
+        )
+        history = api.get("/api/runs").json()["runs"]
+    assert response.status_code == 422
+    assert history == []
 
 
 def test_interventions_produce_distinct_grounded_accounts(tmp_path: Path) -> None:
@@ -410,13 +575,26 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
         assert release.wait(timeout=5)
         return original_run_service_desk(*args, **kwargs)
 
-    def scripted_native(fixture: Any, *, trace_id_prefix: str) -> Any:
-        del trace_id_prefix
+    def scripted_native(
+        fixture: Any,
+        *,
+        trace_id_prefix: str,
+        model: str,
+        reasoning_effort: str,
+    ) -> Any:
+        del trace_id_prefix, model, reasoning_effort
         return service_desk_scripted_bindings(fixture)
 
     first_response: list[object] = []
     with (
-        patch.dict("os.environ", {"CYBERNETIC_INFLUENCE_LIVE": "1"}),
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary",
+            },
+        ),
         patch(
             "cybernetic_influence.api.service_desk_native_bindings",
             side_effect=scripted_native,
@@ -434,6 +612,10 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
                 "moments": [],
                 "calls": [],
             },
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
         ),
     ):
         api = client(tmp_path)

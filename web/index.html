@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=workspace-history-v1">
-  <link rel="stylesheet" href="/assets/graph-canvas.css?v=workspace-history-v1">
+  <link rel="stylesheet" href="/assets/styles.css?v=configurable-runs-v1">
+  <link rel="stylesheet" href="/assets/graph-canvas.css?v=configurable-runs-v1">
 </head>
 <body>
   <header>
@@ -36,14 +36,45 @@
         </label>
         <label class="live"><input id="live" type="checkbox"> Use live LLM agents <small id="live-help">People reason from their own memory, position, and delivered observations.</small></label>
         <button id="run">Play simulation</button>
-        <details><summary>Model, cost, and simulation assumptions</summary><p id="cost-details">Loading…</p><p>People are modeled with remembered positions and dispositions. The scenario condition changes the world or institutional mechanism; it is not an instruction placed in a person's mind.</p></details>
+        <details id="run-settings">
+          <summary>Model, cost, and simulation assumptions</summary>
+          <div class="settings-grid">
+            <div class="setting-field">
+              <div class="setting-label"><label for="model">Model</label><button class="help-button" type="button" data-help="model-help" aria-expanded="false" aria-controls="model-help">?</button></div>
+              <select id="model"></select>
+              <small id="model-help" class="inline-help" hidden></small>
+            </div>
+            <div class="setting-field">
+              <div class="setting-label"><label for="reasoning">Agent reasoning</label><button class="help-button" type="button" data-help="reasoning-help" aria-expanded="false" aria-controls="reasoning-help">?</button></div>
+              <select id="reasoning"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+              <small id="reasoning-help" class="inline-help" hidden></small>
+            </div>
+            <div class="setting-field">
+              <div class="setting-label"><label for="max-cost">Maximum total spend</label><button class="help-button" type="button" data-help="max-cost-help" aria-expanded="false" aria-controls="max-cost-help">?</button></div>
+              <input id="max-cost" type="number" min="0.01" step="0.01" inputmode="decimal">
+              <small id="max-cost-help" class="inline-help" hidden></small>
+            </div>
+          </div>
+          <p id="cost-details" class="authorization-preview">Loading…</p>
+          <div class="assumption-panel">
+            <h3>What this scenario represents</h3>
+            <p id="representation-summary"></p>
+            <div class="assumption-columns">
+              <div><strong>Assumptions</strong><ul id="scenario-assumptions"></ul></div>
+              <div><strong>Known omissions</strong><ul id="scenario-omissions"></ul></div>
+              <div><strong>Fidelity questions</strong><ul id="scenario-questions"></ul></div>
+            </div>
+          </div>
+        </details>
       </section>
 
       <section id="result" hidden>
       <div class="status-line"><strong id="result-status"></strong><span id="result-cost"></span></div>
+      <div id="run-config-readout" class="run-config-readout"></div>
       <section id="map-section" class="map-section">
         <span class="eyebrow">People · information · objects · mechanisms</span>
-        <h2>Simulation map</h2>
+        <div class="heading-help"><h2>Simulation map</h2><button class="help-button" type="button" data-help="map-help" aria-expanded="false" aria-controls="map-help">?</button></div>
+        <p id="map-help" class="inline-help" hidden></p>
         <p class="muted">Choose a layout, then select a node or edge for its retained state. Spatial layout shows authored places, occupants, and physical topology; causal flow shows information, actions, and exact mechanisms.</p>
         <div class="projection-toolbar" aria-label="Map layout">
           <div class="tabs">
@@ -53,7 +84,8 @@
           <p id="projection-help" class="muted"></p>
         </div>
         <div class="scale-toolbar">
-          <span class="eyebrow">Analytical scale</span>
+          <span class="eyebrow">Analytical scale <button class="help-button" type="button" data-help="scale-help" aria-expanded="false" aria-controls="scale-help">?</button></span>
+          <small id="scale-help" class="inline-help" hidden></small>
           <div id="scale-tabs" class="tabs" aria-label="Graph scale"></div>
           <p id="scale-loss" class="scale-loss"></p>
         </div>
@@ -65,7 +97,8 @@
 
       <section class="timeline-panel">
         <span class="eyebrow">Causal time</span>
-        <h2>Choose a moment</h2>
+        <div class="heading-help"><h2>Choose a moment</h2><button class="help-button" type="button" data-help="moment-help" aria-expanded="false" aria-controls="moment-help">?</button></div>
+        <p id="moment-help" class="inline-help" hidden></p>
         <p class="muted">The map, account, and inspector stay synchronized with this moment. Simulated time may advance unevenly because each process follows its own cadence.</p>
         <div class="timeline-controls">
           <button id="previous-event" aria-label="Previous event">←</button>
@@ -78,7 +111,8 @@
 
       <section class="step-account">
         <span class="eyebrow">Narrative for the selected causal moment</span>
-        <h2 id="step-account-title"></h2>
+        <div class="heading-help"><h2 id="step-account-title"></h2><button class="help-button" type="button" data-help="narrative-help" aria-expanded="false" aria-controls="narrative-help">?</button></div>
+        <p id="narrative-help" class="inline-help" hidden></p>
         <p id="step-account-body"></p>
         <p id="step-account-source" class="muted"></p>
         <div id="moment-events" class="moment-events" aria-label="Exact events in selected causal moment"></div>
@@ -112,7 +146,7 @@
       </section>
 
       <details class="advanced">
-        <summary>Advanced evidence</summary>
+        <summary>Advanced evidence <span class="summary-help">Exact retained state and provider-call summaries</span></summary>
         <pre id="raw"></pre>
       </details>
       </section>
@@ -127,7 +161,7 @@
       <p id="storage-warning" class="warning" hidden></p>
     </section>
   </main>
-  <script src="/assets/graph-canvas.js?v=workspace-history-v1"></script>
-  <script src="/assets/app.js?v=workspace-history-v1"></script>
+  <script src="/assets/graph-canvas.js?v=configurable-runs-v1"></script>
+  <script src="/assets/app.js?v=configurable-runs-v1"></script>
 </body>
 </html>

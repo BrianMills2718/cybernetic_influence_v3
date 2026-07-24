@@ -314,6 +314,10 @@ class NativeLlmActiveSystem:
     implementation_family_id: str | None = None
     decision_wire_contract: DecisionWireContract = DECISION_WIRE_CONTRACT_V2
 
+    @property
+    def provider_bound(self) -> bool:
+        return True
+
     def __post_init__(self) -> None:
         """Reject blank configuration and nonsensical memory bounds early."""
         for label, value in (
@@ -447,6 +451,7 @@ class NativeLlmActiveSystem:
                 trace_id=trace_id,
                 model=self.model,
                 task=self.task,
+                reasoning_effort=self.reasoning_effort,
                 system_prompt=system,
                 user_prompt=user,
                 cost=None,
@@ -476,6 +481,7 @@ class NativeLlmActiveSystem:
                 trace_id=trace_id,
                 model=self.model,
                 task=self.task,
+                reasoning_effort=self.reasoning_effort,
                 system_prompt=system,
                 user_prompt=user,
                 cost=cost,
@@ -494,6 +500,7 @@ class NativeLlmActiveSystem:
             trace_id=trace_id,
             model=self.model,
             task=self.task,
+            reasoning_effort=self.reasoning_effort,
             system_prompt=system,
             user_prompt=user,
             structured_output=decision.model_dump(mode="json"),

@@ -21,6 +21,11 @@ class ActiveSystemImplementation(Protocol):
         """Return the immutable code/config identity bound by the scenario."""
         ...
 
+    @property
+    def provider_bound(self) -> bool:
+        """Report whether one step necessarily authorizes a provider call."""
+        ...
+
     def step(self, active_input: ActiveSystemInput) -> object:
         """Return one proposal from only the supplied bounded input."""
         ...
@@ -61,6 +66,10 @@ class ScriptedActiveSystem:
 
     implementation_id: str
     controller: Controller
+
+    @property
+    def provider_bound(self) -> bool:
+        return False
 
     def step(self, active_input: ActiveSystemInput) -> object:
         """Validate the controller result at the same boundary as other policies."""

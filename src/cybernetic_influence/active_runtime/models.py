@@ -411,6 +411,11 @@ class ModelCallEvidence(_StrictModel):
     trace_id: str = Field(min_length=1)
     model: str = Field(min_length=1)
     task: str = Field(min_length=1)
+    reasoning_effort: str | None = Field(
+        default=None,
+        min_length=1,
+        exclude_if=lambda value: value is None,
+    )
     system_prompt: str = Field(min_length=1)
     user_prompt: str = Field(min_length=1)
     structured_output: dict[str, JsonValue] | None = None

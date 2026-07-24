@@ -13,6 +13,7 @@ from pydantic.types import JsonValue
 from cybernetic_influence.active_runtime import (
     ActiveProposal,
     ActiveRuntimeConfig,
+    ActiveRuntimeCheckpoint,
     ActiveRuntimeResult,
     ActiveRuntimeSession,
     ActiveStepResult,
@@ -217,6 +218,10 @@ class _ScriptedImplementation:
     implementation_id: str
     handler: Callable[[ActiveSystemInput], ActiveStepResult]
 
+    @property
+    def provider_bound(self) -> bool:
+        return False
+
     def step(self, active_input: ActiveSystemInput) -> ActiveStepResult:
         return self.handler(active_input)
 
@@ -330,10 +335,12 @@ def purchase_payment_fixture(
     )
 
 
-def purchase_payment_runtime_config() -> ActiveRuntimeConfig:
+def purchase_payment_runtime_config(
+    *, per_run_budget: float = 0.30
+) -> ActiveRuntimeConfig:
     return ActiveRuntimeConfig(
         per_call_budget=0.05,
-        per_run_budget=0.30,
+        per_run_budget=per_run_budget,
         max_actions_per_system=1,
         max_observations_per_system=8,
         max_private_state_bytes=24_576,
@@ -344,6 +351,8 @@ def purchase_payment_native_bindings(
     fixture: PurchasePaymentFixture,
     *,
     trace_id_prefix: str,
+    model: str = PURCHASE_PAYMENT_MODEL,
+    reasoning_effort: str = PURCHASE_PAYMENT_REASONING_EFFORT,
 ) -> dict[str, ActiveSystemBinding]:
     personas = {
         "requester": REQUESTER_PERSONA,
@@ -358,10 +367,10 @@ def purchase_payment_native_bindings(
                     f"native_purchase_{spec.active_system_id}_v1"
                 ),
                 persona=personas[spec.active_system_id],
-                model=PURCHASE_PAYMENT_MODEL,
+                model=model,
                 task=PURCHASE_PAYMENT_TASK,
                 trace_id_prefix=trace_id_prefix,
-                reasoning_effort=PURCHASE_PAYMENT_REASONING_EFFORT,
+                reasoning_effort=reasoning_effort,
                 max_memory_entries=20,
                 max_output_tokens=768,
                 decision_wire_contract="openai-json-payload-wire.v2",
@@ -417,6 +426,8 @@ def run_purchase_payment(
     bindings: Mapping[str, ActiveSystemBinding],
     *,
     run_id: str,
+    runtime_config: ActiveRuntimeConfig | None = None,
+    checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
 ) -> ActiveRuntimeResult:
     session = ActiveRuntimeSession(
         fixture.scenario,
@@ -424,35 +435,49 @@ def run_purchase_payment(
         fixture.active_specs,
         bindings,
         run_id=run_id,
-        config=purchase_payment_runtime_config(),
+        config=runtime_config or purchase_payment_runtime_config(),
     )
-    session.activate(
-        ["requester"],
-        logical_time=0,
-        activation_causes={
-            "requester": [
-                ActivationCause(
-                    kind="scenario_start",
-                    scheduled_for=0,
-                    description=(
-                        "The authored scenario began with the purchase request "
-                        "and invoice retained by the requester."
-                    ),
-                )
-            ]
-        },
-    )
+    try:
+        session.activate(
+            ["requester"],
+            logical_time=0,
+            activation_causes={
+                "requester": [
+                    ActivationCause(
+                        kind="scenario_start",
+                        scheduled_for=0,
+                        description=(
+                            "The authored scenario began with the purchase request "
+                            "and invoice retained by the requester."
+                        ),
+                    )
+                ]
+            },
+        )
+    except Exception:
+        if checkpoint_observer is not None:
+            checkpoint_observer(session.checkpoint())
+        raise
+    if checkpoint_observer is not None:
+        checkpoint_observer(session.checkpoint())
     while (due := session.next_due_activation()) is not None:
         if len(session.attempts) >= PURCHASE_PAYMENT_MAX_CAUSAL_MOMENTS:
             raise RuntimeError(
                 "purchase-payment event scheduler exceeded its "
                 "causal-moment bound"
             )
-        session.activate(
-            due.active_system_ids,
-            logical_time=due.logical_time,
-            activation_causes=due.causes,
-        )
+        try:
+            session.activate(
+                due.active_system_ids,
+                logical_time=due.logical_time,
+                activation_causes=due.causes,
+            )
+        except Exception:
+            if checkpoint_observer is not None:
+                checkpoint_observer(session.checkpoint())
+            raise
+        if checkpoint_observer is not None:
+            checkpoint_observer(session.checkpoint())
     return session.complete()
 
 

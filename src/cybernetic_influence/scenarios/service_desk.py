@@ -316,6 +316,10 @@ class _ScriptedImplementation:
     implementation_id: str
     handler: Callable[[ActiveSystemInput], ActiveStepResult]
 
+    @property
+    def provider_bound(self) -> bool:
+        return False
+
     def step(self, active_input: ActiveSystemInput) -> ActiveStepResult:
         """Return one deterministic proposal with no provider evidence."""
         return self.handler(active_input)
@@ -510,11 +514,13 @@ def service_desk_fixture(
     )
 
 
-def service_desk_runtime_config() -> ActiveRuntimeConfig:
+def service_desk_runtime_config(
+    *, per_run_budget: float = 0.50
+) -> ActiveRuntimeConfig:
     """Return the bounded participant-call budget envelope."""
     return ActiveRuntimeConfig(
         per_call_budget=0.05,
-        per_run_budget=0.50,
+        per_run_budget=per_run_budget,
         max_actions_per_system=2,
         max_observations_per_system=10,
         max_private_state_bytes=32_768,
@@ -525,6 +531,8 @@ def service_desk_native_bindings(
     fixture: ServiceDeskFixture,
     *,
     trace_id_prefix: str,
+    model: str = SERVICE_DESK_MODEL,
+    reasoning_effort: str | None = None,
 ) -> dict[str, ActiveSystemBinding]:
     """Bind LLM people plus the zero-call exact process controller."""
     personas = service_desk_personas(fixture.cognition_profile)
@@ -544,10 +552,10 @@ def service_desk_native_bindings(
             NativeLlmActiveSystem.from_bound_configuration(
                 implementation_family_id=f"native_service_{spec.active_system_id}_v1",
                 persona=personas[spec.active_system_id],
-                model=SERVICE_DESK_MODEL,
+                model=model,
                 task=SERVICE_DESK_TASK,
                 trace_id_prefix=trace_id_prefix,
-                reasoning_effort=fixture.reasoning_effort,
+                reasoning_effort=reasoning_effort or fixture.reasoning_effort,
                 max_memory_entries=32,
                 max_output_tokens=1024,
                 decision_wire_contract="openai-json-payload-wire.v2",
@@ -596,6 +604,7 @@ def run_service_desk(
     *,
     run_id: str,
     checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
+    runtime_config: ActiveRuntimeConfig | None = None,
 ) -> ActiveRuntimeResult:
     """Execute the fixed schedule and optionally expose each forensic prefix."""
     if fixture.multirate:
@@ -609,7 +618,7 @@ def run_service_desk(
         fixture.active_specs,
         bindings,
         run_id=run_id,
-        config=service_desk_runtime_config(),
+        config=runtime_config or service_desk_runtime_config(),
     )
     for logical_time, participant_id in SERVICE_DESK_SCHEDULE:
         try:
@@ -629,6 +638,7 @@ def run_event_driven_service_desk(
     *,
     run_id: str,
     checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
+    runtime_config: ActiveRuntimeConfig | None = None,
 ) -> ActiveRuntimeResult:
     """Run due-set moments until no observation or internal wake remains.
 
@@ -642,7 +652,7 @@ def run_event_driven_service_desk(
         fixture.active_specs,
         bindings,
         run_id=run_id,
-        config=service_desk_runtime_config(),
+        config=runtime_config or service_desk_runtime_config(),
     )
     try:
         session.activate(

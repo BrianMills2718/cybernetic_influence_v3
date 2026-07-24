@@ -357,6 +357,8 @@ class ActiveRuntimeSession:
                 item = collected[active_system_id]
                 binding = self._active_bindings[active_system_id]
                 try:
+                    if getattr(binding.implementation, "provider_bound", False):
+                        self._require_call_authorization()
                     raw = binding.implementation.step(
                         item.active_input.model_copy(deep=True)
                     )
@@ -1110,6 +1112,15 @@ class ActiveRuntimeSession:
             )
         if self.total_observed_cost >= self._config.per_run_budget:
             raise ActiveBudgetError("per-run budget is exhausted")
+
+    def _require_call_authorization(self) -> None:
+        """Reserve a full call ceiling before dispatching a provider-bound step."""
+        remaining = self._config.per_run_budget - self.total_observed_cost
+        if remaining + 1e-12 < self._config.per_call_budget:
+            raise ActiveBudgetError(
+                f"remaining run authorization {remaining:.8f} cannot fit "
+                f"per-call ceiling {self._config.per_call_budget:.8f}"
+            )
 
     def _ordered_specs(self) -> list[ActiveSystemSpec]:
         """Return canonical defensive active-system declarations."""

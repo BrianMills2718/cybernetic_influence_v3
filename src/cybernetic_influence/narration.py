@@ -35,6 +35,7 @@ def narrate_live_moments(
     *,
     model: str,
     trace_id_prefix: str,
+    max_total_cost: float = 0.74,
     structured_call: StructuredCall | None = None,
 ) -> dict[str, object]:
     """Narrate each retained causal moment without giving the narrator authority.
@@ -60,10 +61,33 @@ def narrate_live_moments(
     calls: list[dict[str, object]] = []
     total_cost = 0.0
     for index, moment in enumerate(moments, start=1):
+        remaining = max_total_cost - total_cost
+        if remaining + 1e-12 < NARRATOR_MAX_BUDGET:
+            return {
+                "status": "unavailable",
+                "reason": (
+                    f"narration stopped before moment {index}: remaining "
+                    f"authorization ${remaining:.8f} cannot fit the "
+                    f"${NARRATOR_MAX_BUDGET:.8f} narrator call ceiling"
+                ),
+                "failure_boundary": {
+                    "kind": "budget_exhausted",
+                    "next_moment": index,
+                    "remaining_authorization": max(0.0, remaining),
+                    "required_call_ceiling": NARRATOR_MAX_BUDGET,
+                },
+                "model_calls": len(calls),
+                "cost": total_cost,
+                "moments": narrated,
+                "calls": calls,
+            }
         system, user = _render_prompt(moment=moment, prior=prior)
         trace_id = (
             f"{trace_id_prefix}/narrator/moment/{moment['activation']}"
         )
+        meta: object | None = None
+        cost = 0.0
+        cost_source = "unavailable"
         try:
             parsed, meta = call(
                 model,
@@ -82,6 +106,19 @@ def narrate_live_moments(
                 max_tokens=NARRATOR_MAX_TOKENS,
                 reasoning_effort=NARRATOR_REASONING_EFFORT,
             )
+            cost = _observed_cost(meta)
+            cost_source = str(getattr(meta, "cost_source", "unavailable"))
+            total_cost += cost
+            if cost > NARRATOR_MAX_BUDGET:
+                raise ValueError(
+                    f"narrator call cost {cost:.8f} exceeds per-call ceiling "
+                    f"{NARRATOR_MAX_BUDGET:.8f}"
+                )
+            if total_cost > max_total_cost:
+                raise ValueError(
+                    f"observed narration cost {total_cost:.8f} exceeds remaining "
+                    f"authorization {max_total_cost:.8f}"
+                )
             narration = CausalMomentNarration.model_validate(
                 parsed.model_dump(mode="json")
                 if isinstance(parsed, BaseModel)
@@ -93,8 +130,6 @@ def narrate_live_moments(
                 raise ValueError(
                     "narrator cited an event outside its current causal moment"
                 )
-            cost = _observed_cost(meta)
-            total_cost += cost
             record = {
                 "moment": index,
                 "activation": moment["activation"],
@@ -111,8 +146,9 @@ def narrate_live_moments(
                     "trace_id": trace_id,
                     "model": model,
                     "task": NARRATOR_TASK,
+                    "reasoning_effort": NARRATOR_REASONING_EFFORT,
                     "cost": cost,
-                    "cost_source": str(getattr(meta, "cost_source", "unavailable")),
+                    "cost_source": cost_source,
                 }
             )
         except Exception as error:
@@ -122,8 +158,9 @@ def narrate_live_moments(
                     "trace_id": trace_id,
                     "model": model,
                     "task": NARRATOR_TASK,
-                    "cost": 0.0,
-                    "cost_source": "unavailable",
+                    "reasoning_effort": NARRATOR_REASONING_EFFORT,
+                    "cost": cost if meta is not None else None,
+                    "cost_source": cost_source,
                     "error_type": type(error).__name__,
                     "error_message": str(error),
                 }

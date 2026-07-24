@@ -56,11 +56,36 @@ async function loadConfig() {
     `<option value="${html(id)}">${html(item.label)}</option>`
   ).join('')
   $('#scenario').value = config.scenario
+  const liveOptions = config.live_options || {}
+  const choices = liveOptions.models || []
+  $('#model').innerHTML = choices.map((choice) =>
+    `<option value="${html(choice.model)}">${html(choice.label)}</option>`
+  ).join('')
+  $('#model').value = liveOptions.defaults?.model || config.model
+  $('#reasoning').value = liveOptions.defaults?.agent_reasoning_effort || config.reasoning_effort
+  $('#max-cost').value = Number(liveOptions.defaults?.max_total_cost || config.maximum_live_cost).toFixed(2)
+  $('#max-cost').max = liveOptions.limits?.server_max_total_cost || config.maximum_live_cost
+  const help = liveOptions.help || {}
+  $('#model-help').textContent = help.model || ''
+  $('#reasoning-help').textContent = help.agent_reasoning_effort || ''
+  $('#max-cost-help').textContent = help.max_total_cost || ''
+  $('#map-help').textContent = help.map_projection || ''
+  $('#scale-help').textContent = help.analytical_scale || ''
+  $('#moment-help').textContent = help.causal_moment || ''
+  $('#narrative-help').textContent = help.narrative || ''
   configureScenario(config.scenario)
-  $('#live').disabled = !config.live_authorized
+  $('#live').disabled = !config.live_authorized || choices.length === 0
   $('#live').checked = config.live_authorized
   $('#run').textContent = config.live_authorized ? 'Play live simulation' : 'Play reference simulation'
-  if (!config.live_authorized) $('#live').parentElement.title = 'Start the server with CYBERNETIC_INFLUENCE_LIVE=1 to enable live agents.'
+  if (!config.live_authorized) {
+    $('#live-help').textContent = 'Live execution is disabled on this server. Reference runs remain zero-cost.'
+  } else if (!choices.length) {
+    $('#live').checked = false
+    $('#live-help').textContent = 'No deployment-certified model route is currently selectable.'
+  } else {
+    $('#live-help').textContent = help.live_execution || 'People reason from their own memory, position, and delivered observations.'
+  }
+  configureLiveControls()
 }
 
 function configureScenario(scenarioId) {
@@ -75,13 +100,37 @@ function configureScenario(scenarioId) {
     : scenarioId === 'purchase_payment'
       ? 'Follow one purchase across human decisions, exact internal control, and a deliberately coarse external processor.'
       : 'Run people, information, records, connections, and exact mechanisms together.'
-  const model = selected.model || runtimeConfig.model
-  const reasoning = selected.reasoning_effort || runtimeConfig.reasoning_effort
-  const calls = selected.maximum_live_calls || runtimeConfig.maximum_live_calls
-  const cost = selected.maximum_live_cost || runtimeConfig.maximum_live_cost
-  $('#cost-details').textContent =
-    `${model} · ${reasoning} reasoning · up to ${calls} calls · $${Number(cost).toFixed(2)} cap. Scripted reference runs cost $0.`
+  $('#representation-summary').textContent = selected.representation_summary || ''
+  fillList('#scenario-assumptions', selected.assumptions)
+  fillList('#scenario-omissions', selected.known_omissions)
+  fillList('#scenario-questions', selected.fidelity_questions)
+  updateAuthorizationPreview()
   describeCondition()
+}
+
+function fillList(selector, values = []) {
+  $(selector).innerHTML = values.map((value) => `<li>${html(value)}</li>`).join('')
+}
+
+function configureLiveControls() {
+  const enabled = $('#live').checked && !$('#live').disabled
+  for (const selector of ['#model', '#reasoning', '#max-cost']) {
+    $(selector).disabled = !enabled
+  }
+  updateAuthorizationPreview()
+}
+
+function updateAuthorizationPreview() {
+  const limits = runtimeConfig.live_options?.limits || {}
+  if (!$('#live').checked) {
+    $('#cost-details').textContent = 'Reference execution uses fixed policies, makes zero model calls, and costs $0.'
+    return
+  }
+  const modelLabel = $('#model').selectedOptions[0]?.textContent || 'No eligible model'
+  const reasoning = $('#reasoning').value || 'medium'
+  const authorized = Number($('#max-cost').value || 0)
+  $('#cost-details').textContent =
+    `${modelLabel} · ${reasoning} agent reasoning · participants ≤ ${limits.maximum_participant_calls ?? 0} calls at $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} each · narrator ≤ ${limits.maximum_narrator_calls ?? 0} calls at $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} each · $${authorized.toFixed(2)} total authorized.`
 }
 
 function describeCondition() {
@@ -799,6 +848,17 @@ function render(run) {
   renderProjectionControls()
   $('#result-status').textContent = `${current.status} · ${String(current.scenario || '').replaceAll('_',' ')} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
   $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator) · $${Number(current.cost).toFixed(6)} · ${current.run_id}`
+  const llm = current.llm_configuration
+  $('#run-config-readout').innerHTML = llm ? `
+    <strong>Effective live configuration</strong>
+    <span>${html(llm.model)}</span>
+    <span>${html(llm.agent_reasoning_effort)} agent reasoning · ${html(llm.narrator_reasoning_effort)} narrator reasoning</span>
+    <span>$${Number(llm.max_total_cost).toFixed(2)} authorized · $${Number(current.cost).toFixed(6)} observed</span>
+    <small>${html(String(llm.selection_basis).replaceAll('_',' '))} · llm_client ${html(llm.llm_client_revision)}</small>
+  ` : `
+    <strong>Reference execution</strong>
+    <span>Fixed zero-call policies · $0 observed</span>
+  `
   $('#story-headline').textContent = current.story.headline
   $('#story-summary').textContent = current.story.summary
   $('#story-steps').innerHTML = ''
@@ -855,7 +915,19 @@ $('#causal-layout').onclick = () => {
 }
 $('#live').onchange = () => {
   $('#run').textContent = $('#live').checked ? 'Play live simulation' : 'Play reference simulation'
+  configureLiveControls()
 }
+$('#model').onchange = updateAuthorizationPreview
+$('#reasoning').onchange = updateAuthorizationPreview
+$('#max-cost').oninput = updateAuthorizationPreview
+document.querySelectorAll('.help-button').forEach((button) => {
+  button.onclick = () => {
+    const target = document.getElementById(button.dataset.help)
+    const expanded = button.getAttribute('aria-expanded') === 'true'
+    button.setAttribute('aria-expanded', String(!expanded))
+    target.hidden = expanded
+  }
+})
 
 $('#run').onclick = async () => {
   $('#run').disabled = true
@@ -869,6 +941,13 @@ $('#run').onclick = async () => {
         cognition_profile:'position_context',
         arm_id:$('#arm').value,
         execution:$('#live').checked ? 'live' : 'scripted',
+        ...($('#live').checked ? {
+          llm_options:{
+            model:$('#model').value,
+            agent_reasoning_effort:$('#reasoning').value,
+            max_total_cost:Number($('#max-cost').value),
+          },
+        } : {}),
       }),
     })
     render(body)

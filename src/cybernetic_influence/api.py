@@ -15,6 +15,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
 from cybernetic_influence import __version__
+from cybernetic_influence.active_runtime import (
+    ActiveRuntimeCheckpoint,
+)
 from cybernetic_influence.presentation import (
     build_analyst_document,
     build_service_desk_analyst_document,
@@ -31,11 +34,18 @@ from cybernetic_influence.run_store import (
     RunStore,
     now_iso,
 )
+from cybernetic_influence.run_configuration import (
+    EffectiveRunLlmConfiguration,
+    RunLlmOptions,
+    live_options_contract,
+    resolve_live_configuration,
+)
 from cybernetic_influence.scenarios.service_desk import (
     SERVICE_DESK_MODEL,
     SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
     ServiceDeskCognitionProfile,
     run_event_driven_service_desk,
+    service_desk_runtime_config,
     service_desk_arm_configurations,
     service_desk_fixture,
     service_desk_native_bindings,
@@ -49,6 +59,7 @@ from cybernetic_influence.scenarios.physical_access import (
     physical_access_scripted_bindings,
     physical_access_summary,
     run_physical_access,
+    physical_access_runtime_config,
 )
 from cybernetic_influence.scenarios.purchase_payment import (
     build_purchase_payment_readout,
@@ -58,6 +69,7 @@ from cybernetic_influence.scenarios.purchase_payment import (
     purchase_payment_scripted_bindings,
     purchase_payment_summary,
     run_purchase_payment,
+    purchase_payment_runtime_config,
 )
 
 
@@ -74,6 +86,7 @@ class RunRequest(BaseModel):
     cognition_profile: ServiceDeskCognitionProfile = "position_context"
     arm_id: str = "baseline"
     execution: Literal["scripted", "live"] = "scripted"
+    llm_options: RunLlmOptions | None = None
 
 
 def create_app(web_root: Path | None = None, run_root: Path | None = None) -> FastAPI:
@@ -110,6 +123,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
 
     @app.get("/api/config")
     def config() -> dict[str, object]:
+        live_options = live_options_contract()
         return {
             "version": __version__,
             "build_commit": os.getenv("CYBERNETIC_INFLUENCE_BUILD_COMMIT", "development"),
@@ -117,6 +131,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             "scenarios": {
                 "service_desk": {
                     "label": "Service desk",
+                    **_scenario_explanation("service_desk"),
                     "profiles": ["position_context", "procedural_control"],
                     "arms": [
                         {
@@ -133,6 +148,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 },
                 "physical_access": {
                     "label": "Physical access",
+                    **_scenario_explanation("physical_access"),
                     "profiles": ["position_context"],
                     "arms": [
                         {
@@ -149,6 +165,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 },
                 "purchase_payment": {
                     "label": "Purchase to payment",
+                    **_scenario_explanation("purchase_payment"),
                     "profiles": ["position_context"],
                     "model": "openrouter/openai/gpt-5.6-terra",
                     "reasoning_effort": "medium",
@@ -186,6 +203,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             "scripted_cost": 0.0,
             "maximum_live_calls": 48,
             "maximum_live_cost": 0.74,
+            "live_options": live_options,
         }
 
     @app.get("/api/runs")
@@ -269,11 +287,24 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 )
             selected_profile = "position_context"
         live = request_body.execution == "live"
+        if not live and request_body.llm_options is not None:
+            raise HTTPException(
+                status_code=422,
+                detail="llm_options apply only to live execution",
+            )
         if live and os.getenv("CYBERNETIC_INFLUENCE_LIVE") != "1":
             raise HTTPException(
                 status_code=403,
                 detail="live execution requires CYBERNETIC_INFLUENCE_LIVE=1",
             )
+        effective_llm: EffectiveRunLlmConfiguration | None = None
+        if live:
+            try:
+                effective_llm = resolve_live_configuration(
+                    request_body.llm_options
+                )
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
         lock_acquired = live and live_lock.acquire(blocking=False)
         if live and not lock_acquired:
             raise HTTPException(
@@ -293,27 +324,52 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             "execution": request_body.execution,
             "model_calls": 0,
             "cost": 0.0,
+            "llm_configuration": (
+                effective_llm.model_dump(mode="json")
+                if effective_llm is not None
+                else None
+            ),
         }
         runs.save(initial)
+        latest_checkpoint: ActiveRuntimeCheckpoint | None = None
+
+        def retain_checkpoint(checkpoint: ActiveRuntimeCheckpoint) -> None:
+            nonlocal latest_checkpoint
+            latest_checkpoint = checkpoint.model_copy(deep=True)
+
         try:
             if service_arm is not None:
                 service_fixture = service_desk_fixture(
                     service_arm,
                     cognition_profile=request_body.cognition_profile,
-                    reasoning_effort=SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
+                    reasoning_effort=(
+                        effective_llm.agent_reasoning_effort
+                        if effective_llm is not None
+                        else SERVICE_DESK_SCAFFOLD_REASONING_EFFORT
+                    ),
                 )
                 service_bindings = (
                     service_desk_native_bindings(
                         service_fixture,
                         trace_id_prefix=run_id,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
                     )
-                    if live
+                    if effective_llm is not None
                     else service_desk_scripted_bindings(service_fixture)
                 )
                 result = run_event_driven_service_desk(
                     service_fixture,
                     service_bindings,
                     run_id=run_id,
+                    runtime_config=(
+                        service_desk_runtime_config(
+                            per_run_budget=effective_llm.max_total_cost
+                        )
+                        if effective_llm is not None
+                        else None
+                    ),
+                    checkpoint_observer=retain_checkpoint,
                 )
                 readout = event_driven_service_desk_outcome(result)
                 document = build_service_desk_analyst_document(
@@ -331,14 +387,24 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                     physical_access_native_bindings(
                         physical_fixture,
                         trace_id_prefix=run_id,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
                     )
-                    if live
+                    if effective_llm is not None
                     else physical_access_scripted_bindings(physical_fixture)
                 )
                 result = run_physical_access(
                     physical_fixture,
                     physical_bindings,
                     run_id=run_id,
+                    runtime_config=(
+                        physical_access_runtime_config(
+                            per_run_budget=effective_llm.max_total_cost
+                        )
+                        if effective_llm is not None
+                        else None
+                    ),
+                    checkpoint_observer=retain_checkpoint,
                 )
                 physical_readout = build_physical_access_readout(result)
                 headline, summary = physical_access_summary(physical_readout)
@@ -363,14 +429,24 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                     purchase_payment_native_bindings(
                         purchase_fixture,
                         trace_id_prefix=run_id,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
                     )
-                    if live
+                    if effective_llm is not None
                     else purchase_payment_scripted_bindings(purchase_fixture)
                 )
                 result = run_purchase_payment(
                     purchase_fixture,
                     purchase_bindings,
                     run_id=run_id,
+                    runtime_config=(
+                        purchase_payment_runtime_config(
+                            per_run_budget=effective_llm.max_total_cost
+                        )
+                        if effective_llm is not None
+                        else None
+                    ),
+                    checkpoint_observer=retain_checkpoint,
                 )
                 purchase_readout = build_purchase_payment_readout(result)
                 headline, summary = purchase_payment_summary(
@@ -397,13 +473,17 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 document,
                 live=live,
                 run_id=run_id,
+                effective_llm=effective_llm,
             )
+            narrated["llm_configuration"] = initial["llm_configuration"]
+            narrated["model_call_summaries"] = _result_call_summaries(result)
             return runs.save(narrated)
         except Exception as error:
             failed = {
                 **initial,
                 "status": "failed",
                 "error": f"{type(error).__name__}: {error}",
+                **_checkpoint_failure_projection(latest_checkpoint),
             }
             runs.save(failed)
             raise HTTPException(
@@ -441,17 +521,26 @@ app = create_app()
 
 
 def _attach_narration(
-    document: dict[str, object], *, live: bool, run_id: str
+    document: dict[str, object],
+    *,
+    live: bool,
+    run_id: str,
+    effective_llm: EffectiveRunLlmConfiguration | None,
 ) -> dict[str, object]:
     """Add costed causal-moment narration without changing causal evidence."""
     narrated = dict(document)
     narration = (
         narrate_live_moments(
             narrated,
-            model=SERVICE_DESK_MODEL,
+            model=effective_llm.model,
             trace_id_prefix=run_id,
+            max_total_cost=max(
+                0.0,
+                effective_llm.max_total_cost
+                - _nonnegative_float(narrated.get("cost")),
+            ),
         )
-        if live
+        if live and effective_llm is not None
         else reference_narration()
     )
     agent_calls = _nonnegative_int(narrated.get("model_calls"))
@@ -466,6 +555,130 @@ def _attach_narration(
     narrated["cost"] = agent_cost + narration_cost
     narrated["narration"] = narration
     return narrated
+
+
+def _result_call_summaries(result: object) -> list[dict[str, object]]:
+    attempts = getattr(result, "attempts", ())
+    return _attempt_call_summaries(attempts)
+
+
+def _attempt_call_summaries(attempts: object) -> list[dict[str, object]]:
+    summaries: list[dict[str, object]] = []
+    if not isinstance(attempts, (list, tuple)):
+        return summaries
+    for attempt in attempts:
+        for participant in getattr(attempt, "participants", ()):
+            for call in getattr(participant, "call_evidence", ()):
+                summaries.append(
+                    {
+                        key: value
+                        for key, value in {
+                            "status": call.status,
+                            "trace_id": call.trace_id,
+                            "model": call.model,
+                            "task": call.task,
+                            "reasoning_effort": call.reasoning_effort,
+                            "cost": call.cost,
+                            "cost_source": call.cost_source,
+                            "error_type": call.error_type,
+                            "error_message": call.error_message,
+                        }.items()
+                        if value is not None
+                    }
+                )
+    return summaries
+
+
+def _checkpoint_failure_projection(
+    checkpoint: ActiveRuntimeCheckpoint | None,
+) -> dict[str, object]:
+    if checkpoint is None:
+        return {
+            "model_call_summaries": [],
+            "failure_boundary": {"kind": "before_first_checkpoint"},
+        }
+    return {
+        "model_calls": sum(
+            len(participant.call_evidence)
+            for attempt in checkpoint.attempts
+            for participant in attempt.participants
+        ),
+        "cost": checkpoint.total_observed_cost,
+        "cost_fully_observable": checkpoint.cost_fully_observable,
+        "model_call_summaries": _attempt_call_summaries(checkpoint.attempts),
+        "failure_boundary": {
+            "kind": "active_runtime",
+            "attempt_index": checkpoint.next_attempt_index,
+            "logical_time": checkpoint.core_checkpoint.state.logical_time,
+        },
+    }
+
+
+def _scenario_explanation(scenario: str) -> dict[str, object]:
+    explanations: dict[str, dict[str, object]] = {
+        "service_desk": {
+            "help": "Inspect how information routes and exact gates shape one incident workflow.",
+            "representation_summary": (
+                "A bounded incident workflow with people, copied information, "
+                "a ticket record, declared routes, and exact remediation and "
+                "closure mechanisms."
+            ),
+            "assumptions": [
+                "People act only from retained memory and delivered observations.",
+                "Authentication, authorization, remediation, and closure are exact mechanisms.",
+                "Logical seconds express process cadence, not wall-clock duration.",
+            ],
+            "known_omissions": [
+                "No authored spatial topology is present.",
+                "The customer and broader organization are not active participants.",
+                "The stipulated remediation abstracts away the underlying software stack.",
+            ],
+            "fidelity_questions": [
+                "Did missing information cause a request or reroute rather than invented access?",
+                "Did unsafe closure attempts fail at the exact mechanism?",
+                "Do the narratives remain grounded in retained events?",
+            ],
+        },
+        "physical_access": {
+            "help": "Inspect proof, authorization, physical capability, crossing, and feedback separately.",
+            "representation_summary": (
+                "A person, credential proof, copied policy, access controller, "
+                "physical latch, boundary, and observed crossing."
+            ),
+            "assumptions": [
+                "Credential proof, policy authorization, latch operation, and movement are distinct.",
+                "The technician acts only from retained or delivered information.",
+            ],
+            "known_omissions": [
+                "No adversarial credential attack or tailgating is modeled.",
+                "The building topology is intentionally small.",
+            ],
+            "fidelity_questions": [
+                "Did location change only after the boundary opened?",
+                "Did authorization remain distinct from physical capability?",
+            ],
+        },
+        "purchase_payment": {
+            "help": "Inspect human decisions, exact internal control, and a coarse external subsystem without conflating them.",
+            "representation_summary": (
+                "A purchase request moving through people, copied records, an "
+                "exact internal control, and a deliberately coarse processor."
+            ),
+            "assumptions": [
+                "People act from their positions, dispositions, memory, and delivered records.",
+                "The internal approval control is exact; the external processor is coarse.",
+            ],
+            "known_omissions": [
+                "The processor's internal organization and infrastructure are not modeled.",
+                "No market, supplier, or accounting-period dynamics are included.",
+            ],
+            "fidelity_questions": [
+                "Did policy evidence remain distinct from the exact control?",
+                "Did the coarse processor avoid invented internal explanations?",
+            ],
+        },
+    }
+    return explanations[scenario]
 
 
 def _nonnegative_int(value: object) -> int:

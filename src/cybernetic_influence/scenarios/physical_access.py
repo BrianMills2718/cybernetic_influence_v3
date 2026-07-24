@@ -13,6 +13,7 @@ from pydantic.types import JsonValue
 from cybernetic_influence.active_runtime import (
     ActiveProposal,
     ActiveRuntimeConfig,
+    ActiveRuntimeCheckpoint,
     ActiveRuntimeResult,
     ActiveRuntimeSession,
     ActiveStepResult,
@@ -167,6 +168,10 @@ class _ScriptedImplementation:
     implementation_id: str
     handler: Callable[[ActiveSystemInput], ActiveStepResult]
 
+    @property
+    def provider_bound(self) -> bool:
+        return False
+
     def step(self, active_input: ActiveSystemInput) -> ActiveStepResult:
         return self.handler(active_input)
 
@@ -263,10 +268,12 @@ def physical_access_fixture(
     )
 
 
-def physical_access_runtime_config() -> ActiveRuntimeConfig:
+def physical_access_runtime_config(
+    *, per_run_budget: float = 0.20
+) -> ActiveRuntimeConfig:
     return ActiveRuntimeConfig(
         per_call_budget=0.05,
-        per_run_budget=0.20,
+        per_run_budget=per_run_budget,
         max_actions_per_system=1,
         max_observations_per_system=8,
         max_private_state_bytes=16_384,
@@ -277,6 +284,8 @@ def physical_access_native_bindings(
     fixture: PhysicalAccessFixture,
     *,
     trace_id_prefix: str,
+    model: str = PHYSICAL_ACCESS_MODEL,
+    reasoning_effort: str = PHYSICAL_ACCESS_REASONING_EFFORT,
 ) -> dict[str, ActiveSystemBinding]:
     spec = fixture.active_specs[0]
     return {
@@ -285,10 +294,10 @@ def physical_access_native_bindings(
             NativeLlmActiveSystem.from_bound_configuration(
                 implementation_family_id="native_physical_technician_v1",
                 persona=TECHNICIAN_PERSONA,
-                model=PHYSICAL_ACCESS_MODEL,
+                model=model,
                 task=PHYSICAL_ACCESS_TASK,
                 trace_id_prefix=trace_id_prefix,
-                reasoning_effort=PHYSICAL_ACCESS_REASONING_EFFORT,
+                reasoning_effort=reasoning_effort,
                 max_memory_entries=16,
                 max_output_tokens=768,
                 decision_wire_contract="openai-json-payload-wire.v2",
@@ -325,6 +334,8 @@ def run_physical_access(
     bindings: Mapping[str, ActiveSystemBinding],
     *,
     run_id: str,
+    runtime_config: ActiveRuntimeConfig | None = None,
+    checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
 ) -> ActiveRuntimeResult:
     session = ActiveRuntimeSession(
         fixture.scenario,
@@ -332,10 +343,17 @@ def run_physical_access(
         fixture.active_specs,
         bindings,
         run_id=run_id,
-        config=physical_access_runtime_config(),
+        config=runtime_config or physical_access_runtime_config(),
     )
     for logical_time, participant_id in PHYSICAL_ACCESS_SCHEDULE:
-        session.activate([participant_id], logical_time=logical_time)
+        try:
+            session.activate([participant_id], logical_time=logical_time)
+        except Exception:
+            if checkpoint_observer is not None:
+                checkpoint_observer(session.checkpoint())
+            raise
+        if checkpoint_observer is not None:
+            checkpoint_observer(session.checkpoint())
     return session.complete()
 
 

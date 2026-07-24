@@ -8,10 +8,14 @@ import json
 import pytest
 
 from cybernetic_influence.active_runtime import (
+    ActiveBudgetError,
+    ActiveRuntimeCheckpoint,
+    ActiveRuntimeConfig,
     ActiveSystemBinding,
     ActiveStepResult,
     ActiveSystemInput,
     ParticipantContractError,
+    ModelCallEvidence,
     ScriptedActiveSystem,
     UpdateScheduleDirective,
 )
@@ -108,6 +112,66 @@ def test_service_desk_replay_reconstructs_exact_final_state() -> None:
     )
     replayed = replay_committed_trajectory(fixture.scenario, result.core_result)
     assert replayed == result.core_result.final_state
+
+
+def test_provider_call_requires_full_ceiling_but_retains_prior_spend() -> None:
+    fixture = physical_access_fixture(
+        physical_access_arm_configurations()[0]
+    )
+    scripted = physical_access_scripted_bindings(fixture)["technician"]
+    calls = 0
+
+    class CostedProvider:
+        implementation_id = scripted.implementation_id
+        provider_bound = True
+
+        def step(self, active_input: ActiveSystemInput) -> ActiveStepResult:
+            nonlocal calls
+            calls += 1
+            result = ActiveStepResult.model_validate(
+                scripted.implementation.step(active_input)
+            )
+            evidence = ModelCallEvidence(
+                status="completed",
+                trace_id=f"budget-test/{calls}",
+                model="test/provider",
+                task="budget_test",
+                reasoning_effort="medium",
+                system_prompt="test system",
+                user_prompt="test user",
+                structured_output={"orientation": "test"},
+                cost=0.01,
+                cost_source="test",
+            )
+            return result.model_copy(update={"call_evidence": [evidence]})
+
+    checkpoints: list[ActiveRuntimeCheckpoint] = []
+    with pytest.raises(
+        ActiveBudgetError,
+        match="cannot fit per-call ceiling",
+    ):
+        run_physical_access(
+            fixture,
+            {
+                "technician": ActiveSystemBinding(
+                    scripted.implementation_id,
+                    CostedProvider(),
+                )
+            },
+            run_id="budget_admission_gate",
+            runtime_config=ActiveRuntimeConfig(
+                per_call_budget=0.05,
+                per_run_budget=0.055,
+                max_actions_per_system=1,
+                max_observations_per_system=8,
+                max_private_state_bytes=16_384,
+            ),
+            checkpoint_observer=checkpoints.append,
+        )
+    assert calls == 1
+    assert checkpoints[-1].total_observed_cost == pytest.approx(0.01)
+    assert checkpoints[-1].attempts[0].status == "committed"
+    assert checkpoints[-1].attempts[-1].status == "failed"
 
 
 def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state() -> None:

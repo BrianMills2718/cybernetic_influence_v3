@@ -26,12 +26,18 @@
     <string>__BUILD_COMMIT__</string>
     <key>CYBERNETIC_INFLUENCE_LIVE</key>
     <string>1</string>
+    <key>CYBERNETIC_INFLUENCE_CERT_TERRA</key>
+    <string>__CERT_TERRA__</string>
+    <key>CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH</key>
+    <string>__CERT_DEEPSEEK_V4_FLASH__</string>
     <key>CYBERNETIC_INFLUENCE_OPENROUTER_KEY_FILE</key>
     <string>__OPENROUTER_KEY_FILE__</string>
     <key>CYBERNETIC_INFLUENCE_RUNS_DIR</key>
     <string>__RUN_ROOT__</string>
     <key>LLM_CLIENT_DATA_ROOT</key>
     <string>__LLM_CLIENT_DATA_ROOT__</string>
+    <key>LLM_CLIENT_REVISION</key>
+    <string>__LLM_CLIENT_REVISION__</string>
     <key>LLM_CLIENT_OPENROUTER_ROUTING</key>
     <string>on</string>
     <key>LLM_CLIENT_PROJECT</key>
