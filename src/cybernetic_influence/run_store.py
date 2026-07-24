@@ -168,6 +168,9 @@ class RunStore:
                 continue
             document["status"] = "interrupted"
             document["error"] = "The server stopped before this run produced a final record."
+            continuation = document.get("continuation")
+            if isinstance(continuation, dict):
+                continuation["lifecycle"] = "interrupted"
             self.save(document)
             changed += 1
         return changed

@@ -16,9 +16,13 @@ The service-desk event scheduler can now stop only after a validated quiescent
 `ActiveRuntimeCheckpoint` and restore that checkpoint into the same event-driven
 schedule. The focused scripted test pauses after three causal moments and
 proves that the resumed run has the same activation IDs, event IDs, and final
-state as an uninterrupted reference. This is the continuation seam for Slice
-14A; it is deliberately not advertised as pause/resume yet because no API/UI
-control or durable checkpoint envelope exists.
+state as an uninterrupted reference. During every running Service Desk causal
+boundary, the API now atomically retains the full validated checkpoint under a
+private continuation envelope as well as its analyst-safe progress summary.
+The failure path preserves that envelope with lifecycle `interrupted`; a
+focused API test verifies its checkpoint digest rather than trusting a progress
+summary. This is the continuation seam for Slice 14A; it is deliberately not
+advertised as pause/resume yet because no API/UI control exists.
 
 ## Decision packet
 

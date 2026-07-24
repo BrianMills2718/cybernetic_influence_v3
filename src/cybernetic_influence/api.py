@@ -345,6 +345,10 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 {
                     **initial,
                     **_checkpoint_progress_projection(latest_checkpoint),
+                    "continuation": _checkpoint_continuation(
+                        latest_checkpoint,
+                        lifecycle="running",
+                    ),
                 }
             )
 
@@ -524,6 +528,16 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
                 "status": "failed",
                 "error": f"{type(error).__name__}: {error}",
                 **_checkpoint_failure_projection(latest_checkpoint),
+                **(
+                    {
+                        "continuation": _checkpoint_continuation(
+                            latest_checkpoint,
+                            lifecycle="interrupted",
+                        )
+                    }
+                    if latest_checkpoint is not None
+                    else {}
+                ),
             }
             runs.save(failed)
             raise HTTPException(
@@ -679,6 +693,29 @@ def _checkpoint_progress_projection(
             ),
             "logical_time": checkpoint.core_checkpoint.state.logical_time,
         },
+    }
+
+
+def _checkpoint_continuation(
+    checkpoint: ActiveRuntimeCheckpoint,
+    *,
+    lifecycle: Literal["running", "paused", "interrupted"],
+) -> dict[str, object]:
+    """Persist the complete validated causal prefix, not only its summary.
+
+    This is deliberately private run evidence.  It makes an interrupted prefix
+    recoverable by the future controller while the analyst surface continues to
+    receive only its redacted progress projection.
+    """
+    validated = ActiveRuntimeCheckpoint.model_validate(
+        checkpoint.model_dump(mode="json")
+    )
+    return {
+        "schema_version": 1,
+        "phase": "causal",
+        "lifecycle": lifecycle,
+        "checkpoint": validated.model_dump(mode="json"),
+        "checkpoint_digest": validated.record_digest,
     }
 
 

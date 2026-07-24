@@ -591,6 +591,32 @@ def test_failed_run_is_retained_for_inspection(tmp_path: Path) -> None:
     assert "RuntimeError" in retained["error"]
 
 
+def test_failed_run_retains_its_full_validated_continuation(tmp_path: Path) -> None:
+    def checkpoint_then_fail(*args: Any, **kwargs: Any) -> Any:
+        observer = kwargs["checkpoint_observer"]
+
+        def fail_after_checkpoint(checkpoint: Any) -> None:
+            observer(checkpoint)
+            raise RuntimeError("after checkpoint")
+
+        kwargs["checkpoint_observer"] = fail_after_checkpoint
+        return original_run_service_desk(*args, **kwargs)
+
+    with patch(
+        "cybernetic_influence.api.run_event_driven_service_desk",
+        side_effect=checkpoint_then_fail,
+    ):
+        api = client(tmp_path)
+        response = api.post("/api/runs", json={"execution": "scripted"})
+
+    assert response.status_code == 500
+    retained = api.get(f"/api/runs/{api.get('/api/runs').json()['runs'][0]['run_id']}").json()
+    continuation = retained["continuation"]
+    assert continuation["lifecycle"] == "interrupted"
+    assert continuation["checkpoint_digest"] == continuation["checkpoint"]["record_digest"]
+    assert continuation["checkpoint"]["attempts"]
+
+
 def test_optional_tailscale_identity_allowlist_guards_run_evidence(
     tmp_path: Path,
 ) -> None:
