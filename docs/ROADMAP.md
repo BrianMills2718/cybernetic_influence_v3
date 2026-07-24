@@ -122,8 +122,12 @@ analytical usefulness remain under iterative stakeholder review rather than
 being treated as proven.
 
 Technical execution is established for V0.12.2 locally and on the private Mac
-development host. Stakeholder comprehension and analytical usefulness of the
-autonomous purchase-to-payment vertical have not yet been observed.
+development host. Stakeholder observation has now occurred on the deployed
+workflow: the operator successfully ran and inspected authored scenarios, and
+identified fixed LLM settings, insufficient control explanations, and the
+closed scenario catalog as the next barriers to the intended modeling job.
+This licenses the next product direction; it does not yet establish analytical
+usefulness on a real research question.
 
 ## Canonical MVP Probe
 
@@ -150,6 +154,25 @@ Non-claims: this probe does not establish realistic organizations, general
 human psychology, calibrated human timing, arbitrary delayed-route
 interleaving, continuous time, or fidelity outside its stipulated service
 workflow.
+
+## Approved Outcome Extension
+
+The next product increment preserves the same analyst and inspectable result
+while removing two observed restrictions in sequence:
+
+1. The analyst can choose an available, policy-allowed structured-output model,
+   agent reasoning level, and maximum total LLM spend; understand the meaning
+   of each control and the scenario's read-only fidelity assumptions; then
+   recover the effective configuration from the retained run.
+2. After that configuration contract is proven, the analyst can describe a
+   bounded situation conversationally, review and correct a typed scenario
+   draft and its unresolved assumptions, approve its graph, and run it only
+   when every executable mechanism has a validated implementation.
+
+The second increment is not permission for a chatbot to generate arbitrary
+runtime code. Natural language will propose a typed draft; validation,
+template-backed mechanism composition, explicit coarse boundaries, and human
+approval remain separate gates.
 
 ## Binding Architectural Direction
 
@@ -212,14 +235,52 @@ processor-fidelity behavior, and stops at quiescence. Deterministic controls,
 full live traces, deployed UI reopening, and fail-closed credential/access
 checks passed.
 
-### 5. Expand multiscale agency only through concrete pressure
+### 5. Make one run configurable and self-explanatory — active
+
+Expose model, agent reasoning, and a bounded total-spend authorization through
+one typed request contract and the existing simulator screen. The shared
+`llm_client` registry and execution policy remain authoritative for model
+eligibility; the simulator must not grow a provider capability database.
+Scenario assumptions, known omissions, and fidelity questions are visible and
+explained but remain read-only unless an authored scenario contract actually
+supports changing them.
+
+The active bounded design is
+[Slice 13](plans/013-configurable-explainable-runs.md). It must preserve the
+zero-cost scripted path, apply selected settings to every LLM-modeled person
+and the narrator while leaving exact processes unchanged, retain effective
+configuration and spend evidence, fail before dispatch on invalid settings,
+and pass a deployed live canary for each initially advertised model.
+
+### 6. Add conversational scenario drafting behind a typed compiler — next
+
+After Slice 13 is observed in use, design one representative authoring
+vertical:
+
+```text
+conversation -> typed scenario draft -> validation and unresolved questions
+  -> spatial/causal preview -> analyst approval -> compiled scenario -> run
+```
+
+Reuse the current causal-state, active-system, fidelity-note, representation,
+spatial, and analytical-boundary contracts. Begin with a small library of
+approved mechanism templates and one bounded novel workflow. Unsupported
+mechanisms remain unresolved or explicitly coarse; they never become silently
+generated adjudication code.
+
+Do not activate this packet until configurable runs are technically verified
+and reviewed by the stakeholder. Its bounded design must freeze a
+human-reviewed target draft and one ambiguity case before implementation.
+
+### 7. Expand multiscale agency only through concrete pressure
 
 Add overlapping/nested aggregate views, richer composite analysis, additional
 process implementations, or representation refinement only when a scenario
 requires them to answer an analyst question that current contracts cannot.
 
-Return to stakeholder observation of the deployed analyst workflow before
-another substrate or ontology packet starts.
+Do not start another substrate or ontology packet while the configurable-run
+and conversational-authoring path is the shorter route to the observed user
+need.
 
 ## Explicit MVP Deferrals
 

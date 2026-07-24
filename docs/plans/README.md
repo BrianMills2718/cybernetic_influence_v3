@@ -14,8 +14,9 @@ instructions to continue their former “next slice” sections.
 
 ## Active packet
 
-None. Return to stakeholder observation of the deployed analyst workflow before
-selecting another implementation packet.
+[Slice 13: Configurable, explainable runs](013-configurable-explainable-runs.md).
+This is the sole executable next packet. Conversational scenario authoring is
+sequenced in the roadmap but has no active implementation plan yet.
 
 ## Completed evidence
 
