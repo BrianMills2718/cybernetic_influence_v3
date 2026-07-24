@@ -14,7 +14,7 @@ import yaml
 
 NARRATOR_TASK = "cybernetic_causal_moment_narration"
 NARRATOR_MAX_BUDGET = 0.02
-NARRATOR_MAX_TOKENS = 256
+NARRATOR_MAX_TOKENS = 512
 NARRATOR_REASONING_EFFORT = "low"
 
 StructuredCall = Callable[..., tuple[Any, Any]]

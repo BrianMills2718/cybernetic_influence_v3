@@ -29,14 +29,16 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
         json={"execution": "scripted"},
     ).json()
     prompts: list[str] = []
+    call_options: list[dict[str, Any]] = []
 
     def fake_call(
         _model: str,
         messages: list[dict[str, str]],
         response_model: type[CausalMomentNarration],
-        **_kwargs: Any,
+        **kwargs: Any,
     ) -> tuple[CausalMomentNarration, object]:
         prompts.append(messages[1]["content"])
+        call_options.append(kwargs)
         source_ids = re.findall(r'"event_id":\s*"([^"]+)"', messages[1]["content"])
         return (
             response_model(
@@ -65,6 +67,7 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     assert "Never describe scenario_start as an internal" in prompts[0]
     assert "at most 600 characters" in prompts[0]
     assert "Narrated causal moment 1." in prompts[1]
+    assert all(item["max_tokens"] == 512 for item in call_options)
     exact_event_ids = {event["event_id"] for event in document["timeline"]}
     assert all(
         set(moment["source_event_ids"]) <= exact_event_ids
