@@ -302,6 +302,8 @@ class CausalSession:
                 ),
                 "max_effects": self._limits.max_effects,
                 "max_zero_time_depth": self._limits.max_zero_time_depth,
+                "timing_contract": scenario.timing_contract,
+                "minimum_world_duration": scenario.minimum_world_duration,
             },
         )
 
@@ -569,7 +571,15 @@ class CausalSession:
             raise MechanismContractError(
                 f"duplicate action id {action.action_id!r}"
             )
-        if action.logical_time < self._current_logical_time():
+        # In a positive-duration scenario a frozen activation set can enqueue
+        # several later effects.  Those queued trace events must not make a
+        # sibling action at the same activation time look like time travel.
+        current_time = (
+            self._state.logical_time
+            if self._positive_duration
+            else self._current_logical_time()
+        )
+        if action.logical_time < current_time:
             raise MechanismContractError(
                 f"action {action.action_id!r} regresses logical time"
             )
@@ -831,17 +841,27 @@ class CausalSession:
             read_spatial_link_ids=list(mechanism.read_spatial_link_ids),
             invariants=invariants,
         )
+        commit_time = self._next_positive_time(
+            requested=effect.logical_time,
+            parent_event_id=mechanism_event.event_id,
+        )
+        observation_time = (
+            commit_time + self._scenario.minimum_world_duration
+            if self._positive_duration
+            else commit_time
+        )
         patch, new_state = self._build_patch(
             mechanism,
             target_port,
             outcome,
-            logical_time=effect.logical_time,
+            logical_time=commit_time,
+            observation_logical_time=observation_time,
             parent_event_id=mechanism_event.event_id,
         )
         self._state = new_state
         commit_event = self._append_event(
             event_kind="state_committed",
-            logical_time=effect.logical_time,
+            logical_time=commit_time,
             causal_parent_event_ids=[mechanism_event.event_id],
             summary=(
                 f"Committed mechanism {mechanism.mechanism_id} as state "
@@ -1144,6 +1164,7 @@ class CausalSession:
         outcome: MechanismOutcome,
         *,
         logical_time: int,
+        observation_logical_time: int,
         parent_event_id: str,
     ) -> tuple[StatePatch, CausalState]:
         """Construct and validate a complete next-state patch without partial mutation."""
@@ -1222,7 +1243,7 @@ class CausalSession:
                 apparent_content=observation_draft.apparent_content,
                 apparent_source_ref=observation_draft.apparent_source_ref,
                 representation_id=observation_draft.representation_id,
-                logical_time=logical_time,
+                logical_time=observation_logical_time,
                 causal_parent_event_ids=[parent_event_id],
             )
             after.observations[observation_id] = observation
@@ -1295,7 +1316,9 @@ class CausalSession:
             effect_id=effect_id,
             source_port_id=source_port_id,
             representation_id=representation_id,
-            details={"zero_time_depth": zero_time_depth},
+            details={
+                "zero_time_depth": 0 if self._positive_duration else zero_time_depth
+            },
         )
         effect = EffectEnvelope(
             effect_id=effect_id,
@@ -1303,8 +1326,8 @@ class CausalSession:
             source_port_id=source_port_id,
             representation_id=representation_id,
             payload={key: deepcopy(value) for key, value in payload.items()},
-            logical_time=logical_time,
-            zero_time_depth=zero_time_depth,
+            logical_time=event.logical_time,
+            zero_time_depth=0 if self._positive_duration else zero_time_depth,
             variance_source=(
                 "external_action"
                 if variance_source == "external_action"
@@ -1330,6 +1353,39 @@ class CausalSession:
 
     def _append_event(self, **values: object) -> CausalEvent:
         """Append one event with canonical sequence, revision, and parent checks."""
+        event_kind = values.get("event_kind")
+        if self._positive_duration and event_kind not in {
+            "run_started",
+            "run_completed",
+        }:
+            parent_ids = values.get("causal_parent_event_ids", [])
+            if not isinstance(parent_ids, list) or not parent_ids:
+                raise AssertionError("positive-duration event requires a parent")
+            parent_times = [
+                next(event.logical_time for event in self._events if event.event_id == parent_id)
+                for parent_id in parent_ids
+            ]
+            requested = values.get("logical_time")
+            if not isinstance(requested, int):
+                raise AssertionError("event logical time must be an integer")
+            starts_at = max(parent_times)
+            due_at = max(
+                requested,
+                starts_at + self._scenario.minimum_world_duration,
+                self._events[-1].logical_time + self._scenario.minimum_world_duration,
+            )
+            values["logical_time"] = due_at
+            raw_details = values.get("details", {})
+            if not isinstance(raw_details, Mapping):
+                raise AssertionError("event details must be a mapping")
+            details = dict(raw_details)
+            details["timing"] = {
+                "starts_at": starts_at,
+                "duration": due_at - starts_at,
+                "source_kind": "scenario_assumption",
+                "source_ref": "minimum_world_duration",
+            }
+            values["details"] = details
         sequence = self._event_sequence
         event = CausalEvent.model_validate(
             {
@@ -1551,6 +1607,23 @@ class CausalSession:
         if not self._events:
             return self._state.logical_time
         return max(self._state.logical_time, self._events[-1].logical_time)
+
+    @property
+    def _positive_duration(self) -> bool:
+        return self._scenario.timing_contract == "positive_duration"
+
+    def _next_positive_time(self, *, requested: int, parent_event_id: str) -> int:
+        """Return the earliest valid child time without creating a trace event."""
+        if not self._positive_duration:
+            return requested
+        parent = next(
+            event for event in self._events if event.event_id == parent_event_id
+        )
+        return max(
+            requested,
+            parent.logical_time + self._scenario.minimum_world_duration,
+            self._events[-1].logical_time + self._scenario.minimum_world_duration,
+        )
 
     @staticmethod
     def _effect_variance(effect: EffectEnvelope) -> VarianceSource:

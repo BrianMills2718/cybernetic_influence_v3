@@ -78,11 +78,12 @@
         <span class="eyebrow">People · information · objects · mechanisms</span>
         <div class="heading-help"><h2>Simulation map</h2><button class="help-button" type="button" data-help="map-help" aria-expanded="false" aria-controls="map-help">?</button></div>
         <p id="map-help" class="inline-help" hidden></p>
-        <p class="muted">Choose a layout, then select a node or edge for its retained state. Spatial layout shows authored places, occupants, and physical topology; causal flow shows information, actions, and exact mechanisms.</p>
+        <p class="muted">Choose a layout, then select a node or edge for its retained state. Spatial layout shows authored places, occupants, and physical topology; causal flow shows declared interfaces and routes; realized trajectory shows the events that actually occurred and their causal parents.</p>
         <div class="projection-toolbar" aria-label="Map layout">
           <div class="tabs">
             <button id="spatial-layout" type="button" title="Shows authored places, occupants, and physical links. It does not imply permission, communication, or access.">Spatial layout</button>
             <button id="causal-layout" type="button" title="Shows declared information routes, actions, records, and exact mechanisms rather than spatial proximity.">Causal flow</button>
+            <button id="trajectory-layout" type="button" title="Shows retained events that actually occurred, ordered by modeled elapsed time and connected only by causal-parent links.">Realized trajectory</button>
           </div>
           <p id="projection-help" class="muted"></p>
         </div>

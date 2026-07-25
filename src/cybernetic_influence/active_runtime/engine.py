@@ -694,6 +694,11 @@ class ActiveRuntimeSession:
 
     def _settle_exact_due(self, logical_time: int) -> None:
         """Retain a due exact transition as its own causal provenance record."""
+        # Positive-duration traces may serialize a same-due exact cascade into
+        # later retained world events.  Never ask the core to move its world
+        # state backward merely because an already-queued sibling had an older
+        # nominal due time.
+        logical_time = max(logical_time, self._core.state.logical_time)
         before = self._core.checkpoint()
         events = self._core.advance_due(logical_time)
         if not events:

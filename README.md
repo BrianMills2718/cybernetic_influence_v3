@@ -46,6 +46,9 @@ The simulator currently includes:
   IDs and informed by the prior moment narratives;
 - a pannable, zoomable, selectable causal graph of people, information, world
   objects, mechanisms, and concrete declared routes;
+- a separate realized-trajectory graph of retained events and explicit
+  causal-parent links, synchronized with the moment inspector and distinct from
+  both spatial topology and possible structural routes;
 - a synchronized world-topology graph with place containers, event-time
   occupants, pathway substrates, and one-click return to exact causal flow;
 - reversible execution-inert aggregate views—including separate operating,
@@ -103,12 +106,12 @@ remains only inside the closed
 fidelity-report harness so historical comparison evidence retains its original
 sampling contract.
 
-The causal core can now retain delayed effects and deliveries across
-checkpoints, but the authored scenarios still contain legacy zero-duration
-world-event links. The active slice requires every causal child world event to
-complete at a later scenario time than its parent and adds a realized
-activity/event causal graph distinct from the existing structural graph of
-entities and possible routes. See
+The multirate Service Desk now requires every non-metadata causal child event to
+complete at a later modeled scenario time than its parent. Its first timing
+source is a declared scenario-wide minimum duration, not a real-world estimate.
+Other authored scenarios remain legacy zero-duration traces until a concrete
+timing slice migrates them. The realized activity/event causal graph is distinct
+from the existing structural graph of entities and possible routes. See
 [ADR 010](docs/adr/010-autonomous-multirate-process-time.md).
 
 Runs are retained under `artifacts/runs/`. Override that location with

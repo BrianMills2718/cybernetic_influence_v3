@@ -69,7 +69,7 @@ SERVICE_DESK_SCHEDULE: tuple[tuple[int, str], ...] = (
     (7, "specialist"),
     (8, "supervisor"),
 )
-SERVICE_DESK_MAX_CAUSAL_MOMENTS = 12
+SERVICE_DESK_MAX_CAUSAL_MOMENTS = 24
 REMEDIATION_PROCESS_IMPLEMENTATION_ID = "exact_remediation_process_controller_v1"
 
 CUSTOMER_REPORT_ENCODING = "application/vnd.cybernetic.customer-report+json"
@@ -481,6 +481,8 @@ def service_desk_fixture(
             "customer site."
         ),
         time_unit="process_tick" if multirate else "step",
+        timing_contract="positive_duration" if multirate else "legacy",
+        minimum_world_duration=1,
         initial_state=state,
         analytical_boundaries=[
             AnalyticalBoundary(

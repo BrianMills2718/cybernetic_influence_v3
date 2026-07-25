@@ -601,6 +601,8 @@ class CausalScenario(_StrictModel):
     scenario_id: str = Field(pattern=_ID_PATTERN)
     description: str = Field(min_length=1)
     time_unit: str = Field(default="step", pattern=_ID_PATTERN)
+    timing_contract: Literal["legacy", "positive_duration"] = "legacy"
+    minimum_world_duration: int = Field(default=1, ge=1)
     initial_state: CausalState
     analytical_boundaries: list[AnalyticalBoundary] = Field(default_factory=list)
     fidelity_questions: list[str] = Field(min_length=1)
@@ -640,6 +642,10 @@ class CausalScenario(_StrictModel):
                     f"boundary {boundary.boundary_id!r} has unknown or non-node members "
                     f"{sorted(unknown)!r}"
                 )
+        if self.timing_contract == "positive_duration" and self.time_unit == "step":
+            raise ValueError(
+                "positive-duration scenarios must declare a meaningful time unit"
+            )
         return self
 
 
@@ -1186,6 +1192,9 @@ def scenario_execution_fingerprint(scenario: CausalScenario) -> str:
         "runtime_contract": scenario.runtime_contract,
         "schema_version": scenario.schema_version,
         "scenario_id": scenario.scenario_id,
+        "time_unit": scenario.time_unit,
+        "timing_contract": scenario.timing_contract,
+        "minimum_world_duration": scenario.minimum_world_duration,
         "initial_state": scenario.initial_state.model_dump(mode="json"),
     }
     return canonical_record_digest(payload)
@@ -1410,6 +1419,8 @@ def _validate_run_binding(
         "time_unit": time_unit,
         "max_effects": max_effects,
         "max_zero_time_depth": max_zero_time_depth,
+        "timing_contract": root.details.get("timing_contract"),
+        "minimum_world_duration": root.details.get("minimum_world_duration"),
     }
     if root.details != expected:
         raise ValueError("run root disagrees with execution identity or limits")
@@ -1420,6 +1431,9 @@ def _validate_event_causality(
 ) -> None:
     """Require each typed occurrence to name the event that actually caused it."""
     by_id: dict[str, CausalEvent] = {}
+    positive_duration = (
+        events[0].details.get("timing_contract") == "positive_duration"
+    )
     emitted_ids: set[str] = set()
     resolution_kinds: dict[str, set[EventKind]] = {}
     action_effect_counts: dict[str, int] = {}
@@ -1428,6 +1442,15 @@ def _validate_event_causality(
 
     for index, event in enumerate(events):
         parents = [by_id[parent_id] for parent_id in event.causal_parent_event_ids]
+        if (
+            positive_duration
+            and event.event_kind not in {"run_started", "run_completed"}
+            and parents
+            and event.logical_time <= max(parent.logical_time for parent in parents)
+        ):
+            raise ValueError(
+                "positive-duration world event must occur after its causal parent"
+            )
         if event.event_kind == "run_started":
             if event.variance_source != "none":
                 raise ValueError("run_started cannot claim a variance source")
@@ -1474,10 +1497,18 @@ def _validate_event_causality(
                     not isinstance(route_delay, int)
                     or isinstance(route_delay, bool)
                     or route_delay < 0
-                    or event.logical_time != parent.logical_time + route_delay
+                    or (
+                        event.logical_time != parent.logical_time + route_delay
+                        if not positive_duration
+                        else event.logical_time < parent.logical_time + route_delay
+                    )
                 ):
                     raise ValueError("effect route has invalid delay evidence")
-            elif event.logical_time != parent.logical_time:
+            elif (
+                event.logical_time != parent.logical_time
+                if not positive_duration
+                else event.logical_time < parent.logical_time
+            ):
                 raise ValueError("effect dissipation time disagrees with emission")
             assert event.effect_id is not None
             resolution_kinds.setdefault(event.effect_id, set()).add(

@@ -254,7 +254,7 @@ def test_provider_call_requires_full_ceiling_but_retains_prior_spend() -> None:
     }
 
 
-def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state() -> None:
+def test_event_driven_service_desk_preserves_frozen_due_sets_with_positive_time() -> None:
     fixture = service_desk_fixture(
         service_desk_arm_configurations()[0],
         cognition_profile="position_context",
@@ -268,9 +268,9 @@ def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state()
     joint = next(
         attempt
         for attempt in result.attempts
-        if attempt.declared_active_system_ids == ["supervisor", "triager"]
+        if attempt.declared_active_system_ids == ["specialist", "supervisor"]
     )
-    assert joint.declared_active_system_ids == ["supervisor", "triager"]
+    assert joint.declared_active_system_ids == ["specialist", "supervisor"]
     observations = {
         participant.requested_active_system_id: {
             observation.via_port_id
@@ -279,8 +279,8 @@ def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state()
         for participant in joint.participants
     }
     assert observations == {
+        "specialist": {"specialist_ticket_details_in"},
         "supervisor": {"supervisor_remediation_in"},
-        "triager": {"triager_customer_feedback_in"},
     }
     assert all(
         participant.input.activation_id == joint.activation_id
@@ -293,15 +293,22 @@ def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state()
         if attempt.declared_active_system_ids
         == ["remediation_process", "triager"]
     )
-    assert autonomous_joint.logical_time == 1
-    assert all(
-        participant.input.observations == []
-        and [
-            cause.kind for cause in participant.input.activation_causes
-        ]
-        == ["internal_wake"]
+    assert autonomous_joint.logical_time > 0
+    process = next(
+        participant
         for participant in autonomous_joint.participants
+        if participant.requested_active_system_id == "remediation_process"
     )
+    triager = next(
+        participant
+        for participant in autonomous_joint.participants
+        if participant.requested_active_system_id == "triager"
+    )
+    assert process.input.observations == []
+    assert [cause.kind for cause in process.input.activation_causes] == ["internal_wake"]
+    assert {observation.via_port_id for observation in triager.input.observations} == {
+        "triager_detail_request_in"
+    }
     assert len(
         {
             participant.input.logical_time
@@ -321,6 +328,22 @@ def test_event_driven_service_desk_groups_simultaneous_triggers_from_one_state()
     assert result.core_result.final_state.fact(
         "incident_17.status"
     ).value == "closed_confirmed"
+    world_events = [
+        event
+        for event in result.core_result.events
+        if event.event_kind not in {"run_started", "run_completed"}
+    ]
+    by_id = {event.event_id: event for event in result.core_result.events}
+    assert all(
+        event.logical_time > max(by_id[parent].logical_time for parent in event.causal_parent_event_ids)
+        for event in world_events
+    )
+    for event in world_events:
+        timing = event.details.get("timing")
+        assert isinstance(timing, dict)
+        duration = timing.get("duration")
+        assert isinstance(duration, int)
+        assert duration > 0
 
 
 def test_event_driven_service_desk_resumes_one_validated_prefix_without_duplicates() -> None:
@@ -378,19 +401,21 @@ def test_event_driven_checkpoint_retains_future_route_work() -> None:
     delayed_fixture = replace(fixture, scenario=scenario)
     bindings = service_desk_scripted_bindings(delayed_fixture)
 
+    observed: list[ActiveRuntimeCheckpoint] = []
     with pytest.raises(RuntimePaused) as paused:
         run_event_driven_service_desk(
             delayed_fixture,
             bindings,
             run_id="service_desk_pending_route_checkpoint",
-            pause_requested=lambda: True,
+            checkpoint_observer=observed.append,
+            pause_requested=lambda: len(observed) == 2,
         )
 
     checkpoint = paused.value.checkpoint
     scheduled_work = checkpoint.core_checkpoint.scheduled_work
     assert scheduled_work
-    assert {item.due_at for item in scheduled_work} == {300}
-    assert all(item.work_kind == "delivery" for item in scheduled_work)
+    assert {item.due_at for item in scheduled_work} == {2, 4}
+    assert all(item.work_kind == "effect" for item in scheduled_work)
 
     resumed = run_event_driven_service_desk(
         delayed_fixture,
@@ -404,7 +429,7 @@ def test_event_driven_checkpoint_retains_future_route_work() -> None:
         for participant in attempt.participants
         if participant.requested_active_system_id == "specialist"
     )
-    assert specialist_attempt.input.logical_time == 300
+    assert specialist_attempt.input.logical_time == 307
     assert resumed.core_result.final_state.fact("incident_17.status").value == "closed_confirmed"
     timeline = analyst_timeline(
         resumed,
@@ -413,7 +438,7 @@ def test_event_driven_checkpoint_retains_future_route_work() -> None:
     moments = analyst_moments(resumed, timeline)
     assert any(
         moment["activation"] == "exact_work_000000"
-        and moment["logical_time"] == 300
+        and moment["logical_time"] == 2
         and moment["participants"] == ["exact_mechanisms"]
         for moment in moments
     )
@@ -439,21 +464,31 @@ def test_restore_rejects_tampered_pending_delivery_topology(
     scenario.initial_state.connections["routing_to_specialist"].delay = 300
     scenario.initial_state.connections["triager_direct_to_specialist"].delay = 300
     delayed_fixture = replace(fixture, scenario=scenario)
-    with pytest.raises(RuntimePaused) as paused:
-        run_event_driven_service_desk(
-            delayed_fixture,
-            service_desk_scripted_bindings(delayed_fixture),
-            run_id="service_desk_tampered_route_checkpoint",
-            pause_requested=lambda: True,
-        )
-
-    payload = paused.value.checkpoint.core_checkpoint.model_dump(mode="json")
+    observed: list[ActiveRuntimeCheckpoint] = []
+    exact = CausalSession(
+        delayed_fixture.scenario,
+        delayed_fixture.exact_bindings,
+        run_id="service_desk_tampered_route_checkpoint",
+    )
+    exact.advance(
+        ActionAttempt(
+            action_id="tampered_route_action",
+            actor_entity_id="triager",
+            output_port_id="triager_route_out",
+            representation_id="triager_routing_credential",
+            payload={},
+            logical_time=0,
+            public_summary="Triager attempted authenticated ticket assignment.",
+        ),
+        drain_through=6,
+    )
+    payload = exact.checkpoint().model_dump(mode="json")
     payload["scheduled_work"][0][field] = value
     if field == "due_at":
         payload["scheduled_work"][0]["effect"]["logical_time"] = value
     payload.pop("record_digest")
     payload["record_digest"] = canonical_record_digest(payload)
-    corrupt = type(paused.value.checkpoint.core_checkpoint).model_validate(payload)
+    corrupt = type(exact.checkpoint()).model_validate(payload)
 
     with pytest.raises(ValueError, match=message):
         CausalSession.restore(
@@ -525,11 +560,21 @@ def test_future_delivery_waits_for_its_recorded_arrival_time() -> None:
         if participant.requested_active_system_id
         == "remediation_process"
     )
-    assert first_process.input.logical_time == 5
+    remediation_route = next(
+        event
+        for event in result.core_result.events
+        if event.connection_id == "specialist_to_remediation"
+    )
+    emission = next(
+        event
+        for event in result.core_result.events
+        if event.event_id == remediation_route.causal_parent_event_ids[0]
+    )
+    assert remediation_route.logical_time - emission.logical_time >= 5
     assert [
         observation.logical_time
         for observation in first_process.input.observations
-    ] == [5]
+    ] == [first_process.input.logical_time]
     assert all(
         observation.logical_time <= participant.input.logical_time
         for attempt in result.attempts

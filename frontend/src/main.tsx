@@ -77,13 +77,39 @@ interface EventView {
   boundary_ids?: string[]
 }
 
+interface TrajectoryNode {
+  id: string
+  kind: string
+  label: string
+  logical_time: number
+  causal_timestamp?: string | null
+  timing?: {
+    starts_at: number
+    duration: number
+    source_kind: string
+    source_ref: string
+  } | null
+}
+
+interface TrajectoryEdge {
+  id: string
+  source: string
+  target: string
+}
+
+interface TrajectoryView {
+  nodes: TrajectoryNode[]
+  edges: TrajectoryEdge[]
+}
+
 interface CanvasOptions {
   nodes: AnalystNode[]
   edges: AnalystEdge[]
   event: EventView | null
   boundary: BoundaryView | null
   world: WorldView | null
-  viewMode: 'world' | 'causal'
+  trajectory: TrajectoryView | null
+  viewMode: 'world' | 'causal' | 'trajectory'
   analyticalScaleHelp: string
   collapsedBoundaryId: string | null
   selectedNodeId: string | null
@@ -481,6 +507,34 @@ function buildGraph(options: CanvasOptions): {
   edges: Edge<CanvasEdgeData>[]
 } {
   if (options.viewMode === 'world') return buildWorldGraph(options)
+  if (options.viewMode === 'trajectory') {
+    const selectedEventId = options.event?.event_id
+    const nodes = options.trajectory?.nodes.map((item) => toCanvasNode(
+      {
+        id: item.id,
+        kind: 'realized_event',
+        label: `t${item.logical_time} · ${item.kind.replaceAll('_', ' ')}`,
+        description: item.label,
+        state: item,
+      },
+      selectedEventId === item.id,
+      options.selectedNodeId === item.id,
+    )) ?? []
+    const edges = options.trajectory?.edges.map((item) => toCanvasEdge(
+      {
+        id: item.id,
+        kind: 'causal_parent',
+        source: item.source,
+        target: item.target,
+        enabled: true,
+        description: 'Retained causal-parent link.',
+        routeIds: [],
+      },
+      null,
+      options.selectedEdgeId === item.id,
+    )) ?? []
+    return { nodes: dagreLayout(nodes, edges), edges }
+  }
   const event = options.event
   const activeIds = new Set(event?.focus_ids ?? [])
   const canvasNodes = options.nodes.map((item) => {
@@ -596,6 +650,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
     ?? 'analytical composite'
   const collapsed = options.collapsedBoundaryId !== null
   const worldMode = options.viewMode === 'world'
+  const trajectoryMode = options.viewMode === 'trajectory'
   return (
     <section className="cy-graph-shell">
       <div className="cy-graph-bar">
@@ -603,6 +658,8 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
           <strong>
             {worldMode
               ? 'World topology'
+              : trajectoryMode
+                ? 'Realized causal trajectory'
               : collapsed ? 'Collapsed composite' : 'Expanded exact network'}
           </strong>
           {' · '}revision {options.event?.state_revision ?? 'final'}
@@ -611,7 +668,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
             : ''}
         </span>
         <div className="cy-graph-actions">
-          {!worldMode && boundaryId && (
+          {!worldMode && !trajectoryMode && boundaryId && (
           <button
             title={options.analyticalScaleHelp}
             aria-label={`Analytical scale: ${collapsed ? 'expand' : 'collapse'} ${boundaryLabel}`}

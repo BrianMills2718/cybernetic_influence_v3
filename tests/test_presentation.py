@@ -211,12 +211,35 @@ def test_timeline_events_link_to_exact_activation_not_only_time(tmp_path: Path) 
     ).json()
     trace_activations = {trace["activation"] for trace in body["traces"]}
     for event in body["timeline"]:
-        if event["activation"] is not None:
+        if event["activation"] is not None and not str(event["activation"]).startswith("exact_work_"):
             assert event["activation"] in trace_activations
     assert all(
         step["activation"] is not None
         for step in body["story"]["steps"]
     )
+
+
+def test_realized_trajectory_is_a_typed_projection_of_the_exact_trace(
+    tmp_path: Path,
+) -> None:
+    body = TestClient(create_app(ROOT / "web", tmp_path)).post(
+        "/api/runs",
+        json={"arm_id": "baseline", "execution": "scripted"},
+    ).json()
+    trajectory = body["trajectory"]
+    assert {node["id"] for node in trajectory["nodes"]} == {
+        event["event_id"] for event in body["timeline"]
+    }
+    by_id = {event["event_id"]: event for event in body["timeline"]}
+    assert all(
+        by_id[edge["target"]]["logical_time"]
+        > by_id[edge["source"]]["logical_time"]
+        for edge in trajectory["edges"]
+        if by_id[edge["target"]]["kind"] != "run_completed"
+    )
+    timed = [node for node in trajectory["nodes"] if node["timing"] is not None]
+    assert timed
+    assert all(node["timing"]["duration"] > 0 for node in timed)
 
 
 def test_narrative_is_derived_from_open_remediated_and_closed_outcomes() -> None:

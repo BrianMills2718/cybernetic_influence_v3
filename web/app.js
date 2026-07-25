@@ -429,6 +429,11 @@ function showNode(nodeId) {
   selectedEdgeId = null
   renderGraph()
   const event = current?.timeline?.[selectedEventIndex]
+  if (selectedGraphView === 'trajectory') {
+    const timing = event.timing
+    $('#inspector').innerHTML = `<span class="eyebrow">Realized event</span><h2>${html(event.kind.replaceAll('_', ' '))}</h2><p>${html(event.summary)}</p><dl class="detail-list"><dt>Elapsed time</dt><dd>${html(scenarioClock(event.logical_time))}</dd><dt>Causal parents</dt><dd>${html((event.causal_parent_event_ids || []).join(', ') || 'run root')}</dd>${timing ? `<dt>Duration</dt><dd>${html(timing.duration)} ${html(current.time_unit)} · ${html(timing.source_kind.replaceAll('_', ' '))}</dd>` : ''}</dl>`
+    return
+  }
   const world = worldProjection()
   const place = world?.places?.find((candidate) => candidate.id === nodeId)
   if (place) {
@@ -626,6 +631,7 @@ function renderGraph() {
       edges:projection.edges,
       event:current?.timeline?.[selectedEventIndex] || null,
       world:worldProjection(),
+      trajectory:current?.trajectory || null,
       viewMode:selectedGraphView,
       analyticalScaleHelp:runtimeConfig.live_options?.help?.analytical_scale || 'Analytical scale collapses an execution-inert composite for inspection; it does not create another acting system.',
       boundary:authoredBoundary && snapshot ? {
@@ -641,7 +647,17 @@ function renderGraph() {
       collapsedBoundaryId:selectedScale === 'exact' ? null : selectedScale,
       selectedNodeId,
       selectedEdgeId,
-      onSelectNode:(nodeId) => showNode(nodeId),
+      onSelectNode:(nodeId) => {
+        if (selectedGraphView === 'trajectory') {
+          const index = current.timeline.findIndex((event) => event.event_id === nodeId)
+          if (index >= 0) {
+            selectEvent(index)
+            showNode(nodeId)
+          }
+          return
+        }
+        showNode(nodeId)
+      },
       onSelectEdge:(edge) => showEdge(edge),
       onToggleBoundary:(boundaryId) => {
         selectedScale = selectedScale === 'exact' ? boundaryId : 'exact'
@@ -683,12 +699,16 @@ function renderProjectionControls() {
   $('#spatial-layout').disabled = !hasWorld
   $('#spatial-layout').classList.toggle('active', selectedGraphView === 'world')
   $('#causal-layout').classList.toggle('active', selectedGraphView === 'causal')
+  $('#trajectory-layout').classList.toggle('active', selectedGraphView === 'trajectory')
   $('#spatial-layout').setAttribute('aria-pressed', String(selectedGraphView === 'world'))
   $('#causal-layout').setAttribute('aria-pressed', String(selectedGraphView === 'causal'))
+  $('#trajectory-layout').setAttribute('aria-pressed', String(selectedGraphView === 'trajectory'))
   $('#projection-help').textContent = !hasWorld
     ? 'This scenario has no authored places or spatial topology yet, so only its causal flow can be shown.'
     : selectedGraphView === 'world'
       ? 'Spatial layout shows authored places, occupants, and physical links. Adjacency does not itself grant permission or traversal.'
+      : selectedGraphView === 'trajectory'
+        ? 'Realized trajectory shows only retained events that occurred. Its arrows are explicit causal-parent links, not possible routes or physical adjacency.'
       : 'Causal flow shows retained information routes, actions, records, and mechanisms. It does not imply physical proximity.'
 }
 
@@ -991,6 +1011,14 @@ $('#causal-layout').onclick = () => {
   if (!current) return
   selectedGraphView = 'causal'
   selectedNodeId = null
+  selectedEdgeId = null
+  renderProjectionControls()
+  renderGraph()
+}
+
+$('#trajectory-layout').onclick = () => {
+  selectedGraphView = 'trajectory'
+  selectedNodeId = current?.timeline?.[selectedEventIndex]?.event_id || null
   selectedEdgeId = null
   renderProjectionControls()
   renderGraph()

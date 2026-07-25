@@ -8,9 +8,10 @@ predecessor: 014-pausable-live-runs.md
 
 # Slice 15: Positive-Duration Modeled Time
 
-**Status: active. Slice 15A is implemented. The positive-duration Service Desk
-vertical and realized causal-trajectory view are next. This PoC uses declared
-scenario assumptions and bounded model estimates, not real-world calibration.**
+**Status: active. Slices 15A–15C are implemented on the current branch; one
+live-run and browser review remain. The first realization uses the Service
+Desk's explicit minimum world duration as a source-labelled scenario assumption,
+not a real-world calibration.**
 
 ## Outcome
 
@@ -186,11 +187,32 @@ Add source-labelled positive durations at every Service Desk world-transition
 boundary, fail-closed runtime resolution, seeded sampling where useful, and a
 scripted baseline whose causal descendants always advance elapsed time.
 
+**Implementation evidence (2026-07-25):** `CausalScenario` now declares a
+`positive_duration` timing contract and a positive `minimum_world_duration`.
+The multirate Service Desk opts into it. The core assigns every non-metadata
+event a later modeled time than each explicit parent, retains a timing record
+(`starts_at`, `duration`, `scenario_assumption`, and source reference), and
+rejects a persisted trace whose child fails that relation. A scripted baseline
+completed with 90 events and positive duration records; pause/resume and
+tampered-route validation remain covered. This first vertical deliberately
+uses one explicit scenario-wide assumption. It does not yet claim
+per-mechanism estimates, sampled durations, or runtime LLM adjudication.
+
 ### 15C — realized causal graph and live proof
 
 Project the retained activity/event DAG separately from the structural
 causal-flow map, synchronize it with the narrative and inspectors, then run and
 inspect one bounded DeepSeek trajectory plus pause/resume.
+
+**Implementation evidence (2026-07-25):** the analyst document now exposes a
+`trajectory` projection with one node per retained event and one directed edge
+per explicit causal-parent relation. The simulator adds **Realized trajectory**
+beside spatial topology and structural causal flow. Selecting an event keeps the
+moment control synchronized and exposes its elapsed time, duration, and causal
+parents. API and presentation tests prove that the projection has exactly the
+retained event IDs and that every nonterminal graph edge advances modeled time.
+The bounded live run and browser review remain the final evidence for this
+slice.
 
 ### 15D — later evidence integration (deferred)
 

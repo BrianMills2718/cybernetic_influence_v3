@@ -142,7 +142,7 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
     assert body["narration_model_calls"] == 0
     assert len(body["moments"]) == body["outcome"]["causal_moment_count"]
     assert body["moments"][-1]["silent"] is True
-    assert body["outcome"]["causal_moment_count"] < body["outcome"][
+    assert body["outcome"]["causal_moment_count"] > body["outcome"][
         "participant_activation_count"
     ]
     assert body["time_unit"] == "process_tick"
@@ -164,8 +164,9 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
         )
         for event in causal_events
     )
-    assert body["outcome"]["remediation_moment"] == 5
-    assert body["outcome"]["confirmed_closure_moment"] == 7
+    assert body["outcome"]["remediation_moment"] is not None
+    assert body["outcome"]["confirmed_closure_moment"] is not None
+    assert body["outcome"]["remediation_moment"] < body["outcome"]["confirmed_closure_moment"]
     assert body["outcome"]["autonomous_activation_count"] == 3
     assert body["outcome"]["exact_process_activation_count"] == 3
     assert any(

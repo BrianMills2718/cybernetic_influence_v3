@@ -169,6 +169,7 @@ def build_analyst_document(
     nodes = snapshots[str(final_state.revision)]
     edges = analyst_edges(final_state)
     timeline = analyst_timeline(result, temporal_states)
+    trajectory = analyst_trajectory(timeline)
     moments = analyst_moments(result, timeline)
     boundaries = analyst_boundaries(
         analytical_boundaries,
@@ -202,10 +203,44 @@ def build_analyst_document(
         "edges": edges,
         "boundaries": boundaries,
         "timeline": timeline,
+        "trajectory": trajectory,
         "moments": moments,
         "events": [analyst_event(event) for event in result.core_result.events],
         "traces": traces,
     }
+
+
+def analyst_trajectory(
+    timeline: Sequence[Mapping[str, object]],
+) -> dict[str, list[dict[str, object]]]:
+    """Project the realized event DAG without conflating it with declared routes."""
+    nodes: list[dict[str, object]] = []
+    edges: list[dict[str, object]] = []
+    for event in timeline:
+        event_id = event["event_id"]
+        assert isinstance(event_id, str)
+        nodes.append(
+            {
+                "id": event_id,
+                "kind": event["kind"],
+                "label": str(event["summary"]),
+                "logical_time": event["logical_time"],
+                "causal_timestamp": event.get("causal_timestamp"),
+                "timing": event.get("timing"),
+            }
+        )
+        parent_ids = event.get("causal_parent_event_ids", [])
+        assert isinstance(parent_ids, list)
+        for parent_id in parent_ids:
+            if isinstance(parent_id, str):
+                edges.append(
+                    {
+                        "id": f"{parent_id}__{event_id}",
+                        "source": parent_id,
+                        "target": event_id,
+                    }
+                )
+    return {"nodes": nodes, "edges": edges}
 
 
 def analyst_moments(
@@ -812,7 +847,12 @@ def analyst_timeline(
             "focus_edges": sorted(focus_edges),
             "spatial_focus_ids": sorted(spatial_focus_ids),
             "spatial_link_ids": sorted(spatial_link_ids),
+            "causal_parent_event_ids": list(event.causal_parent_event_ids),
         }
+        details = exact.get("details")
+        timing = details.get("timing") if isinstance(details, dict) else None
+        if isinstance(timing, dict):
+            projected_event["timing"] = timing
         if activation_record is not None:
             causal_time = activation_record[2]
             causal_substep = activation_record[3]

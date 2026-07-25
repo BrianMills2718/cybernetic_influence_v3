@@ -57,9 +57,9 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     )
 
     assert narration["status"] == "completed"
-    activation_count = len({trace["activation"] for trace in document["traces"]})
-    assert narration["model_calls"] == activation_count
-    assert narration["cost"] == 0.01 * activation_count
+    retained_moment_count = len(document["moments"])
+    assert narration["model_calls"] == retained_moment_count
+    assert narration["cost"] == pytest.approx(0.01 * retained_moment_count)
     moments = narration["moments"]
     assert isinstance(moments, list)
     assert moments[0]["source_event_ids"]

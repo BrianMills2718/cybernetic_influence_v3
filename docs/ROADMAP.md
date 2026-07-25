@@ -158,9 +158,11 @@ network errors. The repair removes an unintended trace-card auto-scroll and
 normalizes legacy untyped routes at the graph presentation boundary.
 
 The causal core now retains future exact effects and deliveries across
-checkpoints and can settle exact-only work between participant activations.
-Current authored scenarios still contain legacy zero-duration causal links, so
-they do not yet satisfy the approved positive-duration world-time contract.
+checkpoints and can settle exact-only work between participant activations. The
+multirate Service Desk now satisfies the positive-duration world-time contract
+using its declared minimum duration and exposes its realized event DAG. Physical
+access and purchase-to-payment remain legacy zero-duration traces until a
+concrete timing slice migrates them.
 The UI is technically reviewable; operator comprehension and analytical
 usefulness remain under iterative stakeholder review rather than being treated
 as proven.
