@@ -23,7 +23,7 @@ stored in the repository or LaunchAgent plist.
 
 Last verified 2026-07-25:
 
-- simulator: `b45c256af9f2c8e6bac5bc5f1abd946d0f4b7a08`;
+- simulator: `23e2f37017d802911bb02b27c364c2d7c39194d5`;
 - shared client: `9f61bd7c9419c93961a722a7ef6209adcf593382`;
 - advertised routes: Terra and DeepSeek V4 Flash;
 - Terra certification:
@@ -53,6 +53,10 @@ Last verified 2026-07-25:
   view labels the three projections Spatial topology, Configured interaction
   pathways, and Realized causal graph; intentionally nonspatial entities are
   described as outside the spatial projection rather than as missing placement;
+- current pre-run readback: the Service Desk spatial topology and configured
+  interaction pathways render from the read-only initial-state projection before
+  Play, while the realized causal graph remains disabled until retained events
+  exist; the initial projection is labeled revision 0;
 - causal-time correction canary: scripted `run_7124717c9dcd` retained unique
   moment timestamps `c1` through `c8`, 67 unique exact trace positions, and an
   explicitly separate uncalibrated process clock; rendered readback also

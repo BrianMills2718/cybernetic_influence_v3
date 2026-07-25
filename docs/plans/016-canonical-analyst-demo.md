@@ -103,10 +103,11 @@ Acceptance: no misleading lifecycle state, no console/network error, no scroll
 jump, correct map names, and no claim that process ticks are real timestamps.
 
 Technical evidence on 2026-07-25: the Mac Mini deployed
-`b45c256af9f2c8e6bac5bc5f1abd946d0f4b7a08`; its focused API suite passed
-(18 tests), and a rendered 1440px desktop readback of the retained live
-baseline confirmed the map labels, corrected spatial caption, completed state,
-and retained cost. The actual operator usability judgment remains outstanding.
+`23e2f37017d802911bb02b27c364c2d7c39194d5`; its focused API suite passed
+(19 tests), and rendered 1440px desktop readbacks confirmed the configured
+pre-run map, disabled realized-graph control, corrected spatial caption,
+completed state, and retained cost. The actual operator usability judgment
+remains outstanding.
 
 ## Verification and stop rule
 
