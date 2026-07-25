@@ -6,10 +6,10 @@ created: 2026-07-24
 predecessor: 014-pausable-live-runs.md
 ---
 
-# Slice 15: Calibrated Elapsed Time
+# Slice 15: Model-Generated Elapsed Time
 
 **Status: proposed; do not implement until Slice 14 is closed or explicitly
-reset, and the timing-evidence source is chosen.**
+reset. This PoC uses model-generated priors, not real-world calibration.**
 
 ## Outcome
 
@@ -26,7 +26,7 @@ In scope:
 
 - a Service Desk timing profile for human activity, delivery, exact remediation,
   and stipulated external feedback;
-- fixed, sampled-prior, and later empirical timing estimates with provenance;
+- fixed and sampled model-generated-prior timing estimates with provenance;
 - a checkpointable future-work queue that permits independently timed work to
   overlap and advances to the next due time;
 - elapsed-time display in the narrative, trace inspector, and pause state.
@@ -55,8 +55,8 @@ answers duration:
 TimingProfile(profile_id, epoch, base_unit, estimates)
 TimingEstimate(
   estimate_id, applies_to,
-  kind=fixed|triangular|empirical_sample,
-  parameters, source_kind=measured|expert_prior|author_assumption,
+  kind=fixed|triangular,
+  parameters, source_kind=model_generated_prior,
   source_ref, uncertainty_note
 )
 TimedActivity(
@@ -66,11 +66,14 @@ TimedActivity(
 )
 ```
 
-An LLM still proposes only a bounded action through its exposed interfaces. The
-runtime maps a committed action or mechanism transition to its declared timing
-estimate, samples once if applicable, records that realization, and schedules
-completion. A malformed, absent, negative, or past-due timing value fails
-loudly before a world commit.
+Before a run, a bounded timing-profile compiler asks the configured LLM for
+plausible ranges from the authored setting, then retains its model, prompt,
+structured output, and validation result. An LLM acting as a participant still
+proposes only a bounded action through exposed interfaces. The runtime maps a
+committed action or mechanism transition to the already declared estimate,
+samples once if applicable, records that realization, and schedules completion.
+A malformed, absent, negative, or past-due timing value fails loudly before a
+world commit.
 
 ## Runtime rules
 
@@ -95,9 +98,11 @@ causality authority.
 
 The first vertical slice covers triage, specialist assessment, direct and
 ticket-mediated delivery, three remediation phases, and customer feedback.
-Each profile value must name its source. Until Brian supplies representative
-logs or qualified domain estimates, values are marked `author_assumption` or
-`expert_prior`, never `measured` or "realistic."
+Each profile value is marked `model_generated_prior` and names the model,
+profile-generation prompt, and uncertainty note that produced it. The simulator
+must never label it `measured`, `expert`, `calibrated`, or "realistic." The
+model's output is an explicit scenario assumption, not evidence about a real
+service organization.
 
 The direct-path and missing-direct-path arms must differ because their declared
 activities and deliveries differ, not because a model saw hidden instruction or
@@ -147,11 +152,11 @@ proof.
 Add the source-labelled Service Desk profile, seeded sampling, scenario/UI
 readout, and the direct-path comparison.
 
-### 15C — calibration decision
+### 15C — later evidence integration (deferred)
 
-Only if representative logs or qualified estimates are available: define data
-privacy, aggregation, source mapping, calibration/holdout separation, and
-promotion criteria. Otherwise retain the explicit-prior profile.
+Real data or expert estimates are outside this PoC. If a future project needs
+them, it must define source mapping, privacy, aggregation, and calibration
+separately rather than silently upgrading a model-generated prior.
 
 ## Landscape and activation decision
 
@@ -162,7 +167,7 @@ checkpoint semantics. See [SimPy overview](https://simpy.readthedocs.io/en/stabl
 and its [timeout event contract](https://simpy.readthedocs.io/en/3.0.3/api_reference/simpy.events.html).
 ADR 010 remains binding for causal versus scenario time.
 
-Activation requires both the Slice 14 completion/reset decision and one chosen
-evidence source for the first profile: representative measured data, qualified
-expert prior, or clearly labelled author assumption. This is a product/evidence
-decision, not an empirical benchmark disguised as a requirement.
+Activation requires only the Slice 14 completion/reset decision. The initial
+profile source is fixed as `model_generated_prior`; the configured generator's
+identity and retained structured output are required evidence. It is a scenario
+assumption, not an empirical benchmark or calibration claim.

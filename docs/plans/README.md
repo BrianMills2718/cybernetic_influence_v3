@@ -31,11 +31,11 @@ post-demo roadmap direction and has no active implementation plan.
 
 ## Proposed next packet
 
-[Slice 15: Calibrated elapsed time](015-calibrated-elapsed-time.md) is a
+[Slice 15: Model-generated elapsed time](015-calibrated-elapsed-time.md) is a
 post-demo proposal, not an active packet. It preserves unique causal time while
-adding source-labelled modeled durations, overlapping future work, and
+adding retained model-generated duration priors, overlapping future work, and
 truthful elapsed-time readout. It cannot activate until Slice 14 closes or is
-reset and the operator chooses the timing evidence source.
+reset; it does not use real-world timing data or make calibration claims.
 
 ## Completed evidence
 
