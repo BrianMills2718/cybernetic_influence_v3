@@ -1005,12 +1005,12 @@ def service_desk_summary(
     denied = raw_denied if isinstance(raw_denied, int) and not isinstance(raw_denied, bool) else 0
     if closure is not None:
         result = (
-            f"The incident was remediated at causal moment {remediation} and safely "
-            f"closed after confirmation at causal moment {closure}."
+            f"The incident was remediated at causal step {remediation} and safely "
+            f"closed after confirmation at causal step {closure}."
         )
     elif remediation is not None:
         result = (
-            f"The incident was remediated at causal moment {remediation}, but the run "
+            f"The incident was remediated at causal step {remediation}, but the run "
             f"ended {final_status} without confirmed closure."
         )
     else:
