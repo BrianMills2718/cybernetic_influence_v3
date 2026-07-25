@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from importlib import resources
 import json
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import yaml
 from jinja2 import Environment, StrictUndefined
@@ -31,21 +31,90 @@ class _ProposalConsumer(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    proposal_version: int = 1
+    proposal_version: Literal[1] = 1
     scenario_id: str
     title: str
     description: str
-    people: list[dict[str, object]]
-    objects: list[dict[str, object]]
-    information: list[dict[str, object]]
-    places: list[dict[str, object]]
-    spatial_links: list[dict[str, object]]
+    people: list["_PersonConsumer"]
+    objects: list["_ObjectConsumer"]
+    information: list["_InformationConsumer"]
+    places: list["_PlaceConsumer"]
+    spatial_links: list["_SpatialLinkConsumer"]
     placements: dict[str, str]
-    timing_assumptions: list[dict[str, object]]
-    workflow: dict[str, object]
-    analytical_boundaries: list[dict[str, object]]
+    timing_assumptions: list["_TimingConsumer"]
+    workflow: "_WorkflowConsumer"
+    analytical_boundaries: list["_BoundaryConsumer"]
     fidelity_questions: list[str]
     unresolved_questions: list[str] = []
+
+
+class _PersonConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    entity_id: str
+    label: str
+    position: str
+    disposition: str
+    memories: list[str]
+
+
+class _ObjectConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    entity_id: str
+    entity_kind: str
+    label: str
+    description: str
+
+
+class _InformationConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    information_id: str
+    label: str
+    content: str
+
+
+class _PlaceConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    place_id: str
+    label: str
+    description: str
+
+
+class _SpatialLinkConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    spatial_link_id: str
+    endpoint_a_place_id: str
+    endpoint_b_place_id: str
+    description: str
+
+
+class _TimingConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    name: str
+    minutes: int
+    basis: str
+
+
+class _WorkflowConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    template_id: Literal["resource_request_v1"] = "resource_request_v1"
+    requester_id: str
+    reviewer_id: str
+    request_id: str
+    resource_id: str
+    policy_information_id: str
+    eligible_requester_ids: list[str]
+    resource_available: bool
+    request_delivery_minutes: int
+    decision_delivery_minutes: int
+    result_delivery_minutes: int
+
+
+class _BoundaryConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    boundary_id: str
+    label: str
+    description: str
+    member_refs: list[str]
 
 
 def _structured_call() -> StructuredCall:
@@ -110,7 +179,10 @@ class DraftAuthoringService:
             proposal = ScenarioDraftProposal.model_validate(consumer.model_dump(mode="json"))
             diagnostics = _diagnostics(proposal)
         except ValueError as error:
-            diagnostics = [{"severity": "error", "code": "schema", "message": str(error)}]
+            diagnostics = [{
+                "severity": "error", "code": "schema",
+                "message": _concise_validation_error(error),
+            }]
         updated = {
             **current,
             "revision": expected_revision + 1,
@@ -173,3 +245,17 @@ def _diagnostics(proposal: ScenarioDraftProposal) -> list[dict[str, str]]:
     except AuthoringCompilationError as error:
         diagnostics.append({"severity": "error", "code": "compile", "message": str(error)})
     return diagnostics
+
+
+def _concise_validation_error(error: ValueError) -> str:
+    """Expose the first actionable schema mismatch, not a provider-sized dump."""
+    errors = getattr(error, "errors", None)
+    if callable(errors):
+        details = errors()
+        if isinstance(details, list) and details:
+            first = details[0]
+            if isinstance(first, dict):
+                location = ".".join(str(part) for part in first.get("loc", ()))
+                message = str(first.get("msg", "invalid value"))
+                return f"The draft does not match the required scenario fields at {location}: {message}."
+    return "The draft does not match the required bounded scenario schema."

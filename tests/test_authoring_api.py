@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from cybernetic_influence.api import create_app
+from cybernetic_influence.authoring.service import _ProposalConsumer
 from test_authoring_compiler import _proposal
 
 
@@ -95,3 +96,11 @@ def test_unapproved_draft_cannot_run(tmp_path: Path) -> None:
     draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
     response = api.post(f"/api/authoring/drafts/{draft_id}/runs", json={"execution": "scripted"})
     assert response.status_code == 409
+
+
+def test_provider_schema_exposes_nested_template_fields() -> None:
+    schema = _ProposalConsumer.model_json_schema()
+    person = schema["$defs"]["_PersonConsumer"]["properties"]
+    workflow = schema["$defs"]["_WorkflowConsumer"]["properties"]
+    assert {"entity_id", "label", "memories"} <= set(person)
+    assert {"requester_id", "resource_id", "request_delivery_minutes"} <= set(workflow)
