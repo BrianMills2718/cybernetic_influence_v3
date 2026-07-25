@@ -108,6 +108,7 @@ interface CanvasOptions {
   nodes: AnalystNode[]
   edges: AnalystEdge[]
   event: EventView | null
+  initialRevision?: number | null
   boundary: BoundaryView | null
   world: WorldView | null
   trajectory: TrajectoryView | null
@@ -664,7 +665,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
                 ? 'Realized causal trajectory'
               : collapsed ? 'Collapsed composite' : 'Expanded exact network'}
           </strong>
-          {' · '}revision {options.event?.state_revision ?? 'final'}
+          {' · '}revision {options.event?.state_revision ?? options.initialRevision ?? 'unavailable'}
           {worldMode && options.world?.unplacedEntityIds.length
             ? ` · ${options.world.unplacedEntityIds.length} logical entities are outside this spatial projection; inspect them in Configured interaction pathways`
             : ''}

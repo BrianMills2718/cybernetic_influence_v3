@@ -695,6 +695,7 @@ function renderGraph() {
       nodes:projection.nodes,
       edges:projection.edges,
       event:current?.timeline?.[selectedEventIndex] || null,
+      initialRevision:current?.initial_revision ?? null,
       world:worldProjection(),
       trajectory:current?.trajectory || null,
       viewMode:selectedGraphView,
