@@ -14,11 +14,14 @@ instructions to continue their former “next slice” sections.
 
 ## Active packet
 
-[Slice 16: Canonical analyst demo](016-canonical-analyst-demo.md) is the active
-packet. It makes one existing Service Desk run understandable from choose/play
-through narrative, map, evidence, and pause/resume. It also adopts the names
-**Configured interaction pathways** and **Realized causal graph**, while keeping
-uncalibrated process ticks distinct from modeled elapsed time.
+[Slice 17: Typed scenario authoring](017-conversational-scenario-authoring.md)
+is the active packet. Its first deterministic compiler slice adds one approved
+equipment-checkout template without loosening the existing causal, spatial, or
+execution-inert-boundary contracts. Conversational drafting, approval, and UI
+belong to its later 17B slice.
+
+[Slice 16: Canonical analyst demo](016-canonical-analyst-demo.md) is completed
+design evidence for the current closed scenario catalog.
 
 [Slice 14: Pausable live runs](014-pausable-live-runs.md) and
 [Slice 15: Positive-duration modeled time](015-calibrated-elapsed-time.md) are
@@ -26,9 +29,7 @@ implemented evidence. Slice 16 owns their remaining integrated browser and
 operator-comprehension acceptance.
 
 [Slice 13: Configurable, explainable runs](013-configurable-explainable-runs.md)
-is implemented and retained as completed design evidence. Conversational
-scenario authoring is the next product vertical after the canonical demo; it
-has no active implementation packet yet.
+is implemented and retained as completed design evidence.
 
 ## Completed evidence
 

@@ -87,8 +87,9 @@ research vision: exercise one DeepSeek-default Service Desk run through map,
 narrative, traces, cost, pause/resume, and history; verify the resumed trace and
 desktop interaction; then obtain the operator's short usability judgment. The
 canonical checklist is in
-[Slice 14](docs/plans/014-pausable-live-runs.md). Conversational scenario
-authoring is the next product phase, not a requirement for this demo.
+[Slice 14](docs/plans/014-pausable-live-runs.md). Typed scenario authoring is
+now the next product phase; its bounded compiler contract is in
+[Slice 17](docs/plans/017-conversational-scenario-authoring.md).
 
 The user-facing Service Desk simulation is autonomous and event driven. Its
 initial customer report starts the triager; thereafter, newly delivered

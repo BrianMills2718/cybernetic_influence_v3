@@ -25,9 +25,10 @@ claim to reproduce every omitted computation or predict a real system.
 
 ## Current Stage and Truth
 
-Stage: MVP/PoC. The active packet is [Slice 16: Canonical analyst demo]
-(plans/016-canonical-analyst-demo.md). It turns the implemented runtime into
-one intelligible analyst flow before adding more simulator substrate.
+Stage: MVP/PoC. The active packet is [Slice 17: Typed scenario authoring]
+(plans/017-conversational-scenario-authoring.md). Its first deterministic
+compiler vertical removes one closed-catalog restriction while preserving the
+implemented analyst flow and its causal contracts.
 
 V0.13 plus live checkpoint continuation is implemented and deployed as the
 current private demo candidate on the Mac development host at simulator
@@ -386,7 +387,7 @@ It also distinguishes unique causal order (`c1`, `c2`, …) from **modeled elaps
 time**. The initial display must not call uncalibrated process ticks seconds or
 wall-clock timestamps.
 
-### 9. Add conversational scenario drafting behind a typed compiler — next
+### 9. Add conversational scenario drafting behind a typed compiler — active
 
 This comes before comparisons: it removes the closed scenario catalog while
 preserving human review of the executable world model.
@@ -399,10 +400,11 @@ conversation -> typed scenario draft, including timing assumptions
 ```
 
 Reuse the current causal-state, active-system, fidelity-note, representation,
-spatial, timing, and analytical-boundary contracts. Begin with a small library
-of approved mechanism templates and one bounded novel workflow. Unsupported
-mechanisms remain unresolved or explicitly coarse; they never become silently
-generated adjudication code.
+spatial, timing, and analytical-boundary contracts. Slice 17A begins with one
+approved `resource_request_v1` workflow and zero-cost scripted evidence;
+conversational drafting, revision persistence, approval, and UI follow in 17B.
+Unsupported mechanisms remain unresolved or explicitly coarse; they never
+become silently generated adjudication code.
 
 ### 10. Comparative causal analysis — post-MVP
 

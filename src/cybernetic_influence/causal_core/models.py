@@ -1913,6 +1913,14 @@ def _validate_metrics(
             if not isinstance(depth, int) or isinstance(depth, bool) or depth < 0:
                 raise ValueError("effect emission has invalid zero-time depth")
             zero_time_depths.append(depth)
+    # A checkpoint may be taken after an effect has been structurally routed
+    # into future delivery work but before that delivery becomes an event.  The
+    # router has already measured that fan-out, so include the retained route
+    # witnesses rather than incorrectly treating the checkpoint as a mismatch.
+    for item in scheduled_work:
+        if item.work_kind == "delivery":
+            effect_id = item.effect.effect_id
+            route_counts[effect_id] = route_counts.get(effect_id, 0) + 1
     expected_fanout = max(route_counts.values(), default=0)
     expected_depth = max(zero_time_depths, default=0)
     if metrics.maximum_fanout != expected_fanout:
