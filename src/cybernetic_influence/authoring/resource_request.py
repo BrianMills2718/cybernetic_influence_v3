@@ -26,7 +26,10 @@ from cybernetic_influence.active_runtime import (
     ActionIntent,
     ScriptedActiveSystem,
 )
-from cybernetic_influence.authoring.models import ScenarioDraftProposal
+from cybernetic_influence.authoring.models import (
+    ResourceRequestWorkflowDraft,
+    ScenarioDraftProposal,
+)
 from cybernetic_influence.causal_core.engine import (
     ExactMechanismBinding,
     MechanismContext,
@@ -96,6 +99,8 @@ def resource_request_fixture(proposal: ScenarioDraftProposal) -> ResourceRequest
     objects = {item.entity_id: item for item in proposal.objects}
     information = {item.information_id: item for item in proposal.information}
     workflow = proposal.workflow
+    if not isinstance(workflow, ResourceRequestWorkflowDraft):
+        raise ValueError("resource request fixture requires its matching workflow")
     requester = people[workflow.requester_id]
     reviewer = people[workflow.reviewer_id]
     resource = objects[workflow.resource_id]
@@ -264,6 +269,8 @@ def run_resource_request(
 
 def _entities(proposal: ScenarioDraftProposal) -> dict[str, EntityState]:
     workflow = proposal.workflow
+    if not isinstance(workflow, ResourceRequestWorkflowDraft):
+        raise ValueError("resource request entities require their matching workflow")
     result: dict[str, EntityState] = {
         item.entity_id: EntityState(
             entity_id=item.entity_id,
@@ -342,6 +349,8 @@ def _ports(requester_id: str, reviewer_id: str) -> dict[str, PortState]:
 
 def _connections(proposal: ScenarioDraftProposal) -> dict[str, ConnectionState]:
     workflow = proposal.workflow
+    if not isinstance(workflow, ResourceRequestWorkflowDraft):
+        raise ValueError("resource request connections require their matching workflow")
     return {
         "request_route": ConnectionState(
             connection_id="request_route", source_port_id="requester_submit_out",

@@ -14,17 +14,23 @@ An analyst can eventually describe a bounded situation conversationally,
 review the resulting typed draft and its graph, approve it, and run it only
 when its executable mechanisms are already validated implementations.
 
-The stable example is an equipment checkout desk: an employee requests a
+The first stable example is an equipment checkout desk: an employee requests a
 laptop, a clerk receives the request through a configured ticket route, and an
 exact reservation gate reserves an available laptop only for an eligible
 employee. The employee and clerk occupy connected rooms, but the hallway does
 not itself carry the request or grant reservation authority. The department is
 an execution-inert analytical boundary.
 
+The second bounded example is an information campaign: a source retains a
+specific claim, attempts to publish it through a configured channel, and a
+recipient can assess it only after exact delivery. The template retains source,
+carrier, delivery, and assessment lineage. It does not infer truth, persuasion,
+virality, population response, or diplomatic outcome.
+
 ## Boundaries
 
 - Natural language may propose a typed draft; it never creates mechanism code.
-- `resource_request_v1` is the sole executable template in this slice.
+- The LLM selects only `resource_request_v1` or `information_campaign_v1`.
 - The compiler, not the draft, owns ports, connections, carriers, exact
   mechanisms, active bindings, and implementation identities.
 - People receive position, disposition, and remembered context, not procedural
@@ -69,8 +75,24 @@ draft shows accepted, repair, or provider-error status and observed cost when
 available. The loop stops visibly at the cap, and a provider-only failure does
 not erase an earlier valid proposal.
 
+### 17C — bounded information-campaign template
+
+Add `information_campaign_v1` as the smallest reviewed template that fits the
+initiative's canonical information-influence question. A strong structured
+authoring model chooses between the two known templates and populates a
+discriminated union; compiler validation still owns whether the proposal can
+run.
+
+The executable proof contains two atomic people, a retained claim, a concrete
+channel object, positive publication and assessment durations, exact
+representation delivery, and an exact assessment record. Disabling the
+publication route must dissipate the attempt and prevent recipient activation.
+An organization may group these components for analysis but cannot publish,
+assess, or otherwise execute.
+
 ## Non-goals
 
-No arbitrary mechanism/DSL generation, organization executors, additional
-templates, automatic fallback model selection, comparison tooling, Levin-style
-assays, live graph streaming, or deployment/live spend belongs to 17A.
+No arbitrary mechanism/DSL generation, organization executors, automatic
+fallback model selection, comparison tooling, Levin-style assays, live graph
+streaming, or deployment/live spend belongs to Slice 17. Additional domains
+remain unsupported until each receives another reviewed executable template.

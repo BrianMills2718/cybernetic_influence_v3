@@ -1,14 +1,13 @@
-"""The constrained draft language for the first authored scenario template.
+"""The constrained draft language for reviewed authored scenario templates.
 
 These records are intentionally human-reviewable.  They are not a general
-mechanism language: ``resource_request_v1`` is the sole executable template in
-this slice and the compiler owns all ports, carriers, exact mechanisms, and
-runtime bindings.
+mechanism language: the compiler selects only reviewed executable templates and
+owns all ports, carriers, exact mechanisms, and runtime bindings.
 """
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -88,6 +87,20 @@ class ResourceRequestWorkflowDraft(_StrictModel):
     result_delivery_minutes: int = Field(ge=1)
 
 
+class InformationCampaignWorkflowDraft(_StrictModel):
+    """One traceable publication and assessment pathway, not a persuasion oracle."""
+
+    template_id: Literal["information_campaign_v1"] = "information_campaign_v1"
+    source_id: str = Field(pattern=_ID_PATTERN)
+    recipient_id: str = Field(pattern=_ID_PATTERN)
+    campaign_id: str = Field(pattern=_ID_PATTERN)
+    claim_information_id: str = Field(pattern=_ID_PATTERN)
+    channel_object_id: str = Field(pattern=_ID_PATTERN)
+    publication_enabled: bool
+    publication_delivery_minutes: int = Field(ge=1)
+    assessment_recording_minutes: int = Field(ge=1)
+
+
 class ScenarioDraftProposal(_StrictModel):
     """One proposal that can be semantically validated before compilation."""
 
@@ -102,7 +115,10 @@ class ScenarioDraftProposal(_StrictModel):
     spatial_links: list[SpatialLinkDraft] = Field(min_length=1)
     placements: dict[str, str] = Field(min_length=2)
     timing_assumptions: list[TimingAssumption] = Field(min_length=1)
-    workflow: ResourceRequestWorkflowDraft
+    workflow: Annotated[
+        ResourceRequestWorkflowDraft | InformationCampaignWorkflowDraft,
+        Field(discriminator="template_id"),
+    ]
     analytical_boundaries: list[AnalyticalBoundaryDraft] = Field(min_length=1)
     fidelity_questions: list[str] = Field(min_length=1)
     unresolved_questions: list[str] = Field(default_factory=list)

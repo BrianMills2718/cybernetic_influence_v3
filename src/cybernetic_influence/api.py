@@ -15,7 +15,14 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
 from cybernetic_influence.authoring.compiler import AuthoringCompilationError
-from cybernetic_influence.authoring.service import DraftAuthoringService, StructuredCall
+from cybernetic_influence.authoring.service import (
+    AUTHORING_MAX_ATTEMPTS,
+    AUTHORING_MAX_BUDGET,
+    AUTHORING_MODEL,
+    AUTHORING_REASONING_EFFORT,
+    DraftAuthoringService,
+    StructuredCall,
+)
 from cybernetic_influence.authoring.store import (
     AuthoringDraftStore,
     DraftConflictError,
@@ -314,6 +321,13 @@ def create_app(
             "maximum_live_calls": 48,
             "maximum_live_cost": 0.74,
             "live_options": live_options,
+            "authoring": {
+                "model": AUTHORING_MODEL,
+                "reasoning_effort": AUTHORING_REASONING_EFFORT,
+                "maximum_attempts_per_message": AUTHORING_MAX_ATTEMPTS,
+                "maximum_cost_per_attempt": AUTHORING_MAX_BUDGET,
+                "templates": ["resource_request_v1", "information_campaign_v1"],
+            },
             "cost_baselines": runs.cost_baselines(),
         }
 
@@ -414,23 +428,41 @@ def create_app(
             raise HTTPException(status_code=409, detail=str(error)) from error
         run_id = f"run_{uuid4().hex[:12]}"
         result = compiled.run_scripted(run_id=run_id)
-        request_status = result.core_result.final_state.entities[
-            compiled.proposal.workflow.request_id
+        workflow = compiled.proposal.workflow
+        outcome_entity_id = (
+            workflow.request_id
+            if workflow.template_id == "resource_request_v1"
+            else workflow.campaign_id
+        )
+        outcome_status = result.core_result.final_state.entities[
+            outcome_entity_id
         ].attributes["status"].value
         title = compiled.proposal.title
+        resource_request = workflow.template_id == "resource_request_v1"
+        outcome: dict[str, object] = {
+            "status": outcome_status,
+            "draft_id": draft_id,
+            "template_id": workflow.template_id,
+        }
+        if resource_request:
+            outcome["request_status"] = outcome_status
         document = build_analyst_document(
             initial_state=compiled.scenario.initial_state,
             analytical_boundaries=compiled.scenario.analytical_boundaries,
             result=result,
             scenario=compiled.scenario.scenario_id,
-            profile="authored_resource_request",
+            profile="authored_typed_scenario",
             arm_id="approved_draft",
             execution=body.execution,
             created_at=now_iso(),
-            outcome={"request_status": request_status, "draft_id": draft_id},
-            headline=("Resource reserved" if request_status == "reserved" else "Resource request denied"),
+            outcome=outcome,
+            headline=(
+                ("Resource reserved" if outcome_status == "reserved" else "Resource request denied")
+                if resource_request
+                else ("Claim delivered and assessed" if str(outcome_status).startswith("assessed_") else "Claim was not delivered")
+            ),
             summary=(
-                f"{title}: the exact reservation mechanism recorded {request_status}."
+                f"{title}: the exact {'reservation' if resource_request else 'information-delivery'} mechanisms recorded {outcome_status}."
             ),
         )
         document["authoring"] = {

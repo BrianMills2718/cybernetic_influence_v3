@@ -63,6 +63,12 @@ The simulator currently includes:
 - pause at a validated causal boundary and continuation of retained Service
   Desk runs, including live LLM runs on the same deployment and configuration;
 - recoverable deletion and visible failed/interrupted records.
+- conversational typed authoring through a strong structured model, with
+  revisioned review and approval for reviewed resource-request and
+  information-campaign templates;
+- an exact information-campaign reference path that distinguishes a source's
+  publication attempt, configured channel delivery, and recipient assessment
+  without pretending to infer persuasion or geopolitical effects.
 
 ## Run
 
@@ -87,8 +93,8 @@ research vision: exercise one DeepSeek-default Service Desk run through map,
 narrative, traces, cost, pause/resume, and history; verify the resumed trace and
 desktop interaction; then obtain the operator's short usability judgment. The
 canonical checklist is in
-[Slice 14](docs/plans/014-pausable-live-runs.md). Typed scenario authoring is
-now the next product phase; its bounded compiler contract is in
+[Slice 14](docs/plans/014-pausable-live-runs.md). Typed scenario authoring now
+supports two bounded reviewed templates; its compiler and approval contract is in
 [Slice 17](docs/plans/017-conversational-scenario-authoring.md).
 
 The user-facing Service Desk simulation is autonomous and event driven. Its

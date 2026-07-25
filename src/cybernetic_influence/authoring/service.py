@@ -5,16 +5,16 @@ from __future__ import annotations
 from collections.abc import Callable
 from importlib import resources
 import json
-from typing import Any, Literal, cast
+from typing import Annotated, Any, Literal, cast
 
 import yaml
 from jinja2 import Environment, StrictUndefined
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from cybernetic_influence.authoring.compiler import (
     AuthoringCompilationError,
     CompiledScenario,
-    compile_resource_request,
+    compile_scenario,
 )
 from cybernetic_influence.authoring.models import ScenarioDraftProposal
 from cybernetic_influence.authoring.store import AuthoringDraftStore, DraftConflictError
@@ -23,30 +23,9 @@ from cybernetic_influence.run_store import now_iso
 StructuredCall = Callable[..., tuple[Any, Any]]
 AUTHORING_TASK = "cybernetic_influence_v3_scenario_draft"
 AUTHORING_MAX_BUDGET = 0.10
-AUTHORING_MODEL = "openrouter/deepseek/deepseek-v4-flash"
+AUTHORING_MODEL = "openrouter/openai/gpt-5.6-terra"
+AUTHORING_REASONING_EFFORT = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
-
-
-class _ProposalConsumer(BaseModel):
-    """Permissive at the provider boundary; strict proposal validation follows."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    proposal_version: Literal[1] = 1
-    scenario_id: str
-    title: str
-    description: str
-    people: list["_PersonConsumer"]
-    objects: list["_ObjectConsumer"]
-    information: list["_InformationConsumer"]
-    places: list["_PlaceConsumer"]
-    spatial_links: list["_SpatialLinkConsumer"]
-    placements: dict[str, str]
-    timing_assumptions: list["_TimingConsumer"]
-    workflow: "_WorkflowConsumer"
-    analytical_boundaries: list["_BoundaryConsumer"]
-    fidelity_questions: list[str]
-    unresolved_questions: list[str] = []
 
 
 class _PersonConsumer(BaseModel):
@@ -110,12 +89,50 @@ class _WorkflowConsumer(BaseModel):
     result_delivery_minutes: int
 
 
+class _InformationCampaignWorkflowConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    template_id: Literal["information_campaign_v1"] = "information_campaign_v1"
+    source_id: str
+    recipient_id: str
+    campaign_id: str
+    claim_information_id: str
+    channel_object_id: str
+    publication_enabled: bool
+    publication_delivery_minutes: int
+    assessment_recording_minutes: int
+
+
 class _BoundaryConsumer(BaseModel):
     model_config = ConfigDict(extra="ignore")
     boundary_id: str
     label: str
     description: str
     member_refs: list[str]
+
+
+class _ProposalConsumer(BaseModel):
+    """Permissive at the provider boundary; strict proposal validation follows."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    proposal_version: Literal[1] = 1
+    scenario_id: str
+    title: str
+    description: str
+    people: list[_PersonConsumer]
+    objects: list[_ObjectConsumer]
+    information: list[_InformationConsumer]
+    places: list[_PlaceConsumer]
+    spatial_links: list[_SpatialLinkConsumer]
+    placements: dict[str, str]
+    timing_assumptions: list[_TimingConsumer]
+    workflow: Annotated[
+        _WorkflowConsumer | _InformationCampaignWorkflowConsumer,
+        Field(discriminator="template_id"),
+    ]
+    analytical_boundaries: list[_BoundaryConsumer]
+    fidelity_questions: list[str]
+    unresolved_questions: list[str] = []
 
 
 def _structured_call() -> StructuredCall:
@@ -185,8 +202,11 @@ class DraftAuthoringService:
                     trace_id=trace_id,
                     max_budget=AUTHORING_MAX_BUDGET,
                     max_tokens=4000,
-                    model_justification="Produce or repair a bounded, reviewable resource-request scenario draft.",
-                    reasoning_effort="none",
+                    model_justification=(
+                        "Select and populate one reviewed executable scenario template "
+                        "from a bounded natural-language situation."
+                    ),
+                    reasoning_effort=AUTHORING_REASONING_EFFORT,
                 )
                 consumer = _ProposalConsumer.model_validate(
                     parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
@@ -217,7 +237,17 @@ class DraftAuthoringService:
             and isinstance(current.get("proposal"), dict)
         ):
             proposal = ScenarioDraftProposal.model_validate(current["proposal"])
-            diagnostics = list(current.get("diagnostics", []))
+            retained_diagnostics = current.get("diagnostics")
+            diagnostics = (
+                [
+                    {"severity": str(item["severity"]), "code": str(item["code"]), "message": str(item["message"])}
+                    for item in retained_diagnostics
+                    if isinstance(item, dict)
+                    and {"severity", "code", "message"} <= set(item)
+                ]
+                if isinstance(retained_diagnostics, list)
+                else []
+            )
             status = str(current["status"])
             summary = (
                 f"The authoring provider failed {len(attempts)} time(s), so the prior "
@@ -229,8 +259,8 @@ class DraftAuthoringService:
             status = "needs_input"
             summary = (
                 f"The authoring assistant tried {len(attempts)} time(s) without producing "
-                "a valid resource-request scenario. Review the concise issue below, then clarify "
-                "the requester, reviewer, requested resource, and eligibility rule."
+                "a valid bounded scenario. Review the concise issue below, then clarify the "
+                "people, information or resource, configured pathway, and desired trace boundary."
             )
             approval = None
         updated = {
@@ -251,7 +281,7 @@ class DraftAuthoringService:
         raw = document.get("proposal")
         if not isinstance(raw, dict):
             raise AuthoringCompilationError("draft has no valid proposal")
-        return compile_resource_request(ScenarioDraftProposal.model_validate(raw))
+        return compile_scenario(ScenarioDraftProposal.model_validate(raw))
 
     def approve(self, draft_id: str, *, expected_revision: int) -> dict[str, object]:
         document = self.store.get(draft_id)
@@ -293,7 +323,7 @@ def _diagnostics(proposal: ScenarioDraftProposal) -> list[dict[str, str]]:
         for question in proposal.unresolved_questions
     ]
     try:
-        compile_resource_request(proposal)
+        compile_scenario(proposal)
     except AuthoringCompilationError as error:
         diagnostics.append({"severity": "error", "code": "compile", "message": str(error)})
     return diagnostics

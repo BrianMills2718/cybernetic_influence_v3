@@ -13,7 +13,17 @@ from hashlib import sha256
 import json
 
 from cybernetic_influence.active_runtime import ActiveRuntimeResult
-from cybernetic_influence.authoring.models import ScenarioDraftProposal
+from cybernetic_influence.authoring.models import (
+    InformationCampaignWorkflowDraft,
+    ResourceRequestWorkflowDraft,
+    ScenarioDraftProposal,
+)
+from cybernetic_influence.authoring.information_campaign import (
+    InformationCampaignFixture,
+    information_campaign_fixture,
+    information_campaign_scripted_bindings,
+    run_information_campaign,
+)
 from cybernetic_influence.authoring.resource_request import (
     ResourceRequestFixture,
     resource_request_fixture,
@@ -49,6 +59,25 @@ _RESOURCE_REQUEST_RUNTIME_IDS = frozenset(
     }
 )
 
+_INFORMATION_CAMPAIGN_RUNTIME_IDS = frozenset(
+    {
+        "exact_publication_delivery",
+        "exact_assessment_recording",
+        "source_publish_out",
+        "publication_in",
+        "recipient_assess_out",
+        "assessment_in",
+        "publication_route",
+        "assessment_route",
+        "source_claim_carrier",
+        "recipient_claim_buffer",
+        "assessment_record",
+        "claim_copy",
+        "campaign_source",
+        "campaign_recipient",
+    }
+)
+
 
 @dataclass(frozen=True)
 class CompiledScenario:
@@ -56,7 +85,7 @@ class CompiledScenario:
 
     proposal: ScenarioDraftProposal
     proposal_digest: str
-    fixture: ResourceRequestFixture
+    fixture: ResourceRequestFixture | InformationCampaignFixture
 
     @property
     def scenario(self) -> CausalScenario:
@@ -67,6 +96,12 @@ class CompiledScenario:
         return self.fixture.exact_bindings
 
     def run_scripted(self, *, run_id: str) -> ActiveRuntimeResult:
+        if isinstance(self.fixture, InformationCampaignFixture):
+            return run_information_campaign(
+                self.fixture,
+                information_campaign_scripted_bindings(self.fixture),
+                run_id=run_id,
+            )
         return run_resource_request(
             self.fixture,
             resource_request_scripted_bindings(self.fixture),
@@ -78,6 +113,8 @@ def compile_resource_request(proposal: ScenarioDraftProposal) -> CompiledScenari
     """Compile only ``resource_request_v1`` after semantic validation."""
 
     selected = ScenarioDraftProposal.model_validate(proposal.model_dump(mode="json"))
+    if selected.workflow.template_id != "resource_request_v1":
+        raise AuthoringCompilationError("proposal is not a resource_request_v1 workflow")
     _validate_resource_request(selected)
     return CompiledScenario(
         proposal=selected,
@@ -86,13 +123,82 @@ def compile_resource_request(proposal: ScenarioDraftProposal) -> CompiledScenari
     )
 
 
-def _validate_resource_request(proposal: ScenarioDraftProposal) -> None:
+def compile_scenario(proposal: ScenarioDraftProposal) -> CompiledScenario:
+    """Dispatch one typed proposal to a known, reviewed executable template."""
+
+    if proposal.workflow.template_id == "resource_request_v1":
+        return compile_resource_request(proposal)
+    if proposal.workflow.template_id == "information_campaign_v1":
+        selected = ScenarioDraftProposal.model_validate(proposal.model_dump(mode="json"))
+        _validate_information_campaign(selected)
+        return CompiledScenario(
+            proposal=selected,
+            proposal_digest=_proposal_digest(selected),
+            fixture=information_campaign_fixture(selected),
+        )
+    raise AuthoringCompilationError("unknown authored scenario template")
+
+
+def _validate_information_campaign(proposal: ScenarioDraftProposal) -> None:
+    workflow = proposal.workflow
+    if not isinstance(workflow, InformationCampaignWorkflowDraft):
+        raise AuthoringCompilationError("proposal is not an information_campaign_v1 workflow")
     people = {item.entity_id for item in proposal.people}
     objects = {item.entity_id for item in proposal.objects}
     information = {item.information_id for item in proposal.information}
     places = {item.place_id for item in proposal.places}
-    all_entities = people | objects | information | {proposal.workflow.request_id}
+    for label, value, allowed in (
+        ("source_id", workflow.source_id, people),
+        ("recipient_id", workflow.recipient_id, people),
+        ("claim_information_id", workflow.claim_information_id, information),
+        ("channel_object_id", workflow.channel_object_id, objects),
+    ):
+        if value not in allowed:
+            raise AuthoringCompilationError(f"{label} does not name a declared referent: {value}")
+    if workflow.source_id == workflow.recipient_id:
+        raise AuthoringCompilationError("information_campaign_v1 requires distinct source and recipient")
+    declared = people | objects | information | {workflow.campaign_id}
+    if len(declared) != len(people) + len(objects) + len(information) + 1:
+        raise AuthoringCompilationError("campaign, people, objects, and information need distinct ids")
+    if reserved := declared & _INFORMATION_CAMPAIGN_RUNTIME_IDS:
+        raise AuthoringCompilationError(
+            "draft entity ids collide with information_campaign_v1 runtime ids: "
+            f"{sorted(reserved)!r}"
+        )
+    required_placements = {workflow.source_id, workflow.recipient_id, workflow.channel_object_id}
+    if unknown := set(proposal.placements) - (people | objects):
+        raise AuthoringCompilationError(f"placements has unknown entities: {sorted(unknown)!r}")
+    if missing := required_placements - set(proposal.placements):
+        raise AuthoringCompilationError(f"placements missing required entities: {sorted(missing)!r}")
+    if unknown := set(proposal.placements.values()) - places:
+        raise AuthoringCompilationError(f"placements names unknown places: {sorted(unknown)!r}")
+    for link in proposal.spatial_links:
+        if {link.endpoint_a_place_id, link.endpoint_b_place_id} - places:
+            raise AuthoringCompilationError(f"spatial link {link.spatial_link_id} names an unknown place")
+    timing = {item.name: item.minutes for item in proposal.timing_assumptions}
+    expected = {
+        "publication_delivery": workflow.publication_delivery_minutes,
+        "assessment_recording": workflow.assessment_recording_minutes,
+    }
+    for name, minutes in expected.items():
+        if timing.get(name) != minutes:
+            raise AuthoringCompilationError(f"timing assumption {name!r} must equal workflow duration {minutes}")
+    for boundary in proposal.analytical_boundaries:
+        if unknown := set(boundary.member_refs) - declared:
+            raise AuthoringCompilationError(
+                f"boundary {boundary.boundary_id} has unknown members: {sorted(unknown)!r}"
+            )
+
+
+def _validate_resource_request(proposal: ScenarioDraftProposal) -> None:
     workflow = proposal.workflow
+    if not isinstance(workflow, ResourceRequestWorkflowDraft):
+        raise AuthoringCompilationError("proposal is not a resource_request_v1 workflow")
+    people = {item.entity_id for item in proposal.people}
+    objects = {item.entity_id for item in proposal.objects}
+    information = {item.information_id for item in proposal.information}
+    places = {item.place_id for item in proposal.places}
+    all_entities = people | objects | information | {workflow.request_id}
     declared_entity_ids = [
         *(item.entity_id for item in proposal.people),
         *(item.entity_id for item in proposal.objects),

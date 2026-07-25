@@ -91,7 +91,11 @@ function setWorkspaceView(view) {
 function authoringSummary(proposal) {
   const people = (proposal.people || []).map((person) => person.label).join(', ')
   const places = (proposal.places || []).map((place) => place.label).join(', ')
-  return `<span class="eyebrow">Compiled typed proposal</span><h3>${html(proposal.title || 'Untitled draft')}</h3><p>${html(proposal.description || '')}</p><p><strong>People:</strong> ${html(people)}. <strong>Places:</strong> ${html(places)}.</p><p><strong>Exact workflow:</strong> an authored request is delivered to a reviewer, checked against copied eligibility and resource availability, then delivered back to the requester. The analytical boundary remains a view, not an executor.</p>`
+  const informationCampaign = proposal.workflow?.template_id === 'information_campaign_v1'
+  const workflow = informationCampaign
+    ? 'a retained claim is published through a configured channel, delivered to a recipient, and exactly recorded when assessed. Persuasion, truth, virality, and geopolitical outcomes are not inferred.'
+    : 'an authored request is delivered to a reviewer, checked against copied eligibility and resource availability, then delivered back to the requester.'
+  return `<span class="eyebrow">Compiled typed proposal · ${html(proposal.workflow?.template_id || 'unknown template')}</span><h3>${html(proposal.title || 'Untitled draft')}</h3><p>${html(proposal.description || '')}</p><p><strong>People:</strong> ${html(people)}. <strong>Places:</strong> ${html(places)}.</p><p><strong>Exact workflow:</strong> ${html(workflow)} The analytical boundary remains a view, not an executor.</p>`
 }
 
 function renderAuthoring() {
@@ -191,6 +195,10 @@ async function request(url, options = {}) {
 async function loadConfig() {
   const config = await request('/api/config')
   runtimeConfig = config
+  const authoring = config.authoring || {}
+  $('#authoring-runtime').textContent = authoring.model
+    ? `Drafting uses ${authoring.model} with ${authoring.reasoning_effort || 'default'} reasoning. One message may make up to ${authoring.maximum_attempts_per_message || 1} structured attempt(s), each capped at $${Number(authoring.maximum_cost_per_attempt || 0).toFixed(2)}; the retained attempt record shows observed cost.`
+    : 'Structured authoring configuration is unavailable.'
   scenarioCatalog = config.scenarios || {}
   $('#scenario').innerHTML = Object.entries(scenarioCatalog).map(([id, item]) =>
     `<option value="${html(id)}">${html(item.label)}</option>`

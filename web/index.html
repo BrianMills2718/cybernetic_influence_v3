@@ -24,12 +24,12 @@
     <section id="authoring-view" class="app-view authoring-card" hidden>
       <span class="eyebrow">Typed scenario authoring</span>
       <h2>Describe a bounded situation</h2>
-      <p class="muted">The drafting assistant proposes one reviewable equipment-style request scenario. It cannot create executable code or make an analytical composite act. Review the compiled map before approving it.</p>
+      <p class="muted">The drafting assistant selects a reviewed resource-request or information-campaign template, then proposes a typed world around it. It cannot create executable code or make an analytical composite act. Review the compiled map before approving it.</p>
       <label for="authoring-message">What situation should be modeled?
-        <textarea id="authoring-message" rows="5" placeholder="For example: A field researcher asks an equipment clerk for an available laptop. They work in separate rooms connected by a hallway; the request travels through a ticket system, and the department is only an analytical view."></textarea>
+        <textarea id="authoring-message" rows="5" placeholder="For example: A campaign operator publishes a false claim about a diplomatic position through a media channel. A public-diplomacy analyst in another location receives and assesses it; both organizations are analytical views, not actors."></textarea>
       </label>
       <div class="authoring-actions"><button id="authoring-draft" type="button">Draft scenario</button><button id="authoring-approve" type="button" hidden>Approve this draft</button><button id="authoring-run" type="button" hidden>Play approved reference run</button></div>
-      <p class="muted">Drafting may make up to three structured authoring calls, each capped at $0.10. The retained attempt record shows what happened and observed cost when the provider reports it.</p>
+      <p id="authoring-runtime" class="muted">Loading the structured authoring model…</p>
       <p id="authoring-status" class="muted" aria-live="polite">Describe a situation to begin.</p>
       <section id="authoring-review" hidden>
         <div class="heading-help"><h2 id="authoring-title">Draft review</h2><button class="help-button" type="button" data-help="authoring-help" aria-expanded="false" aria-controls="authoring-help">?</button></div>

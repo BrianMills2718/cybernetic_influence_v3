@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from cybernetic_influence.api import create_app
 from cybernetic_influence.authoring.service import _ProposalConsumer
 from test_authoring_compiler import _proposal
+from test_authoring_information_campaign import information_campaign_proposal
 
 
 class _Meta:
@@ -105,8 +106,54 @@ def test_provider_schema_exposes_nested_template_fields() -> None:
     schema = _ProposalConsumer.model_json_schema()
     person = schema["$defs"]["_PersonConsumer"]["properties"]
     workflow = schema["$defs"]["_WorkflowConsumer"]["properties"]
+    campaign = schema["$defs"]["_InformationCampaignWorkflowConsumer"]["properties"]
     assert {"entity_id", "label", "memories"} <= set(person)
     assert {"requester_id", "resource_id", "request_delivery_minutes"} <= set(workflow)
+    assert {"source_id", "claim_information_id", "publication_delivery_minutes"} <= set(campaign)
+    assert schema["properties"]["workflow"]["discriminator"]["propertyName"] == "template_id"
+
+
+def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) -> None:
+    def campaign_proposer(*_args: object, **_kwargs: object) -> tuple[object, object]:
+        return information_campaign_proposal(), _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=campaign_proposer,
+        )
+    )
+    config = api.get("/api/config").json()["authoring"]
+    assert config["model"] == "openrouter/openai/gpt-5.6-terra"
+    assert config["reasoning_effort"] == "medium"
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    drafted = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "m1",
+            "message": "Model a disinformation claim sent to a diplomatic office.",
+        },
+    )
+    assert drafted.status_code == 200
+    assert drafted.json()["proposal"]["workflow"]["template_id"] == "information_campaign_v1"
+    preview = api.get(f"/api/authoring/drafts/{draft_id}/preview")
+    assert preview.status_code == 200
+    assert preview.json()["world"]["places"]
+    approved = api.post(
+        f"/api/authoring/drafts/{draft_id}/approve",
+        json={"expected_revision": 1},
+    )
+    assert approved.status_code == 200
+    run = api.post(
+        f"/api/authoring/drafts/{draft_id}/runs",
+        json={"execution": "scripted"},
+    )
+    assert run.status_code == 200
+    assert run.json()["outcome"]["status"] == "assessed_contested"
+    assert run.json()["authoring"]["template_id"] == "information_campaign_v1"
 
 
 def test_authoring_repairs_a_compiler_error_before_returning_the_draft(tmp_path: Path) -> None:

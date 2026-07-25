@@ -173,6 +173,7 @@ def test_compiler_rejects_unknown_boundary_referent() -> None:
 def test_compiler_rejects_runtime_id_collisions_and_timing_drift() -> None:
     collision = _proposal().model_copy(deep=True)
     collision.objects[0].entity_id = "exact_reservation_gate"
+    assert collision.workflow.template_id == "resource_request_v1"
     collision.workflow.resource_id = "exact_reservation_gate"
     try:
         compile_resource_request(collision)

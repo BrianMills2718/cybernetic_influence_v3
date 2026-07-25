@@ -402,9 +402,12 @@ conversation -> typed scenario draft, including timing assumptions
 ```
 
 Reuse the current causal-state, active-system, fidelity-note, representation,
-spatial, timing, and analytical-boundary contracts. Slice 17A begins with one
-approved `resource_request_v1` workflow and zero-cost scripted evidence;
-conversational drafting, revision persistence, approval, and UI follow in 17B.
+spatial, timing, and analytical-boundary contracts. Slice 17A proved the
+approved `resource_request_v1` workflow with zero-cost scripted evidence; 17B
+added conversational drafting, revision persistence, approval, and UI. Slice
+17C adds the bounded `information_campaign_v1` workflow: exact claim delivery
+through one configured channel followed by a recipient assessment record. It
+does not infer persuasion, truth, virality, or geopolitical outcome.
 Unsupported mechanisms remain unresolved or explicitly coarse; they never
 become silently generated adjudication code.
 
