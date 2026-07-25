@@ -22,22 +22,64 @@ let scenarioCatalog = {}
 let runtimeConfig = {}
 let activeRunId = null
 let previewRequestSerial = 0
+let authoringDraft = null
+let authoringPreview = null
 
 function setWorkspaceView(view) {
   const simulation = view === 'simulation'
+  const authoring = view === 'authoring'
   const history = view === 'history'
   const readme = view === 'readme'
   $('#simulation-view').hidden = !simulation
+  $('#authoring-view').hidden = !authoring
   $('#history-view').hidden = !history
   $('#readme-view').hidden = !readme
   for (const [tab, active] of [
     ['#simulation-tab', simulation],
+    ['#authoring-tab', authoring],
     ['#history-tab', history],
     ['#readme-tab', readme],
   ]) {
     $(tab).classList.toggle('active', active)
     $(tab).setAttribute('aria-pressed', String(active))
   }
+}
+
+function authoringSummary(proposal) {
+  const people = (proposal.people || []).map((person) => person.label).join(', ')
+  const places = (proposal.places || []).map((place) => place.label).join(', ')
+  return `<span class="eyebrow">Compiled typed proposal</span><h3>${html(proposal.title || 'Untitled draft')}</h3><p>${html(proposal.description || '')}</p><p><strong>People:</strong> ${html(people)}. <strong>Places:</strong> ${html(places)}.</p><p><strong>Exact workflow:</strong> an authored request is delivered to a reviewer, checked against copied eligibility and resource availability, then delivered back to the requester. The analytical boundary remains a view, not an executor.</p>`
+}
+
+function renderAuthoring() {
+  const draft = authoringDraft
+  $('#authoring-review').hidden = !draft?.proposal
+  if (!draft) return
+  $('#authoring-status').textContent = `Draft revision ${draft.revision} · ${draft.status}`
+  const diagnostics = draft.diagnostics || []
+  $('#authoring-diagnostics').innerHTML = diagnostics.length
+    ? diagnostics.map((item) => `<p class="warning"><strong>${html(item.severity)}:</strong> ${html(item.message)}</p>`).join('')
+    : '<p class="muted">No unresolved compiler questions. Review the map, then approve this exact proposal.</p>'
+  $('#authoring-summary').innerHTML = authoringSummary(draft.proposal || {})
+  const approvable = !!draft.proposal && diagnostics.length === 0 && draft.status !== 'approved'
+  $('#authoring-approve').hidden = !approvable
+  $('#authoring-run').hidden = draft.status !== 'approved'
+  if (authoringPreview?.nodes && window.CyberneticGraph) {
+    window.CyberneticGraph.render($('#authoring-graph'), {
+      nodes: authoringPreview.nodes, edges: authoringPreview.edges,
+      boundaries: authoringPreview.boundaries || [], world: authoringPreview.world,
+      viewMode: authoringPreview.world ? 'world' : 'causal', event: null,
+      initialRevision: authoringPreview.initial_revision, selectedNodeId: null, selectedEdgeId: null,
+      boundary: null, collapsedBoundaryId: null,
+      analyticalScaleHelp: 'The analytical boundary is a view, not an actor.',
+      onToggleBoundary: () => {}, onSelectNode: () => {}, onSelectEdge: () => {},
+    })
+  }
+}
+
+async function loadAuthoringPreview() {
+  if (!authoringDraft?.proposal) return
+  authoringPreview = await request(`/api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/preview`)
 }
 
 function modeledElapsedTime(event) {
@@ -1085,6 +1127,7 @@ $('#event-slider').oninput = (event) => selectMoment(Number(event.target.value))
 $('#previous-event').onclick = () => selectMoment(selectedMomentIndex - 1)
 $('#next-event').onclick = () => selectMoment(selectedMomentIndex + 1)
 $('#simulation-tab').onclick = () => setWorkspaceView('simulation')
+$('#authoring-tab').onclick = () => setWorkspaceView('authoring')
 $('#history-tab').onclick = () => setWorkspaceView('history')
 $('#readme-tab').onclick = () => setWorkspaceView('readme')
 $('#scenario').onchange = async (event) => {
@@ -1214,6 +1257,62 @@ $('#resume').onclick = async () => {
     $('#run-status').textContent = error.message
   } finally {
     $('#resume').disabled = false
+  }
+}
+
+$('#authoring-draft').onclick = async () => {
+  const message = $('#authoring-message').value.trim()
+  if (!message) {
+    $('#authoring-status').textContent = 'Describe the situation before drafting it.'
+    return
+  }
+  $('#authoring-draft').disabled = true
+  $('#authoring-status').textContent = 'Drafting a typed scenario…'
+  try {
+    if (!authoringDraft) authoringDraft = await request('/api/authoring/drafts', {method:'POST'})
+    authoringDraft = await request(`/api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/messages`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        expected_revision:authoringDraft.revision,
+        message_id:crypto.randomUUID(), message,
+      }),
+    })
+    await loadAuthoringPreview()
+    renderAuthoring()
+  } catch (error) {
+    $('#authoring-status').textContent = error.message
+  } finally {
+    $('#authoring-draft').disabled = false
+  }
+}
+
+$('#authoring-approve').onclick = async () => {
+  if (!authoringDraft) return
+  try {
+    authoringDraft = await request(`/api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/approve`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({expected_revision:authoringDraft.revision}),
+    })
+    renderAuthoring()
+  } catch (error) {
+    $('#authoring-status').textContent = error.message
+  }
+}
+
+$('#authoring-run').onclick = async () => {
+  if (!authoringDraft) return
+  $('#authoring-run').disabled = true
+  try {
+    const run = await request(`/api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/runs`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({execution:'scripted'}),
+    })
+    setWorkspaceView('simulation')
+    render(run)
+    await loadHistory()
+  } catch (error) {
+    $('#authoring-status').textContent = error.message
+  } finally {
+    $('#authoring-run').disabled = false
   }
 }
 

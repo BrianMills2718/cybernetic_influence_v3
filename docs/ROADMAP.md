@@ -25,10 +25,12 @@ claim to reproduce every omitted computation or predict a real system.
 
 ## Current Stage and Truth
 
-Stage: MVP/PoC. The active packet is [Slice 17: Typed scenario authoring]
-(plans/017-conversational-scenario-authoring.md). Its first deterministic
-compiler vertical removes one closed-catalog restriction while preserving the
-implemented analyst flow and its causal contracts.
+Stage: MVP/PoC. [Slice 17: Typed scenario authoring]
+(plans/017-conversational-scenario-authoring.md) is complete: the equipment
+checkout template removes one closed-catalog restriction while preserving the
+implemented analyst flow and its causal contracts. The next packet must select
+the smallest new user-visible capability rather than treating this one-template
+authoring seam as a general scenario language.
 
 V0.13 plus live checkpoint continuation is implemented and deployed as the
 current private demo candidate on the Mac development host at simulator

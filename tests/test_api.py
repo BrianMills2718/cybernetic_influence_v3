@@ -92,6 +92,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="lifecycle-help"' in page.text
     assert "Run history" in page.text
     assert "Read me" in page.text
+    assert "Author scenario" in page.text
+    assert "Describe a bounded situation" in page.text
+    assert 'id="authoring-view"' in page.text
     assert "How to read a cybernetic simulation" in page.text
     assert 'id="model"' in page.text
     assert 'id="reasoning"' in page.text
@@ -124,6 +127,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function renderLifecycleControls" in app_script.content
     assert b"renderLifecycleControls(current)" in app_script.content
     assert b"function loadScenarioPreview" in app_script.content
+    assert b"/api/authoring/drafts" in app_script.content
+    assert b"function renderAuthoring" in app_script.content
     assert b"let previewRequestSerial = 0" in app_script.content
     assert b"requestSerial !== previewRequestSerial" in app_script.content
     assert b"/api/scenarios/${encodeURIComponent(scenario)}/preview" in app_script.content

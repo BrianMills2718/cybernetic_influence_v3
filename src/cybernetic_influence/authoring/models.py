@@ -105,6 +105,7 @@ class ScenarioDraftProposal(_StrictModel):
     workflow: ResourceRequestWorkflowDraft
     analytical_boundaries: list[AnalyticalBoundaryDraft] = Field(min_length=1)
     fidelity_questions: list[str] = Field(min_length=1)
+    unresolved_questions: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def unique_declared_ids(self) -> "ScenarioDraftProposal":

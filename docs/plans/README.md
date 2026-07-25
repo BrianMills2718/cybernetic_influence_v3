@@ -15,10 +15,10 @@ instructions to continue their former “next slice” sections.
 ## Active packet
 
 [Slice 17: Typed scenario authoring](017-conversational-scenario-authoring.md)
-is the active packet. Its first deterministic compiler slice adds one approved
-equipment-checkout template without loosening the existing causal, spatial, or
-execution-inert-boundary contracts. Conversational drafting, approval, and UI
-belong to its later 17B slice.
+is completed evidence: one bounded equipment-checkout template can be drafted
+conversationally, reviewed as a typed map, explicitly approved, and run through
+the zero-cost scripted reference path without loosening existing causal,
+spatial, or execution-inert-boundary contracts.
 
 [Slice 16: Canonical analyst demo](016-canonical-analyst-demo.md) is completed
 design evidence for the current closed scenario catalog.

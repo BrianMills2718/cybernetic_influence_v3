@@ -24,6 +24,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "cybernetic_influence.active_runtime" = ["prompts/*.yaml"]
+"cybernetic_influence.authoring" = ["prompts/*.yaml"]
 
 [tool.mypy]
 strict = true

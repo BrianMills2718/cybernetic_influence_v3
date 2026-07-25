@@ -1,7 +1,7 @@
 ---
 doc_role: active_plan
 authority: implementation_plan
-status: active
+status: completed
 created: 2026-07-25
 predecessor: 016-canonical-analyst-demo.md
 ---
@@ -57,6 +57,11 @@ diagnostics, graph preview, explicit approval manifest, and authored run API/UI.
 The LLM supplies only `ScenarioDraftProposal`; an approved compiler digest
 binds the later run. Provider failure preserves the previous draft; duplicate
 messages cannot duplicate spend; unapproved or stale drafts cannot run.
+
+Implemented as a provider-neutral structured-call seam using the shared
+`llm_client`. The browser permits only a zero-cost scripted execution of the
+approved template in this slice; live authored people require a separately
+reviewed native binding and are intentionally not implied by approval.
 
 ## Non-goals
 

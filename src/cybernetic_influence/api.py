@@ -14,6 +14,14 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
+from cybernetic_influence.authoring.compiler import AuthoringCompilationError
+from cybernetic_influence.authoring.service import DraftAuthoringService, StructuredCall
+from cybernetic_influence.authoring.store import (
+    AuthoringDraftStore,
+    DraftConflictError,
+    DraftNotFoundError,
+)
+
 from cybernetic_influence import __version__
 from cybernetic_influence.active_runtime import (
     ActiveRuntimeCheckpoint,
@@ -100,6 +108,25 @@ class RunRequest(BaseModel):
     run_id: str | None = None
 
 
+class DraftMessageRequest(BaseModel):
+    """One idempotent conversational update to an authoring draft."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    expected_revision: int
+    message_id: str
+    message: str
+
+
+class DraftApprovalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    expected_revision: int
+
+
+class AuthoredRunRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    execution: Literal["scripted"] = "scripted"
+
+
 def _scenario_preview(
     scenario: str,
     arm_id: str,
@@ -161,7 +188,13 @@ def _scenario_preview(
     }
 
 
-def create_app(web_root: Path | None = None, run_root: Path | None = None) -> FastAPI:
+def create_app(
+    web_root: Path | None = None,
+    run_root: Path | None = None,
+    *,
+    authoring_root: Path | None = None,
+    authoring_call: StructuredCall | None = None,
+) -> FastAPI:
     """Create the visibility-safe API without any legacy workbench."""
     app = FastAPI(title="Cybernetic Influence Simulator", version=__version__)
     root = web_root or Path(__file__).resolve().parents[2] / "web"
@@ -171,6 +204,9 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
         or (Path(configured_run_root) if configured_run_root else root.parent / "artifacts" / "runs")
     )
     runs.mark_incomplete_interrupted()
+    drafts = AuthoringDraftStore(authoring_root or runs.root.parent / "authoring_drafts")
+    authoring = DraftAuthoringService(drafts, call=authoring_call)
+    authoring_lock = Lock()
     live_lock = Lock()
     pause_requests: dict[str, Event] = {}
     pause_lock = Lock()
@@ -286,6 +322,122 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
         _require_access(request)
         retained, corrupt = runs.list_runs()
         return {"runs": retained, "corrupt_files": corrupt}
+
+    @app.post("/api/authoring/drafts")
+    def create_draft(request: Request) -> dict[str, object]:
+        _require_access(request)
+        return drafts.create(now=now_iso())
+
+    @app.get("/api/authoring/drafts/{draft_id}")
+    def get_draft(draft_id: str, request: Request) -> dict[str, object]:
+        _require_access(request)
+        try:
+            return drafts.get(draft_id)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except DraftNotFoundError as error:
+            raise HTTPException(status_code=404, detail="authoring draft not found") from error
+
+    @app.post("/api/authoring/drafts/{draft_id}/messages")
+    def add_draft_message(
+        draft_id: str, body: DraftMessageRequest, request: Request
+    ) -> dict[str, object]:
+        _require_access(request)
+        with authoring_lock:
+            try:
+                return authoring.advance(
+                    draft_id,
+                    expected_revision=body.expected_revision,
+                    message_id=body.message_id,
+                    message=body.message,
+                )
+            except DraftConflictError as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
+            except DraftNotFoundError as error:
+                raise HTTPException(status_code=404, detail="authoring draft not found") from error
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+            except Exception as error:
+                raise HTTPException(
+                    status_code=502,
+                    detail="scenario drafting provider failed; the prior draft was preserved",
+                ) from error
+
+    @app.get("/api/authoring/drafts/{draft_id}/preview")
+    def preview_draft(draft_id: str, request: Request) -> dict[str, object]:
+        _require_access(request)
+        try:
+            document = drafts.get(draft_id)
+            compiled = authoring.compile(document)
+        except DraftNotFoundError as error:
+            raise HTTPException(status_code=404, detail="authoring draft not found") from error
+        except (ValueError, AuthoringCompilationError) as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        state = compiled.scenario.initial_state
+        revision = str(state.revision)
+        temporal_states = {revision: state}
+        edges = analyst_edges(state)
+        return {
+            "status": "ready", "preview": True, "scenario": compiled.scenario.scenario_id,
+            "profile": "authored_resource_request", "arm": "approved_draft",
+            "initial_revision": state.revision, "world": analyst_world(temporal_states),
+            "nodes": analyst_nodes(state), "snapshots": {revision: analyst_nodes(state)},
+            "edges": edges, "timeline": [], "trajectory": {"nodes": [], "edges": []},
+            "boundaries": analyst_boundaries(compiled.scenario.analytical_boundaries, temporal_states, edges, []),
+            "draft_id": draft_id, "draft_revision": document["revision"],
+        }
+
+    @app.post("/api/authoring/drafts/{draft_id}/approve")
+    def approve_draft(
+        draft_id: str, body: DraftApprovalRequest, request: Request
+    ) -> dict[str, object]:
+        _require_access(request)
+        try:
+            return authoring.approve(draft_id, expected_revision=body.expected_revision)
+        except DraftConflictError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        except DraftNotFoundError as error:
+            raise HTTPException(status_code=404, detail="authoring draft not found") from error
+        except (ValueError, AuthoringCompilationError) as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.post("/api/authoring/drafts/{draft_id}/runs")
+    def run_approved_draft(
+        draft_id: str, body: AuthoredRunRequest, request: Request
+    ) -> dict[str, object]:
+        _require_access(request)
+        try:
+            compiled = authoring.approved_compile(draft_id)
+        except DraftNotFoundError as error:
+            raise HTTPException(status_code=404, detail="authoring draft not found") from error
+        except (ValueError, AuthoringCompilationError) as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        run_id = f"run_{uuid4().hex[:12]}"
+        result = compiled.run_scripted(run_id=run_id)
+        request_status = result.core_result.final_state.entities[
+            compiled.proposal.workflow.request_id
+        ].attributes["status"].value
+        title = compiled.proposal.title
+        document = build_analyst_document(
+            initial_state=compiled.scenario.initial_state,
+            analytical_boundaries=compiled.scenario.analytical_boundaries,
+            result=result,
+            scenario=compiled.scenario.scenario_id,
+            profile="authored_resource_request",
+            arm_id="approved_draft",
+            execution=body.execution,
+            created_at=now_iso(),
+            outcome={"request_status": request_status, "draft_id": draft_id},
+            headline=("Resource reserved" if request_status == "reserved" else "Resource request denied"),
+            summary=(
+                f"{title}: the exact reservation mechanism recorded {request_status}."
+            ),
+        )
+        document["authoring"] = {
+            "draft_id": draft_id, "proposal_digest": compiled.proposal_digest,
+            "template_id": compiled.proposal.workflow.template_id,
+        }
+        return runs.save(_attach_narration(document, live=False, run_id=run_id, effective_llm=None))
 
     @app.get("/api/scenarios/{scenario}/preview")
     def scenario_preview(
