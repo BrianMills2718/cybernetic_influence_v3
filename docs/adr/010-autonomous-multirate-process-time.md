@@ -1,7 +1,8 @@
 # ADR 010: Autonomous Multirate Process Time
 
 **Status:** Accepted and implemented for the Service Desk and
-purchase-to-payment MVP probes — 2026-07-23.
+purchase-to-payment MVP probes — 2026-07-23. Amended 2026-07-25 to require
+positive elapsed time across world-event causal links.
 
 ## Decision
 
@@ -36,6 +37,40 @@ arbitrary integer multiples of the scenario unit, not powers of two. A fine
 clock resolution orders fast effects but does not require an LLM call at every
 representable instant.
 
+## Positive-Duration World Causality
+
+Every retained world event that is a causal consequence of another retained
+world event must occur at a strictly later scenario time than its parent.
+Independent events may complete at the same time, and siblings produced from
+one prior state may share a completion time, but a descendant may not collapse
+onto its ancestor's timestamp.
+
+This applies to modeled cognition/action completion, transmission, mechanism
+transitions, movement, and observation availability. A duration may be very
+small relative to another process, but it must be positive at the scenario's
+declared temporal resolution. A container crossing an ocean and a spoken
+greeting therefore cannot become temporally equivalent merely because both are
+represented as one scheduler step.
+
+Simulator bookkeeping—database writes, ID allocation, indexing, serialization,
+and trace formatting—is not a world event and consumes no scenario time. It
+must not appear as an extra causal node merely to satisfy the timing invariant.
+
+A duration is optional while a scenario is being drafted, but mandatory before
+a world transition crosses the runtime scheduling boundary. Resolution uses
+the narrowest applicable source:
+
+1. an exact mechanism calculation, such as path length and speed;
+2. a typed scenario value or distribution, whether supplied by a human or a
+   scenario-authoring model; or
+3. bounded runtime LLM adjudication when context makes the duration genuinely
+   underspecified.
+
+The resolved activity retains its start time, positive duration, due time,
+source kind, source reference, and causal parents. Missing, zero, negative,
+past-due, or untraceable duration data fails before the world transition is
+scheduled.
+
 ## Multirate Agency
 
 Processes evolve at their own meaningful rates. A matching engine may transition
@@ -64,7 +99,9 @@ agency.
 - An agent may act now, continue an activity, schedule reconsideration, or
   become dormant without a pending wake.
 - Multiple due agents remain separate participants in one atomic causal moment.
-- Zero-time cascades and self-scheduling loops remain bounded and fail loudly.
+- Legacy zero-time cascades remain bounded until migrated; under the amended
+  contract, new world-event causal links with zero duration fail before
+  scheduling.
 - Organizations, regulations, incentives, and procedures do not gain autonomous
   clocks. Concrete people, documents, records, software, and mechanisms change;
   organizational-scale dynamics are derived from those changes.
@@ -84,16 +121,15 @@ uncalibrated `process_tick` values, not real-world seconds.
 V0.12 applies the same scheduler to purchase-to-payment. Only the requester is
 an authored `scenario_start`; the approver and AP clerk become due from
 unconsumed delivered observations, and the runner stops at quiescence. Its
-zero-delay routes preserve causal ancestry while leaving elapsed workflow
-latency explicitly unmodeled. Its moments nevertheless have unique causal
-timestamps.
+legacy zero-delay routes preserve causal ancestry while leaving elapsed
+workflow latency explicitly unmodeled. Its moments nevertheless have unique
+causal timestamps. These routes must be migrated before that scenario can claim
+the amended positive-duration contract.
 
-The causal core still drains the complete typed cascade from one accepted
-action before accepting another. Therefore this slice does not claim arbitrary
-interleaving of unrelated processes inside a nonzero-delay route cascade; the
-representative scenario uses zero-delay routes and scheduled process wakes.
-Adding a resumable future-effect queue is a separate bounded change if a
-concrete scenario requires that interleaving.
+The causal core now retains delayed future effects and deliveries across
+checkpoints and can settle exact-only work between participant activations.
+The remaining work is to require and source positive durations for every
+world-event transition rather than preserving zero-delay causal cascades.
 
 Do not yet add continuous-time solvers, speculative parallel execution,
 rollback, generalized process algebra, automatic attention models, or a

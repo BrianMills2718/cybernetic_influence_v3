@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-07-24
+updated: 2026-07-25
 ---
 
 # Cybernetic Influence V3 Roadmap
@@ -157,26 +157,29 @@ run-history view, reopened a legacy retained run, and found no console or
 network errors. The repair removes an unintended trace-card auto-scroll and
 normalizes legacy untyped routes at the graph presentation boundary.
 
-The causal core still drains one action's complete routed cascade before
-accepting another; arbitrary interleaving within nonzero-delay routes is not
-yet supported. The UI is technically reviewable; operator comprehension and
-analytical usefulness remain under iterative stakeholder review rather than
-being treated as proven.
+The causal core now retains future exact effects and deliveries across
+checkpoints and can settle exact-only work between participant activations.
+Current authored scenarios still contain legacy zero-duration causal links, so
+they do not yet satisfy the approved positive-duration world-time contract.
+The UI is technically reviewable; operator comprehension and analytical
+usefulness remain under iterative stakeholder review rather than being treated
+as proven.
 
-## Proposed Post-Demo Direction: Model-Generated Elapsed Time
+## Active Direction: Positive-Duration Modeled Time
 
-After the current demo gate, the next substantial fidelity improvement is to
-replace the Service Desk's uncalibrated process ticks with retained,
-model-generated duration priors. Human activities, deliveries, exact-process
-transitions, and stipulated external feedback would become scheduled future
-work, allowing independent work to overlap without treating LLM/provider
-latency as scenario time. This would make the current trajectory temporally
-plausible and inspectable, never calibrated to any real service organization.
+The next substantial fidelity improvement is to replace the Service Desk's
+uncalibrated process ticks and zero-delay causal cascades with retained positive
+durations. Human activities, deliveries, exact-process transitions, and
+stipulated external feedback become scheduled future work, allowing independent
+work to overlap without treating LLM/provider latency as scenario time.
 
 [Slice 15](plans/015-calibrated-elapsed-time.md) owns the proposed contract,
-initial Service Desk vertical, and acceptance checks. It remains inactive until
-the current demo is closed or explicitly reset. Its initial evidence is the
-retained model identity, prompt, structured prior, and validation—not real data.
+initial Service Desk vertical, realized activity/event causal graph, and
+acceptance checks. Timing values are ordinary typed scenario configuration:
+humans may supply empirical values when available, and a future scenario
+compiler may propose model estimates for review. Context-dependent omissions
+may use bounded runtime LLM adjudication, but every world transition must have a
+positive, source-labelled duration before it enters the scheduler.
 
 Stakeholder observation has occurred repeatedly on the deployed workflow: the
 operator ran and inspected authored scenarios and directly shaped the map,
@@ -197,6 +200,8 @@ condition and play a live or zero-cost reference simulation.
 Inspectable result:
 
 - causal and spatial projections synchronized to causal moments;
+- a realized activity/event causal graph whose explicit parent edges and
+  elapsed positions agree with the exact trace;
 - separate participant perceptions, proposed actions, mechanism decisions,
   world commits, and later observations;
 - one evidence-cited narrative per causal moment;
@@ -204,12 +209,12 @@ Inspectable result:
 
 Negative cases: absent information routes must cause grounded rerouting rather
 than invented access; speed pressure may produce an attempted unsafe action but
-exact mechanisms must still deny it.
+exact mechanisms must still deny it; a zero-duration causal child must be
+rejected before scheduling.
 
 Non-claims: this probe does not establish realistic organizations, general
-human psychology, calibrated human timing, arbitrary delayed-route
-interleaving, continuous time, or fidelity outside its stipulated service
-workflow.
+human psychology, calibrated human timing, continuous time, or fidelity outside
+its stipulated service workflow.
 
 ## Current Demo Completion Boundary
 
@@ -331,42 +336,74 @@ than inheriting the `none` evidence. Its final desktop observation is
 consolidated into the integrated demo gate rather than left as a competing
 active packet.
 
-### 6. Finish the integrated private demo — active
+### 6. Preserve the integrated private demo — implemented, usability judgment deferred
 
-[Slice 14](plans/014-pausable-live-runs.md) is the sole active packet. Live
+[Slice 14](plans/014-pausable-live-runs.md) remains the demo boundary. Live
 pause/resume is implemented and one retained run completed from its checkpoint.
-The shortest remaining path is the operator's short usability judgment. Passing the
-[Current Demo Completion Boundary](#current-demo-completion-boundary) ends this
-PoC demo stage.
+The operator explicitly advanced modeled-time work before recording the final
+short usability judgment; that judgment remains a later acceptance check rather
+than a competing active implementation packet.
 
-### 7. Add conversational scenario drafting behind a typed compiler — post-demo next
+### 7. Make world time and realized causal chains truthful — active
 
-After the current demo is marked complete, design one representative authoring
-vertical:
+Complete [Slice 15](plans/015-calibrated-elapsed-time.md) as the current
+representative vertical:
 
 ```text
-conversation -> typed scenario draft -> validation and unresolved questions
-  -> spatial/causal preview -> analyst approval -> compiled scenario -> run
+typed or runtime-resolved positive duration
+  -> scheduled activity/world transition
+  -> exact retained event and parent link
+  -> elapsed-time causal graph, narrative, and inspector
+```
+
+This is one product slice, not scheduler work followed by a disconnected graph
+project. If it stopped after Service Desk passed, the analyst would have a small
+but useful simulation whose realized causal chain is temporally meaningful and
+inspectable.
+
+### 8. Run one Levin-style composite-agency assay — next
+
+Use one authored scenario and its execution-inert analytical boundary to ask a
+specific multiscale question: does the candidate composite preserve or restore
+a declared outcome under shocks and member replacement, and which concrete
+policies, information routes, memories, incentives, and feedback mechanisms
+make that behavior possible?
+
+The first assay must compare component-level, structural, and
+feedback-disruption interventions across repeated trajectories. Its output is
+an intervention-specific influence profile with uncertainty and exact
+trace/graph step-down—not a claim that the aggregate is another executor, a
+mind, or a single additive percentage of causation.
+[ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) owns that
+interpretation.
+
+This comes before general conversational authoring because it proves the
+simulator's distinctive analyst job and supplies the measurement contract that
+future generated scenarios must support.
+
+### 9. Add conversational scenario drafting behind a typed compiler — then
+
+After the first composite-agency assay fixes the required scenario and
+intervention contracts, implement one representative authoring vertical:
+
+```text
+conversation -> typed scenario draft, including timing assumptions
+  -> validation and unresolved questions
+  -> spatial, structural-causal, and planned-intervention preview
+  -> analyst approval -> compiled scenario -> run
 ```
 
 Reuse the current causal-state, active-system, fidelity-note, representation,
-spatial, and analytical-boundary contracts. Begin with a small library of
-approved mechanism templates and one bounded novel workflow. Unsupported
+spatial, timing, and analytical-boundary contracts. Begin with a small library
+of approved mechanism templates and one bounded novel workflow. Unsupported
 mechanisms remain unresolved or explicitly coarse; they never become silently
 generated adjudication code.
 
-Do not activate this packet until the demo completion gate is closed. Its
-bounded design must freeze a human-reviewed target draft and one ambiguity case
-before implementation.
-
-### 8. Expand multiscale agency only through concrete pressure
+### 10. Expand representation depth only through concrete pressure
 
 Add overlapping/nested aggregate views, richer composite analysis, additional
 process implementations, or representation refinement only when a scenario
 requires them to answer an analyst question that current contracts cannot.
-
-Do not start another substrate or ontology packet while demo completion and
-conversational authoring are the shorter routes to the observed user need.
 
 ## Explicit MVP Deferrals
 
@@ -379,9 +416,11 @@ conversational authoring are the shorter routes to the observed user need.
 - stock exchanges, HFT systems, or market calibration;
 - treating an organization, market, policy, or incentive system as an
   ungrounded acting mind;
-- systemic-influence attribution or aggregate-agency scoring; the open question
-  is retained in [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md)
-  without changing the component-grounded execution model;
+- a universal scalar “agency score,” organization-level executor, or
+  consciousness claim; the next research slice may test one
+  intervention-specific composite-control hypothesis under
+  [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) without changing
+  the component-grounded execution model;
 - production hosting, public access, and multi-user operations.
 
 ## Decision Rule

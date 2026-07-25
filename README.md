@@ -103,11 +103,12 @@ remains only inside the closed
 fidelity-report harness so historical comparison evidence retains its original
 sampling contract.
 
-This MVP does not yet interleave unrelated processes inside one exact action's
-nonzero-delay causal cascade; the representative Service Desk uses zero-delay
-message routes and explicit scheduled process wakes. General asynchronous
-channel interleaving is a future causal-core extension, not a claimed result of
-this slice. See
+The causal core can now retain delayed effects and deliveries across
+checkpoints, but the authored scenarios still contain legacy zero-duration
+world-event links. The active slice requires every causal child world event to
+complete at a later scenario time than its parent and adds a realized
+activity/event causal graph distinct from the existing structural graph of
+entities and possible routes. See
 [ADR 010](docs/adr/010-autonomous-multirate-process-time.md).
 
 Runs are retained under `artifacts/runs/`. Override that location with

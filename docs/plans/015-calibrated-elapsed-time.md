@@ -6,16 +6,17 @@ created: 2026-07-24
 predecessor: 014-pausable-live-runs.md
 ---
 
-# Slice 15: Model-Generated Elapsed Time
+# Slice 15: Positive-Duration Modeled Time
 
-**Status: active. Slice 15A is implemented locally; the timing-profile compiler
-and Service Desk profile remain next. This PoC uses model-generated priors, not
-real-world calibration.**
+**Status: active. Slice 15A is implemented. The positive-duration Service Desk
+vertical and realized causal-trajectory view are next. This PoC uses declared
+scenario assumptions and bounded model estimates, not real-world calibration.**
 
 ## Outcome
 
-An analyst can follow a Service Desk trajectory in modeled elapsed time without
-mistaking provider latency or arbitrary scheduler ticks for real-world time.
+An analyst can follow a Service Desk trajectory in modeled elapsed time and as
+a realized causal graph without mistaking provider latency, database operations,
+or arbitrary scheduler ticks for world time.
 For example: a report arrives at 09:00, triage completes at 09:02, remediation
 finishes at 09:08, and the trace identifies the declared estimate that produced
 each duration. The initial claim is *plausible, source-labelled simulation*,
@@ -25,18 +26,21 @@ not a claim that an organization really operates at those timings.
 
 In scope:
 
-- a Service Desk timing profile for human activity, delivery, exact remediation,
-  and stipulated external feedback;
-- fixed and sampled model-generated-prior timing estimates with provenance;
+- positive durations for human activity, delivery, exact remediation, and
+  stipulated external feedback;
+- fixed and sampled typed timing assumptions with provenance;
+- bounded runtime LLM duration adjudication only where a transition remains
+  contextually underspecified at the scheduling boundary;
 - a checkpointable future-work queue that permits independently timed work to
   overlap and advances to the next due time;
-- elapsed-time display in the narrative, trace inspector, and pause state.
+- elapsed-time display in the narrative, trace inspector, and pause state;
+- a realized causal-trajectory projection whose nodes are retained world
+  activities/events and whose edges are explicit causal-parent links.
 
 Out of scope:
 
 - using LLM response time, token count, or wall-clock run duration as simulated
   time;
-- asking an LLM to invent numeric durations at action time;
 - a universal scheduler, continuous-time solver, resource-queue library,
   market model, or claim of general organizational fidelity;
 - calling generic internet averages a calibration.
@@ -57,7 +61,8 @@ TimingProfile(profile_id, epoch, base_unit, estimates)
 TimingEstimate(
   estimate_id, applies_to,
   kind=fixed|triangular,
-  parameters, source_kind=model_generated_prior,
+  parameters,
+  source_kind=exact_mechanism|scenario_assumption|runtime_model_estimate,
   source_ref, uncertainty_note
 )
 TimedActivity(
@@ -67,43 +72,51 @@ TimedActivity(
 )
 ```
 
-Before a run, a bounded timing-profile compiler asks the configured LLM for
-plausible ranges from the authored setting, then retains its model, prompt,
-structured output, and validation result. An LLM acting as a participant still
-proposes only a bounded action through exposed interfaces. The runtime maps a
-committed action or mechanism transition to the already declared estimate,
-samples once if applicable, records that realization, and schedules completion.
-A malformed, absent, negative, or past-due timing value fails loudly before a
-world commit.
+Timing fields are ordinary typed scenario configuration. A human may author
+them directly, and a future conversational scenario compiler may propose them
+for review. They do not require a separate pre-run timing-profile subsystem.
+
+Every retained world transition must resolve a positive duration before it
+enters the scheduler. The runtime first uses an exact mechanism calculation,
+then a configured value or distribution, and finally bounded runtime LLM
+adjudication only for genuinely contextual omissions. Runtime adjudication
+retains the model, prompt, structured output, validation result, and declared
+uncertainty. An LLM acting as a participant still proposes only a bounded
+action through exposed interfaces; it does not silently control scheduler time.
+A malformed, absent, zero, negative, past-due, or untraceable timing value fails
+loudly before a world transition is scheduled.
 
 ## Runtime rules
 
 1. The global future-work queue is part of the validated checkpoint.
-2. At each earliest due elapsed time, all due participants see one frozen
+2. Every causal child world event completes strictly later than its parent.
+   Independent due work may share a timestamp; simulator bookkeeping is outside
+   world time and outside the causal graph.
+3. At each earliest due elapsed time, all due participants see one frozen
    pre-moment state and may propose concurrently.
-3. New observations become usable only at their declared arrival time.
-4. A human has no second single-attention activity while one is pending; richer
+4. New observations become usable only at their declared arrival time.
+5. A human has no second single-attention activity while one is pending; richer
    attention/resource models are deferred.
-5. Exact mechanisms and controllers may progress at their own declared rates
+6. Exact mechanisms and controllers may progress at their own declared rates
    without an LLM call at every micro-transition.
-6. Seeded uncertainty is replayable: the trace retains estimate ID, sampler
+7. Seeded uncertainty is replayable: the trace retains estimate ID, sampler
    stream, and sampled duration. Same seed and checkpoint reproduce declared
    timing; different seeds vary only declared stochastic timing.
 
-The current causal core drains a routed cascade immediately. Slice 15 changes
-that specific boundary to retained future work; it does not reinterpret exact
-trace order as causal relation. Explicit causal-parent links remain the
-causality authority.
+Slice 15A changed the former immediate-drain boundary to retained future work.
+The remaining slices do not reinterpret exact trace order as causal relation:
+explicit causal-parent links remain the causality authority.
 
 ## Service Desk first profile
 
 The first vertical slice covers triage, specialist assessment, direct and
 ticket-mediated delivery, three remediation phases, and customer feedback.
-Each profile value is marked `model_generated_prior` and names the model,
-profile-generation prompt, and uncertainty note that produced it. The simulator
-must never label it `measured`, `expert`, `calibrated`, or "realistic." The
-model's output is an explicit scenario assumption, not evidence about a real
-service organization.
+Each timing value names whether it came from an exact mechanism, a typed
+scenario assumption, or bounded runtime model adjudication. A model-generated
+value names the model, prompt, and uncertainty note that produced it. The
+simulator must never label such a value `measured`, `expert`, `calibrated`, or
+"realistic." The model's output is an explicit simulation assumption, not
+evidence about a real service organization.
 
 The direct-path and missing-direct-path arms must differ because their declared
 activities and deliveries differ, not because a model saw hidden instruction or
@@ -115,6 +128,9 @@ outcome.
 
 - Narrative: concise causal account with elapsed time only where material,
   ending in the outcome.
+- Realized causal trajectory: selectable world activities/events arranged by
+  elapsed time, connected only by retained causal-parent links. This is distinct
+  from the existing structural causal-flow map of entities and possible routes.
 - Inspector: causal position, elapsed timestamp, timing estimate/source, and
   realized duration for each activity.
 - Process/participant trace: pending, completed, dormant; no fake real-time
@@ -127,17 +143,22 @@ outcome.
 
 1. A scripted Service Desk baseline has nontrivial elapsed time with every
    material duration traceable to a declared source.
-2. Direct and missing-direct-path arms differ through declared timing only.
-3. Independent future activities can overlap; all same-time actors use a frozen
+2. No retained causal child world event shares its parent's elapsed timestamp;
+   an attempted zero-duration transition fails before scheduling.
+3. The realized causal graph contains the same world-event IDs and explicit
+   parent links as the exact trace, while simulator bookkeeping produces no
+   graph node.
+4. Direct and missing-direct-path arms differ through declared timing only.
+5. Independent future activities can overlap; all same-time actors use a frozen
    state.
-4. Invalid timing data fails before commit; no provider/wall-clock duration is
+6. Invalid timing data fails before commit; no provider/wall-clock duration is
    accepted as simulation time.
-5. Pause/resume preserves pending IDs, due times, and sampled realizations.
-6. Same-seed replay matches declared timing; different seeds change only
+7. Pause/resume preserves pending IDs, due times, and sampled realizations.
+8. Same-seed replay matches declared timing; different seeds change only
    declared stochastic estimates.
-7. Desktop opens a newly timed and legacy uncalibrated run without mislabelling
+9. Desktop opens a newly timed and legacy uncalibrated run without mislabelling
    either, scroll jumps, console errors, or network failures.
-8. One DeepSeek live run has the same timing-envelope checks as scripted runs;
+10. One DeepSeek live run has the same timing-envelope checks as scripted runs;
    trace inspection proves timing was runtime-modelled, not provider-derived.
 
 ## Thin slices
@@ -159,12 +180,19 @@ semantics, not a generated or calibrated duration profile. Restore re-derives
 every pending delivery from the authored connection/container topology and
 rejects altered targets, delays, and due times before it can resume.
 
-### 15B — profile and analyst readout
+### 15B — positive-duration Service Desk trajectory
 
-Add the source-labelled Service Desk profile, seeded sampling, scenario/UI
-readout, and the direct-path comparison.
+Add source-labelled positive durations at every Service Desk world-transition
+boundary, fail-closed runtime resolution, seeded sampling where useful, and a
+scripted baseline whose causal descendants always advance elapsed time.
 
-### 15C — later evidence integration (deferred)
+### 15C — realized causal graph and live proof
+
+Project the retained activity/event DAG separately from the structural
+causal-flow map, synchronize it with the narrative and inspectors, then run and
+inspect one bounded DeepSeek trajectory plus pause/resume.
+
+### 15D — later evidence integration (deferred)
 
 Real data or expert estimates are outside this PoC. If a future project needs
 them, it must define source mapping, privacy, aggregation, and calibration
@@ -180,7 +208,7 @@ and its [timeout event contract](https://simpy.readthedocs.io/en/3.0.3/api_refer
 ADR 010 remains binding for causal versus scenario time.
 
 The operator-directed start of this packet is the explicit Slice 14 reset
-decision. The initial profile source is fixed as `model_generated_prior`; the
-configured generator's identity and retained structured output are required
-evidence. It is a scenario assumption, not an empirical benchmark or
-calibration claim.
+decision. Model-generated configuration and runtime estimates are scenario
+assumptions, not empirical benchmarks or calibration claims. The configured
+generator's identity and retained structured output are required whenever a
+model supplies a duration.

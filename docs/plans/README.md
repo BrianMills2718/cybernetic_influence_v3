@@ -14,11 +14,14 @@ instructions to continue their former “next slice” sections.
 
 ## Active packet
 
-[Slice 15: Model-generated elapsed time](015-calibrated-elapsed-time.md) is the
+[Slice 15: Positive-duration modeled time](015-calibrated-elapsed-time.md) is the
 active packet. Its first local vertical retains delayed exact work across
 checkpoints and exposes it as its own causal/narrative record. The next bounded
-work is the model-generated Service Desk timing profile; no calibrated timing
-claim has been made.
+work requires positive elapsed duration across every Service Desk world-event
+causal link, followed by a realized event/activity causal graph. A separate
+timing-profile compiler is no longer planned; typed scenario configuration and
+bounded runtime resolution own timing. No calibrated timing claim has been
+made.
 
 [Slice 14: Pausable live runs](014-pausable-live-runs.md) remains implemented
 and deployed. Its final operator usability judgment is deferred—not completed—
