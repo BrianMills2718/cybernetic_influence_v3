@@ -28,7 +28,8 @@ system: |
   Return the requested structured response. Cite one or more event IDs from the
   current causal moment only; these IDs are provenance, not prose for the reader.
   Cite only one to four decisive events rather than inventorying routine
-  bookkeeping.
+  bookkeeping. Put event IDs only in source_event_ids: never write an event ID,
+  parenthetical citation, or an "ID" label in narrative.
 user: |
   Earlier causal-moment narratives, in order:
   {{ prior | tojson }}

@@ -29,6 +29,7 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
         json={"execution": "scripted"},
     ).json()
     prompts: list[str] = []
+    system_prompts: list[str] = []
     call_options: list[dict[str, Any]] = []
 
     def fake_call(
@@ -37,6 +38,7 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
         response_model: type[CausalMomentNarration],
         **kwargs: Any,
     ) -> tuple[CausalMomentNarration, object]:
+        system_prompts.append(messages[0]["content"])
         prompts.append(messages[1]["content"])
         call_options.append(kwargs)
         source_ids = re.findall(r'"event_id":\s*"([^"]+)"', messages[1]["content"])
@@ -73,6 +75,7 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     assert "Earlier causal-moment narratives, in order:\n[]" in prompts[0]
     assert "Never describe scenario_start as an internal" in prompts[0]
     assert "exactly one sentence of at most 240 characters" in prompts[0]
+    assert "never write an event ID" in system_prompts[0]
     assert "Narrated causal moment 1." in prompts[1]
     assert all(item["max_tokens"] == 96 for item in call_options)
     assert all(item["reasoning_effort"] == "high" for item in call_options)
