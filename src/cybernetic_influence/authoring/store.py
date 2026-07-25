@@ -8,6 +8,8 @@ import re
 from pathlib import Path
 from uuid import uuid4
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -27,13 +29,30 @@ class _DraftDocument(BaseModel):
 
     draft_id: str = Field(pattern=r"^draft_[0-9a-f]{12}$")
     revision: int = Field(ge=0)
-    status: str
-    messages: list[dict[str, str]] = Field(default_factory=list)
+    status: Literal["draft", "repairing", "needs_input", "ready_for_review", "approved"]
+    messages: list["_DraftMessage"] = Field(default_factory=list)
+    attempts: list["_DraftAttempt"] = Field(default_factory=list)
+    authoring_summary: str = "Describe a bounded situation to begin."
     proposal: dict[str, object] | None = None
     diagnostics: list[dict[str, str]] = Field(default_factory=list)
     approval: dict[str, object] | None = None
     created_at: str
     updated_at: str
+
+
+class _DraftMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    message_id: str
+    content: str
+
+
+class _DraftAttempt(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    attempt: int = Field(ge=1)
+    trace_id: str
+    status: Literal["accepted", "repair", "provider_error"]
+    message: str
+    observed_cost: float | None = Field(default=None, ge=0)
 
 
 class AuthoringDraftStore:

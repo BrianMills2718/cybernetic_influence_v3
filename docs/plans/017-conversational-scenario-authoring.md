@@ -63,6 +63,12 @@ Implemented as a provider-neutral structured-call seam using the shared
 approved template in this slice; live authored people require a separately
 reviewed native binding and are intentionally not implied by approval.
 
+The authoring seam attempts structured repair at most three times for one user
+message. Each attempt has a distinct trace and per-call ceiling; the retained
+draft shows accepted, repair, or provider-error status and observed cost when
+available. The loop stops visibly at the cap, and a provider-only failure does
+not erase an earlier valid proposal.
+
 ## Non-goals
 
 No arbitrary mechanism/DSL generation, organization executors, additional

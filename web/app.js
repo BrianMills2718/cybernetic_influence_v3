@@ -55,15 +55,19 @@ function renderAuthoring() {
   const draft = authoringDraft
   $('#authoring-review').hidden = !draft || (!draft.proposal && !(draft.diagnostics || []).length)
   if (!draft) return
-  $('#authoring-status').textContent = `Draft revision ${draft.revision} · ${draft.status}`
+  $('#authoring-status').textContent = draft.authoring_summary || `Draft revision ${draft.revision} · ${draft.status}`
   const diagnostics = draft.diagnostics || []
   $('#authoring-diagnostics').innerHTML = diagnostics.length
     ? diagnostics.map((item) => `<p class="warning"><strong>${html(item.severity)}:</strong> ${html(item.message)}</p>`).join('')
     : '<p class="muted">No unresolved compiler questions. Review the map, then approve this exact proposal.</p>'
+  const attempts = draft.attempts || []
+  $('#authoring-diagnostics').innerHTML += attempts.length
+    ? `<p class="muted">Authoring attempts: ${attempts.map((attempt) => `${html(attempt.attempt)} (${html(attempt.status)})`).join(' · ')}. Each attempt is traceable; no hidden retry loop is running.</p>`
+    : ''
   $('#authoring-summary').innerHTML = draft.proposal
     ? authoringSummary(draft.proposal)
     : '<span class="eyebrow">Draft needs correction</span><h3>No executable proposal yet</h3><p>The provider response was retained only as a validation diagnostic. Send a follow-up after correcting the shown schema issue; the earlier draft remains intact.</p>'
-  const approvable = !!draft.proposal && diagnostics.length === 0 && draft.status !== 'approved'
+  const approvable = !!draft.proposal && diagnostics.length === 0 && draft.status === 'ready_for_review'
   $('#authoring-approve').hidden = !approvable
   $('#authoring-run').hidden = draft.status !== 'approved'
   if (authoringPreview?.nodes && window.CyberneticGraph) {

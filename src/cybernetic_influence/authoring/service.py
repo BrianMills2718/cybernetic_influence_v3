@@ -24,6 +24,7 @@ StructuredCall = Callable[..., tuple[Any, Any]]
 AUTHORING_TASK = "cybernetic_influence_v3_scenario_draft"
 AUTHORING_MAX_BUDGET = 0.10
 AUTHORING_MODEL = "openrouter/deepseek/deepseek-v4-flash"
+AUTHORING_MAX_ATTEMPTS = 3
 
 
 class _ProposalConsumer(BaseModel):
@@ -125,7 +126,10 @@ def _structured_call() -> StructuredCall:
     return cast(StructuredCall, call_llm_structured)
 
 
-def _prompt(*, message: str, prior: dict[str, object]) -> tuple[str, str]:
+def _prompt(
+    *, message: str, prior: dict[str, object], repair_feedback: str | None,
+    candidate: object | None,
+) -> tuple[str, str]:
     raw = resources.files("cybernetic_influence.authoring").joinpath(
         "prompts/scenario_draft.yaml"
     ).read_text(encoding="utf-8")
@@ -136,7 +140,10 @@ def _prompt(*, message: str, prior: dict[str, object]) -> tuple[str, str]:
     environment.filters["tojson"] = lambda value: json.dumps(value, sort_keys=True)
     return (
         environment.from_string(str(template["system"])).render(),
-        environment.from_string(str(template["user"])).render(message=message, prior=prior),
+        environment.from_string(str(template["user"])).render(
+            message=message, prior=prior, repair_feedback=repair_feedback,
+            candidate=candidate,
+        ),
     )
 
 
@@ -158,39 +165,84 @@ class DraftAuthoringService:
             return current
         if current["revision"] != expected_revision:
             raise DraftConflictError("draft revision has changed; reload before editing")
-        system, user = _prompt(message=message, prior=current)
-        parsed, _meta = self.call(
-            AUTHORING_MODEL,
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            response_model=_ProposalConsumer,
-            task=AUTHORING_TASK,
-            trace_id=f"{draft_id}/revision/{expected_revision + 1}",
-            max_budget=AUTHORING_MAX_BUDGET,
-            max_tokens=4000,
-            model_justification="Produce a bounded, reviewable resource-request scenario draft.",
-            reasoning_effort="none",
-        )
-        consumer = _ProposalConsumer.model_validate(
-            parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
-        )
         proposal: ScenarioDraftProposal | None = None
-        diagnostics: list[dict[str, str]]
-        try:
-            proposal = ScenarioDraftProposal.model_validate(consumer.model_dump(mode="json"))
-            diagnostics = _diagnostics(proposal)
-        except ValueError as error:
-            diagnostics = [{
-                "severity": "error", "code": "schema",
-                "message": _concise_validation_error(error),
-            }]
+        diagnostics: list[dict[str, str]] = []
+        attempts: list[dict[str, object]] = []
+        repair_feedback: str | None = None
+        candidate: object | None = None
+        for attempt_number in range(1, AUTHORING_MAX_ATTEMPTS + 1):
+            trace_id = f"{draft_id}/revision/{expected_revision + 1}/attempt/{attempt_number}"
+            system, user = _prompt(
+                message=message, prior=current, repair_feedback=repair_feedback,
+                candidate=candidate,
+            )
+            try:
+                parsed, meta = self.call(
+                    AUTHORING_MODEL,
+                    [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                    response_model=_ProposalConsumer,
+                    task=AUTHORING_TASK,
+                    trace_id=trace_id,
+                    max_budget=AUTHORING_MAX_BUDGET,
+                    max_tokens=4000,
+                    model_justification="Produce or repair a bounded, reviewable resource-request scenario draft.",
+                    reasoning_effort="none",
+                )
+                consumer = _ProposalConsumer.model_validate(
+                    parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
+                )
+                candidate = consumer.model_dump(mode="json")
+                proposal = ScenarioDraftProposal.model_validate(candidate)
+                diagnostics = _diagnostics(proposal)
+                if not diagnostics:
+                    attempts.append(_attempt(trace_id, attempt_number, "accepted", "The typed draft compiled successfully.", meta))
+                    break
+                repair_feedback = _diagnostic_feedback(diagnostics)
+                attempts.append(_attempt(trace_id, attempt_number, "repair", repair_feedback, meta))
+                proposal = None
+            except Exception as error:
+                repair_feedback = _concise_validation_error(error) if isinstance(error, ValueError) else (
+                    f"The provider did not produce a usable typed draft: {type(error).__name__}."
+                )
+                diagnostics = [{"severity": "error", "code": "drafting", "message": repair_feedback}]
+                attempts.append(_attempt(trace_id, attempt_number, "provider_error", repair_feedback, None))
+        successful = proposal is not None and not diagnostics
+        if successful:
+            status = "ready_for_review"
+            summary = f"Ready to review after {len(attempts)} authoring attempt(s)."
+            approval: dict[str, object] | None = None
+        elif (
+            attempts
+            and all(item["status"] == "provider_error" for item in attempts)
+            and isinstance(current.get("proposal"), dict)
+        ):
+            proposal = ScenarioDraftProposal.model_validate(current["proposal"])
+            diagnostics = list(current.get("diagnostics", []))
+            status = str(current["status"])
+            summary = (
+                f"The authoring provider failed {len(attempts)} time(s), so the prior "
+                "reviewable draft was preserved and this requested change was not applied."
+            )
+            raw_approval = current.get("approval")
+            approval = raw_approval if isinstance(raw_approval, dict) else None
+        else:
+            status = "needs_input"
+            summary = (
+                f"The authoring assistant tried {len(attempts)} time(s) without producing "
+                "a valid resource-request scenario. Review the concise issue below, then clarify "
+                "the requester, reviewer, requested resource, and eligibility rule."
+            )
+            approval = None
         updated = {
             **current,
             "revision": expected_revision + 1,
-            "status": "draft",
+            "status": status,
             "messages": [*messages, {"message_id": message_id, "content": message}],
+            "attempts": attempts,
+            "authoring_summary": summary,
             "proposal": proposal.model_dump(mode="json") if proposal else None,
             "diagnostics": diagnostics,
-            "approval": None,
+            "approval": approval,
             "updated_at": now_iso(),
         }
         return self.store.replace(draft_id, expected_revision=expected_revision, document=updated)
@@ -245,6 +297,22 @@ def _diagnostics(proposal: ScenarioDraftProposal) -> list[dict[str, str]]:
     except AuthoringCompilationError as error:
         diagnostics.append({"severity": "error", "code": "compile", "message": str(error)})
     return diagnostics
+
+
+def _diagnostic_feedback(diagnostics: list[dict[str, str]]) -> str:
+    return "; ".join(item["message"] for item in diagnostics[:3])
+
+
+def _attempt(
+    trace_id: str, attempt: int, status: Literal["accepted", "repair", "provider_error"],
+    message: str, meta: object | None,
+) -> dict[str, object]:
+    raw_cost = getattr(meta, "cost", None)
+    cost = float(raw_cost) if isinstance(raw_cost, (int, float)) and raw_cost >= 0 else None
+    return {
+        "attempt": attempt, "trace_id": trace_id, "status": status,
+        "message": message, "observed_cost": cost,
+    }
 
 
 def _concise_validation_error(error: ValueError) -> str:

@@ -94,6 +94,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Read me" in page.text
     assert "Author scenario" in page.text
     assert "Describe a bounded situation" in page.text
+    assert "up to three structured authoring calls" in page.text
     assert 'id="authoring-view"' in page.text
     assert "How to read a cybernetic simulation" in page.text
     assert 'id="model"' in page.text
