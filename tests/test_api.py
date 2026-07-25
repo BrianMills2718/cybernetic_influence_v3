@@ -126,6 +126,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b".scrollIntoView" not in app_script.content
     assert b"Configured interaction pathways show scenario-configured" in app_script.content
     assert b"function renderLifecycleControls" in app_script.content
+    assert b"function applyButtonTooltips" in app_script.content
+    assert b"new MutationObserver" in app_script.content
     assert b"renderLifecycleControls(current)" in app_script.content
     assert b"function loadScenarioPreview" in app_script.content
     assert b"/api/authoring/drafts" in app_script.content
@@ -134,6 +136,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"requestSerial !== previewRequestSerial" in app_script.content
     assert b"/api/scenarios/${encodeURIComponent(scenario)}/preview" in app_script.content
     assert b"the realized causal graph appears only after events are committed" in app_script.content
+    assert b"else renderGraph()" in app_script.content
     assert b"how did this condition change the path to safe closure" in app_script.content
     assert b"modeled elapsed time T+" in app_script.content
     assert b"aria-pressed" in app_script.content

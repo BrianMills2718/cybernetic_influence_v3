@@ -25,6 +25,49 @@ let previewRequestSerial = 0
 let authoringDraft = null
 let authoringPreview = null
 
+const buttonTooltips = {
+  'simulation-tab': 'Choose and run a configured simulation.',
+  'authoring-tab': 'Describe a situation and review a typed scenario draft.',
+  'history-tab': 'Open or remove previously retained simulation runs.',
+  'readme-tab': 'Read how the simulator, maps, and evidence should be interpreted.',
+  'authoring-draft': 'Ask the authoring assistant to create or repair a typed scenario draft. Up to three bounded calls may be used.',
+  'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
+  'authoring-run': 'Run the approved draft with the zero-cost reference policy.',
+  'run': 'Run the selected scenario and condition.',
+  'pause': 'Request a pause after the current causal step is safely retained.',
+  'resume': 'Continue a paused run from its retained causal checkpoint.',
+  'spatial-layout': 'Show authored places, occupants, and physical links. This does not grant access or permission.',
+  'causal-layout': 'Show configured interaction pathways. A pathway does not itself grant authority.',
+  'trajectory-layout': 'Show only the causal events that occurred in the selected run.',
+  'previous-event': 'Select the previous causal step.',
+  'next-event': 'Select the next causal step.',
+}
+
+function explainButton(button) {
+  if (button.title) return
+  let explanation = buttonTooltips[button.id]
+  if (!explanation && button.classList.contains('help-button')) {
+    explanation = `Show or hide help for ${button.getAttribute('aria-controls')?.replaceAll('-', ' ') || 'this control'}.`
+  }
+  if (!explanation && button.classList.contains('open-run')) explanation = 'Open this retained run for inspection.'
+  if (!explanation && button.classList.contains('trash-run')) explanation = 'Move this retained run to recoverable server trash.'
+  if (!explanation && button.classList.contains('turn-narrative')) explanation = 'Select this causal step and inspect its grounded evidence.'
+  if (!explanation && button.classList.contains('timeline-marker')) explanation = 'Select this causal step.'
+  if (!explanation && button.classList.contains('story-event')) explanation = 'Inspect the exact event behind this outcome step.'
+  if (!explanation && button.dataset.eventId) explanation = 'Inspect this exact event in the selected causal step.'
+  if (!explanation && button.dataset.person) explanation = 'Show this participant or analytical composite account.'
+  if (!explanation && button.dataset.nodeId) explanation = 'Inspect this retained node on the map.'
+  if (!explanation && button.id === 'expand-boundary') explanation = 'Return to the exact components inside this analytical composite.'
+  if (!explanation && button.id === 'inspect-composite') explanation = 'Show this analytical composite on the configured interaction map.'
+  if (!explanation) explanation = `Use ${button.textContent.trim() || 'this control'}.`
+  button.title = explanation
+  if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', explanation)
+}
+
+function applyButtonTooltips(root = document) {
+  root.querySelectorAll('button').forEach(explainButton)
+}
+
 function setWorkspaceView(view) {
   const simulation = view === 'simulation'
   const authoring = view === 'authoring'
@@ -792,7 +835,8 @@ function renderGraph() {
         selectedNodeId = null
         selectedEdgeId = null
         renderScaleControls()
-        selectEvent(selectedEventIndex)
+        if (current?.timeline?.length) selectEvent(selectedEventIndex)
+        else renderGraph()
       },
     })
     return
@@ -1330,6 +1374,16 @@ Promise.all([loadConfig(), loadHistory()])
     else await loadScenarioPreview()
   })
   .catch((error) => { $('#run-status').textContent = error.message })
+
+applyButtonTooltips()
+new MutationObserver((records) => {
+  records.forEach((record) => record.addedNodes.forEach((node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.matches?.('button')) explainButton(node)
+      applyButtonTooltips(node)
+    }
+  }))
+}).observe(document.body, {childList:true, subtree:true})
 
 window.addEventListener('resize', () => {
   if (current) drawGraphLines(graphProjection().edges)
