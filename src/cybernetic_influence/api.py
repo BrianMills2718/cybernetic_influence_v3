@@ -829,7 +829,7 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
             "assumptions": [
                 "People act only from retained memory and delivered observations.",
                 "Authentication, authorization, remediation, and closure are exact mechanisms.",
-                "Logical seconds express process cadence, not wall-clock duration.",
+                "Process ticks order authored internal updates; they are not elapsed real-world seconds.",
             ],
             "known_omissions": [
                 "The authored topology covers only the service-operations center and remote customer site; it does not model travel, building interiors, or network infrastructure in detail.",

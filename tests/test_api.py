@@ -145,7 +145,25 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
     assert body["outcome"]["causal_moment_count"] < body["outcome"][
         "participant_activation_count"
     ]
-    assert body["time_unit"] == "second"
+    assert body["time_unit"] == "process_tick"
+    assert [moment["causal_time"] for moment in body["moments"]] == list(
+        range(1, len(body["moments"]) + 1)
+    )
+    assert [moment["causal_timestamp"] for moment in body["moments"]] == [
+        f"c{index}" for index in range(1, len(body["moments"]) + 1)
+    ]
+    causal_events = [
+        event for event in body["timeline"] if event["activation"] is not None
+    ]
+    assert len(
+        {event["causal_timestamp"] for event in causal_events}
+    ) == len(causal_events)
+    assert all(
+        event["causal_timestamp"].startswith(
+            f"c{event['causal_time']}."
+        )
+        for event in causal_events
+    )
     assert body["outcome"]["remediation_moment"] == 5
     assert body["outcome"]["confirmed_closure_moment"] == 7
     assert body["outcome"]["autonomous_activation_count"] == 3

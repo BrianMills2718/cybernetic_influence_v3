@@ -38,8 +38,10 @@ user: |
 
   Write one or two sentences, at most 360 characters. Lead with the meaningful
   change in ordinary language: who did what, what happened, and why it matters
-  to the unfolding incident. Mention simulated time only when it matters to
-  timing. Translate retained activation causes naturally: scenario_start means
+  to the unfolding incident. Treat causal_timestamp as the unique causal order.
+  Mention the separate logical_time scenario clock only when an authored delay
+  matters; do not translate it into real-world elapsed time. Translate retained
+  activation causes naturally: scenario_start means
   the scenario began; observation_delivery means new information arrived; and
   internal_wake means a scheduled process update. Include silence only when it
   changes the story. Never describe scenario_start as an internal wake or

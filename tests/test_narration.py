@@ -63,6 +63,12 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     moments = narration["moments"]
     assert isinstance(moments, list)
     assert moments[0]["source_event_ids"]
+    assert [moment["causal_time"] for moment in moments] == list(
+        range(1, len(moments) + 1)
+    )
+    assert [moment["causal_timestamp"] for moment in moments] == [
+        f"c{index}" for index in range(1, len(moments) + 1)
+    ]
     assert any(len(moment["participants"]) > 1 for moment in moments)
     assert "Earlier causal-moment narratives, in order:\n[]" in prompts[0]
     assert "Never describe scenario_start as an internal" in prompts[0]

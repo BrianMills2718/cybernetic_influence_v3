@@ -60,6 +60,14 @@ was repaired, and the exact regression remained at `scrollY=3359` across
 triager, supervisor, and composite selections. Browser console, exceptions,
 failed requests, HTTP errors, and backend errors were empty.
 
+The operator review then identified a temporal-comprehension defect: successive
+causal moments were labeled with repeated scenario-clock seconds, making an
+uncalibrated two-tick process look like a realistic two-second incident. The
+accepted correction gives every moment and exact subevent a unique causal
+timestamp, keeps the scenario clock separate, and stops the Service Desk from
+claiming calibrated seconds. This correction must be deployed and the desktop
+readout rechecked before the final operator judgment can close the packet.
+
 ## Demo completion gate
 
 This packet is the sole active path to calling the current private PoC demo

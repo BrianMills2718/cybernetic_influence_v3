@@ -228,6 +228,8 @@ def analyst_moments(
             {
                 "moment": moment_number,
                 "activation": attempt.activation_id,
+                "causal_time": moment_number,
+                "causal_timestamp": f"c{moment_number}",
                 "logical_time": attempt.logical_time,
                 "participants": [
                     participant.requested_active_system_id
@@ -619,7 +621,7 @@ def analyst_timeline(
     """Link each event to exact temporal, activation, entity, and route identities."""
     state = result.core_result.final_state
     node_ids = {str(node["id"]) for node in analyst_nodes(state)}
-    event_activation: dict[str, tuple[str, str | None]] = {}
+    event_activation: dict[str, tuple[str, str | None, int, int]] = {}
     events_by_id = {
         event.event_id: event for event in result.core_result.events
     }
@@ -630,7 +632,7 @@ def analyst_timeline(
             for action_id in participant.assigned_action_ids
         }
         event_owner: dict[str, str] = {}
-        for event_id in attempt.core_event_ids:
+        for causal_substep, event_id in enumerate(attempt.core_event_ids, start=1):
             event = events_by_id[event_id]
             owner = (
                 action_owner.get(event.action_id)
@@ -647,7 +649,12 @@ def analyst_timeline(
                     owner = next(iter(parent_owners))
             if owner is not None:
                 event_owner[event_id] = owner
-            event_activation[event_id] = (attempt.activation_id, owner)
+            event_activation[event_id] = (
+                attempt.activation_id,
+                owner,
+                attempt.attempt_index + 1,
+                causal_substep,
+            )
 
     timeline: list[dict[str, object]] = []
     for event in result.core_result.events:
@@ -729,7 +736,9 @@ def analyst_timeline(
                     spatial_focus_ids.update(
                         spatial_link.substrate_entity_ids
                     )
-        activation, person = event_activation.get(event.event_id, (None, None))
+        activation_record = event_activation.get(event.event_id)
+        activation = activation_record[0] if activation_record is not None else None
+        person = activation_record[1] if activation_record is not None else None
         projected_event: dict[str, object] = {
             "event_id": event.event_id,
             "sequence": event.sequence,
@@ -744,6 +753,16 @@ def analyst_timeline(
             "spatial_focus_ids": sorted(spatial_focus_ids),
             "spatial_link_ids": sorted(spatial_link_ids),
         }
+        if activation_record is not None:
+            causal_time = activation_record[2]
+            causal_substep = activation_record[3]
+            projected_event.update(
+                {
+                    "causal_time": causal_time,
+                    "causal_substep": causal_substep,
+                    "causal_timestamp": f"c{causal_time}.{causal_substep}",
+                }
+            )
         mechanism = (
             state.mechanisms.get(event.mechanism_id)
             if event.mechanism_id is not None
@@ -790,6 +809,8 @@ def analyst_traces(result: ActiveRuntimeResult) -> list[dict[str, object]]:
             traces.append(
                 {
                     "activation": attempt.activation_id,
+                    "causal_time": attempt.attempt_index + 1,
+                    "causal_timestamp": f"c{attempt.attempt_index + 1}",
                     "logical_time": attempt.logical_time,
                     "person": participant.requested_active_system_id,
                     "participant_kind": state.entities[

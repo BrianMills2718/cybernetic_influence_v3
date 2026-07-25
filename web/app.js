@@ -39,10 +39,17 @@ function setWorkspaceView(view) {
   }
 }
 
-function simulatedTime(value) {
+function scenarioClock(value) {
   const unit = current?.time_unit || 'step'
   const plural = Number(value) === 1 ? unit : `${unit}s`
-  return `time ${value} ${plural}`
+  return `scenario clock ${value} ${plural}`
+}
+
+function causalTime(item, fallback = 1) {
+  const activationMatch = String(item?.activation || '').match(/^activation_(\d+)$/)
+  const derived = activationMatch ? Number(activationMatch[1]) + 1 : fallback
+  const value = Number.isInteger(item?.causal_time) ? item.causal_time : derived
+  return `causal time c${value}`
 }
 
 function causeSummary(causes = []) {
@@ -528,7 +535,7 @@ function showTrace(person) {
     const matches = selectedEvent?.activation === entry.activation
     return `
       <article class="trace-step ${matches ? 'event-match' : ''}">
-        <strong>${html(entry.activation)} · ${html(simulatedTime(entry.logical_time))} · ${html(entry.status)}</strong>
+        <strong>${html(entry.activation)} · ${html(causalTime(entry))} · ${html(entry.status)}</strong>
         <small>${html(String(entry.participant_kind || 'person').replaceAll('_',' '))} · activated by ${html(causeSummary(entry.activation_causes) || 'legacy schedule')} · ${html(entry.model_call_count || 0)} model call(s)</small>
         <p>${html(entry.orientation || 'No private orientation was recorded.')}</p>
         <details>
@@ -694,6 +701,8 @@ function causalMoments() {
     return {
       moment:index + 1,
       activation,
+      causal_time:traces[0]?.causal_time ?? index + 1,
+      causal_timestamp:traces[0]?.causal_timestamp ?? `c${index + 1}`,
       logical_time:traces[0]?.logical_time ?? index,
       participants:traces.map((trace) => trace.person),
       event_ids:eventIds,
@@ -724,15 +733,15 @@ function selectEvent(index, momentActivation = null) {
   const moment = moments[momentIndex]
   selectedMomentIndex = momentIndex
   $('#event-slider').value = selectedMomentIndex
-  $('#event-count').textContent = `${selectedMomentIndex + 1} / ${moments.length} moments · ${simulatedTime(moment?.logical_time)}`
+  $('#event-count').textContent = `${selectedMomentIndex + 1} / ${moments.length} moments · ${causalTime(moment, selectedMomentIndex + 1)}`
   $('#previous-event').disabled = selectedMomentIndex === 0
   $('#next-event').disabled = selectedMomentIndex === moments.length - 1
   const exactBelongsToMoment = event.activation === activation
   $('#event-detail').innerHTML = exactBelongsToMoment ? `
-    <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>${html(simulatedTime(event.logical_time))}</span><span>revision ${html(event.state_revision)}</span>${event.activation ? `<span>${html(event.activation)}</span>` : ''}</div>
+    <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>${html(event.causal_timestamp || causalTime(moment, selectedMomentIndex + 1))}</span><span>${html(scenarioClock(event.logical_time))}</span><span>revision ${html(event.state_revision)}</span>${event.activation ? `<span>${html(event.activation)}</span>` : ''}</div>
     <h3>${html(event.summary)}</h3>
     <small>${html(event.event_id)}</small>` : `
-    <div><span class="event-kind">No committed event</span><span>${html(simulatedTime(moment?.logical_time))}</span><span>${html(activation)}</span></div>
+    <div><span class="event-kind">No committed event</span><span>${html(causalTime(moment, selectedMomentIndex + 1))}</span><span>${html(activation)}</span></div>
     <h3>Every participant remained silent in this causal moment.</h3>
     <small>The map remains at the latest preceding exact event.</small>`
   const accountEvent = exactBelongsToMoment ? event : {...event, activation, person:null}
@@ -802,7 +811,7 @@ function renderStepAccount(event) {
   if (narration) {
     const momentNumber = narration.moment || narration.turn
     const participants = narration.participants || [narration.person || 'system']
-    $('#step-account-title').textContent = `Causal moment ${momentNumber} · ${simulatedTime(narration.logical_time)} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
+    $('#step-account-title').textContent = `Causal moment ${momentNumber} · ${causalTime(narration, momentNumber)} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
     $('#step-account-body').textContent = narration.narrative
     $('#step-account-source').textContent = `Live LLM narrator · grounded in ${narration.source_event_ids.join(', ')}. It received this moment’s trace and the earlier moment narratives.`
   } else if (exactProcess) {
@@ -842,7 +851,7 @@ function renderTurnNarratives() {
       const participants = moment.participants || [moment.person || 'system']
       return `
       <button class="turn-narrative" data-activation="${html(moment.activation)}">
-        <span>Causal moment ${html(momentNumber)} · ${html(simulatedTime(moment.logical_time))} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
+        <span>Causal moment ${html(momentNumber)} · ${html(causalTime(moment, momentNumber))} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
         <p>${html(moment.narrative)}</p>
         <small>${html((moment.source_event_ids || []).join(' · '))}</small>
       </button>`
@@ -870,7 +879,7 @@ function renderTimeline(run) {
     marker.dataset.index = index
     const people = moment.participants.map((person) => person.replaceAll('_',' ')).join(' + ')
     const causes = Object.values(moment.activation_causes || {}).flat()
-    marker.title = `Causal moment ${index + 1}, ${simulatedTime(moment.logical_time)}: ${people}; ${causeSummary(causes)}${moment.silent ? ' (silent)' : ''}`
+    marker.title = `Causal moment ${index + 1}, ${causalTime(moment, index + 1)}: ${people}; ${causeSummary(causes)}${moment.silent ? ' (silent)' : ''}`
     marker.setAttribute('aria-label', marker.title)
     marker.onclick = () => selectMoment(index)
     $('#timeline-track').append(marker)

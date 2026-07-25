@@ -72,12 +72,12 @@ while preserving the earlier event-driven and narrative-fidelity behavior.
 - spatial topology separated from communication, capability, and permission;
 - execution-inert aggregate graph views;
 - retained causal traces and sequential LLM causal-moment narration;
-- autonomous due-set scheduling with scenario-declared integer time;
+- autonomous due-set scheduling with a separate scenario clock and unique
+  causal timestamps for successive moments and exact subevents;
 - a Service Desk baseline with eight causal moments, including a human
   internal wake with no new observation and a three-phase exact process with
   no model calls;
-- one frozen simulated-second-1 activation set shared by that person and
-  process;
+- one frozen process-tick-1 activation set shared by that person and process;
 - a purchase-to-payment probe that separates human approval, copied policy and
   signing evidence, exact internal payment authorization, and a declared coarse
   external processor;
@@ -118,8 +118,9 @@ The autonomous purchase-to-payment canary `run_609b4503dda6` exercised V0.12
 behavior commit `e6c935f6352e937f2307342757f2f04ddaa02285` with four human
 calls at medium reasoning and four narrator calls at low reasoning for
 $0.04058125. It began only with the requester, then activated the approver and
-AP clerk from delivered observations; all four moments remained causally
-ordered at logical time 0 because route latency is deliberately unmodeled.
+AP clerk from delivered observations; all four moments remained at scenario
+clock 0 because route latency is deliberately unmodeled, while their causal
+order is the unique sequence `c1` through `c4`.
 All eight structured calls validated with zero retries. Full-trace inspection
 confirmed bounded information/interface access, complete prior-narrative
 context, current-moment-only citations, exact-gate authorization, and zero

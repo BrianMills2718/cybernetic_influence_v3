@@ -480,7 +480,7 @@ def service_desk_fixture(
             "incident across an authored service-operations center and remote "
             "customer site."
         ),
-        time_unit="second",
+        time_unit="process_tick" if multirate else "step",
         initial_state=state,
         analytical_boundaries=[
             AnalyticalBoundary(

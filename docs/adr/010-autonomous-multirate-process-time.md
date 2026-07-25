@@ -10,20 +10,31 @@ messages. Its state may change because of perceptions, retained intentions,
 ongoing activity, elapsed time, or other internal dynamics. The scheduler must
 not infer inertness merely from the absence of a newly delivered observation.
 
-Simulation time, process updates, causal moments, and exact events are distinct:
+Scenario time, causal time, process updates, causal moments, and exact events
+are distinct:
 
-- simulation time is an integer timestamp in a scenario-declared base unit;
+- scenario time is an integer clock in a scenario-declared base unit and may
+  remain unchanged when no elapsed duration is modeled;
+- causal time is a strictly increasing integer assigned once to each successive
+  causal moment;
 - a process update advances one stateful entity according to its own dynamics;
-- a causal moment batches everything due at one timestamp against one frozen
-  pre-moment state;
+- a causal moment batches everything due together against one frozen
+  pre-moment state and has a unique timestamp such as `c2`;
 - exact events retain attempts, mechanism decisions, deliveries, and commits
-  within that moment.
+  within that moment, with stable trace positions such as `c2.1` and `c2.2`.
+
+Exact-event trace positions provide total replay order. They do not create a
+causal edge between otherwise independent events: explicit causal-parent links
+remain the authority for what caused what, and same-moment participants still
+cannot observe one another's proposals.
 
 Every process may produce `next_update_at`; every delayed effect or observation
 has `arrives_at`. The simulator jumps to the earliest due timestamp and updates
-the due set. Timestamp divisions are arbitrary integer multiples of the
-scenario unit, not powers of two. A fine clock resolution orders fast effects
-but does not require an LLM call at every representable instant.
+the due set. Those fields use the scenario clock, while the committed activation
+ledger supplies the independent causal clock. Scenario-clock divisions are
+arbitrary integer multiples of the scenario unit, not powers of two. A fine
+clock resolution orders fast effects but does not require an LLM call at every
+representable instant.
 
 ## Multirate Agency
 
@@ -36,7 +47,8 @@ Fast known behavior belongs in exact mechanisms or conventional controllers.
 An LLM may configure a bounded contingent controller and reconsider it when a
 material condition or scheduled boundary occurs; it should not narrate every
 micro-transition. Agents due at the same timestamp may decide concurrently from
-the frozen state. Causally dependent updates at later timestamps remain ordered.
+the frozen state in one causal moment. A later moment receives a strictly later
+causal timestamp even when the scenario clock has not advanced.
 
 Conceptually every stateful process advances with elapsed time. Computational
 evaluation may be skipped only when the process contract establishes that no
@@ -65,12 +77,16 @@ The representative trajectory includes a human internal wake with no new
 observation and a three-phase exact remediation process with no model calls.
 The exact trace, replay, budgets, causal graph, participant inspector, and
 sequential narration retain the simulated time and reason for each activation.
+The analyst projection additionally assigns unique causal timestamps to moments
+and exact-event substeps. Service Desk scenario time is currently expressed as
+uncalibrated `process_tick` values, not real-world seconds.
 
 V0.12 applies the same scheduler to purchase-to-payment. Only the requester is
 an authored `scenario_start`; the approver and AP clerk become due from
 unconsumed delivered observations, and the runner stops at quiescence. Its
 zero-delay routes preserve causal ancestry while leaving elapsed workflow
-latency explicitly unmodeled.
+latency explicitly unmodeled. Its moments nevertheless have unique causal
+timestamps.
 
 The causal core still drains the complete typed cascade from one accepted
 action before accepting another. Therefore this slice does not claim arbitrary

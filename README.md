@@ -31,8 +31,8 @@ The simulator currently includes:
 - an explicit procedural control profile;
 - autonomous causal moments in the Service Desk and purchase-to-payment
   scenarios: each person or exact process may wake from delivered information
-  or retained internal timing, and everyone due at one timestamp receives the
-  same frozen pre-moment state;
+  or retained internal timing, everyone due together receives the same frozen
+  pre-moment state, and every successive moment has a unique causal timestamp;
 - an exact three-phase remediation process that advances without model calls,
   including one moment shared with a triager reconsidering without new input;
 - zero-cost scripted reference runs;
@@ -92,10 +92,16 @@ initial customer report starts the triager; thereafter, newly delivered
 observations and retained `next_update_at` intentions form the next frozen
 activation set. A person can therefore reconsider without a new message, while
 an exact state-machine controller can advance more often without paying for an
-LLM call. The UI and narrator expose each moment's simulated time, time unit,
-participant kind, and activation cause. The older fixed nine-activation
-schedule remains only inside the closed fidelity-report harness so historical
-comparison evidence retains its original sampling contract.
+LLM call. The UI and narrator expose each moment's unique causal timestamp,
+participant kind, and activation cause. A separate scenario clock is retained
+for authored process delays; the Service Desk currently uses uncalibrated
+process ticks rather than claiming realistic elapsed seconds. Exact subevents
+within moment `c2`, for example, have canonical trace positions `c2.1`,
+`c2.2`, and so on; explicit parent links, not that stable replay order, state
+which events actually caused others. The older fixed nine-activation schedule
+remains only inside the closed
+fidelity-report harness so historical comparison evidence retains its original
+sampling contract.
 
 This MVP does not yet interleave unrelated processes inside one exact action's
 nonzero-delay causal cascade; the representative Service Desk uses zero-delay

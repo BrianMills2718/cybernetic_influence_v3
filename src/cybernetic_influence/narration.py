@@ -135,6 +135,8 @@ def narrate_live_moments(
                 "moment": index,
                 "activation": moment["activation"],
                 "participants": moment["participants"],
+                "causal_time": moment["causal_time"],
+                "causal_timestamp": moment["causal_timestamp"],
                 "logical_time": moment["logical_time"],
                 "narrative": narration.narrative,
                 "source_event_ids": narration.source_event_ids,
@@ -198,6 +200,12 @@ def reference_narration() -> dict[str, object]:
 def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
     timeline = _list_of_mappings(document.get("timeline"))
     traces = _list_of_mappings(document.get("traces"))
+    projected_moments = _list_of_mappings(document.get("moments"))
+    moment_by_activation = {
+        str(moment["activation"]): moment
+        for moment in projected_moments
+        if isinstance(moment.get("activation"), str)
+    }
     events_by_activation: dict[str, list[dict[str, object]]] = {}
     for event in timeline:
         activation = event.get("activation")
@@ -232,6 +240,23 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
     moments: list[dict[str, object]] = []
     for activation, activation_traces in traces_by_activation.items():
         logical_time = activation_traces[0]["logical_time"]
+        projected_moment = moment_by_activation.get(activation)
+        causal_time = (
+            projected_moment.get("causal_time")
+            if projected_moment is not None
+            else activation_traces[0].get("causal_time")
+        )
+        causal_timestamp = (
+            projected_moment.get("causal_timestamp")
+            if projected_moment is not None
+            else activation_traces[0].get("causal_timestamp")
+        )
+        if not isinstance(causal_time, int) or not isinstance(
+            causal_timestamp, str
+        ):
+            raise ValueError(
+                f"causal moment {activation!r} lacks a valid causal timestamp"
+            )
         events = events_by_activation.get(activation, [])
         if not events:
             private_updates = [
@@ -259,6 +284,8 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
             {
                 "activation": activation,
                 "participants": [trace["person"] for trace in activation_traces],
+                "causal_time": causal_time,
+                "causal_timestamp": causal_timestamp,
                 "logical_time": logical_time,
                 "events": events,
                 "participant_traces": [
@@ -285,7 +312,7 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
         )
     return sorted(
         moments,
-        key=lambda item: (cast(int, item["logical_time"]), str(item["activation"])),
+        key=lambda item: cast(int, item["causal_time"]),
     )
 
 

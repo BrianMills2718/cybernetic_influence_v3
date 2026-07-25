@@ -17,9 +17,11 @@ instructions to continue their former “next slice” sections.
 [Slice 14: Pausable live runs](014-pausable-live-runs.md) is the sole active
 packet. Its runtime implementation is deployed, and a real DeepSeek run has
 completed from a retained live checkpoint. The remaining work is the integrated
-demo completion gate: obtain the operator's short usability judgment. The
-resumed trace has passed duplicate/cost/narrative-continuity inspection, and the
-current desktop workflow has passed the rendered browser gate.
+demo completion gate: deploy and recheck the operator-requested unique causal
+timestamp correction, then obtain the operator's short usability judgment. The
+resumed trace has passed duplicate/cost/narrative-continuity inspection; the
+previous desktop workflow passed its rendered browser gate before the clock
+labeling defect was identified.
 
 [Slice 13: Configurable, explainable runs](013-configurable-explainable-runs.md)
 is implemented and retained as completed design evidence. Its remaining
