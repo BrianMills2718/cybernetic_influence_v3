@@ -29,6 +29,14 @@ desktop acceptance is consolidated into Slice 14's integrated demo gate rather
 than advertised as a second active packet. Conversational scenario authoring is
 post-demo roadmap direction and has no active implementation plan.
 
+## Proposed next packet
+
+[Slice 15: Calibrated elapsed time](015-calibrated-elapsed-time.md) is a
+post-demo proposal, not an active packet. It preserves unique causal time while
+adding source-labelled modeled durations, overlapping future work, and
+truthful elapsed-time readout. It cannot activate until Slice 14 closes or is
+reset and the operator chooses the timing evidence source.
+
 ## Completed evidence
 
 | Slice | Outcome |

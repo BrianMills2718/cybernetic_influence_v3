@@ -162,6 +162,23 @@ yet supported. The UI is technically reviewable; operator comprehension and
 analytical usefulness remain under iterative stakeholder review rather than
 being treated as proven.
 
+## Proposed Post-Demo Direction: Calibrated Elapsed Time
+
+After the current demo gate, the next substantial fidelity improvement is to
+replace the Service Desk's uncalibrated process ticks with explicitly
+source-labelled modeled durations. Human activities, deliveries, exact-process
+transitions, and stipulated external feedback would become scheduled future
+work, allowing independent work to overlap without treating LLM/provider
+latency as scenario time. This would make the current trajectory temporally
+plausible and inspectable, not automatically calibrated to any real service
+organization.
+
+[Slice 15](plans/015-calibrated-elapsed-time.md) owns the proposed contract,
+initial Service Desk vertical, and acceptance checks. It remains inactive until
+the current demo is closed or explicitly reset and an evidence source is chosen:
+representative measurements, qualified expert estimates, or a clearly labelled
+author assumption.
+
 Stakeholder observation has occurred repeatedly on the deployed workflow: the
 operator ran and inspected authored scenarios and directly shaped the map,
 narrative, configuration, and lifecycle controls. This licenses the current
