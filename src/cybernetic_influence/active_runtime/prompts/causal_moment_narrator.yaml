@@ -36,8 +36,9 @@ user: |
   Current causal moment:
   {{ moment | tojson }}
 
-  Write one or two sentences, at most 360 characters. Lead with the meaningful
-  change in ordinary language: who did what, what happened, and why it matters
+  Write exactly one sentence of at most 240 characters. This account is shown
+  in a compact analyst card, so omit setup and routine mechanics. Lead with the
+  meaningful change in ordinary language: who did what, what happened, and why it matters
   to the unfolding incident. Treat causal_timestamp as the unique causal order.
   Mention the separate logical_time scenario clock only when an authored delay
   matters; do not translate it into real-world elapsed time. Translate retained

@@ -14,7 +14,9 @@ import yaml
 
 NARRATOR_TASK = "cybernetic_causal_moment_narration"
 NARRATOR_MAX_BUDGET = 0.02
-NARRATOR_MAX_TOKENS = 384
+# The analyst card needs one compact account; a bounded completion prevents a
+# provider-accepted but locally overlong response from breaking the sequence.
+NARRATOR_MAX_TOKENS = 96
 NARRATOR_REASONING_EFFORT = "low"
 
 StructuredCall = Callable[..., tuple[Any, Any]]
