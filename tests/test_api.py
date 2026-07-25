@@ -83,11 +83,13 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert page.headers["x-content-type-options"] == "nosniff"
     assert "Scenario condition" in page.text
     assert "Simulation map" in page.text
-    assert "Spatial layout" in page.text
-    assert "Causal flow" in page.text
-    assert "Narrative for the selected causal moment" in page.text
-    assert "Causal-moment narrative" in page.text
+    assert "Spatial topology" in page.text
+    assert "Configured interaction pathways" in page.text
+    assert "Realized causal graph" in page.text
+    assert "Narrative for the selected causal step" in page.text
+    assert "Causal-step narrative" in page.text
     assert "Play simulation" in page.text
+    assert 'id="lifecycle-help"' in page.text
     assert "Run history" in page.text
     assert "Read me" in page.text
     assert "How to read a cybernetic simulation" in page.text
@@ -101,7 +103,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "/assets/graph-canvas.js" in page.text
     assert "/assets/graph-canvas.css" in page.text
     assert "V2 Inspect" not in page.text
-    assert "Choose a moment" in page.text
+    assert "Choose a step" in page.text
     graph_script = api.get("/assets/graph-canvas.js")
     graph_styles = api.get("/assets/graph-canvas.css")
     app_script = api.get("/assets/app.js")
@@ -117,7 +119,11 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert len(graph_script.content) > 250_000
     assert b".react-flow" in graph_styles.content
     assert b".scrollIntoView" not in app_script.content
-    assert b"Causal flow shows retained information routes" in app_script.content
+    assert b"Configured interaction pathways show scenario-configured" in app_script.content
+    assert b"function renderLifecycleControls" in app_script.content
+    assert b"renderLifecycleControls(current)" in app_script.content
+    assert b"how did this condition change the path to safe closure" in app_script.content
+    assert b"modeled elapsed time T+" in app_script.content
     assert b"aria-pressed" in app_script.content
     assert b"showTraceInPlace(button.dataset.person)" in app_script.content
     assert b"trace.style.minHeight" in app_script.content

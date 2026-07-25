@@ -14,24 +14,21 @@ instructions to continue their former “next slice” sections.
 
 ## Active packet
 
-[Slice 15: Positive-duration modeled time](015-calibrated-elapsed-time.md) is the
-active packet. Its first local vertical retains delayed exact work across
-checkpoints and exposes it as its own causal/narrative record. Positive elapsed
-duration across every Service Desk world-event causal link, the realized
-event/activity causal graph, and one bounded live API proof are complete. The
-remaining packet evidence is a rendered browser review. A separate timing-profile
-compiler is no longer planned; typed scenario configuration and bounded runtime
-resolution own timing. No calibrated timing claim has been made.
+[Slice 16: Canonical analyst demo](016-canonical-analyst-demo.md) is the active
+packet. It makes one existing Service Desk run understandable from choose/play
+through narrative, map, evidence, and pause/resume. It also adopts the names
+**Configured interaction pathways** and **Realized causal graph**, while keeping
+uncalibrated process ticks distinct from modeled elapsed time.
 
-[Slice 14: Pausable live runs](014-pausable-live-runs.md) remains implemented
-and deployed. Its final operator usability judgment is deferred—not completed—
-while the operator-directed timing work proceeds.
+[Slice 14: Pausable live runs](014-pausable-live-runs.md) and
+[Slice 15: Positive-duration modeled time](015-calibrated-elapsed-time.md) are
+implemented evidence. Slice 16 owns their remaining integrated browser and
+operator-comprehension acceptance.
 
 [Slice 13: Configurable, explainable runs](013-configurable-explainable-runs.md)
-is implemented and retained as completed design evidence. Its remaining
-desktop acceptance is consolidated into Slice 14's integrated demo gate rather
-than advertised as a second active packet. Conversational scenario authoring is
-post-demo roadmap direction and has no active implementation plan.
+is implemented and retained as completed design evidence. Conversational
+scenario authoring is the next product vertical after the canonical demo; it
+has no active implementation packet yet.
 
 ## Completed evidence
 

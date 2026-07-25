@@ -1,16 +1,18 @@
 ---
 doc_role: active_plan
 authority: implementation_plan
-status: active
+status: superseded
 created: 2026-07-24
-updated: 2026-07-24
+updated: 2026-07-25
 predecessor: 013-configurable-explainable-runs.md
 ---
 
 # Slice 14: Pausable Live Runs
 
-**Status: Live pause/resume implemented and deployed; integrated demo acceptance
-remains active.**
+**Status: The checkpoint/runtime implementation remains evidence. The active
+user-visible acceptance and any repair are owned by successor
+[Slice 16](016-canonical-analyst-demo.md), after the operator reported a pause
+without a discoverable Resume control.**
 
 ## Current implementation evidence
 

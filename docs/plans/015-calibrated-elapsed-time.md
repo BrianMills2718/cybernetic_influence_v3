@@ -1,15 +1,16 @@
 ---
 doc_role: proposed_plan
 authority: scoped
-status: active
+status: superseded
 created: 2026-07-24
 predecessor: 014-pausable-live-runs.md
 ---
 
 # Slice 15: Positive-Duration Modeled Time
 
-**Status: active. Slices 15A–15C are implemented; the bounded local live proof
-is complete and one browser review remains. The first realization uses the
+**Status: Slices 15A–15C are implemented evidence. Their remaining integrated
+browser/operator acceptance is owned by successor
+[Slice 16](016-canonical-analyst-demo.md). The first realization uses the
 Service Desk's explicit minimum world duration as a source-labelled scenario
 assumption, not a real-world calibration.**
 

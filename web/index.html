@@ -37,8 +37,9 @@
         </label>
         <label class="live"><input id="live" type="checkbox"> Use live LLM agents <small id="live-help">People reason from their own memory, position, and delivered observations.</small></label>
         <button id="run">Play simulation</button>
-        <button id="pause" hidden>Pause after this causal moment</button>
+        <button id="pause" hidden>Pause after this causal step</button>
         <button id="resume" hidden>Resume paused run</button>
+        <p id="lifecycle-help" class="muted" aria-live="polite"></p>
         <details id="run-settings">
           <summary>Model, cost, and simulation assumptions</summary>
           <div class="settings-grid">
@@ -78,12 +79,12 @@
         <span class="eyebrow">People · information · objects · mechanisms</span>
         <div class="heading-help"><h2>Simulation map</h2><button class="help-button" type="button" data-help="map-help" aria-expanded="false" aria-controls="map-help">?</button></div>
         <p id="map-help" class="inline-help" hidden></p>
-        <p class="muted">Choose a layout, then select a node or edge for its retained state. Spatial layout shows authored places, occupants, and physical topology; causal flow shows declared interfaces and routes; realized trajectory shows the events that actually occurred and their causal parents.</p>
+        <p class="muted">Choose a view, then select a node or edge for its retained state. Spatial topology shows authored places and physical links; configured interaction pathways show the scenario relationships through which information or action may travel; the realized causal graph shows what actually occurred.</p>
         <div class="projection-toolbar" aria-label="Map layout">
           <div class="tabs">
-            <button id="spatial-layout" type="button" title="Shows authored places, occupants, and physical links. It does not imply permission, communication, or access.">Spatial layout</button>
-            <button id="causal-layout" type="button" title="Shows declared information routes, actions, records, and exact mechanisms rather than spatial proximity.">Causal flow</button>
-            <button id="trajectory-layout" type="button" title="Shows retained events that actually occurred, ordered by modeled elapsed time and connected only by causal-parent links.">Realized trajectory</button>
+            <button id="spatial-layout" type="button" title="Shows authored places, occupants, and physical links. It does not imply permission, communication, or access.">Spatial topology</button>
+            <button id="causal-layout" type="button" title="Shows scenario-configured routes, actions, records, and mechanisms. A pathway does not itself grant authorization.">Configured interaction pathways</button>
+            <button id="trajectory-layout" type="button" title="Shows retained events that actually occurred, ordered by modeled elapsed time and connected only by causal-parent links.">Realized causal graph</button>
           </div>
           <p id="projection-help" class="muted"></p>
         </div>
@@ -94,9 +95,9 @@
       </section>
 
       <section class="turn-narratives">
-        <span class="eyebrow">Causal-moment narrative</span>
+        <span class="eyebrow">Causal-step narrative</span>
         <h2>How the run unfolded</h2>
-        <p class="muted">An LLM writes one concise account per causal moment from the retained trace. Each account carries the earlier story forward; exact evidence remains available below.</p>
+        <p class="muted">An LLM writes one concise account per causal step from the retained trace. Each account carries the earlier story forward; exact evidence remains available below.</p>
         <div id="turn-narratives"></div>
         <footer class="story" aria-label="Run outcome">
           <span class="eyebrow">Outcome</span>
@@ -120,10 +121,10 @@
       </section>
 
       <details class="moment-inspector">
-        <summary>Choose a causal moment <span class="summary-help">Synchronize the map and inspect the exact evidence behind one account</span></summary>
+        <summary>Choose a causal step <span class="summary-help">Synchronize the map and inspect the exact evidence behind one account</span></summary>
         <section class="timeline-panel">
-          <span class="eyebrow">Causal time</span>
-          <div class="heading-help"><h2>Choose a moment</h2><button class="help-button" type="button" data-help="moment-help" aria-expanded="false" aria-controls="moment-help">?</button></div>
+          <span class="eyebrow">Causal order and modeled time</span>
+          <div class="heading-help"><h2>Choose a step</h2><button class="help-button" type="button" data-help="moment-help" aria-expanded="false" aria-controls="moment-help">?</button></div>
           <p id="moment-help" class="inline-help" hidden></p>
           <p class="muted">The map, account, and inspector stay synchronized with this moment. Simulated time may advance unevenly because each process follows its own cadence.</p>
           <div class="timeline-controls">
@@ -136,12 +137,12 @@
         </section>
 
         <section class="step-account">
-          <span class="eyebrow">Narrative for the selected causal moment</span>
+          <span class="eyebrow">Narrative for the selected causal step</span>
           <div class="heading-help"><h2 id="step-account-title"></h2><button class="help-button" type="button" data-help="narrative-help" aria-expanded="false" aria-controls="narrative-help">?</button></div>
           <p id="narrative-help" class="inline-help" hidden></p>
           <p id="step-account-body"></p>
           <p id="step-account-source" class="muted"></p>
-          <div id="moment-events" class="moment-events" aria-label="Exact events in selected causal moment"></div>
+          <div id="moment-events" class="moment-events" aria-label="Exact events in selected causal step"></div>
           <article id="event-detail" class="event-detail"></article>
         </section>
       </details>
@@ -168,9 +169,9 @@
       <p>This is a bounded causal model, not a claim that a real organization is a single mind. People and exact processes act; records, credentials, and mechanisms constrain what can happen; an organization is an analytical composite over those retained components.</p>
       <div class="readme-grid">
         <article><h3>Choose and play</h3><p>Select a scenario and condition, then run it. Live runs let LLM-modeled people act from their retained memory, position, observations, and interfaces. Reference runs use fixed zero-cost policies.</p></article>
-        <article><h3>Read the map</h3><p><strong>Spatial layout</strong> shows authored places, occupants, and physical links. <strong>Causal flow</strong> shows information, actions, records, and mechanisms. Spatial proximity does not grant authority or communication.</p></article>
+        <article><h3>Read the map</h3><p><strong>Spatial topology</strong> shows authored places, occupants, and physical links. <strong>Configured interaction pathways</strong> show relationships that may support information or action when exact mechanisms permit them; they do not grant authority. <strong>Realized causal graph</strong> shows what happened in the selected run.</p></article>
         <article><h3>Change analytical scale</h3><p>The graph’s analytical-scale control collapses or expands an execution-inert composite such as the service desk. It changes what is summarized, not what exists or acts in the simulation.</p></article>
-        <article><h3>Follow the account</h3><p>The narrative is an LLM-written account grounded in each moment’s retained trace. Use the rolled-up causal-moment inspector and advanced evidence when you need to step down to exact events and state.</p></article>
+        <article><h3>Follow the account</h3><p>The narrative is an LLM-written account grounded in each step’s retained trace. Use the rolled-up causal-step inspector and advanced evidence when you need to step down to exact events and state.</p></article>
       </div>
     </section>
   </main>

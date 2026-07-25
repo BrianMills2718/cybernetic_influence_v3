@@ -25,8 +25,9 @@ claim to reproduce every omitted computation or predict a real system.
 
 ## Current Stage and Truth
 
-Stage: MVP/PoC. Slice 15 is active after the operator directed modeled-time
-work to proceed before recording Slice 14's final usability judgment.
+Stage: MVP/PoC. The active packet is [Slice 16: Canonical analyst demo]
+(plans/016-canonical-analyst-demo.md). It turns the implemented runtime into
+one intelligible analyst flow before adding more simulator substrate.
 
 V0.13 plus live checkpoint continuation is implemented and deployed as the
 current private demo candidate on the Mac development host at simulator
@@ -51,15 +52,14 @@ live checkpoint with lifecycle `completed_from_checkpoint`, 12 causal moments,
 105 events, 11 participant calls, 12 narrator calls, 12 narratives, and
 `$0.0054597981` observed cost.
 
-Technical execution is therefore observed for the configured live path and for
-one live checkpoint continuation. Full-trace inspection found no duplicated
-causal event or provider logical call, preserved the complete sequential
-narrative context, and reconciled every provider-reported receipt to retained
-cost. The current-revision desktop workflow also passes through real Play,
-pause, resume, both maps, narratives, participant/composite traces,
-causal-moment controls, and history readback without console/network errors or
-page-position jumps. Stakeholder reviewability is established; the final
-operator usability judgment for this demo candidate is not yet recorded.
+Technical execution is observed for the configured live path and one live
+checkpoint continuation. Full-trace inspection found no duplicated causal event
+or provider logical call, preserved the complete sequential narrative context,
+and reconciled every provider-reported receipt to retained cost. Those facts do
+not establish a usable analyst experience: the current operator reported that a
+pause did not expose a Resume control and that the causal/time labels did not
+explain what to inspect. Slice 16 owns reproduction, repair, and an integrated
+browser review of that user-visible flow.
 
 The operator's first review found that repeated scenario-clock values were
 misleadingly displayed as elapsed seconds. The deployed correction now shows
@@ -222,15 +222,17 @@ its stipulated service workflow.
 ## Current Demo Completion Boundary
 
 “Finished” currently means a reviewable private PoC demo, not completion of the
-North Star or a production simulator. [Slice 14](plans/014-pausable-live-runs.md)
-remains the demo-completion boundary, but its final usability judgment is
-deferred while active [Slice 15](plans/015-calibrated-elapsed-time.md) makes
-modeled time truthful and inspectable. The demo is complete when:
+North Star or a production simulator. [Slice 16](plans/016-canonical-analyst-demo.md)
+is the sole demo-completion boundary. It integrates the prior pause/resume and
+timing implementation evidence into the operator's actual workflow. The demo
+is complete when:
 
-1. the current DeepSeek-default Service Desk run exposes synchronized spatial
-   and causal maps, grounded moment narratives, participant/composite traces,
-   exact evidence, effective configuration, and observed cost;
-2. a live run pauses at a validated causal boundary and resumes without
+1. the current DeepSeek-default Service Desk run exposes Spatial topology,
+   Configured interaction pathways, and a Realized causal graph, grounded step
+   narratives, participant/composite traces, exact evidence, effective
+   configuration, and observed cost;
+2. a live run pauses at a validated causal boundary, visibly offers Resume
+   after reload/history reopening, and resumes without
    duplicated pre-pause causal events or provider logical calls, with continuous
    narration and receipt-supported observed cost;
 3. the current desktop path—choose scenario, Play, map, narrative, traces,
@@ -241,9 +243,10 @@ modeled time truthful and inspectable. The demo is complete when:
 5. the operator uses the current build for five to ten minutes and finds no
    remaining demo-blocking comprehension or control defect.
 
-Checks 1 through 4 have current deployed evidence. The final operator judgment
-remains open. Once it passes, mark Slice 14 and the current demo complete. Do
-not add another substrate or feature packet to this gate.
+Earlier implementation evidence supports parts of checks 1 through 4, but the
+operator's reported confusion reopens the integrated UI claim. Once this packet
+passes, mark Slice 16 and the current demo complete. Do not add another
+substrate or feature packet to this gate.
 
 ## Approved Outcome Extension
 
@@ -347,7 +350,7 @@ The operator explicitly advanced modeled-time work before recording the final
 short usability judgment; that judgment remains a later acceptance check rather
 than a competing active implementation packet.
 
-### 7. Make world time and realized causal chains truthful — active
+### 7. Make world time and realized causal chains truthful — implemented evidence
 
 Complete [Slice 15](plans/015-calibrated-elapsed-time.md) as the current
 representative vertical:
@@ -364,7 +367,50 @@ project. If it stopped after Service Desk passed, the analyst would have a small
 but useful simulation whose realized causal chain is temporally meaningful and
 inspectable.
 
-### 8. Run one Levin-style composite-agency assay — next
+### 8. Canonical analyst demo — active
+
+The MVP outcome is one clear answerable flow: an analyst chooses or later
+authors a bounded Service Desk condition, presses Play, reads what changed and
+why, then steps down through a map and exact evidence to answer why the outcome
+occurred. This packet owns reliable pause/resume visibility, plain language,
+and the three distinct graph views:
+
+- **Spatial topology**: authored places, occupants, and physical links.
+- **Configured interaction pathways**: scenario-configured relationships that
+  may carry information or action when other mechanism conditions hold; they do
+  not themselves grant authorization.
+- **Realized causal graph**: retained events that occurred in this run, linked
+  only by explicit causal-parent relations.
+
+It also distinguishes unique causal order (`c1`, `c2`, …) from **modeled elapsed
+time**. The initial display must not call uncalibrated process ticks seconds or
+wall-clock timestamps.
+
+### 9. Add conversational scenario drafting behind a typed compiler — next
+
+This comes before comparisons: it removes the closed scenario catalog while
+preserving human review of the executable world model.
+
+```text
+conversation -> typed scenario draft, including timing assumptions
+  -> validation and unresolved questions
+  -> spatial, configured-interaction, and planned-intervention preview
+  -> analyst approval -> compiled scenario -> run
+```
+
+Reuse the current causal-state, active-system, fidelity-note, representation,
+spatial, timing, and analytical-boundary contracts. Begin with a small library
+of approved mechanism templates and one bounded novel workflow. Unsupported
+mechanisms remain unresolved or explicitly coarse; they never become silently
+generated adjudication code.
+
+### 10. Comparative causal analysis — post-MVP
+
+Compare approved conditions only after an analyst can author/review one bounded
+scenario. The comparison must explain the outcome, modeled delay, and changed
+path with exact evidence rather than presenting two disconnected graphs.
+
+### 11. Run one Levin-style composite-agency assay — post-MVP
 
 Use one authored scenario and its execution-inert analytical boundary to ask a
 specific multiscale question: does the candidate composite preserve or restore
@@ -380,29 +426,11 @@ mind, or a single additive percentage of causation.
 [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) owns that
 interpretation.
 
-This comes before general conversational authoring because it proves the
-simulator's distinctive analyst job and supplies the measurement contract that
-future generated scenarios must support.
+This is post-MVP. It follows conversational authoring and comparison because
+those flows must first make an authored scenario and its intervention evidence
+inspectable to the analyst.
 
-### 9. Add conversational scenario drafting behind a typed compiler — then
-
-After the first composite-agency assay fixes the required scenario and
-intervention contracts, implement one representative authoring vertical:
-
-```text
-conversation -> typed scenario draft, including timing assumptions
-  -> validation and unresolved questions
-  -> spatial, structural-causal, and planned-intervention preview
-  -> analyst approval -> compiled scenario -> run
-```
-
-Reuse the current causal-state, active-system, fidelity-note, representation,
-spatial, timing, and analytical-boundary contracts. Begin with a small library
-of approved mechanism templates and one bounded novel workflow. Unsupported
-mechanisms remain unresolved or explicitly coarse; they never become silently
-generated adjudication code.
-
-### 10. Expand representation depth only through concrete pressure
+### 12. Expand representation depth only through concrete pressure
 
 Add overlapping/nested aggregate views, richer composite analysis, additional
 process implementations, or representation refinement only when a scenario

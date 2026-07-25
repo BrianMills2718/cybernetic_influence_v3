@@ -39,17 +39,43 @@ function setWorkspaceView(view) {
   }
 }
 
-function scenarioClock(value) {
-  const unit = current?.time_unit || 'step'
-  const plural = Number(value) === 1 ? unit : `${unit}s`
-  return `scenario clock ${value} ${plural}`
+function modeledElapsedTime(event) {
+  if (!event?.timing) return 'modeled elapsed time omitted'
+  const unit = String(current?.time_unit || 'step').replaceAll('_', ' ')
+  const plural = Number(event.logical_time) === 1 ? unit : `${unit}s`
+  return `modeled elapsed time T+${event.logical_time} ${plural} (${String(event.timing.source_kind || 'scenario assumption').replaceAll('_', ' ')})`
 }
 
 function causalTime(item, fallback = 1) {
   const activationMatch = String(item?.activation || '').match(/^activation_(\d+)$/)
   const derived = activationMatch ? Number(activationMatch[1]) + 1 : fallback
   const value = Number.isInteger(item?.causal_time) ? item.causal_time : derived
-  return `causal time c${value}`
+  return `causal order c${value}`
+}
+
+function renderLifecycleControls(run = current) {
+  const status = run?.status || 'ready'
+  const paused = status === 'paused'
+  const pausing = status === 'pause_requested'
+  $('#resume').hidden = !paused
+  $('#resume').disabled = false
+  $('#pause').hidden = true
+  $('#pause').disabled = false
+  if (paused) {
+    $('#run-status').textContent = 'Paused'
+    $('#lifecycle-help').textContent = run.pause_message || 'This run stopped at a validated causal boundary. Resume continues from the retained checkpoint.'
+  } else if (pausing) {
+    $('#run-status').textContent = 'Pause requested'
+    $('#lifecycle-help').textContent = run.pause_message || 'The current causal step is finishing before the checkpoint is retained.'
+  } else if (status === 'completed') {
+    $('#run-status').textContent = 'Completed'
+    $('#lifecycle-help').textContent = 'This run is complete. Choose another condition or open a saved run from Run history.'
+  } else if (status === 'failed' || status === 'interrupted') {
+    $('#run-status').textContent = status === 'failed' ? 'Failed' : 'Interrupted'
+    $('#lifecycle-help').textContent = run.error || 'This run did not reach a resumable checkpoint.'
+  } else if (!run) {
+    $('#lifecycle-help').textContent = 'Choose a scenario and condition, then play it to inspect what changed and why.'
+  }
 }
 
 function causeSummary(causes = []) {
@@ -198,7 +224,10 @@ function updateAuthorizationPreview() {
 function describeCondition() {
   const scenario = scenarioCatalog[$('#scenario').value]
   const arm = scenario?.arms.find((item) => item.id === $('#arm').value)
-  $('#arm-help').textContent = arm?.description || 'Choose the concrete condition you want the simulation to test.'
+  const question = $('#scenario').value === 'service_desk'
+    ? 'After Play, ask: how did this condition change the path to safe closure?'
+    : 'After Play, ask: what changed, why, and which retained evidence supports it?'
+  $('#arm-help').textContent = `${arm?.description || 'Choose the concrete condition you want the simulation to test.'} ${question}`
 }
 
 async function loadHistory() {
@@ -428,7 +457,7 @@ function renderTrajectoryInspector(event) {
        <dt>Minimum modeled duration</dt><dd>${html(timing.minimum_duration)} ${html(current.time_unit)} · ${html(timing.source_ref)}</dd>
        ${queueDelay > 0 ? `<dt>Runtime serialization delay</dt><dd>${html(queueDelay)} ${html(current.time_unit)}; retained separately from the scenario assumption.</dd>` : ''}`
     : ''
-  $('#inspector').innerHTML = `<span class="eyebrow">Realized event</span><h2>${html(event.kind.replaceAll('_', ' '))}</h2><p>${html(event.summary)}</p><dl class="detail-list"><dt>Elapsed time</dt><dd>${html(scenarioClock(event.logical_time))}</dd><dt>Causal parents</dt><dd>${html((event.causal_parent_event_ids || []).join(', ') || 'run root')}</dd>${timingDetails}</dl>`
+  $('#inspector').innerHTML = `<span class="eyebrow">Realized event</span><h2>${html(event.kind.replaceAll('_', ' '))}</h2><p>${html(event.summary)}</p><dl class="detail-list"><dt>Modeled elapsed time</dt><dd>${html(modeledElapsedTime(event))}</dd><dt>Causal parents</dt><dd>${html((event.causal_parent_event_ids || []).join(', ') || 'run root')}</dd>${timingDetails}</dl>`
 }
 
 function showNode(nodeId) {
@@ -714,12 +743,12 @@ function renderProjectionControls() {
   $('#causal-layout').setAttribute('aria-pressed', String(selectedGraphView === 'causal'))
   $('#trajectory-layout').setAttribute('aria-pressed', String(selectedGraphView === 'trajectory'))
   $('#projection-help').textContent = !hasWorld
-    ? 'This scenario has no authored places or spatial topology yet, so only its causal flow can be shown.'
+    ? 'This scenario has no authored places or spatial topology yet, so only configured interaction pathways and the realized causal graph can be shown.'
     : selectedGraphView === 'world'
-      ? 'Spatial layout shows authored places, occupants, and physical links. Adjacency does not itself grant permission or traversal.'
+      ? 'Spatial topology shows authored places, occupants, and physical links. Adjacency does not itself grant permission or traversal.'
       : selectedGraphView === 'trajectory'
-        ? 'Realized trajectory shows only retained events that occurred. Its arrows are explicit causal-parent links, not possible routes or physical adjacency.'
-      : 'Causal flow shows retained information routes, actions, records, and mechanisms. It does not imply physical proximity.'
+        ? 'The realized causal graph shows only retained events that occurred. Its arrows are explicit causal-parent links, not possible routes or physical adjacency.'
+      : 'Configured interaction pathways show scenario-configured information routes, actions, records, and mechanisms. They do not imply physical proximity or authorization.'
 }
 
 function causalMoments() {
@@ -763,16 +792,19 @@ function selectEvent(index, momentActivation = null) {
   const moment = moments[momentIndex]
   selectedMomentIndex = momentIndex
   $('#event-slider').value = selectedMomentIndex
-  $('#event-count').textContent = `${selectedMomentIndex + 1} / ${moments.length} moments · ${causalTime(moment, selectedMomentIndex + 1)}`
+  const stepEvent = (moment.event_ids || [])
+    .map((eventId) => current.timeline.find((item) => item.event_id === eventId))
+    .find(Boolean)
+  $('#event-count').textContent = `${selectedMomentIndex + 1} / ${moments.length} steps · ${causalTime(moment, selectedMomentIndex + 1)} · ${modeledElapsedTime(stepEvent)}`
   $('#previous-event').disabled = selectedMomentIndex === 0
   $('#next-event').disabled = selectedMomentIndex === moments.length - 1
   const exactBelongsToMoment = event.activation === activation
   $('#event-detail').innerHTML = exactBelongsToMoment ? `
-    <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>${html(event.causal_timestamp || causalTime(moment, selectedMomentIndex + 1))}</span><span>${html(scenarioClock(event.logical_time))}</span><span>revision ${html(event.state_revision)}</span>${event.activation ? `<span>${html(event.activation)}</span>` : ''}</div>
+    <div><span class="event-kind">${html(event.kind.replaceAll('_',' '))}</span><span>${html(event.causal_timestamp || causalTime(moment, selectedMomentIndex + 1))}</span><span>${html(modeledElapsedTime(event))}</span><span>revision ${html(event.state_revision)}</span>${event.activation ? `<span>${html(event.activation)}</span>` : ''}</div>
     <h3>${html(event.summary)}</h3>
     <small>${html(event.event_id)}</small>` : `
     <div><span class="event-kind">No committed event</span><span>${html(causalTime(moment, selectedMomentIndex + 1))}</span><span>${html(activation)}</span></div>
-    <h3>Every participant remained silent in this causal moment.</h3>
+    <h3>Every participant remained silent in this causal step.</h3>
     <small>The map remains at the latest preceding exact event.</small>`
   const accountEvent = exactBelongsToMoment ? event : {...event, activation, person:null}
   renderStepAccount(accountEvent)
@@ -842,7 +874,7 @@ function renderStepAccount(event) {
   if (narration) {
     const momentNumber = narration.moment || narration.turn
     const participants = narration.participants || [narration.person || 'system']
-    $('#step-account-title').textContent = `Causal moment ${momentNumber} · ${causalTime(narration, momentNumber)} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
+    $('#step-account-title').textContent = `Causal step ${momentNumber} · ${causalTime(narration, momentNumber)} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
     $('#step-account-body').textContent = narration.narrative
     $('#step-account-source').textContent = `Live LLM narrator · grounded in ${narration.source_event_ids.join(', ')}. It received this moment’s trace and the earlier moment narratives.`
   } else if (exactProcess) {
@@ -882,7 +914,7 @@ function renderTurnNarratives() {
       const participants = moment.participants || [moment.person || 'system']
       return `
       <button class="turn-narrative" data-activation="${html(moment.activation)}">
-        <span>Causal moment ${html(momentNumber)} · ${html(causalTime(moment, momentNumber))} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
+        <span>Causal step ${html(momentNumber)} · ${html(causalTime(moment, momentNumber))} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
         <p>${html(moment.narrative)}</p>
         <small>${html((moment.source_event_ids || []).join(' · '))}</small>
       </button>`
@@ -910,7 +942,7 @@ function renderTimeline(run) {
     marker.dataset.index = index
     const people = moment.participants.map((person) => person.replaceAll('_',' ')).join(' + ')
     const causes = Object.values(moment.activation_causes || {}).flat()
-    marker.title = `Causal moment ${index + 1}, ${causalTime(moment, index + 1)}: ${people}; ${causeSummary(causes)}${moment.silent ? ' (silent)' : ''}`
+    marker.title = `Causal step ${index + 1}, ${causalTime(moment, index + 1)}: ${people}; ${causeSummary(causes)}${moment.silent ? ' (silent)' : ''}`
     marker.setAttribute('aria-label', marker.title)
     marker.onclick = () => selectMoment(index)
     $('#timeline-track').append(marker)
@@ -950,6 +982,7 @@ function render(run) {
     describeCondition()
   }
   $('#result').hidden = false
+  renderLifecycleControls(current)
   renderProjectionControls()
   $('#result-status').textContent = `${current.status} · ${String(current.scenario || '').replaceAll('_',' ')} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
   $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator) · $${Number(current.cost).toFixed(6)} · ${current.run_id}`
@@ -1086,8 +1119,7 @@ $('#run').onclick = async () => {
     url.searchParams.set('run', body.run_id)
     window.history.replaceState({}, '', url)
     await loadHistory()
-    $('#run-status').textContent = body.status === 'paused' ? 'Paused' : 'Completed'
-    $('#resume').hidden = body.status !== 'paused'
+    renderLifecycleControls(body)
   } catch (error) {
     $('#run-status').textContent = error.message
     await loadHistory()
@@ -1102,7 +1134,7 @@ $('#pause').onclick = async () => {
   $('#pause').disabled = true
   try {
     await request(`/api/runs/${activeRunId}/pause`, {method:'POST'})
-    $('#run-status').textContent = 'Pause requested; finishing this causal moment…'
+    $('#run-status').textContent = 'Pause requested; finishing this causal step…'
   } catch (error) {
     $('#run-status').textContent = error.message
   }
@@ -1127,6 +1159,7 @@ $('#resume').onclick = async () => {
 
 Promise.all([loadConfig(), loadHistory()])
   .then(async () => {
+    renderLifecycleControls()
     const retainedId = new URLSearchParams(window.location.search).get('run')
     if (retainedId) await openRetained(retainedId)
   })
