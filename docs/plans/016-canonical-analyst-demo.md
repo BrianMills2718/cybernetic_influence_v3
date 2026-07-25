@@ -75,12 +75,13 @@ Acceptance: API fixtures for completed, pause-requested, paused, and failed
 records render distinct states; a paused retained fixture exposes Resume; the
 map labels and tooltips preserve the terminology contract.
 
-### 16B — canonical answer-first walkthrough
+### 16B — canonical map-to-account walkthrough
 
-Make the post-run narrative lead with the outcome and condition-specific
-explanation, with maps/evidence below it. Add a minimal comparison-ready
-readout for the one run: condition, outcome, modeled timing availability, and
-the next exact evidence to inspect.
+Keep the map directly beneath Play and put the narrative directly below the map,
+as the operator requested. Lead that narrative with the outcome and its
+condition-specific explanation, then offer the exact inspector below it. Add a
+minimal comparison-ready readout for the one run: condition, outcome, modeled
+timing availability, and the next exact evidence to inspect.
 
 Acceptance: a reviewer can run baseline and `no_direct_path`, identify the
 changed direct report route, and find the retained evidence without opening
