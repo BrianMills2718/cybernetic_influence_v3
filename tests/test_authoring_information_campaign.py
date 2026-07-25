@@ -67,3 +67,19 @@ def test_disabled_publication_dissipates_without_inventing_recipient_access() ->
     assert result.core_result.final_state.fact("campaign_record.status").value == "drafted"
     assert [attempt.declared_active_system_ids for attempt in result.attempts] == [["campaign_source"]]
     assert any(event.event_kind == "effect_dissipated" for event in result.core_result.events)
+
+
+def test_information_campaign_rejects_a_second_authored_campaign_record() -> None:
+    proposal = information_campaign_proposal()
+    proposal.objects.append(type(proposal.objects[0]).model_validate({
+        "entity_id": "duplicate_campaign_record",
+        "entity_kind": "campaign_record",
+        "label": "Duplicate campaign record",
+        "description": "A record the compiler already owns.",
+    }))
+    try:
+        compile_scenario(proposal)
+    except ValueError as error:
+        assert "creates its campaign record" in str(error)
+    else:
+        raise AssertionError("a second authored campaign record was accepted")

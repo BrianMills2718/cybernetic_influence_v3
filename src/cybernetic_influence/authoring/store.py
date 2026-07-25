@@ -50,7 +50,7 @@ class _DraftAttempt(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     attempt: int = Field(ge=1)
     trace_id: str
-    status: Literal["accepted", "repair", "provider_error"]
+    status: Literal["accepted", "repair", "needs_input", "provider_error"]
     message: str
     observed_cost: float | None = Field(default=None, ge=0)
 

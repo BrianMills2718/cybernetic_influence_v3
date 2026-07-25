@@ -74,7 +74,7 @@ class AnalyticalBoundaryDraft(_StrictModel):
 
 
 class ResourceRequestWorkflowDraft(_StrictModel):
-    template_id: Literal["resource_request_v1"] = "resource_request_v1"
+    template_id: Literal["resource_request_v1"]
     requester_id: str = Field(pattern=_ID_PATTERN)
     reviewer_id: str = Field(pattern=_ID_PATTERN)
     request_id: str = Field(pattern=_ID_PATTERN)
@@ -90,7 +90,7 @@ class ResourceRequestWorkflowDraft(_StrictModel):
 class InformationCampaignWorkflowDraft(_StrictModel):
     """One traceable publication and assessment pathway, not a persuasion oracle."""
 
-    template_id: Literal["information_campaign_v1"] = "information_campaign_v1"
+    template_id: Literal["information_campaign_v1"]
     source_id: str = Field(pattern=_ID_PATTERN)
     recipient_id: str = Field(pattern=_ID_PATTERN)
     campaign_id: str = Field(pattern=_ID_PATTERN)

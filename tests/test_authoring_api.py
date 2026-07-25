@@ -7,7 +7,11 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from cybernetic_influence.api import create_app
-from cybernetic_influence.authoring.service import _ProposalConsumer
+from cybernetic_influence.authoring.service import (
+    _ProposalConsumer,
+    _provider_candidate_from_proposal,
+)
+from llm_client import LLMCapabilityError
 from test_authoring_compiler import _proposal
 from test_authoring_information_campaign import information_campaign_proposal
 
@@ -95,6 +99,61 @@ def test_provider_failure_becomes_a_visible_bounded_needs_input_state(tmp_path: 
     assert all(attempt["status"] == "provider_error" for attempt in retained["attempts"])
 
 
+def test_unresolved_question_retains_previewable_draft_without_repeating_spend(
+    tmp_path: Path,
+) -> None:
+    calls = 0
+
+    def questioning(*_args: object, **_kwargs: object) -> tuple[object, object]:
+        nonlocal calls
+        calls += 1
+        proposal = _proposal().model_copy(deep=True)
+        proposal.unresolved_questions = ["Which exact policy copy should govern eligibility?"]
+        return proposal, _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=questioning,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={"expected_revision": 0, "message_id": "m1", "message": "Model checkout."},
+    ).json()
+    assert calls == 1
+    assert draft["status"] == "needs_input"
+    assert draft["proposal"] is not None
+    assert draft["attempts"][0]["status"] == "needs_input"
+    assert "Which exact policy copy" in draft["diagnostics"][0]["message"]
+    assert api.get(f"/api/authoring/drafts/{draft_id}/preview").status_code == 200
+
+
+def test_nonretryable_capability_failure_stops_after_one_visible_attempt(tmp_path: Path) -> None:
+    def unsupported(*_args: object, **_kwargs: object) -> tuple[object, object]:
+        raise LLMCapabilityError("the selected route rejects this schema")
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=unsupported,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    failed = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={"expected_revision": 0, "message_id": "m1", "message": "A request."},
+    ).json()
+    assert len(failed["attempts"]) == 1
+    assert "cannot accept this structured schema" in failed["diagnostics"][0]["message"]
+    assert "selected route rejects this schema" in failed["diagnostics"][0]["message"]
+
+
 def test_unapproved_draft_cannot_run(tmp_path: Path) -> None:
     api = _client(tmp_path)
     draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
@@ -107,9 +166,14 @@ def test_provider_schema_exposes_nested_template_fields() -> None:
     person = schema["$defs"]["_PersonConsumer"]["properties"]
     workflow = schema["$defs"]["_WorkflowConsumer"]["properties"]
     campaign = schema["$defs"]["_InformationCampaignWorkflowConsumer"]["properties"]
+    placement = schema["$defs"]["_PlacementConsumer"]["properties"]
     assert {"entity_id", "label", "memories"} <= set(person)
     assert {"requester_id", "resource_id", "request_delivery_minutes"} <= set(workflow)
     assert {"source_id", "claim_information_id", "publication_delivery_minutes"} <= set(campaign)
+    assert {"entity_id", "place_id"} <= set(placement)
+    assert schema["properties"]["placements"]["type"] == "array"
+    assert "template_id" in schema["$defs"]["_WorkflowConsumer"]["required"]
+    assert "template_id" in schema["$defs"]["_InformationCampaignWorkflowConsumer"]["required"]
     assert schema["properties"]["workflow"]["discriminator"]["propertyName"] == "template_id"
 
 
@@ -185,3 +249,45 @@ def test_authoring_repairs_a_compiler_error_before_returning_the_draft(tmp_path:
     assert calls == 2
     assert body["status"] == "ready_for_review"
     assert [attempt["status"] for attempt in body["attempts"]] == ["repair", "accepted"]
+
+
+def test_authoring_returns_all_local_schema_issues_to_the_next_repair(tmp_path: Path) -> None:
+    calls = 0
+    repair_prompt = ""
+
+    def repairable(*args: object, **_kwargs: object) -> tuple[object, object]:
+        nonlocal calls, repair_prompt
+        calls += 1
+        if calls == 1:
+            proposal = _provider_candidate_from_proposal(_proposal())
+            proposal["scenario_id"] = "Invalid ID"
+            timing = proposal["timing_assumptions"]
+            assert isinstance(timing, list)
+            first_timing = timing[0]
+            assert isinstance(first_timing, dict)
+            first_timing["minutes"] = 0
+            return proposal, _Meta()
+        messages = args[1]
+        assert isinstance(messages, list)
+        last_message = messages[-1]
+        assert isinstance(last_message, dict)
+        repair_prompt = str(last_message["content"])
+        return _proposal(), _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=repairable,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    body = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={"expected_revision": 0, "message_id": "m1", "message": "Model checkout."},
+    ).json()
+    assert body["status"] == "ready_for_review"
+    assert [attempt["status"] for attempt in body["attempts"]] == ["repair", "accepted"]
+    assert "scenario_id" in repair_prompt
+    assert "timing_assumptions.0.minutes" in repair_prompt

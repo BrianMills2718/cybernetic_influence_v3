@@ -118,10 +118,17 @@ function renderAuthoring() {
   $('#authoring-approve').hidden = !approvable
   $('#authoring-run').hidden = draft.status !== 'approved'
   if (authoringPreview?.nodes && window.CyberneticGraph) {
+    const revision = authoringPreview.initial_revision ?? 0
+    const world = projectWorld(authoringPreview.world, revision)
     window.CyberneticGraph.render($('#authoring-graph'), {
-      nodes: authoringPreview.nodes, edges: authoringPreview.edges,
-      boundaries: authoringPreview.boundaries || [], world: authoringPreview.world,
-      viewMode: authoringPreview.world ? 'world' : 'causal', event: null,
+      nodes: authoringPreview.nodes,
+      edges: (authoringPreview.edges || []).map((edge) => ({
+        ...edge,
+        kind:edge.kind || 'connection',
+        routeIds:edge.exact_route_ids || [edge.id],
+      })),
+      boundaries: authoringPreview.boundaries || [], world,
+      viewMode: world ? 'world' : 'causal', event: null,
       initialRevision: authoringPreview.initial_revision, selectedNodeId: null, selectedEdgeId: null,
       boundary: null, collapsedBoundaryId: null,
       analyticalScaleHelp: 'The analytical boundary is a view, not an actor.',
@@ -443,6 +450,10 @@ function worldProjection() {
   const world = current?.world
   const event = current?.timeline?.[selectedEventIndex]
   const revision = event?.state_revision ?? current?.initial_revision
+  return projectWorld(world, revision)
+}
+
+function projectWorld(world, revision) {
   if (!world || revision === undefined) return null
   const snapshot = world.snapshots?.[String(revision)]
   if (!snapshot) return null

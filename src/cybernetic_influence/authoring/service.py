@@ -74,9 +74,15 @@ class _TimingConsumer(BaseModel):
     basis: str
 
 
+class _PlacementConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    entity_id: str
+    place_id: str
+
+
 class _WorkflowConsumer(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    template_id: Literal["resource_request_v1"] = "resource_request_v1"
+    template_id: Literal["resource_request_v1"]
     requester_id: str
     reviewer_id: str
     request_id: str
@@ -91,7 +97,7 @@ class _WorkflowConsumer(BaseModel):
 
 class _InformationCampaignWorkflowConsumer(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    template_id: Literal["information_campaign_v1"] = "information_campaign_v1"
+    template_id: Literal["information_campaign_v1"]
     source_id: str
     recipient_id: str
     campaign_id: str
@@ -115,7 +121,7 @@ class _ProposalConsumer(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    proposal_version: Literal[1] = 1
+    proposal_version: Literal[1]
     scenario_id: str
     title: str
     description: str
@@ -124,7 +130,7 @@ class _ProposalConsumer(BaseModel):
     information: list[_InformationConsumer]
     places: list[_PlaceConsumer]
     spatial_links: list[_SpatialLinkConsumer]
-    placements: dict[str, str]
+    placements: list[_PlacementConsumer]
     timing_assumptions: list[_TimingConsumer]
     workflow: Annotated[
         _WorkflowConsumer | _InformationCampaignWorkflowConsumer,
@@ -132,7 +138,7 @@ class _ProposalConsumer(BaseModel):
     ]
     analytical_boundaries: list[_BoundaryConsumer]
     fidelity_questions: list[str]
-    unresolved_questions: list[str] = []
+    unresolved_questions: list[str]
 
 
 def _structured_call() -> StructuredCall:
@@ -188,6 +194,7 @@ class DraftAuthoringService:
         repair_feedback: str | None = None
         candidate: object | None = None
         for attempt_number in range(1, AUTHORING_MAX_ATTEMPTS + 1):
+            meta: object | None = None
             trace_id = f"{draft_id}/revision/{expected_revision + 1}/attempt/{attempt_number}"
             system, user = _prompt(
                 message=message, prior=current, repair_feedback=repair_feedback,
@@ -208,24 +215,40 @@ class DraftAuthoringService:
                     ),
                     reasoning_effort=AUTHORING_REASONING_EFFORT,
                 )
-                consumer = _ProposalConsumer.model_validate(
-                    parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
-                )
-                candidate = consumer.model_dump(mode="json")
-                proposal = ScenarioDraftProposal.model_validate(candidate)
+                if isinstance(parsed, ScenarioDraftProposal):
+                    proposal = parsed
+                    candidate = _provider_candidate_from_proposal(parsed)
+                else:
+                    consumer = _ProposalConsumer.model_validate(
+                        parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
+                    )
+                    candidate = consumer.model_dump(mode="json")
+                    proposal = _proposal_from_consumer(consumer)
                 diagnostics = _diagnostics(proposal)
                 if not diagnostics:
                     attempts.append(_attempt(trace_id, attempt_number, "accepted", "The typed draft compiled successfully.", meta))
                     break
+                if all(item["severity"] == "question" for item in diagnostics):
+                    repair_feedback = _diagnostic_feedback(diagnostics)
+                    attempts.append(
+                        _attempt(trace_id, attempt_number, "needs_input", repair_feedback, meta)
+                    )
+                    break
                 repair_feedback = _diagnostic_feedback(diagnostics)
                 attempts.append(_attempt(trace_id, attempt_number, "repair", repair_feedback, meta))
                 proposal = None
+            except ValueError as error:
+                repair_feedback = _concise_validation_error(error)
+                diagnostics = [{"severity": "error", "code": "validation", "message": repair_feedback}]
+                attempts.append(_attempt(trace_id, attempt_number, "repair", repair_feedback, meta))
+                proposal = None
             except Exception as error:
-                repair_feedback = _concise_validation_error(error) if isinstance(error, ValueError) else (
-                    f"The provider did not produce a usable typed draft: {type(error).__name__}."
-                )
+                capability_error = _is_capability_error(error)
+                repair_feedback = _concise_provider_error(error)
                 diagnostics = [{"severity": "error", "code": "drafting", "message": repair_feedback}]
-                attempts.append(_attempt(trace_id, attempt_number, "provider_error", repair_feedback, None))
+                attempts.append(_attempt(trace_id, attempt_number, "provider_error", repair_feedback, meta))
+                if capability_error:
+                    break
         successful = proposal is not None and not diagnostics
         if successful:
             status = "ready_for_review"
@@ -258,9 +281,14 @@ class DraftAuthoringService:
         else:
             status = "needs_input"
             summary = (
-                f"The authoring assistant tried {len(attempts)} time(s) without producing "
-                "a valid bounded scenario. Review the concise issue below, then clarify the "
-                "people, information or resource, configured pathway, and desired trace boundary."
+                "A typed draft is ready to inspect, but it needs your answer to the "
+                "question below before approval."
+                if proposal is not None and diagnostics
+                else (
+                    f"The authoring assistant tried {len(attempts)} time(s) without producing "
+                    "a valid bounded scenario. Review the concise issue below, then clarify the "
+                    "people, information or resource, configured pathway, and desired trace boundary."
+                )
             )
             approval = None
         updated = {
@@ -329,12 +357,39 @@ def _diagnostics(proposal: ScenarioDraftProposal) -> list[dict[str, str]]:
     return diagnostics
 
 
+def _proposal_from_consumer(consumer: _ProposalConsumer) -> ScenarioDraftProposal:
+    payload = consumer.model_dump(mode="json")
+    raw_placements = payload["placements"]
+    assert isinstance(raw_placements, list)
+    placements = {
+        str(item["entity_id"]): str(item["place_id"])
+        for item in raw_placements
+        if isinstance(item, dict)
+    }
+    if len(placements) != len(raw_placements):
+        raise ValueError("placements must name each entity at most once")
+    payload["placements"] = placements
+    return ScenarioDraftProposal.model_validate(payload)
+
+
+def _provider_candidate_from_proposal(proposal: ScenarioDraftProposal) -> dict[str, object]:
+    payload = proposal.model_dump(mode="json")
+    placements = payload["placements"]
+    assert isinstance(placements, dict)
+    payload["placements"] = [
+        {"entity_id": entity_id, "place_id": place_id}
+        for entity_id, place_id in placements.items()
+    ]
+    return payload
+
+
 def _diagnostic_feedback(diagnostics: list[dict[str, str]]) -> str:
     return "; ".join(item["message"] for item in diagnostics[:3])
 
 
 def _attempt(
-    trace_id: str, attempt: int, status: Literal["accepted", "repair", "provider_error"],
+    trace_id: str, attempt: int,
+    status: Literal["accepted", "repair", "needs_input", "provider_error"],
     message: str, meta: object | None,
 ) -> dict[str, object]:
     raw_cost = getattr(meta, "cost", None)
@@ -346,14 +401,34 @@ def _attempt(
 
 
 def _concise_validation_error(error: ValueError) -> str:
-    """Expose the first actionable schema mismatch, not a provider-sized dump."""
+    """Expose every bounded actionable mismatch without a provider-sized dump."""
     errors = getattr(error, "errors", None)
     if callable(errors):
         details = errors()
         if isinstance(details, list) and details:
-            first = details[0]
-            if isinstance(first, dict):
-                location = ".".join(str(part) for part in first.get("loc", ()))
-                message = str(first.get("msg", "invalid value"))
-                return f"The draft does not match the required scenario fields at {location}: {message}."
+            issues = []
+            for item in details[:8]:
+                if not isinstance(item, dict):
+                    continue
+                location = ".".join(str(part) for part in item.get("loc", ())) or "proposal"
+                message = str(item.get("msg", "invalid value"))
+                issues.append(f"{location}: {message}")
+            if issues:
+                remaining = len(details) - len(issues)
+                suffix = f" ({remaining} more issue(s) omitted.)" if remaining > 0 else ""
+                return "The draft does not match the required scenario fields: " + "; ".join(issues) + suffix
     return "The draft does not match the required bounded scenario schema."
+
+
+def _is_capability_error(error: Exception) -> bool:
+    try:
+        from llm_client import LLMCapabilityError
+    except ImportError:
+        return False
+    return isinstance(error, LLMCapabilityError)
+
+
+def _concise_provider_error(error: Exception) -> str:
+    if _is_capability_error(error):
+        return f"The selected authoring route cannot accept this structured schema: {error}"
+    return f"The provider did not produce a usable typed draft: {type(error).__name__}."

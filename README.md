@@ -63,7 +63,7 @@ The simulator currently includes:
 - pause at a validated causal boundary and continuation of retained Service
   Desk runs, including live LLM runs on the same deployment and configuration;
 - recoverable deletion and visible failed/interrupted records.
-- conversational typed authoring through a strong structured model, with
+- conversational typed authoring through a task-tested structured model, with
   revisioned review and approval for reviewed resource-request and
   information-campaign templates;
 - an exact information-campaign reference path that distinguishes a source's

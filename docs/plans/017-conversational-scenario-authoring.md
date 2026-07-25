@@ -75,11 +75,18 @@ draft shows accepted, repair, or provider-error status and observed cost when
 available. The loop stops visibly at the cap, and a provider-only failure does
 not erase an earlier valid proposal.
 
+OpenAI-strict provider output represents placements as typed
+`{entity_id, place_id}` records; the local consumer converts them to the
+canonical placement map and rejects duplicates. A semantically valid draft
+with unresolved user-judgment questions is retained and previewable after one
+call. It does not spend repeated repair attempts trying to answer the same
+question for the user.
+
 ### 17C — bounded information-campaign template
 
 Add `information_campaign_v1` as the smallest reviewed template that fits the
-initiative's canonical information-influence question. A strong structured
-authoring model chooses between the two known templates and populates a
+initiative's canonical information-influence question. A task-certified
+structured authoring route chooses between the two known templates and populates a
 discriminated union; compiler validation still owns whether the proposal can
 run.
 

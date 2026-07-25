@@ -157,9 +157,30 @@ def _validate_information_campaign(proposal: ScenarioDraftProposal) -> None:
             raise AuthoringCompilationError(f"{label} does not name a declared referent: {value}")
     if workflow.source_id == workflow.recipient_id:
         raise AuthoringCompilationError("information_campaign_v1 requires distinct source and recipient")
-    declared = people | objects | information | {workflow.campaign_id}
-    if len(declared) != len(people) + len(objects) + len(information) + 1:
-        raise AuthoringCompilationError("campaign, people, objects, and information need distinct ids")
+    authored_campaign_records = sorted(
+        item.entity_id for item in proposal.objects if item.entity_kind == "campaign_record"
+    )
+    if authored_campaign_records:
+        raise AuthoringCompilationError(
+            "information_campaign_v1 creates its campaign record from workflow.campaign_id; "
+            "remove separately declared campaign_record objects and reference campaign_id "
+            f"from analytical boundaries instead: {authored_campaign_records!r}"
+        )
+    declared_ids = [
+        *(item.entity_id for item in proposal.people),
+        *(item.entity_id for item in proposal.objects),
+        *(item.information_id for item in proposal.information),
+        workflow.campaign_id,
+    ]
+    declared = set(declared_ids)
+    if len(declared) != len(declared_ids):
+        duplicates = sorted(
+            entity_id for entity_id in declared if declared_ids.count(entity_id) > 1
+        )
+        raise AuthoringCompilationError(
+            "campaign, people, objects, and information need distinct ids; "
+            f"duplicate ids: {duplicates!r}"
+        )
     if reserved := declared & _INFORMATION_CAMPAIGN_RUNTIME_IDS:
         raise AuthoringCompilationError(
             "draft entity ids collide with information_campaign_v1 runtime ids: "
