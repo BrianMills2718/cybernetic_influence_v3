@@ -8,10 +8,10 @@ predecessor: 014-pausable-live-runs.md
 
 # Slice 15: Positive-Duration Modeled Time
 
-**Status: active. Slices 15A–15C are implemented on the current branch; one
-live-run and browser review remain. The first realization uses the Service
-Desk's explicit minimum world duration as a source-labelled scenario assumption,
-not a real-world calibration.**
+**Status: active. Slices 15A–15C are implemented; the bounded local live proof
+is complete and one browser review remains. The first realization uses the
+Service Desk's explicit minimum world duration as a source-labelled scenario
+assumption, not a real-world calibration.**
 
 ## Outcome
 
@@ -217,8 +217,14 @@ beside spatial topology and structural causal flow. Selecting an event keeps the
 moment control synchronized and exposes its elapsed time, duration, and causal
 parents. API and presentation tests prove that the projection has exactly the
 retained event IDs and that every nonterminal graph edge advances modeled time.
-The bounded live run and browser review remain the final evidence for this
-slice.
+After the narrator output bound repair, isolated local API canary
+`run_abc000000002` completed a live DeepSeek V4 Flash `none` baseline with ten
+participant calls, 23 narration calls, 23 fully narrated causal moments, a
+`closed_confirmed` outcome, and 93 modeled process ticks. The retained document
+records `$0.007474738` total observed provider cost and no failed model calls.
+This proves the current API/trace path, not the browser presentation or a
+real-world timing calibration; a rendered browser review remains the final
+evidence for this slice.
 
 ### 15D — later evidence integration (deferred)
 

@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-07-24
+updated: 2026-07-25
 ---
 
 # Implementation Plans
@@ -16,12 +16,12 @@ instructions to continue their former “next slice” sections.
 
 [Slice 15: Positive-duration modeled time](015-calibrated-elapsed-time.md) is the
 active packet. Its first local vertical retains delayed exact work across
-checkpoints and exposes it as its own causal/narrative record. The next bounded
-work requires positive elapsed duration across every Service Desk world-event
-causal link, followed by a realized event/activity causal graph. A separate
-timing-profile compiler is no longer planned; typed scenario configuration and
-bounded runtime resolution own timing. No calibrated timing claim has been
-made.
+checkpoints and exposes it as its own causal/narrative record. Positive elapsed
+duration across every Service Desk world-event causal link, the realized
+event/activity causal graph, and one bounded live API proof are complete. The
+remaining packet evidence is a rendered browser review. A separate timing-profile
+compiler is no longer planned; typed scenario configuration and bounded runtime
+resolution own timing. No calibrated timing claim has been made.
 
 [Slice 14: Pausable live runs](014-pausable-live-runs.md) remains implemented
 and deployed. Its final operator usability judgment is deferred—not completed—
