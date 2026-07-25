@@ -124,6 +124,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function renderLifecycleControls" in app_script.content
     assert b"renderLifecycleControls(current)" in app_script.content
     assert b"function loadScenarioPreview" in app_script.content
+    assert b"let previewRequestSerial = 0" in app_script.content
+    assert b"requestSerial !== previewRequestSerial" in app_script.content
     assert b"/api/scenarios/${encodeURIComponent(scenario)}/preview" in app_script.content
     assert b"the realized causal graph appears only after events are committed" in app_script.content
     assert b"how did this condition change the path to safe closure" in app_script.content

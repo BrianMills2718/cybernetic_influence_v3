@@ -21,6 +21,7 @@ let selectedEdgeId = null
 let scenarioCatalog = {}
 let runtimeConfig = {}
 let activeRunId = null
+let previewRequestSerial = 0
 
 function setWorkspaceView(view) {
   const simulation = view === 'simulation'
@@ -158,9 +159,21 @@ async function loadScenarioPreview() {
   const scenario = $('#scenario').value
   const arm = $('#arm').value
   if (!scenario || !arm) return
-  const preview = await request(
-    `/api/scenarios/${encodeURIComponent(scenario)}/preview?arm_id=${encodeURIComponent(arm)}&cognition_profile=position_context`,
-  )
+  const requestSerial = ++previewRequestSerial
+  let preview
+  try {
+    preview = await request(
+      `/api/scenarios/${encodeURIComponent(scenario)}/preview?arm_id=${encodeURIComponent(arm)}&cognition_profile=position_context`,
+    )
+  } catch (error) {
+    if (requestSerial !== previewRequestSerial) return false
+    throw error
+  }
+  if (
+    requestSerial !== previewRequestSerial
+    || scenario !== $('#scenario').value
+    || arm !== $('#arm').value
+  ) return false
   current = {
     nodes: [], snapshots: {}, edges: [], boundaries: [], timeline: [], moments: [], traces: [],
     trajectory: {nodes: [], edges: []},
@@ -176,6 +189,7 @@ async function loadScenarioPreview() {
   renderProjectionControls()
   renderGraph()
   $('#inspector').innerHTML = `<span class="eyebrow">Configured starting state</span><h2>Ready to play</h2><p>Select a place, person, record, mechanism, or pathway to inspect the scenario as configured. The realized causal graph will appear after the simulation commits events.</p>`
+  return true
 }
 
 function fillList(selector, values = []) {
