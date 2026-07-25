@@ -14,28 +14,21 @@ instructions to continue their former “next slice” sections.
 
 ## Active packet
 
-[Slice 14: Pausable live runs](014-pausable-live-runs.md) is the sole active
-packet. Its runtime implementation is deployed, and a real DeepSeek run has
-completed from a retained live checkpoint. The remaining work is the integrated
-demo completion gate: obtain the operator's short usability judgment. The
-resumed trace has passed duplicate/cost/narrative-continuity inspection, and the
-operator-requested unique causal timestamp correction is deployed and has
-passed its API, legacy-readback, rendered desktop, console/network, and backend
-log checks.
+[Slice 15: Model-generated elapsed time](015-calibrated-elapsed-time.md) is the
+active packet. Its first local vertical retains delayed exact work across
+checkpoints and exposes it as its own causal/narrative record. The next bounded
+work is the model-generated Service Desk timing profile; no calibrated timing
+claim has been made.
+
+[Slice 14: Pausable live runs](014-pausable-live-runs.md) remains implemented
+and deployed. Its final operator usability judgment is deferred—not completed—
+while the operator-directed timing work proceeds.
 
 [Slice 13: Configurable, explainable runs](013-configurable-explainable-runs.md)
 is implemented and retained as completed design evidence. Its remaining
 desktop acceptance is consolidated into Slice 14's integrated demo gate rather
 than advertised as a second active packet. Conversational scenario authoring is
 post-demo roadmap direction and has no active implementation plan.
-
-## Proposed next packet
-
-[Slice 15: Model-generated elapsed time](015-calibrated-elapsed-time.md) is a
-post-demo proposal, not an active packet. It preserves unique causal time while
-adding retained model-generated duration priors, overlapping future work, and
-truthful elapsed-time readout. It cannot activate until Slice 14 closes or is
-reset; it does not use real-world timing data or make calibration claims.
 
 ## Completed evidence
 

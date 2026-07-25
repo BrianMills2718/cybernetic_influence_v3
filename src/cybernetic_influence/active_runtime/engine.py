@@ -22,6 +22,7 @@ from cybernetic_influence.active_runtime.models import (
     ActivationCause,
     ActivationAttemptRecord,
     ExecutionBudget,
+    ExactWorkRecord,
     ModelCallEvidence,
     ParticipantAttempt,
     private_state_size,
@@ -129,6 +130,7 @@ class ActiveRuntimeSession:
             limits=causal_limits,
         )
         self._attempts: list[ActivationAttemptRecord] = []
+        self._exact_work: list[ExactWorkRecord] = []
         self._next_attempt_index = 0
         self._next_commit_index = 0
         self._terminal = False
@@ -173,6 +175,18 @@ class ActiveRuntimeSession:
     def next_due_activation(self) -> DueActivation | None:
         """Return the earliest observation or internal wake as one frozen set."""
         with self._lock:
+            while True:
+                due = self._next_due_activation_after_exact_work()
+                if due is not None:
+                    return due
+                exact_due = self._core.next_pending_time
+                if exact_due is None:
+                    return None
+                self._settle_exact_due(exact_due)
+
+    def _next_due_activation_after_exact_work(self) -> DueActivation | None:
+        """Find participant work, first settling any earlier exact future work."""
+        while True:
             due_candidates: dict[str, int] = {}
             pending_observations: dict[str, list[ActiveObservation]] = {}
             core_state = self._core.state
@@ -204,10 +218,17 @@ class ActiveRuntimeSession:
                     times.append(state.next_update_at)
                 if times:
                     due_candidates[active_system_id] = min(times)
-            if not due_candidates:
+            participant_earliest = min(due_candidates.values(), default=None)
+            exact_due = self._core.next_pending_time
+            if exact_due is not None and (
+                participant_earliest is None or exact_due <= participant_earliest
+            ):
+                self._settle_exact_due(exact_due)
+                continue
+            if participant_earliest is None:
                 return None
 
-            earliest = min(due_candidates.values())
+            earliest = participant_earliest
             logical_time = max(earliest, core_state.logical_time)
             causes: dict[str, tuple[ActivationCause, ...]] = {}
             for active_system_id in sorted(due_candidates):
@@ -431,7 +452,8 @@ class ActiveRuntimeSession:
                                 actor_entity_id=spec.entity_id,
                                 intent=intent,
                                 logical_time=logical_time,
-                            )
+                            ),
+                            drain_through=logical_time,
                         )
                 post_core = trial.checkpoint()
                 new_states = self._proposed_states(canonical_ids, collected)
@@ -536,6 +558,9 @@ class ActiveRuntimeSession:
         session._attempts = [
             attempt.model_copy(deep=True) for attempt in validated.attempts
         ]
+        session._exact_work = [
+            item.model_copy(deep=True) for item in validated.exact_work
+        ]
         session._next_attempt_index = validated.next_attempt_index
         session._next_commit_index = validated.next_commit_index
         return session
@@ -574,6 +599,10 @@ class ActiveRuntimeSession:
                             "attempts": [
                                 item.model_dump(mode="json")
                                 for item in self._attempts
+                            ],
+                            "exact_work": [
+                                item.model_dump(mode="json")
+                                for item in self._exact_work
                             ],
                             "next_attempt_index": self._next_attempt_index,
                             "next_commit_index": self._next_commit_index,
@@ -662,6 +691,30 @@ class ActiveRuntimeSession:
                 max_actions=self._config.max_actions_per_system,
             ),
         )
+
+    def _settle_exact_due(self, logical_time: int) -> None:
+        """Retain a due exact transition as its own causal provenance record."""
+        before = self._core.checkpoint()
+        events = self._core.advance_due(logical_time)
+        if not events:
+            return
+        after = self._core.checkpoint()
+        record = ExactWorkRecord.model_validate(
+            with_record_digest(
+                {
+                    "work_index": len(self._exact_work),
+                    "work_id": f"exact_work_{len(self._exact_work):06d}",
+                    "prior_attempt_count": self._next_attempt_index,
+                    "logical_time": logical_time,
+                    "pre_core_state_digest": before.state_digest,
+                    "pre_core_event_tail_digest": before.event_tail_digest,
+                    "post_core_state_digest": after.state_digest,
+                    "post_core_event_tail_digest": after.event_tail_digest,
+                    "core_event_ids": [event.event_id for event in events],
+                }
+            )
+        )
+        self._exact_work.append(record)
 
     @staticmethod
     def _validate_step_result(raw: object) -> ActiveStepResult:
@@ -1010,6 +1063,9 @@ class ActiveRuntimeSession:
                     "core_checkpoint": core_checkpoint.model_dump(mode="json"),
                     "attempts": [
                         item.model_dump(mode="json") for item in attempts
+                    ],
+                    "exact_work": [
+                        item.model_dump(mode="json") for item in self._exact_work
                     ],
                     "next_attempt_index": next_attempt_index,
                     "next_commit_index": next_commit_index,

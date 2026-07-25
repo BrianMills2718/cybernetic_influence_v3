@@ -5,7 +5,11 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 
-from cybernetic_influence.active_runtime import ActiveRuntimeResult
+from cybernetic_influence.active_runtime import (
+    ActivationAttemptRecord,
+    ActiveRuntimeResult,
+    ExactWorkRecord,
+)
 from cybernetic_influence.causal_core.models import (
     AnalyticalBoundary,
     CausalEvent,
@@ -64,8 +68,10 @@ def event_driven_service_desk_outcome(
     }
     remediation_moment: int | None = None
     closure_moment: int | None = None
-    for moment_number, attempt in enumerate(result.attempts, start=1):
-        for event_id in attempt.core_event_ids:
+    for moment_number, (_, record) in enumerate(
+        _causal_records(result), start=1
+    ):
+        for event_id in record.core_event_ids:
             event = event_by_id[event_id]
             if event.patch is None:
                 continue
@@ -101,7 +107,7 @@ def event_driven_service_desk_outcome(
         "remediation_activation": remediation_moment,
         "confirmed_closure_activation": closure_moment,
         "target_censored": closure_moment is None,
-        "causal_moment_count": len(result.attempts),
+        "causal_moment_count": len(_causal_records(result)),
         "participant_activation_count": sum(
             len(attempt.participants) for attempt in result.attempts
         ),
@@ -216,14 +222,51 @@ def analyst_moments(
         entity_id: entity.entity_kind
         for entity_id, entity in result.core_result.final_state.entities.items()
     }
-    for moment_number, attempt in enumerate(result.attempts, start=1):
+    for moment_number, (record_kind, record) in enumerate(
+        _causal_records(result), start=1
+    ):
         event_indices = [
             timeline_ids[event_id]
-            for event_id in attempt.core_event_ids
+            for event_id in record.core_event_ids
             if event_id in timeline_ids
         ]
         if event_indices:
             last_event_index = event_indices[-1]
+        if record_kind == "exact":
+            exact_record = record
+            assert isinstance(exact_record, ExactWorkRecord)
+            moments.append(
+                {
+                    "moment": moment_number,
+                    "activation": exact_record.work_id,
+                    "causal_time": moment_number,
+                    "causal_timestamp": f"c{moment_number}",
+                    "logical_time": exact_record.logical_time,
+                    "participants": ["exact_mechanisms"],
+                    "participant_kinds": {"exact_mechanisms": "exact"},
+                    "activation_causes": {
+                        "exact_mechanisms": [
+                            {
+                                "kind": "scheduled_exact_work",
+                                "scheduled_for": exact_record.logical_time,
+                                "description": (
+                                    "Previously retained exact work reached "
+                                    "its declared due time."
+                                ),
+                            }
+                        ]
+                    },
+                    "event_ids": [
+                        str(timeline[index]["event_id"])
+                        for index in event_indices
+                    ],
+                    "representative_event_index": last_event_index,
+                    "silent": False,
+                }
+            )
+            continue
+        attempt = record
+        assert isinstance(attempt, ActivationAttemptRecord)
         moments.append(
             {
                 "moment": moment_number,
@@ -625,7 +668,24 @@ def analyst_timeline(
     events_by_id = {
         event.event_id: event for event in result.core_result.events
     }
-    for attempt in result.attempts:
+    for causal_moment, (record_kind, record) in enumerate(
+        _causal_records(result), start=1
+    ):
+        if record_kind == "exact":
+            exact_record = record
+            assert isinstance(exact_record, ExactWorkRecord)
+            for causal_substep, event_id in enumerate(
+                exact_record.core_event_ids, start=1
+            ):
+                event_activation[event_id] = (
+                    exact_record.work_id,
+                    None,
+                    causal_moment,
+                    causal_substep,
+                )
+            continue
+        attempt = record
+        assert isinstance(attempt, ActivationAttemptRecord)
         action_owner = {
             action_id: participant.requested_active_system_id
             for participant in attempt.participants
@@ -652,7 +712,7 @@ def analyst_timeline(
             event_activation[event_id] = (
                 attempt.activation_id,
                 owner,
-                attempt.attempt_index + 1,
+                causal_moment,
                 causal_substep,
             )
 
@@ -785,6 +845,27 @@ def analyst_timeline(
             )
         timeline.append(projected_event)
     return timeline
+
+
+def _causal_records(
+    result: ActiveRuntimeResult,
+) -> list[tuple[str, ActivationAttemptRecord | ExactWorkRecord]]:
+    """Return retained agent and exact-only work in committed causal order."""
+    by_prior_attempt_count: dict[int, list[ExactWorkRecord]] = {}
+    for record in result.exact_work:
+        by_prior_attempt_count.setdefault(record.prior_attempt_count, []).append(record)
+    records: list[tuple[str, ActivationAttemptRecord | ExactWorkRecord]] = []
+    for attempt_index, attempt in enumerate(result.attempts):
+        records.extend(
+            ("exact", record)
+            for record in by_prior_attempt_count.get(attempt_index, [])
+        )
+        records.append(("activation", attempt))
+    records.extend(
+        ("exact", record)
+        for record in by_prior_attempt_count.get(len(result.attempts), [])
+    )
+    return records
 
 
 def analyst_traces(result: ActiveRuntimeResult) -> list[dict[str, object]]:

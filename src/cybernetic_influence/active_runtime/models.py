@@ -31,6 +31,7 @@ _FORBID = ConfigDict(extra="forbid", strict=True)
 _ID_PATTERN = r"^[a-z][a-z0-9_]*$"
 _DIGEST_PATTERN = r"^[0-9a-f]{64}$"
 _ACTIVATION_PATTERN = r"^activation_[0-9]{6}$"
+_EXACT_WORK_PATTERN = r"^exact_work_[0-9]{6}$"
 _UNPRICED_COST_SOURCES = frozenset({"unavailable", "unspecified"})
 ActivationCauseKind = Literal[
     "scenario_start",
@@ -616,6 +617,33 @@ class ActivationAttemptRecord(_StrictModel):
         return self
 
 
+class ExactWorkRecord(_StrictModel):
+    """One retained exact-only transition between active-system activations."""
+
+    work_index: int = Field(ge=0)
+    work_id: str = Field(pattern=_EXACT_WORK_PATTERN)
+    prior_attempt_count: int = Field(ge=0)
+    logical_time: int = Field(ge=0)
+    pre_core_state_digest: str = Field(pattern=_DIGEST_PATTERN)
+    pre_core_event_tail_digest: str = Field(pattern=_DIGEST_PATTERN)
+    post_core_state_digest: str = Field(pattern=_DIGEST_PATTERN)
+    post_core_event_tail_digest: str = Field(pattern=_DIGEST_PATTERN)
+    core_event_ids: list[str] = Field(min_length=1)
+    record_digest: str = Field(pattern=_DIGEST_PATTERN)
+
+    @model_validator(mode="after")
+    def validate_exact_work(self) -> "ExactWorkRecord":
+        """Bind exact work to one contiguous, independently inspectable range."""
+        if self.work_id != f"exact_work_{self.work_index:06d}":
+            raise ValueError("exact-work id must match its index")
+        _require_unique(self.core_event_ids, "exact-work core event ids")
+        if self.record_digest != canonical_record_digest(
+            self.model_dump(mode="json", exclude={"record_digest"})
+        ):
+            raise ValueError("exact-work record digest mismatch")
+        return self
+
+
 class ActiveRuntimeCheckpoint(_StrictModel):
     """Complete nonterminal continuation record for one active runtime."""
 
@@ -630,6 +658,7 @@ class ActiveRuntimeCheckpoint(_StrictModel):
     states: dict[str, ActiveSystemState]
     core_checkpoint: CausalCheckpoint
     attempts: list[ActivationAttemptRecord] = Field(default_factory=list)
+    exact_work: list[ExactWorkRecord] = Field(default_factory=list)
     next_attempt_index: int = Field(ge=0)
     next_commit_index: int = Field(ge=0)
     total_observed_cost: float = Field(ge=0.0)
@@ -649,6 +678,7 @@ class ActiveRuntimeCheckpoint(_StrictModel):
         _validate_specs_and_states(self.specs, self.states)
         _validate_attempt_ledger(
             attempts=self.attempts,
+            exact_work=self.exact_work,
             specs=self.specs,
             states=self.states,
             core=self.core_checkpoint,
@@ -685,6 +715,7 @@ class ActiveRuntimeResult(_StrictModel):
     final_states: dict[str, ActiveSystemState]
     core_result: CausalRunResult
     attempts: list[ActivationAttemptRecord] = Field(default_factory=list)
+    exact_work: list[ExactWorkRecord] = Field(default_factory=list)
     next_attempt_index: int = Field(ge=0)
     next_commit_index: int = Field(ge=0)
     model_calls: int = Field(ge=0)
@@ -706,6 +737,7 @@ class ActiveRuntimeResult(_StrictModel):
         _validate_specs_and_states(self.specs, self.final_states)
         _validate_attempt_ledger(
             attempts=self.attempts,
+            exact_work=self.exact_work,
             specs=self.specs,
             states=self.final_states,
             core=self.core_result,
@@ -792,6 +824,7 @@ def _validate_specs_and_states(
 def _validate_attempt_ledger(
     *,
     attempts: Sequence[ActivationAttemptRecord],
+    exact_work: Sequence[ExactWorkRecord],
     specs: Sequence[ActiveSystemSpec],
     states: Mapping[str, ActiveSystemState],
     core: CausalCheckpoint | CausalRunResult,
@@ -883,7 +916,28 @@ def _validate_attempt_ledger(
             else core_state.fact(fact_id).value
         )
     event_by_id = {event.event_id: event for event in core.events}
-    for attempt in attempts:
+    exact_work_by_prior_attempt_count: dict[int, list[ExactWorkRecord]] = {}
+    for record in exact_work:
+        exact_work_by_prior_attempt_count.setdefault(
+            record.prior_attempt_count, []
+        ).append(record)
+
+    def apply_availability_history(event_ids: Sequence[str]) -> None:
+        for event_id in event_ids:
+            event = event_by_id[event_id]
+            if event.patch is None:
+                continue
+            for change in event.patch.fact_changes:
+                if change.fact_id in availability_fact_values:
+                    if availability_fact_values[change.fact_id] != change.before:
+                        raise ValueError(
+                            "availability fact history disagrees with causal patch"
+                        )
+                    availability_fact_values[change.fact_id] = change.after
+
+    for attempt_index, attempt in enumerate(attempts):
+        for record in exact_work_by_prior_attempt_count.get(attempt_index, []):
+            apply_availability_history(record.core_event_ids)
         for participant in attempt.participants:
             active_system_id = participant.requested_active_system_id
             spec = spec_by_id[active_system_id]
@@ -972,17 +1026,9 @@ def _validate_attempt_ledger(
                     for observation in participant.input.observations
                 )
                 expected_revisions[active_system_id] += 1
-        for event_id in attempt.core_event_ids:
-            event = event_by_id[event_id]
-            if event.patch is None:
-                continue
-            for change in event.patch.fact_changes:
-                if change.fact_id in availability_fact_values:
-                    if availability_fact_values[change.fact_id] != change.before:
-                        raise ValueError(
-                            "availability fact history disagrees with causal patch"
-                        )
-                    availability_fact_values[change.fact_id] = change.after
+        apply_availability_history(attempt.core_event_ids)
+    for record in exact_work_by_prior_attempt_count.get(len(attempts), []):
+        apply_availability_history(record.core_event_ids)
     for active_system_id, state in states.items():
         if state.revision != expected_revisions[active_system_id]:
             raise ValueError("active-state revisions disagree with activation ledger")
@@ -995,7 +1041,7 @@ def _validate_attempt_ledger(
         if state.next_update_at != expected_next_update_at[active_system_id]:
             raise ValueError("active-state schedule disagrees with activation ledger")
 
-    _validate_core_attempt_slices(attempts, core)
+    _validate_core_attempt_slices(attempts, exact_work, core)
     expected_cost = sum(item.observed_cost for item in attempts)
     if not _same_float(total_observed_cost, expected_cost):
         raise ValueError("runtime total cost disagrees with attempt ledger")
@@ -1058,14 +1104,45 @@ def _validate_enclosing_core(
 
 def _validate_core_attempt_slices(
     attempts: Sequence[ActivationAttemptRecord],
+    exact_work: Sequence[ExactWorkRecord],
     core: CausalCheckpoint | CausalRunResult,
 ) -> None:
     """Bind activation event ranges and state digests to exact core prefixes."""
     events = core.events
     terminal_offset = 1 if isinstance(core, CausalRunResult) else 0
     event_limit = len(events) - terminal_offset
+    _require_unique([item.work_id for item in exact_work], "exact-work ids")
+    if [item.work_index for item in exact_work] != list(range(len(exact_work))):
+        raise ValueError("exact-work indexes must be contiguous")
+    work_by_prior_count: dict[int, list[ExactWorkRecord]] = {}
+    for item in exact_work:
+        if item.prior_attempt_count > len(attempts):
+            raise ValueError("exact work names a future attempt count")
+        work_by_prior_count.setdefault(item.prior_attempt_count, []).append(item)
+
     cursor = 1
-    for attempt in attempts:
+
+    def consume_exact(item: ExactWorkRecord) -> int:
+        nonlocal cursor
+        if item.pre_core_event_tail_digest != trace_digest(events[:cursor]):
+            raise ValueError("exact work pre-core tail is not the prior prefix")
+        if item.pre_core_state_digest != _prefix_state_digest(events, cursor, core):
+            raise ValueError("exact work pre-core state is not the prior prefix")
+        stop = cursor + len(item.core_event_ids)
+        if stop > event_limit:
+            raise ValueError("exact-work event range exceeds the causal trace")
+        if [event.event_id for event in events[cursor:stop]] != item.core_event_ids:
+            raise ValueError("exact-work event range is not contiguous")
+        if item.post_core_event_tail_digest != trace_digest(events[:stop]):
+            raise ValueError("exact-work post-core tail disagrees with its range")
+        if item.post_core_state_digest != _prefix_state_digest(events, stop, core):
+            raise ValueError("exact-work post-core state disagrees with its range")
+        cursor = stop
+        return cursor
+
+    for attempt_index, attempt in enumerate(attempts):
+        for item in work_by_prior_count.get(attempt_index, []):
+            consume_exact(item)
         expected_pre_events = events[:cursor]
         if attempt.pre_core_event_tail_digest != trace_digest(expected_pre_events):
             raise ValueError("attempt pre-core event tail is not the prior prefix")
@@ -1100,6 +1177,8 @@ def _validate_core_attempt_slices(
             raise ValueError("attempt post-core event tail disagrees with its range")
         if attempt.post_core_state_digest != _prefix_state_digest(events, cursor, core):
             raise ValueError("attempt post-core state disagrees with its range")
+    for item in work_by_prior_count.get(len(attempts), []):
+        consume_exact(item)
     if cursor != event_limit:
         raise ValueError("causal-core events are not owned by committed activations")
 

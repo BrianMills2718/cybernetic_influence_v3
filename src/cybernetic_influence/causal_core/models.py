@@ -963,6 +963,51 @@ class CausalStep(_StrictModel):
     state: CausalState
 
 
+class ScheduledWork(_StrictModel):
+    """One retained, exact effect or routed delivery awaiting its due time."""
+
+    due_at: int = Field(ge=0)
+    sequence: int = Field(ge=0)
+    work_kind: Literal["effect", "delivery"]
+    effect: EffectEnvelope
+    route_kind: RouteKind | None = None
+    target_port_id: str | None = Field(default=None, pattern=_ID_PATTERN)
+    route_delay: int | None = Field(default=None, ge=0)
+    connection_id: str | None = Field(default=None, pattern=_ID_PATTERN)
+    container_id: str | None = Field(default=None, pattern=_ID_PATTERN)
+
+    @model_validator(mode="after")
+    def validate_work(self) -> "ScheduledWork":
+        """Keep persisted future work unambiguous and replayable."""
+        if self.due_at != self.effect.logical_time:
+            raise ValueError("scheduled work due time must equal effect time")
+        if self.work_kind == "effect":
+            if any(
+                value is not None
+                for value in (
+                    self.route_kind,
+                    self.target_port_id,
+                    self.route_delay,
+                    self.connection_id,
+                    self.container_id,
+                )
+            ):
+                raise ValueError("pending effect cannot carry route fields")
+            return self
+        if (
+            self.route_kind is None
+            or self.target_port_id is None
+            or self.route_delay is None
+        ):
+            raise ValueError("pending delivery requires a complete route")
+        if self.route_kind == "connection":
+            if self.connection_id is None or self.container_id is not None:
+                raise ValueError("connection delivery has invalid route fields")
+        elif self.container_id is None or self.connection_id is not None:
+            raise ValueError("container delivery has invalid route fields")
+        return self
+
+
 class CausalCheckpoint(_StrictModel):
     """Complete quiescent continuation record for one nonterminal session."""
 
@@ -985,12 +1030,19 @@ class CausalCheckpoint(_StrictModel):
     effect_sequence: int = Field(ge=0)
     observation_sequence: int = Field(ge=0)
     queue_sequence: int = Field(ge=0)
+    scheduled_work: list[ScheduledWork] = Field(default_factory=list)
     record_digest: str = Field(pattern=_DIGEST_PATTERN)
 
     @model_validator(mode="after")
     def validate_checkpoint(self) -> "CausalCheckpoint":
         """Reject terminal, corrupt, or counter-regressed continuation state."""
-        _validate_trace(self.events, terminal=False, run_id=self.run_id)
+        _validate_scheduled_work(self.scheduled_work, self.events)
+        _validate_trace(
+            self.events,
+            terminal=False,
+            run_id=self.run_id,
+            pending_effect_ids={item.effect.effect_id for item in self.scheduled_work},
+        )
         _validate_run_binding(
             self.events,
             scenario_id=self.scenario_id,
@@ -1007,7 +1059,7 @@ class CausalCheckpoint(_StrictModel):
         _validate_actions(self.accepted_action_ids, self.events)
         _validate_event_references(self.state, self.events)
         _validate_state_evidence(self.state, self.events)
-        _validate_metrics(self.metrics, self.events)
+        _validate_metrics(self.metrics, self.events, self.scheduled_work)
         if self.event_sequence != len(self.events):
             raise ValueError("event sequence must equal the next trace position")
         if self.effect_sequence != self.metrics.effects_emitted:
@@ -1015,10 +1067,18 @@ class CausalCheckpoint(_StrictModel):
         if self.observation_sequence != len(self.state.observations):
             raise ValueError("observation sequence must equal delivered state")
         expected_queue_sequence = (
-            self.metrics.effects_emitted + self.metrics.routed_deliveries
+            self.metrics.effects_emitted
+            + self.metrics.routed_deliveries
+            + sum(item.work_kind == "delivery" for item in self.scheduled_work)
         )
         if self.queue_sequence != expected_queue_sequence:
             raise ValueError("queue sequence disagrees with scheduled work")
+        _require_unique(
+            [str(item.sequence) for item in self.scheduled_work],
+            "scheduled work sequences",
+        )
+        if any(item.sequence >= self.queue_sequence for item in self.scheduled_work):
+            raise ValueError("scheduled work sequence exceeds queue cursor")
         if self.metrics.state_commits != self.state.revision:
             raise ValueError("state revision must equal committed patch count")
         if self.metrics.effects_emitted > self.max_effects:
@@ -1263,11 +1323,34 @@ def _require_fields(event: CausalEvent, *field_names: str) -> None:
         )
 
 
+def _validate_scheduled_work(
+    scheduled_work: Sequence[ScheduledWork], events: Sequence[CausalEvent]
+) -> None:
+    """Bind every retained future item to its already-recorded emission."""
+    emitted = {
+        event.effect_id: event
+        for event in events
+        if event.event_kind == "effect_emitted" and event.effect_id is not None
+    }
+    for item in scheduled_work:
+        emission = emitted.get(item.effect.effect_id)
+        if emission is None:
+            raise ValueError("scheduled work references an unemitted effect")
+        if (
+            item.effect.source_port_id != emission.source_port_id
+            or item.effect.representation_id != emission.representation_id
+            or item.effect.causal_parent_event_ids != [emission.event_id]
+            or item.effect.logical_time < emission.logical_time
+        ):
+            raise ValueError("scheduled work disagrees with its effect emission")
+
+
 def _validate_trace(
     events: Sequence[CausalEvent],
     *,
     terminal: bool,
     run_id: str,
+    pending_effect_ids: set[str] | None = None,
 ) -> None:
     """Validate event order, parent lineage, and terminal shape."""
     if not events or events[0].event_kind != "run_started":
@@ -1306,7 +1389,7 @@ def _validate_trace(
         previous_revision = event.state_revision
         previous_logical_time = event.logical_time
         seen.add(event.event_id)
-    _validate_event_causality(events)
+    _validate_event_causality(events, pending_effect_ids or set())
 
 
 def _validate_run_binding(
@@ -1332,7 +1415,9 @@ def _validate_run_binding(
         raise ValueError("run root disagrees with execution identity or limits")
 
 
-def _validate_event_causality(events: Sequence[CausalEvent]) -> None:
+def _validate_event_causality(
+    events: Sequence[CausalEvent], pending_effect_ids: set[str]
+) -> None:
     """Require each typed occurrence to name the event that actually caused it."""
     by_id: dict[str, CausalEvent] = {}
     emitted_ids: set[str] = set()
@@ -1450,13 +1535,21 @@ def _validate_event_causality(events: Sequence[CausalEvent]) -> None:
     }
     if any(action_effect_counts.get(event_id, 0) != 1 for event_id in action_event_ids):
         raise ValueError("every accepted action must emit exactly one initial effect")
-    if emitted_ids != set(resolution_kinds):
+    if not pending_effect_ids <= emitted_ids:
+        raise ValueError("scheduled work references an unemitted effect")
+    if emitted_ids != set(resolution_kinds) | pending_effect_ids:
         raise ValueError("every emitted effect must have a terminal routing decision")
     if any(
         kinds not in ({"effect_routed"}, {"effect_dissipated"})
         for kinds in resolution_kinds.values()
     ):
         raise ValueError("one effect cannot both route and dissipate")
+    if pending_effect_ids & {
+        effect_id
+        for effect_id, kinds in resolution_kinds.items()
+        if "effect_dissipated" in kinds
+    }:
+        raise ValueError("dissipated effect cannot remain scheduled")
     routed_event_ids = {
         event.event_id for event in events if event.event_kind == "effect_routed"
     }
@@ -1746,7 +1839,9 @@ def _validate_state_evidence(
 
 
 def _validate_metrics(
-    metrics: CausalMetrics, events: Sequence[CausalEvent]
+    metrics: CausalMetrics,
+    events: Sequence[CausalEvent],
+    scheduled_work: Sequence[ScheduledWork] = (),
 ) -> None:
     """Recompute exact event-count metrics that have canonical trace witnesses."""
     counts = {
@@ -1770,9 +1865,11 @@ def _validate_metrics(
     }
     if counts != expected:
         raise ValueError("metrics disagree with canonical event counts")
-    if metrics.effects_processed != metrics.effects_emitted:
-        raise ValueError("quiescent evidence must account for every emitted effect")
-    if metrics.candidates_considered != metrics.routed_deliveries:
+    pending_effects = sum(item.work_kind == "effect" for item in scheduled_work)
+    pending_deliveries = sum(item.work_kind == "delivery" for item in scheduled_work)
+    if metrics.effects_processed != metrics.effects_emitted - pending_effects:
+        raise ValueError("effect accounting disagrees with scheduled work")
+    if metrics.candidates_considered != metrics.routed_deliveries + pending_deliveries:
         raise ValueError("candidate accounting must equal realized typed routes")
     route_counts: dict[str, int] = {}
     zero_time_depths: list[int] = []

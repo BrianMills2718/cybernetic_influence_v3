@@ -201,11 +201,6 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
     timeline = _list_of_mappings(document.get("timeline"))
     traces = _list_of_mappings(document.get("traces"))
     projected_moments = _list_of_mappings(document.get("moments"))
-    moment_by_activation = {
-        str(moment["activation"]): moment
-        for moment in projected_moments
-        if isinstance(moment.get("activation"), str)
-    }
     events_by_activation: dict[str, list[dict[str, object]]] = {}
     for event in timeline:
         activation = event.get("activation")
@@ -238,25 +233,24 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
             continue
         traces_by_activation.setdefault(activation, []).append(trace)
     moments: list[dict[str, object]] = []
-    for activation, activation_traces in traces_by_activation.items():
-        logical_time = activation_traces[0]["logical_time"]
-        projected_moment = moment_by_activation.get(activation)
-        causal_time = (
-            projected_moment.get("causal_time")
-            if projected_moment is not None
-            else activation_traces[0].get("causal_time")
-        )
-        causal_timestamp = (
-            projected_moment.get("causal_timestamp")
-            if projected_moment is not None
-            else activation_traces[0].get("causal_timestamp")
-        )
-        if not isinstance(causal_time, int) or not isinstance(
-            causal_timestamp, str
+    for projected_moment in projected_moments:
+        activation = projected_moment.get("activation")
+        logical_time = projected_moment.get("logical_time")
+        causal_time = projected_moment.get("causal_time")
+        causal_timestamp = projected_moment.get("causal_timestamp")
+        participants = projected_moment.get("participants")
+        if (
+            not isinstance(activation, str)
+            or not isinstance(logical_time, int)
+            or not isinstance(causal_time, int)
+            or not isinstance(causal_timestamp, str)
+            or not isinstance(participants, list)
+            or not all(isinstance(item, str) for item in participants)
         ):
             raise ValueError(
-                f"causal moment {activation!r} lacks a valid causal timestamp"
+                "projected causal moment lacks a valid activation/time contract"
             )
+        activation_traces = traces_by_activation.get(activation, [])
         events = events_by_activation.get(activation, [])
         if not events:
             private_updates = [
@@ -283,7 +277,7 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
         moments.append(
             {
                 "activation": activation,
-                "participants": [trace["person"] for trace in activation_traces],
+                "participants": participants,
                 "causal_time": causal_time,
                 "causal_timestamp": causal_timestamp,
                 "logical_time": logical_time,

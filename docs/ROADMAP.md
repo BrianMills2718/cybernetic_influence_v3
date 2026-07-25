@@ -25,7 +25,8 @@ claim to reproduce every omitted computation or predict a real system.
 
 ## Current Stage and Truth
 
-Stage: MVP/PoC.
+Stage: MVP/PoC. Slice 15 is active after the operator directed modeled-time
+work to proceed before recording Slice 14's final usability judgment.
 
 V0.13 plus live checkpoint continuation is implemented and deployed as the
 current private demo candidate on the Mac development host at simulator
@@ -213,8 +214,10 @@ workflow.
 ## Current Demo Completion Boundary
 
 “Finished” currently means a reviewable private PoC demo, not completion of the
-North Star or a production simulator. The sole active packet is
-[Slice 14](plans/014-pausable-live-runs.md), and the demo is complete when:
+North Star or a production simulator. [Slice 14](plans/014-pausable-live-runs.md)
+remains the demo-completion boundary, but its final usability judgment is
+deferred while active [Slice 15](plans/015-calibrated-elapsed-time.md) makes
+modeled time truthful and inspectable. The demo is complete when:
 
 1. the current DeepSeek-default Service Desk run exposes synchronized spatial
    and causal maps, grounded moment narratives, participant/composite traces,

@@ -1,15 +1,16 @@
 ---
 doc_role: proposed_plan
 authority: scoped
-status: proposed
+status: active
 created: 2026-07-24
 predecessor: 014-pausable-live-runs.md
 ---
 
 # Slice 15: Model-Generated Elapsed Time
 
-**Status: proposed; do not implement until Slice 14 is closed or explicitly
-reset. This PoC uses model-generated priors, not real-world calibration.**
+**Status: active. Slice 15A is implemented locally; the timing-profile compiler
+and Service Desk profile remain next. This PoC uses model-generated priors, not
+real-world calibration.**
 
 ## Outcome
 
@@ -147,6 +148,15 @@ Add fixed durations, the retained queue, checkpoint validation, and corruption
 plus resume tests. A single timed Service Desk transition is the first vertical
 proof.
 
+**Implementation evidence (2026-07-24):** delayed exact effects and deliveries
+now remain in a strict `scheduled_work` checkpoint contract instead of being
+drained prematurely. The active runtime retains each exact-only due transition
+as an `ExactWorkRecord`, so its trace, causal moment, and narration remain
+inspectable between agent activations. A focused Service Desk test pauses with
+two 300-unit deliveries pending, restores the checkpoint, and verifies that the
+specialist first activates at time 300. This establishes truthful future-work
+semantics, not a generated or calibrated duration profile.
+
 ### 15B — profile and analyst readout
 
 Add the source-labelled Service Desk profile, seeded sampling, scenario/UI
@@ -167,7 +177,8 @@ checkpoint semantics. See [SimPy overview](https://simpy.readthedocs.io/en/stabl
 and its [timeout event contract](https://simpy.readthedocs.io/en/3.0.3/api_reference/simpy.events.html).
 ADR 010 remains binding for causal versus scenario time.
 
-Activation requires only the Slice 14 completion/reset decision. The initial
-profile source is fixed as `model_generated_prior`; the configured generator's
-identity and retained structured output are required evidence. It is a scenario
-assumption, not an empirical benchmark or calibration claim.
+The operator-directed start of this packet is the explicit Slice 14 reset
+decision. The initial profile source is fixed as `model_generated_prior`; the
+configured generator's identity and retained structured output are required
+evidence. It is a scenario assumption, not an empirical benchmark or
+calibration claim.

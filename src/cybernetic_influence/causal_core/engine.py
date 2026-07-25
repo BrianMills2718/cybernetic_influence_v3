@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
-from heapq import heappop, heappush
+from heapq import heapify, heappop, heappush
 import json
 import re
 import threading
@@ -23,6 +23,7 @@ from cybernetic_influence.causal_core.models import (
     CausalRunResult,
     CausalScenario,
     CausalState,
+    ScheduledWork,
     CausalStep,
     CarrierRevisionChange,
     ConnectionState,
@@ -322,8 +323,18 @@ class CausalSession:
         with self._lock:
             return self._metrics.model_copy(deep=True)
 
-    def advance(self, action: ActionAttempt) -> CausalStep:
-        """Commit one routed action completely or restore the exact prior session."""
+    def advance(
+        self,
+        action: ActionAttempt,
+        *,
+        drain_through: int | None = None,
+    ) -> CausalStep:
+        """Commit one action and drain only work due at the selected horizon.
+
+        The default preserves the historical fully-drained action behavior.
+        Active runtimes pass the action timestamp, retaining later work for the
+        global scheduler and checkpoint rather than prematurely realizing it.
+        """
         with self._lock:
             if self._terminal:
                 raise RuntimeError("causal session is already terminal")
@@ -336,7 +347,7 @@ class CausalSession:
             observation_ids = set(self._state.observations)
             try:
                 self._accept_action(validated_action)
-                self._drain_queue()
+                self._drain_queue(through=drain_through)
                 self._accepted_action_ids.append(validated_action.action_id)
             except Exception:
                 self._restore_snapshot(snapshot)
@@ -356,13 +367,41 @@ class CausalSession:
                 state=state,
             )
 
+    @property
+    def next_pending_time(self) -> int | None:
+        """Return the earliest retained exact work time without consuming it."""
+        with self._lock:
+            return self._queue[0][0] if self._queue else None
+
+    def advance_due(self, logical_time: int) -> list[CausalEvent]:
+        """Commit exact work due through one scheduler horizon.
+
+        This operation has no actor proposal.  Its events remain exact causal
+        evidence and any delivered observations become eligible only after it
+        returns.
+        """
+        with self._lock:
+            if self._terminal:
+                raise RuntimeError("causal session is already terminal")
+            if logical_time < self._state.logical_time:
+                raise ValueError("due-work logical time regresses")
+            snapshot = self._snapshot()
+            event_start = len(self._events)
+            try:
+                self._drain_queue(through=logical_time)
+            except Exception:
+                self._restore_snapshot(snapshot)
+                raise
+            return [
+                event.model_copy(deep=True)
+                for event in self._events[event_start:]
+            ]
+
     def checkpoint(self) -> CausalCheckpoint:
         """Return a validating quiescent checkpoint for future continuation."""
         with self._lock:
             if self._terminal:
                 raise RuntimeError("terminal causal sessions cannot be checkpointed")
-            if self._queue:
-                raise RuntimeError("cannot checkpoint with pending effects")
             events = self.events
             return CausalCheckpoint.model_validate(
                 _with_record_digest(
@@ -392,6 +431,10 @@ class CausalSession:
                         "effect_sequence": self._effect_sequence,
                         "observation_sequence": self._observation_sequence,
                         "queue_sequence": self._queue_sequence,
+                        "scheduled_work": [
+                            item.model_dump(mode="json")
+                            for item in self._serialize_queue()
+                        ],
                     }
                 )
             )
@@ -432,7 +475,7 @@ class CausalSession:
         session._state = validated.state.model_copy(deep=True)
         session._events = [event.model_copy(deep=True) for event in validated.events]
         session._metrics = validated.metrics.model_copy(deep=True)
-        session._queue = []
+        session._queue = session._deserialize_queue(validated.scheduled_work)
         session._accepted_action_ids = list(validated.accepted_action_ids)
         session._event_sequence = validated.event_sequence
         session._effect_sequence = validated.effect_sequence
@@ -575,9 +618,9 @@ class CausalSession:
             variance_source="external_action",
         )
 
-    def _drain_queue(self) -> None:
-        """Process every effect and routed arrival in logical-time order."""
-        while self._queue:
+    def _drain_queue(self, *, through: int | None = None) -> None:
+        """Process exact work in order, retaining items after ``through``."""
+        while self._queue and (through is None or self._queue[0][0] <= through):
             _, _, work = heappop(self._queue)
             if isinstance(work, EffectEnvelope):
                 self._metrics.effects_processed += 1
@@ -1337,6 +1380,65 @@ class CausalSession:
         self._observation_sequence = snapshot.observation_sequence
         self._queue_sequence = snapshot.queue_sequence
         self._known_event_ids = {event.event_id for event in self._events}
+
+    def _serialize_queue(self) -> list[ScheduledWork]:
+        """Project private heap work into a strict checkpoint contract."""
+        serialized: list[ScheduledWork] = []
+        for due_at, sequence, work in sorted(self._queue):
+            if isinstance(work, EffectEnvelope):
+                serialized.append(
+                    ScheduledWork(
+                        due_at=due_at,
+                        sequence=sequence,
+                        work_kind="effect",
+                        effect=work.model_copy(deep=True),
+                    )
+                )
+                continue
+            serialized.append(
+                ScheduledWork(
+                    due_at=due_at,
+                    sequence=sequence,
+                    work_kind="delivery",
+                    effect=work.effect.model_copy(deep=True),
+                    route_kind=work.route.route_kind,
+                    target_port_id=work.route.target_port_id,
+                    route_delay=work.route.route_delay,
+                    connection_id=work.route.connection_id,
+                    container_id=work.route.container_id,
+                )
+            )
+        return serialized
+
+    @staticmethod
+    def _deserialize_queue(
+        scheduled: list[ScheduledWork],
+    ) -> list[tuple[int, int, _QueuedWork]]:
+        """Restore only the public, validated pending-work representation."""
+        queue: list[tuple[int, int, _QueuedWork]] = []
+        for item in scheduled:
+            if item.work_kind == "effect":
+                work: _QueuedWork = item.effect.model_copy(deep=True)
+            else:
+                if (
+                    item.route_kind is None
+                    or item.target_port_id is None
+                    or item.route_delay is None
+                ):
+                    raise ValueError("validated delivery lost route fields")
+                work = _RoutedDelivery(
+                    effect=item.effect.model_copy(deep=True),
+                    route=_RouteCandidate(
+                        route_kind=item.route_kind,
+                        target_port_id=item.target_port_id,
+                        route_delay=item.route_delay,
+                        connection_id=item.connection_id,
+                        container_id=item.container_id,
+                    ),
+                )
+            queue.append((item.due_at, item.sequence, work))
+        heapify(queue)
+        return queue
 
     def _build_indexes(self) -> None:
         """Precompute exact local adjacency without semantic world search."""

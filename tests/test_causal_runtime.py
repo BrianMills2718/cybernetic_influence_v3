@@ -34,6 +34,11 @@ from cybernetic_influence.causal_core.models import (
     PlacementDraft,
 )
 from cybernetic_influence.causal_core.projection import project_graph
+from cybernetic_influence.presentation import (
+    analyst_moments,
+    analyst_timeline,
+    _temporal_states,
+)
 from cybernetic_influence.causal_core.replay import replay_committed_trajectory
 from cybernetic_influence.scenarios.physical_access import (
     CrossingRequest,
@@ -358,6 +363,59 @@ def test_event_driven_service_desk_resumes_one_validated_prefix_without_duplicat
         event.event_id for event in uninterrupted.core_result.events
     ]
     assert resumed.core_result.final_state == uninterrupted.core_result.final_state
+
+
+def test_event_driven_checkpoint_retains_future_route_work() -> None:
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0],
+        cognition_profile="position_context",
+        reasoning_effort="medium",
+    )
+    scenario = fixture.scenario.model_copy(deep=True)
+    scenario.initial_state.connections["routing_to_specialist"].delay = 300
+    scenario.initial_state.connections["triager_direct_to_specialist"].delay = 300
+    delayed_fixture = replace(fixture, scenario=scenario)
+    bindings = service_desk_scripted_bindings(delayed_fixture)
+
+    with pytest.raises(RuntimePaused) as paused:
+        run_event_driven_service_desk(
+            delayed_fixture,
+            bindings,
+            run_id="service_desk_pending_route_checkpoint",
+            pause_requested=lambda: True,
+        )
+
+    checkpoint = paused.value.checkpoint
+    scheduled_work = checkpoint.core_checkpoint.scheduled_work
+    assert scheduled_work
+    assert {item.due_at for item in scheduled_work} == {300}
+    assert all(item.work_kind == "delivery" for item in scheduled_work)
+
+    resumed = run_event_driven_service_desk(
+        delayed_fixture,
+        bindings,
+        run_id="service_desk_pending_route_checkpoint",
+        checkpoint=checkpoint,
+    )
+    specialist_attempt = next(
+        participant
+        for attempt in resumed.attempts
+        for participant in attempt.participants
+        if participant.requested_active_system_id == "specialist"
+    )
+    assert specialist_attempt.input.logical_time == 300
+    assert resumed.core_result.final_state.fact("incident_17.status").value == "closed_confirmed"
+    timeline = analyst_timeline(
+        resumed,
+        _temporal_states(delayed_fixture.scenario.initial_state, resumed.core_result.events),
+    )
+    moments = analyst_moments(resumed, timeline)
+    assert any(
+        moment["activation"] == "exact_work_000000"
+        and moment["logical_time"] == 300
+        and moment["participants"] == ["exact_mechanisms"]
+        for moment in moments
+    )
 
 
 def test_multirate_scheduler_rejects_nonfuture_process_update() -> None:
