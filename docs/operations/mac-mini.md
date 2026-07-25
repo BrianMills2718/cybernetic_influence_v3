@@ -21,9 +21,9 @@ service `cybernetic-influence-v3-openrouter`, then an owner-only raw secret file
 when the Keychain is locked to noninteractive services. The credential is not
 stored in the repository or LaunchAgent plist.
 
-Last verified 2026-07-24:
+Last verified 2026-07-25:
 
-- simulator: `ecce006c77e99f968230d9e5fb0f78cfcac727b4`;
+- simulator: `b45c256af9f2c8e6bac5bc5f1abd946d0f4b7a08`;
 - shared client: `9f61bd7c9419c93961a722a7ef6209adcf593382`;
 - advertised routes: Terra and DeepSeek V4 Flash;
 - Terra certification:
@@ -47,6 +47,12 @@ Last verified 2026-07-24:
   participant/composite traces, causal-moment controls, and history readback;
   no browser console/network or backend error remained, and the reproduced
   trace-selection scroll jump is fixed;
+- current rendered desktop readback: live DeepSeek baseline
+  `run_eece01600002` completed after pause and resume with 38 model calls,
+  `$0.007079` retained cost, and a `closed_confirmed` outcome. The deployed
+  view labels the three projections Spatial topology, Configured interaction
+  pathways, and Realized causal graph; intentionally nonspatial entities are
+  described as outside the spatial projection rather than as missing placement;
 - causal-time correction canary: scripted `run_7124717c9dcd` retained unique
   moment timestamps `c1` through `c8`, 67 unique exact trace positions, and an
   explicitly separate uncalibrated process clock; rendered readback also

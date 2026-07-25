@@ -32,8 +32,8 @@ pause did not leave the operator with a discoverable resume path.
 The target screen has one ordered flow:
 
 ```text
-choose scenario + condition -> Play -> concise outcome account
-  -> select one of three maps -> select evidence -> optional exact inspector
+choose scenario + condition -> Play -> select one of three maps
+  -> concise outcome account -> select evidence -> optional exact inspector
 ```
 
 Run lifecycle state stays visible at the control that owns Play. A completed run
@@ -96,6 +96,12 @@ revision, trace ID, and limitations.
 
 Acceptance: no misleading lifecycle state, no console/network error, no scroll
 jump, correct map names, and no claim that process ticks are real timestamps.
+
+Technical evidence on 2026-07-25: the Mac Mini deployed
+`b45c256af9f2c8e6bac5bc5f1abd946d0f4b7a08`; its focused API suite passed
+(18 tests), and a rendered 1440px desktop readback of the retained live
+baseline confirmed the map labels, corrected spatial caption, completed state,
+and retained cost. The actual operator usability judgment remains outstanding.
 
 ## Verification and stop rule
 
