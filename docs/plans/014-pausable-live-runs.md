@@ -65,8 +65,13 @@ causal moments were labeled with repeated scenario-clock seconds, making an
 uncalibrated two-tick process look like a realistic two-second incident. The
 accepted correction gives every moment and exact subevent a unique causal
 timestamp, keeps the scenario clock separate, and stops the Service Desk from
-claiming calibrated seconds. This correction must be deployed and the desktop
-readout rechecked before the final operator judgment can close the packet.
+claiming calibrated seconds. It is deployed at
+`ecce006c77e99f968230d9e5fb0f78cfcac727b4`. Scripted canary
+`run_7124717c9dcd` retained `c1` through `c8` plus 67 unique exact trace
+positions; the rendered desktop reopened both it and legacy live run
+`run_251610100415` with unique causal labels, no repeated-seconds claim, and no
+console, network, or new backend error. The final operator judgment remains the
+only open demo gate.
 
 ## Demo completion gate
 

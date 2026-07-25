@@ -29,7 +29,7 @@ Stage: MVP/PoC.
 
 V0.13 plus live checkpoint continuation is implemented and deployed as the
 current private demo candidate on the Mac development host at simulator
-`997ce39890bdc9c0e222e6b029704623df10b848` with shared-client revision
+`ecce006c77e99f968230d9e5fb0f78cfcac727b4` with shared-client revision
 `9f61bd7c9419c93961a722a7ef6209adcf593382`. The API reports DeepSeek V4
 Flash with `none` reasoning as the default and Terra as the other certified
 route. DeepSeek `high` and `xhigh` remain explicitly experimental; `medium` is
@@ -59,6 +59,16 @@ pause, resume, both maps, narratives, participant/composite traces,
 causal-moment controls, and history readback without console/network errors or
 page-position jumps. Stakeholder reviewability is established; the final
 operator usability judgment for this demo candidate is not yet recorded.
+
+The operator's first review found that repeated scenario-clock values were
+misleadingly displayed as elapsed seconds. The deployed correction now shows
+successive causal moments as unique `c1`, `c2`, and so on, gives exact trace
+events stable positions such as `c1.1`, and retains the separate uncalibrated
+Service Desk process clock only in advanced evidence. Scripted deployment
+canary `run_7124717c9dcd` produced `c1` through `c8` and 67 unique exact trace
+positions. A rendered desktop check reopened both that run and the older live
+run `run_251610100415`; legacy narratives also displayed unique causal time,
+with no console, network, or new backend error.
 
 V0.12.2 is retained as the earlier narrated and browser-certified baseline. It adds
 the separate run-history workspace and stable in-place scale/time inspection

@@ -23,7 +23,7 @@ stored in the repository or LaunchAgent plist.
 
 Last verified 2026-07-24:
 
-- simulator: `997ce39890bdc9c0e222e6b029704623df10b848`;
+- simulator: `ecce006c77e99f968230d9e5fb0f78cfcac727b4`;
 - shared client: `9f61bd7c9419c93961a722a7ef6209adcf593382`;
 - advertised routes: Terra and DeepSeek V4 Flash;
 - Terra certification:
@@ -47,6 +47,11 @@ Last verified 2026-07-24:
   participant/composite traces, causal-moment controls, and history readback;
   no browser console/network or backend error remained, and the reproduced
   trace-selection scroll jump is fixed;
+- causal-time correction canary: scripted `run_7124717c9dcd` retained unique
+  moment timestamps `c1` through `c8`, 67 unique exact trace positions, and an
+  explicitly separate uncalibrated process clock; rendered readback also
+  upgraded the older live canary to unique causal labels without console,
+  network, or new backend errors;
 - open limitation: operator usability judgment remains pending; mobile is out
   of scope for this private PoC.
 
