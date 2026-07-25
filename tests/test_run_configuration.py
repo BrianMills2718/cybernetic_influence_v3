@@ -14,12 +14,22 @@ from pytest import MonkeyPatch
 from cybernetic_influence.run_configuration import (
     RunLlmOptions,
     _current_schema_digests,
+    llm_client_revision,
     model_catalog,
     resolve_live_configuration,
 )
 
 
 MODEL = "openrouter/openai/gpt-5.6-terra"
+
+
+def test_local_package_revision_matches_shared_client_observation_format(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("LLM_CLIENT_REVISION", raising=False)
+    monkeypatch.setattr("cybernetic_influence.run_configuration.version", lambda _: "0.7.0")
+
+    assert llm_client_revision() == "package:0.7.0"
 
 
 def _observation(

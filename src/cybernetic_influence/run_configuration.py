@@ -317,12 +317,12 @@ def resolve_live_configuration(
 
 
 def llm_client_revision() -> str:
-    """Return the deployment binding without inventing a source revision."""
+    """Return the same package/deployment revision form used by shared-client evidence."""
     bound = os.getenv("LLM_CLIENT_REVISION", "").strip()
     if bound:
         return bound
     try:
-        return version("llm-client")
+        return f"package:{version('llm-client')}"
     except PackageNotFoundError:
         return "unknown-development"
 
