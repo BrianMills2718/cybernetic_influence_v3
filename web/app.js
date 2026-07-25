@@ -154,6 +154,30 @@ function configureScenario(scenarioId) {
   describeCondition()
 }
 
+async function loadScenarioPreview() {
+  const scenario = $('#scenario').value
+  const arm = $('#arm').value
+  if (!scenario || !arm) return
+  const preview = await request(
+    `/api/scenarios/${encodeURIComponent(scenario)}/preview?arm_id=${encodeURIComponent(arm)}&cognition_profile=position_context`,
+  )
+  current = {
+    nodes: [], snapshots: {}, edges: [], boundaries: [], timeline: [], moments: [], traces: [],
+    trajectory: {nodes: [], edges: []},
+    ...preview,
+  }
+  selectedEventIndex = 0
+  selectedMomentIndex = 0
+  selectedScale = 'exact'
+  selectedGraphView = current.world ? 'world' : 'causal'
+  selectedNodeId = null
+  selectedEdgeId = null
+  $('#map-section').hidden = false
+  renderProjectionControls()
+  renderGraph()
+  $('#inspector').innerHTML = `<span class="eyebrow">Configured starting state</span><h2>Ready to play</h2><p>Select a place, person, record, mechanism, or pathway to inspect the scenario as configured. The realized causal graph will appear after the simulation commits events.</p>`
+}
+
 function fillList(selector, values = []) {
   $(selector).innerHTML = values.map((value) => `<li>${html(value)}</li>`).join('')
 }
@@ -298,14 +322,16 @@ function selectedBoundary() {
 
 function boundarySnapshot(boundary = selectedBoundary()) {
   const event = current?.timeline?.[selectedEventIndex]
-  return boundary?.snapshots?.[String(event?.state_revision)] || null
+  const revision = event?.state_revision ?? current?.initial_revision
+  return boundary?.snapshots?.[String(revision)] || null
 }
 
 function worldProjection() {
   const world = current?.world
   const event = current?.timeline?.[selectedEventIndex]
-  if (!world || !event) return null
-  const snapshot = world.snapshots?.[String(event.state_revision)]
+  const revision = event?.state_revision ?? current?.initial_revision
+  if (!world || revision === undefined) return null
+  const snapshot = world.snapshots?.[String(revision)]
   if (!snapshot) return null
   return {
     places:(world.places || []).map((place) => ({
@@ -735,14 +761,19 @@ function renderGraph() {
 
 function renderProjectionControls() {
   const hasWorld = Boolean(current?.world)
+  const hasTrajectory = Boolean(current?.timeline?.length)
   $('#spatial-layout').disabled = !hasWorld
+  $('#causal-layout').disabled = !current
+  $('#trajectory-layout').disabled = !hasTrajectory
   $('#spatial-layout').classList.toggle('active', selectedGraphView === 'world')
   $('#causal-layout').classList.toggle('active', selectedGraphView === 'causal')
   $('#trajectory-layout').classList.toggle('active', selectedGraphView === 'trajectory')
   $('#spatial-layout').setAttribute('aria-pressed', String(selectedGraphView === 'world'))
   $('#causal-layout').setAttribute('aria-pressed', String(selectedGraphView === 'causal'))
   $('#trajectory-layout').setAttribute('aria-pressed', String(selectedGraphView === 'trajectory'))
-  $('#projection-help').textContent = !hasWorld
+  $('#projection-help').textContent = current?.preview
+    ? 'This is the configured starting state. Spatial topology and configured interaction pathways are available before Play; the realized causal graph appears only after events are committed.'
+    : !hasWorld
     ? 'This scenario has no authored places or spatial topology yet, so only configured interaction pathways and the realized causal graph can be shown.'
     : selectedGraphView === 'world'
       ? 'Spatial topology shows authored places, occupants, and physical links. Adjacency does not itself grant permission or traversal.'
@@ -1041,8 +1072,22 @@ $('#next-event').onclick = () => selectMoment(selectedMomentIndex + 1)
 $('#simulation-tab').onclick = () => setWorkspaceView('simulation')
 $('#history-tab').onclick = () => setWorkspaceView('history')
 $('#readme-tab').onclick = () => setWorkspaceView('readme')
-$('#scenario').onchange = (event) => configureScenario(event.target.value)
-$('#arm').onchange = describeCondition
+$('#scenario').onchange = async (event) => {
+  configureScenario(event.target.value)
+  try {
+    await loadScenarioPreview()
+  } catch (error) {
+    $('#run-status').textContent = error.message
+  }
+}
+$('#arm').onchange = async () => {
+  describeCondition()
+  try {
+    await loadScenarioPreview()
+  } catch (error) {
+    $('#run-status').textContent = error.message
+  }
+}
 $('#spatial-layout').onclick = () => {
   if (!current?.world) return
   selectedGraphView = 'world'
@@ -1162,6 +1207,7 @@ Promise.all([loadConfig(), loadHistory()])
     renderLifecycleControls()
     const retainedId = new URLSearchParams(window.location.search).get('run')
     if (retainedId) await openRetained(retainedId)
+    else await loadScenarioPreview()
   })
   .catch((error) => { $('#run-status').textContent = error.message })
 

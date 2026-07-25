@@ -19,6 +19,10 @@ from cybernetic_influence.active_runtime import (
     ActiveRuntimeCheckpoint,
 )
 from cybernetic_influence.presentation import (
+    analyst_boundaries,
+    analyst_edges,
+    analyst_nodes,
+    analyst_world,
     build_analyst_document,
     build_service_desk_analyst_document,
     event_driven_service_desk_outcome,
@@ -94,6 +98,67 @@ class RunRequest(BaseModel):
     execution: Literal["scripted", "live"] = "scripted"
     llm_options: RunLlmOptions | None = None
     run_id: str | None = None
+
+
+def _scenario_preview(
+    scenario: str,
+    arm_id: str,
+    cognition_profile: str,
+) -> dict[str, object]:
+    """Project an initial scenario state without executing or retaining a run."""
+    if scenario == "service_desk":
+        arm = next(
+            (item for item in service_desk_arm_configurations() if item.arm_id == arm_id),
+            None,
+        )
+        if arm is None:
+            raise ValueError("unknown Service Desk condition")
+        if cognition_profile not in {"position_context", "procedural_control"}:
+            raise ValueError("unknown Service Desk cognition profile")
+        fixture = service_desk_fixture(arm, cognition_profile=cognition_profile)
+    elif scenario == "physical_access":
+        arm = next(
+            (item for item in physical_access_arm_configurations() if item.arm_id == arm_id),
+            None,
+        )
+        if arm is None:
+            raise ValueError("unknown Physical Access condition")
+        fixture = physical_access_fixture(arm)
+    elif scenario == "purchase_payment":
+        arm = next(
+            (item for item in purchase_payment_arm_configurations() if item.arm_id == arm_id),
+            None,
+        )
+        if arm is None:
+            raise ValueError("unknown Purchase to Payment condition")
+        fixture = purchase_payment_fixture(arm)
+    else:
+        raise ValueError("unknown scenario")
+
+    state = fixture.scenario.initial_state
+    revision = str(state.revision)
+    temporal_states = {revision: state}
+    edges = analyst_edges(state)
+    return {
+        "status": "ready",
+        "preview": True,
+        "scenario": scenario,
+        "profile": cognition_profile,
+        "arm": arm_id,
+        "initial_revision": state.revision,
+        "world": analyst_world(temporal_states),
+        "nodes": analyst_nodes(state),
+        "snapshots": {revision: analyst_nodes(state)},
+        "edges": edges,
+        "boundaries": analyst_boundaries(
+            fixture.scenario.analytical_boundaries,
+            temporal_states,
+            edges,
+            [],
+        ),
+        "timeline": [],
+        "trajectory": {"nodes": [], "edges": []},
+    }
 
 
 def create_app(web_root: Path | None = None, run_root: Path | None = None) -> FastAPI:
@@ -221,6 +286,18 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
         _require_access(request)
         retained, corrupt = runs.list_runs()
         return {"runs": retained, "corrupt_files": corrupt}
+
+    @app.get("/api/scenarios/{scenario}/preview")
+    def scenario_preview(
+        scenario: Literal["service_desk", "physical_access", "purchase_payment"],
+        arm_id: str,
+        cognition_profile: str = "position_context",
+    ) -> dict[str, object]:
+        """Return a read-only initial projection for the map before Play."""
+        try:
+            return _scenario_preview(scenario, arm_id, cognition_profile)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @app.get("/api/runs/{run_id}")
     def retained_run(run_id: str, request: Request) -> dict[str, object]:

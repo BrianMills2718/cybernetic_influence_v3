@@ -123,12 +123,35 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"Configured interaction pathways show scenario-configured" in app_script.content
     assert b"function renderLifecycleControls" in app_script.content
     assert b"renderLifecycleControls(current)" in app_script.content
+    assert b"function loadScenarioPreview" in app_script.content
+    assert b"/api/scenarios/${encodeURIComponent(scenario)}/preview" in app_script.content
+    assert b"the realized causal graph appears only after events are committed" in app_script.content
     assert b"how did this condition change the path to safe closure" in app_script.content
     assert b"modeled elapsed time T+" in app_script.content
     assert b"aria-pressed" in app_script.content
     assert b"showTraceInPlace(button.dataset.person)" in app_script.content
     assert b"trace.style.minHeight" in app_script.content
     assert b"kind:edge.kind || 'connection'" in app_script.content
+
+
+def test_scenario_preview_exposes_the_initial_map_without_creating_a_run(tmp_path: Path) -> None:
+    api = client(tmp_path)
+    response = api.get(
+        "/api/scenarios/service_desk/preview",
+        params={"arm_id": "no_direct_path", "cognition_profile": "position_context"},
+    )
+
+    assert response.status_code == 200, response.text
+    preview = response.json()
+    assert preview["preview"] is True
+    assert preview["status"] == "ready"
+    assert preview["timeline"] == []
+    assert preview["trajectory"] == {"nodes": [], "edges": []}
+    assert preview["world"]["places"]
+    assert preview["world"]["snapshots"][str(preview["initial_revision"])]["placements"]
+    assert preview["nodes"]
+    assert any(edge["enabled"] is False for edge in preview["edges"])
+    assert api.get("/api/runs").json()["runs"] == []
 
 
 def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Path) -> None:

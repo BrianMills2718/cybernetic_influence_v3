@@ -83,9 +83,14 @@ condition-specific explanation, then offer the exact inspector below it. Add a
 minimal comparison-ready readout for the one run: condition, outcome, modeled
 timing availability, and the next exact evidence to inspect.
 
+The spatial topology and configured interaction pathways must use a read-only
+initial-state projection, so they appear and remain selectable before Play and
+while a live request is in flight. The realized causal graph stays unavailable
+until the run has committed an event; it must never be presented as a forecast.
+
 Acceptance: a reviewer can run baseline and `no_direct_path`, identify the
-changed direct report route, and find the retained evidence without opening
-Advanced evidence.
+changed direct report route before or after Play, then find retained evidence
+without opening Advanced evidence.
 
 ### 16C — integrated live browser proof
 
