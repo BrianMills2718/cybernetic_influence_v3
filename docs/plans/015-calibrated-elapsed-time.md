@@ -191,12 +191,18 @@ scripted baseline whose causal descendants always advance elapsed time.
 `positive_duration` timing contract and a positive `minimum_world_duration`.
 The multirate Service Desk opts into it. The core assigns every non-metadata
 event a later modeled time than each explicit parent, retains a timing record
-(`starts_at`, `duration`, `scenario_assumption`, and source reference), and
+(`starts_at`, elapsed `duration`, minimum scenario duration, and any separately
+labelled runtime-serialization delay), and
 rejects a persisted trace whose child fails that relation. A scripted baseline
 completed with 90 events and positive duration records; pause/resume and
 tampered-route validation remain covered. This first vertical deliberately
 uses one explicit scenario-wide assumption. It does not yet claim
 per-mechanism estimates, sampled durations, or runtime LLM adjudication.
+
+The live narrator reserves enough remaining authorization for every retained
+causal moment before its first provider call. It either produces the complete
+account or retains a no-spend preflight explanation; it never spends on a
+partial account merely because a later moment cannot fit the budget.
 
 ### 15C — realized causal graph and live proof
 

@@ -1308,10 +1308,7 @@ class CausalSession:
             event_kind="effect_emitted",
             logical_time=logical_time,
             causal_parent_event_ids=[parent_event_id],
-            summary=(
-                f"Emitted {effect_type} through {source_port_id} at logical "
-                f"time {logical_time}."
-            ),
+            summary=f"Emitted {effect_type} through {source_port_id}.",
             variance_source=variance_source,
             effect_id=effect_id,
             source_port_id=source_port_id,
@@ -1369,11 +1366,15 @@ class CausalSession:
             if not isinstance(requested, int):
                 raise AssertionError("event logical time must be an integer")
             starts_at = max(parent_times)
-            due_at = max(
+            nominal_due_at = max(
                 requested,
                 starts_at + self._scenario.minimum_world_duration,
+            )
+            due_at = max(
+                nominal_due_at,
                 self._events[-1].logical_time + self._scenario.minimum_world_duration,
             )
+            serialization_delay = due_at - nominal_due_at
             values["logical_time"] = due_at
             raw_details = values.get("details", {})
             if not isinstance(raw_details, Mapping):
@@ -1382,8 +1383,18 @@ class CausalSession:
             details["timing"] = {
                 "starts_at": starts_at,
                 "duration": due_at - starts_at,
-                "source_kind": "scenario_assumption",
-                "source_ref": "minimum_world_duration",
+                "minimum_duration": self._scenario.minimum_world_duration,
+                "serialization_delay": serialization_delay,
+                "source_kind": (
+                    "scenario_assumption"
+                    if serialization_delay == 0
+                    else "scenario_assumption_plus_runtime_serialization"
+                ),
+                "source_ref": (
+                    "minimum_world_duration"
+                    if serialization_delay == 0
+                    else "minimum_world_duration + trace_serialization"
+                ),
             }
             values["details"] = details
         sequence = self._event_sequence

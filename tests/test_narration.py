@@ -124,7 +124,7 @@ def test_narrator_citation_outside_current_moment_is_retained_as_unavailable(
     assert calls[0]["error_type"] == "ValueError"
 
 
-def test_narrator_stops_before_call_ceiling_no_longer_fits(
+def test_narrator_reserves_the_full_account_before_any_provider_call(
     tmp_path: Path,
 ) -> None:
     document = TestClient(create_app(ROOT / "web", tmp_path)).post(
@@ -161,15 +161,41 @@ def test_narrator_stops_before_call_ceiling_no_longer_fits(
         structured_call=fake_call,
     )
 
-    assert calls == 1
+    assert calls == 0
     assert narration["status"] == "unavailable"
-    assert narration["cost"] == 0.01
+    assert narration["cost"] == 0.0
     boundary = narration["failure_boundary"]
     assert isinstance(boundary, Mapping)
-    assert boundary["kind"] == "budget_exhausted"
-    assert boundary["next_moment"] == 2
-    assert boundary["remaining_authorization"] == pytest.approx(0.015)
-    assert boundary["required_call_ceiling"] == 0.02
+    assert boundary["kind"] == "budget_preflight"
+    assert boundary["required_calls"] == len(document["moments"])
+    assert boundary["remaining_authorization"] == pytest.approx(0.025)
+    assert boundary["per_call_ceiling"] == 0.02
+
+
+def test_narrator_checks_its_configured_call_limit_before_provider_calls(
+    tmp_path: Path,
+) -> None:
+    document = TestClient(create_app(ROOT / "web", tmp_path)).post(
+        "/api/runs",
+        json={"execution": "scripted"},
+    ).json()
+
+    narration = narrate_live_moments(
+        document,
+        model="test-model",
+        trace_id_prefix="run_call_limit_test",
+        max_calls=1,
+        structured_call=lambda *_args, **_kwargs: pytest.fail(
+            "preflight must prevent any provider call"
+        ),
+    )
+
+    assert narration["status"] == "unavailable"
+    assert narration["model_calls"] == 0
+    boundary = narration["failure_boundary"]
+    assert isinstance(boundary, Mapping)
+    assert boundary["kind"] == "call_limit_preflight"
+    assert boundary["configured_max_calls"] == 1
 
 
 def test_narrator_retains_observed_over_ceiling_cost_as_failure(
@@ -202,7 +228,7 @@ def test_narrator_retains_observed_over_ceiling_cost_as_failure(
         document,
         model="test-model",
         trace_id_prefix="run_over_ceiling_test",
-        max_total_cost=0.10,
+        max_total_cost=0.74,
         structured_call=expensive_call,
     )
 

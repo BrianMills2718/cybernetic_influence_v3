@@ -21,7 +21,9 @@ NARRATOR_PER_CALL_CEILING = 0.02
 SERVER_MAX_TOTAL_COST = 0.74
 DEFAULT_MAX_TOTAL_COST = 0.74
 MAXIMUM_PARTICIPANT_CALLS = 48
-MAXIMUM_NARRATOR_CALLS = 12
+# The multirate Service Desk may retain participant and exact-work moments in
+# one run.  This bounds a complete account of that representative trace.
+MAXIMUM_NARRATOR_CALLS = 32
 CERTIFICATION_MAX_AGE = timedelta(days=7)
 
 class _RouteAdvertisement(TypedDict):

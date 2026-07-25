@@ -109,6 +109,9 @@ sampling contract.
 The multirate Service Desk now requires every non-metadata causal child event to
 complete at a later modeled scenario time than its parent. Its first timing
 source is a declared scenario-wide minimum duration, not a real-world estimate.
+If the retained single-threaded trace order delays an otherwise-ready event, that
+additional delay is retained separately as runtime serialization rather than
+being attributed to the scenario assumption.
 Other authored scenarios remain legacy zero-duration traces until a concrete
 timing slice migrates them. The realized activity/event causal graph is distinct
 from the existing structural graph of entities and possible routes. See

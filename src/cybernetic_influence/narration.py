@@ -36,6 +36,7 @@ def narrate_live_moments(
     model: str,
     trace_id_prefix: str,
     max_total_cost: float = 0.74,
+    max_calls: int | None = None,
     reasoning_effort: str = NARRATOR_REASONING_EFFORT,
     structured_call: StructuredCall | None = None,
 ) -> dict[str, object]:
@@ -56,32 +57,53 @@ def narrate_live_moments(
             "calls": [],
         }
 
+    required_calls = len(moments)
+    required_ceiling = required_calls * NARRATOR_MAX_BUDGET
+    if max_calls is not None and required_calls > max_calls:
+        return {
+            "status": "unavailable",
+            "reason": (
+                "narration was not started because the retained run requires "
+                f"{required_calls} narrator calls but its configured limit is "
+                f"{max_calls}"
+            ),
+            "failure_boundary": {
+                "kind": "call_limit_preflight",
+                "required_calls": required_calls,
+                "configured_max_calls": max_calls,
+            },
+            "model_calls": 0,
+            "cost": 0.0,
+            "moments": [],
+            "calls": [],
+        }
+    if required_ceiling > max_total_cost + 1e-12:
+        return {
+            "status": "unavailable",
+            "reason": (
+                "narration was not started because the remaining authorization "
+                f"${max_total_cost:.8f} cannot reserve {required_calls} narrator "
+                f"calls at their ${NARRATOR_MAX_BUDGET:.8f} ceiling"
+            ),
+            "failure_boundary": {
+                "kind": "budget_preflight",
+                "required_calls": required_calls,
+                "required_authorization": required_ceiling,
+                "remaining_authorization": max_total_cost,
+                "per_call_ceiling": NARRATOR_MAX_BUDGET,
+            },
+            "model_calls": 0,
+            "cost": 0.0,
+            "moments": [],
+            "calls": [],
+        }
+
     call = structured_call or _resolve_structured_call()
     prior: list[dict[str, object]] = []
     narrated: list[dict[str, object]] = []
     calls: list[dict[str, object]] = []
     total_cost = 0.0
     for index, moment in enumerate(moments, start=1):
-        remaining = max_total_cost - total_cost
-        if remaining + 1e-12 < NARRATOR_MAX_BUDGET:
-            return {
-                "status": "unavailable",
-                "reason": (
-                    f"narration stopped before moment {index}: remaining "
-                    f"authorization ${remaining:.8f} cannot fit the "
-                    f"${NARRATOR_MAX_BUDGET:.8f} narrator call ceiling"
-                ),
-                "failure_boundary": {
-                    "kind": "budget_exhausted",
-                    "next_moment": index,
-                    "remaining_authorization": max(0.0, remaining),
-                    "required_call_ceiling": NARRATOR_MAX_BUDGET,
-                },
-                "model_calls": len(calls),
-                "cost": total_cost,
-                "moments": narrated,
-                "calls": calls,
-            }
         system, user = _render_prompt(moment=moment, prior=prior)
         trace_id = (
             f"{trace_id_prefix}/narrator/moment/{moment['activation']}"

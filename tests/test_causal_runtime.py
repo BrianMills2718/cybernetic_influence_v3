@@ -344,6 +344,16 @@ def test_event_driven_service_desk_preserves_frozen_due_sets_with_positive_time(
         duration = timing.get("duration")
         assert isinstance(duration, int)
         assert duration > 0
+        minimum_duration = timing.get("minimum_duration")
+        serialization_delay = timing.get("serialization_delay")
+        assert minimum_duration == 1
+        assert isinstance(serialization_delay, int)
+        assert serialization_delay >= 0
+        assert duration >= minimum_duration + serialization_delay
+        if serialization_delay:
+            assert timing["source_kind"] == (
+                "scenario_assumption_plus_runtime_serialization"
+            )
 
 
 def test_event_driven_service_desk_resumes_one_validated_prefix_without_duplicates() -> None:

@@ -86,6 +86,8 @@ interface TrajectoryNode {
   timing?: {
     starts_at: number
     duration: number
+    minimum_duration: number
+    serialization_delay: number
     source_kind: string
     source_ref: string
   } | null

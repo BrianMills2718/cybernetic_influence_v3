@@ -240,6 +240,11 @@ def test_realized_trajectory_is_a_typed_projection_of_the_exact_trace(
     timed = [node for node in trajectory["nodes"] if node["timing"] is not None]
     assert timed
     assert all(node["timing"]["duration"] > 0 for node in timed)
+    assert all(node["timing"]["minimum_duration"] == 1 for node in timed)
+    assert all(node["timing"]["serialization_delay"] >= 0 for node in timed)
+    assert any(
+        node["timing"]["serialization_delay"] > 0 for node in timed
+    )
 
 
 def test_narrative_is_derived_from_open_remediated_and_closed_outcomes() -> None:

@@ -192,7 +192,7 @@ function updateAuthorizationPreview() {
     ? `Expected observed spend: about $${Number(baseline.median_cost).toFixed(4)} from ${baseline.sample_count} comparable completed live run${baseline.sample_count === 1 ? '' : 's'} (range $${Number(baseline.minimum_cost).toFixed(4)}–$${Number(baseline.maximum_cost).toFixed(4)}).`
     : 'Expected observed spend: no comparable completed live run is retained yet.'
   $('#cost-details').textContent =
-    `${estimate} Hard authorization: $${authorized.toFixed(2)}; no hidden overage. Each participant call is capped at $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} and each narrator call at $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)}.`
+    `${estimate} Hard authorization: $${authorized.toFixed(2)}; no hidden overage. Each participant call is capped at $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} and each narrator call at $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} (up to ${Number(limits.maximum_narrator_calls || 0)} retained causal moments). Narration starts only when the remaining authorization can reserve every retained moment.`
 }
 
 function describeCondition() {
@@ -420,6 +420,17 @@ function showBoundary(boundaryId) {
   }
 }
 
+function renderTrajectoryInspector(event) {
+  const timing = event?.timing
+  const queueDelay = Number(timing?.serialization_delay || 0)
+  const timingDetails = timing
+    ? `<dt>Elapsed duration</dt><dd>${html(timing.duration)} ${html(current.time_unit)} · ${html(timing.source_kind.replaceAll('_', ' '))}</dd>
+       <dt>Minimum modeled duration</dt><dd>${html(timing.minimum_duration)} ${html(current.time_unit)} · ${html(timing.source_ref)}</dd>
+       ${queueDelay > 0 ? `<dt>Runtime serialization delay</dt><dd>${html(queueDelay)} ${html(current.time_unit)}; retained separately from the scenario assumption.</dd>` : ''}`
+    : ''
+  $('#inspector').innerHTML = `<span class="eyebrow">Realized event</span><h2>${html(event.kind.replaceAll('_', ' '))}</h2><p>${html(event.summary)}</p><dl class="detail-list"><dt>Elapsed time</dt><dd>${html(scenarioClock(event.logical_time))}</dd><dt>Causal parents</dt><dd>${html((event.causal_parent_event_ids || []).join(', ') || 'run root')}</dd>${timingDetails}</dl>`
+}
+
 function showNode(nodeId) {
   if ((current?.boundaries || []).some((boundary) => boundary.id === nodeId)) {
     showBoundary(nodeId)
@@ -430,8 +441,7 @@ function showNode(nodeId) {
   renderGraph()
   const event = current?.timeline?.[selectedEventIndex]
   if (selectedGraphView === 'trajectory') {
-    const timing = event.timing
-    $('#inspector').innerHTML = `<span class="eyebrow">Realized event</span><h2>${html(event.kind.replaceAll('_', ' '))}</h2><p>${html(event.summary)}</p><dl class="detail-list"><dt>Elapsed time</dt><dd>${html(scenarioClock(event.logical_time))}</dd><dt>Causal parents</dt><dd>${html((event.causal_parent_event_ids || []).join(', ') || 'run root')}</dd>${timing ? `<dt>Duration</dt><dd>${html(timing.duration)} ${html(current.time_unit)} · ${html(timing.source_kind.replaceAll('_', ' '))}</dd>` : ''}</dl>`
+    renderTrajectoryInspector(event)
     return
   }
   const world = worldProjection()
@@ -811,6 +821,7 @@ function selectEvent(index, momentActivation = null) {
 
   if (event.person) showTraceInPlace(event.person)
   else if (selectedPerson) showTraceInPlace(selectedPerson)
+  if (selectedGraphView === 'trajectory') renderTrajectoryInspector(event)
 }
 
 function renderStepAccount(event) {
