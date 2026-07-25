@@ -155,7 +155,9 @@ as an `ExactWorkRecord`, so its trace, causal moment, and narration remain
 inspectable between agent activations. A focused Service Desk test pauses with
 two 300-unit deliveries pending, restores the checkpoint, and verifies that the
 specialist first activates at time 300. This establishes truthful future-work
-semantics, not a generated or calibrated duration profile.
+semantics, not a generated or calibrated duration profile. Restore re-derives
+every pending delivery from the authored connection/container topology and
+rejects altered targets, delays, and due times before it can resume.
 
 ### 15B — profile and analyst readout
 

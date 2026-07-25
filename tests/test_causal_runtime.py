@@ -32,6 +32,7 @@ from cybernetic_influence.causal_core.models import (
     CausalState,
     MechanismOutcome,
     PlacementDraft,
+    canonical_record_digest,
 )
 from cybernetic_influence.causal_core.projection import project_graph
 from cybernetic_influence.presentation import (
@@ -416,6 +417,50 @@ def test_event_driven_checkpoint_retains_future_route_work() -> None:
         and moment["participants"] == ["exact_mechanisms"]
         for moment in moments
     )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("target_port_id", "triager_detail_request_in", "incompatible ports"),
+        ("route_delay", 17, "connection"),
+        ("due_at", 17, "due time"),
+    ],
+)
+def test_restore_rejects_tampered_pending_delivery_topology(
+    field: str, value: object, message: str
+) -> None:
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0],
+        cognition_profile="position_context",
+        reasoning_effort="medium",
+    )
+    scenario = fixture.scenario.model_copy(deep=True)
+    scenario.initial_state.connections["routing_to_specialist"].delay = 300
+    scenario.initial_state.connections["triager_direct_to_specialist"].delay = 300
+    delayed_fixture = replace(fixture, scenario=scenario)
+    with pytest.raises(RuntimePaused) as paused:
+        run_event_driven_service_desk(
+            delayed_fixture,
+            service_desk_scripted_bindings(delayed_fixture),
+            run_id="service_desk_tampered_route_checkpoint",
+            pause_requested=lambda: True,
+        )
+
+    payload = paused.value.checkpoint.core_checkpoint.model_dump(mode="json")
+    payload["scheduled_work"][0][field] = value
+    if field == "due_at":
+        payload["scheduled_work"][0]["effect"]["logical_time"] = value
+    payload.pop("record_digest")
+    payload["record_digest"] = canonical_record_digest(payload)
+    corrupt = type(paused.value.checkpoint.core_checkpoint).model_validate(payload)
+
+    with pytest.raises(ValueError, match=message):
+        CausalSession.restore(
+            delayed_fixture.scenario,
+            delayed_fixture.exact_bindings,
+            corrupt,
+        )
 
 
 def test_multirate_scheduler_rejects_nonfuture_process_update() -> None:

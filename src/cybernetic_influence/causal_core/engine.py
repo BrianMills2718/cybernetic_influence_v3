@@ -475,7 +475,7 @@ class CausalSession:
         session._state = validated.state.model_copy(deep=True)
         session._events = [event.model_copy(deep=True) for event in validated.events]
         session._metrics = validated.metrics.model_copy(deep=True)
-        session._queue = session._deserialize_queue(validated.scheduled_work)
+        session._queue = []
         session._accepted_action_ids = list(validated.accepted_action_ids)
         session._event_sequence = validated.event_sequence
         session._effect_sequence = validated.effect_sequence
@@ -489,6 +489,8 @@ class CausalSession:
         session._known_event_ids = {event.event_id for event in session._events}
         session._build_indexes()
         session._validate_binding_registry()
+        session._validate_scheduled_work_topology(validated.scheduled_work)
+        session._queue = session._deserialize_queue(validated.scheduled_work)
         return session
 
     def complete(self) -> CausalRunResult:
@@ -1409,6 +1411,62 @@ class CausalSession:
                 )
             )
         return serialized
+
+    def _validate_scheduled_work_topology(
+        self, scheduled: Sequence[ScheduledWork]
+    ) -> None:
+        """Re-derive every retained delivery from the authored local topology."""
+        emitted = {
+            event.event_id: event
+            for event in self._events
+            if event.event_kind == "effect_emitted"
+        }
+        for item in scheduled:
+            parent_ids = item.effect.causal_parent_event_ids
+            if len(parent_ids) != 1:
+                raise ValueError("scheduled work has invalid effect parentage")
+            emission = emitted.get(parent_ids[0])
+            if emission is None:
+                raise ValueError("scheduled work parent is not an effect emission")
+            source = self._state.ports.get(item.effect.source_port_id)
+            if (
+                source is None
+                or source.direction != "output"
+                or source.effect_type != item.effect.effect_type
+            ):
+                raise ValueError("scheduled work has an invalid source port")
+            if item.work_kind == "effect":
+                if item.due_at != emission.logical_time:
+                    raise ValueError("pending effect has an invalid due time")
+                continue
+            if item.target_port_id is None or item.route_delay is None:
+                raise ValueError("pending delivery lacks route fields")
+            target = self._state.ports.get(item.target_port_id)
+            if target is None or target.direction != "input":
+                raise ValueError("pending delivery has an invalid target port")
+            if target.effect_type != item.effect.effect_type:
+                raise ValueError("pending delivery joins incompatible ports")
+            if item.route_kind == "connection":
+                connection = self._state.connections.get(item.connection_id or "")
+                if (
+                    connection is None
+                    or not connection.enabled
+                    or connection.source_port_id != source.port_id
+                    or connection.target_port_id != target.port_id
+                    or connection.delay != item.route_delay
+                ):
+                    raise ValueError("pending delivery disagrees with its connection")
+            elif item.route_kind == "container":
+                if (
+                    item.container_id != source.container_id
+                    or target.container_id != source.container_id
+                    or item.route_delay != 0
+                ):
+                    raise ValueError("pending delivery disagrees with its container")
+            else:  # pragma: no cover - ScheduledWork validates the union
+                raise ValueError("pending delivery has an unknown route kind")
+            if item.due_at != emission.logical_time + item.route_delay:
+                raise ValueError("pending delivery has an invalid due time")
 
     @staticmethod
     def _deserialize_queue(
