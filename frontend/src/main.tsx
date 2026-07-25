@@ -666,7 +666,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
           </strong>
           {' · '}revision {options.event?.state_revision ?? 'final'}
           {worldMode && options.world?.unplacedEntityIds.length
-            ? ` · ${options.world.unplacedEntityIds.length} logical entities have no authored physical placement`
+            ? ` · ${options.world.unplacedEntityIds.length} logical entities are outside this spatial projection; inspect them in Configured interaction pathways`
             : ''}
         </span>
         <div className="cy-graph-actions">

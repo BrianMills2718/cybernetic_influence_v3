@@ -262,7 +262,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             raise HTTPException(status_code=409, detail="run is not active")
         pause.set()
         document["status"] = "pause_requested"
-        document["pause_message"] = "Pause will take effect after the current causal moment."
+        document["pause_message"] = "Pause will take effect after the current causal step."
         runs.save(document)
         return {"run_id": run_id, "status": "pause_requested"}
 
@@ -615,7 +615,7 @@ def create_app(web_root: Path | None = None, run_root: Path | None = None) -> Fa
             narrated["model_call_summaries"] = _result_call_summaries(result)
             return runs.save(narrated)
         except RuntimePaused as paused_error:
-            paused_document = {**initial, "status": "paused", "pause_message": "Paused after a completed causal moment.", **_checkpoint_progress_projection(paused_error.checkpoint), "continuation": _checkpoint_continuation(paused_error.checkpoint, lifecycle="paused")}
+            paused_document = {**initial, "status": "paused", "pause_message": "Paused after a completed causal step.", **_checkpoint_progress_projection(paused_error.checkpoint), "continuation": _checkpoint_continuation(paused_error.checkpoint, lifecycle="paused")}
             return runs.save(paused_document)
         except Exception as error:
             failed = {

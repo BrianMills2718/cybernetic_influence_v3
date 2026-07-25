@@ -118,6 +118,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert app_styles.headers["cache-control"] == "no-cache"
     assert len(graph_script.content) > 250_000
     assert b".react-flow" in graph_styles.content
+    assert b"logical entities are outside this spatial projection" in graph_script.content
     assert b".scrollIntoView" not in app_script.content
     assert b"Configured interaction pathways show scenario-configured" in app_script.content
     assert b"function renderLifecycleControls" in app_script.content
