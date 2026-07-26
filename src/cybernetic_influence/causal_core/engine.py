@@ -375,7 +375,12 @@ class CausalSession:
         with self._lock:
             return self._queue[0][0] if self._queue else None
 
-    def advance_due(self, logical_time: int) -> list[CausalEvent]:
+    def advance_due(
+        self,
+        logical_time: int,
+        *,
+        event_time_limit: int | None = None,
+    ) -> list[CausalEvent]:
         """Commit exact work due through one scheduler horizon.
 
         This operation has no actor proposal.  Its events remain exact causal
@@ -391,6 +396,12 @@ class CausalSession:
             event_start = len(self._events)
             try:
                 self._drain_queue(through=logical_time)
+                if event_time_limit is not None and any(
+                    event.logical_time > event_time_limit
+                    for event in self._events[event_start:]
+                ):
+                    self._restore_snapshot(snapshot)
+                    return []
             except Exception:
                 self._restore_snapshot(snapshot)
                 raise

@@ -173,19 +173,46 @@ class ActiveRuntimeSession:
                     pending.append(active_system_id)
             return sorted(pending)
 
-    def next_due_activation(self) -> DueActivation | None:
-        """Return the earliest observation or internal wake as one frozen set."""
+    def next_due_activation(self, *, through: int | None = None) -> DueActivation | None:
+        """Return the earliest due set, without settling exact work after ``through``."""
         with self._lock:
             while True:
-                due = self._next_due_activation_after_exact_work()
+                due = self._next_due_activation_after_exact_work(through=through)
                 if due is not None:
                     return due
                 exact_due = self._core.next_pending_time
                 if exact_due is None:
                     return None
-                self._settle_exact_due(exact_due)
+                if through is not None and exact_due > through:
+                    return None
+                if not self._settle_exact_due(exact_due, through=through):
+                    return None
 
-    def _next_due_activation_after_exact_work(self) -> DueActivation | None:
+    def next_scheduled_time(self) -> int | None:
+        """Inspect pending participant or exact work without advancing the trace."""
+        with self._lock:
+            times: list[int] = []
+            if self._core.next_pending_time is not None:
+                times.append(self._core.next_pending_time)
+            for active_system_id, spec in self._specs.items():
+                state = self._states[active_system_id]
+                if state.next_update_at is not None:
+                    times.append(state.next_update_at)
+                consumed = set(state.consumed_observation_ids)
+                times.extend(
+                    self._core.state.observations[observation_id].logical_time
+                    for observation_id in self._core.state.inboxes.get(
+                        spec.entity_id, []
+                    )
+                    if observation_id not in consumed
+                    and self._core.state.observations[observation_id].via_port_id
+                    in set(spec.observation_port_ids)
+                )
+            return min(times) if times else None
+
+    def _next_due_activation_after_exact_work(
+        self, *, through: int | None = None
+    ) -> DueActivation | None:
         """Find participant work, first settling any earlier exact future work."""
         while True:
             due_candidates: dict[str, int] = {}
@@ -221,10 +248,17 @@ class ActiveRuntimeSession:
                     due_candidates[active_system_id] = min(times)
             participant_earliest = min(due_candidates.values(), default=None)
             exact_due = self._core.next_pending_time
+            candidates = [
+                item for item in (participant_earliest, exact_due) if item is not None
+            ]
+            earliest_work = min(candidates) if candidates else None
+            if through is not None and earliest_work is not None and earliest_work > through:
+                return None
             if exact_due is not None and (
                 participant_earliest is None or exact_due <= participant_earliest
             ):
-                self._settle_exact_due(exact_due)
+                if not self._settle_exact_due(exact_due, through=through):
+                    return None
                 continue
             if participant_earliest is None:
                 return None
@@ -711,7 +745,9 @@ class ActiveRuntimeSession:
             ),
         )
 
-    def _settle_exact_due(self, logical_time: int) -> None:
+    def _settle_exact_due(
+        self, logical_time: int, *, through: int | None = None
+    ) -> bool:
         """Retain a due exact transition as its own causal provenance record."""
         # Positive-duration traces may serialize a same-due exact cascade into
         # later retained world events.  Never ask the core to move its world
@@ -719,9 +755,15 @@ class ActiveRuntimeSession:
         # nominal due time.
         logical_time = max(logical_time, self._core.state.logical_time)
         before = self._core.checkpoint()
-        events = self._core.advance_due(logical_time)
+        pending_before = self._core.next_pending_time
+        events = self._core.advance_due(
+            logical_time, event_time_limit=through
+        )
         if not events:
-            return
+            # A legitimate exact transition can have no retained event (for
+            # example, a disabled route). A bounded transition leaves the
+            # exact queue unchanged after its transactional rollback.
+            return self._core.next_pending_time != pending_before
         after = self._core.checkpoint()
         record = ExactWorkRecord.model_validate(
             with_record_digest(
@@ -739,6 +781,7 @@ class ActiveRuntimeSession:
             )
         )
         self._exact_work.append(record)
+        return True
 
     def _discard_pending_exact_work(self, *, reason: str) -> None:
         """Retain deliberate non-execution as exact work at a terminal boundary."""

@@ -714,7 +714,11 @@ def run_event_driven_service_desk(
         current_checkpoint = session.checkpoint()
         if checkpoint_observer is not None:
             checkpoint_observer(current_checkpoint)
-        if pause_requested is not None and pause_requested():
+        if (
+            pause_requested is not None
+            and pause_requested()
+            and not (stop_requested is not None and stop_requested())
+        ):
             raise RuntimePaused(current_checkpoint)
 
     def completion_at_boundary(
@@ -730,6 +734,23 @@ def run_event_driven_service_desk(
     ) -> CompletionRecord:
         attempts = session.attempts
         evidence_event_ids = attempts[-1].core_event_ids if attempts else []
+        if reason == "terminal_condition_met" and run_control is not None:
+            conditions = {
+                item.condition_id: item for item in run_control.terminal_conditions
+            }
+            terminal_events = [
+                event.event_id
+                for event in session.checkpoint().core_checkpoint.events
+                if event.patch is not None
+                and any(
+                    change.fact_id == conditions[condition_id].fact_id
+                    and change.after == conditions[condition_id].expected_value
+                    for change in event.patch.fact_changes
+                    for condition_id in condition_ids or []
+                )
+            ]
+            if terminal_events:
+                evidence_event_ids = terminal_events[-1:]
         logical_time = session.core_state.logical_time
         if reason == "terminal_condition_met":
             summary = "A configured terminal condition was met; the scenario outcome is reported separately."
@@ -784,20 +805,17 @@ def run_event_driven_service_desk(
             raise
         observe()
 
-    while (due := session.next_due_activation()) is not None:
+    while True:
         completion = terminal_completion()
         if completion is not None:
             return session.complete(completion=completion)
-        if (
-            run_control is not None
-            and run_control.modeled_time_horizon is not None
-            and due.logical_time > run_control.modeled_time_horizon.logical_time
-        ):
-            return session.complete(
-                completion=completion_at_boundary(reason="modeled_time_horizon"),
-                discard_pending_effects=True,
-            )
         if stop_requested is not None and stop_requested():
+            # Drain only exact work already due at the current boundary. A stop
+            # must never advance the world through a later scheduled delivery.
+            session.next_due_activation(through=session.core_state.logical_time)
+            completion = terminal_completion()
+            if completion is not None:
+                return session.complete(completion=completion)
             return session.complete(
                 completion=completion_at_boundary(reason="operator_stopped"),
                 discard_pending_effects=True,
@@ -821,6 +839,26 @@ def run_event_driven_service_desk(
                 completion=completion_at_boundary(reason="safety_limit"),
                 discard_pending_effects=True,
             )
+        horizon = (
+            run_control.modeled_time_horizon.logical_time
+            if run_control is not None and run_control.modeled_time_horizon is not None
+            else None
+        )
+        due = session.next_due_activation(through=horizon)
+        if due is None:
+            completion = terminal_completion()
+            if completion is not None:
+                return session.complete(completion=completion)
+            if horizon is not None and session.next_scheduled_time() is not None:
+                return session.complete(
+                    completion=completion_at_boundary(reason="modeled_time_horizon"),
+                    discard_pending_effects=True,
+                )
+            return session.complete(
+                completion=completion_at_boundary(reason="quiescent_before_terminal")
+                if run_control is not None
+                else None
+            )
         try:
             session.activate(
                 due.active_system_ids,
@@ -834,14 +872,6 @@ def run_event_driven_service_desk(
         if completion is not None:
             return session.complete(completion=completion)
         observe()
-    completion = terminal_completion()
-    if completion is not None:
-        return session.complete(completion=completion)
-    return session.complete(
-        completion=completion_at_boundary(reason="quiescent_before_terminal")
-        if run_control is not None
-        else None
-    )
 
 
 def _entities(arm: ServiceDeskArmConfiguration) -> dict[str, EntityState]:

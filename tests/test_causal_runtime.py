@@ -91,6 +91,16 @@ def test_service_desk_retains_terminal_horizon_quiescence_and_stop_reasons() -> 
     assert completed.completion.reason == "terminal_condition_met"
     assert completed.completion.condition_ids == ["confirmed_closure"]
     assert completed.core_result.final_state.fact("incident_17.status").value == "closed_confirmed"
+    terminal_event_id = completed.completion.evidence_event_ids[0]
+    terminal_event = next(
+        event for event in completed.core_result.events if event.event_id == terminal_event_id
+    )
+    assert terminal_event.event_kind == "state_committed"
+    assert terminal_event.patch is not None
+    assert any(
+        change.fact_id == "incident_17.status" and change.after == "closed_confirmed"
+        for change in terminal_event.patch.fact_changes
+    )
 
     horizon_plan = resolve_run_control(
         service_desk_run_control_options(),
@@ -102,6 +112,29 @@ def test_service_desk_retains_terminal_horizon_quiescence_and_stop_reasons() -> 
     assert horizon.completion is not None
     assert horizon.completion.reason == "modeled_time_horizon"
     assert horizon.core_result.final_state.fact("incident_17.status").value != "closed_confirmed"
+
+    mid_horizon = run_event_driven_service_desk(
+        fixture,
+        bindings,
+        run_id="service_desk_mid_horizon",
+        run_control=resolve_run_control(
+            service_desk_run_control_options(),
+            RunControlSelection(modeled_time_horizon=20),
+        ),
+    )
+    assert mid_horizon.completion is not None
+    assert mid_horizon.completion.logical_time <= 20
+    assert not any(
+        event.logical_time > 20
+        and event.event_kind
+        in {"effect_routed", "mechanism_executed", "state_committed", "observation_delivered"}
+        for event in mid_horizon.core_result.events
+    )
+    assert any(
+        event.event_kind == "effect_dissipated"
+        and event.details.get("completion_boundary") == "modeled_time_horizon"
+        for event in mid_horizon.core_result.events
+    )
 
     unreachable_plan = ResolvedRunControlPlan(
         terminal_conditions=[
@@ -124,6 +157,17 @@ def test_service_desk_retains_terminal_horizon_quiescence_and_stop_reasons() -> 
     )
     assert stopped.completion is not None
     assert stopped.completion.reason == "operator_stopped"
+
+    stop_wins = run_event_driven_service_desk(
+        fixture,
+        bindings,
+        run_id="service_desk_stop_wins",
+        run_control=default_plan,
+        pause_requested=lambda: True,
+        stop_requested=lambda: True,
+    )
+    assert stop_wins.completion is not None
+    assert stop_wins.completion.reason == "operator_stopped"
 
 
 def _crossing_attempt_after_badge(

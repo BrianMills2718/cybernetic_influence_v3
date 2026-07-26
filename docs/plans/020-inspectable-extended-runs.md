@@ -92,9 +92,10 @@ must say `quiescent_before_terminal`, not imply success.
 - No arbitrary user-authored predicate language or executable code.
 - No new workflow template.
 - No change to the meaning of pause: pause remains a nonterminal, resumable
-  quiescent causal boundary.
+  retained causal boundary. A checkpoint may truthfully retain future exact
+  work for resume.
 
-## Current state
+## Baseline before Slice 20
 
 - `CausalMomentNarration` retains one short `narrative` string and one to four
   current-moment event IDs.
