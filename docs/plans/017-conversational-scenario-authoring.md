@@ -75,6 +75,13 @@ draft shows accepted, repair, or provider-error status and observed cost when
 available. The loop stops visibly at the cap, and a provider-only failure does
 not erase an earlier valid proposal.
 
+Drafts save automatically after every retained revision. The Author scenario
+screen labels that state, provides a copyable draft URL that reopens the exact
+retained draft, and turns a material unresolved question into a focused
+follow-up field rather than an opaque failed state. Its pre-run map defaults to
+configured interaction pathways; the spatial and realized-causal views remain
+available in the simulation workspace.
+
 OpenAI-strict provider output represents placements as typed
 `{entity_id, place_id}` records; the local consumer converts them to the
 canonical placement map and rejects duplicates. A semantically valid draft

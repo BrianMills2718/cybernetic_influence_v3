@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=readable-run-v2">
+  <link rel="stylesheet" href="/assets/styles.css?v=authoring-layout-v3">
   <link rel="stylesheet" href="/assets/graph-canvas.css?v=readable-run-v2">
 </head>
 <body>
@@ -21,26 +21,28 @@
       <span id="run-status">Ready</span>
     </div>
 
+  </header>
+  <main>
     <section id="authoring-view" class="app-view authoring-card" hidden>
       <span class="eyebrow">Typed scenario authoring</span>
       <h2>Describe a bounded situation</h2>
       <p class="muted">The drafting assistant selects a reviewed resource-request or information-campaign template, then proposes a typed world around it. One message may use up to three structured authoring calls for visible validation repair. It cannot create executable code or make an analytical composite act. Review the compiled map before approving it.</p>
-      <label for="authoring-message">What situation should be modeled?
+      <label id="authoring-message-label" for="authoring-message">What situation should be modeled?
         <textarea id="authoring-message" rows="5" placeholder="For example: A campaign operator publishes a false claim about a diplomatic position through a media channel. A public-diplomacy analyst in another location receives and assesses it; both organizations are analytical views, not actors."></textarea>
       </label>
-      <div class="authoring-actions"><button id="authoring-draft" type="button">Draft scenario</button><button id="authoring-approve" type="button" hidden>Approve this draft</button><button id="authoring-run" type="button" hidden>Play approved reference run</button></div>
+      <div class="authoring-actions"><button id="authoring-draft" type="button">Draft scenario</button><button id="authoring-copy-link" type="button" hidden>Copy saved draft link</button><button id="authoring-approve" type="button" hidden>Approve this draft</button><button id="authoring-run" type="button" hidden>Play approved reference run</button></div>
       <p id="authoring-runtime" class="muted">Loading the structured authoring model…</p>
       <p id="authoring-status" class="muted" aria-live="polite">Describe a situation to begin.</p>
       <section id="authoring-review" hidden>
         <div class="heading-help"><h2 id="authoring-title">Draft review</h2><button class="help-button" type="button" data-help="authoring-help" aria-expanded="false" aria-controls="authoring-help">?</button></div>
-        <p id="authoring-help" class="inline-help" hidden>Approval freezes this exact typed proposal. A later message creates a new revision and removes approval.</p>
+        <p id="authoring-help" class="inline-help" hidden>Every draft is saved automatically. The copied link reopens this exact retained draft. Approval freezes its exact typed proposal; a later message creates a new revision and removes approval.</p>
         <div id="authoring-diagnostics"></div>
         <article id="authoring-summary" class="assumption-panel"></article>
+        <p class="muted">Configured interaction pathways in this proposed scenario. This map shows who can exchange the retained claim through the modeled channel; it does not grant authority or imply that an analytical composite acts.</p>
         <div id="authoring-graph" class="graph" aria-label="Compiled authored scenario map"></div>
       </section>
     </section>
-  </header>
-  <main>
+
     <div id="simulation-view" class="app-view">
       <section class="run-card">
         <div>
@@ -197,6 +199,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=readable-run-v2"></script>
-  <script src="/assets/app.js?v=authoring-v2"></script>
+  <script src="/assets/app.js?v=authoring-v3"></script>
 </body>
 </html>

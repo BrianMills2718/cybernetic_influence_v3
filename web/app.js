@@ -31,6 +31,7 @@ const buttonTooltips = {
   'history-tab': 'Open or remove previously retained simulation runs.',
   'readme-tab': 'Read how the simulator, maps, and evidence should be interpreted.',
   'authoring-draft': 'Ask the authoring assistant to create or repair a typed scenario draft. Up to three bounded calls may be used.',
+  'authoring-copy-link': 'Copy a link that reopens this automatically saved draft.',
   'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
   'authoring-run': 'Run the approved draft with the zero-cost reference policy.',
   'run': 'Run the selected scenario and condition.',
@@ -101,9 +102,19 @@ function authoringSummary(proposal) {
 function renderAuthoring() {
   const draft = authoringDraft
   $('#authoring-review').hidden = !draft || (!draft.proposal && !(draft.diagnostics || []).length)
+  $('#authoring-copy-link').hidden = !draft
   if (!draft) return
-  $('#authoring-status').textContent = draft.authoring_summary || `Draft revision ${draft.revision} · ${draft.status}`
   const diagnostics = draft.diagnostics || []
+  const needsInput = draft.status === 'needs_input'
+  const question = diagnostics.find((item) => item.severity === 'question')?.message || ''
+  $('#authoring-status').textContent = `Saved automatically · revision ${draft.revision}. ${draft.authoring_summary || `Draft status: ${draft.status}.`}`
+  $('#authoring-message-label').firstChild.nodeValue = needsInput
+    ? 'Answer the open question to continue:'
+    : 'What situation should be modeled?'
+  $('#authoring-message').placeholder = needsInput && question
+    ? question
+    : 'For example: A campaign operator publishes a false claim about a diplomatic position through a media channel. A public-diplomacy analyst in another location receives and assesses it; both organizations are analytical views, not actors.'
+  $('#authoring-draft').textContent = needsInput ? 'Continue saved draft' : (draft.messages?.length ? 'Update saved draft' : 'Draft scenario')
   $('#authoring-diagnostics').innerHTML = diagnostics.length
     ? diagnostics.map((item) => `<p class="warning"><strong>${html(item.severity)}:</strong> ${html(item.message)}</p>`).join('')
     : '<p class="muted">No unresolved compiler questions. Review the map, then approve this exact proposal.</p>'
@@ -118,6 +129,7 @@ function renderAuthoring() {
   $('#authoring-approve').hidden = !approvable
   $('#authoring-run').hidden = draft.status !== 'approved'
   if (authoringPreview?.nodes && window.CyberneticGraph) {
+    $('#authoring-graph').classList.add('react-canvas-host')
     const revision = authoringPreview.initial_revision ?? 0
     const world = projectWorld(authoringPreview.world, revision)
     window.CyberneticGraph.render($('#authoring-graph'), {
@@ -128,13 +140,31 @@ function renderAuthoring() {
         routeIds:edge.exact_route_ids || [edge.id],
       })),
       boundaries: authoringPreview.boundaries || [], world,
-      viewMode: world ? 'world' : 'causal', event: null,
+      viewMode: 'causal', event: null,
       initialRevision: authoringPreview.initial_revision, selectedNodeId: null, selectedEdgeId: null,
       boundary: null, collapsedBoundaryId: null,
       analyticalScaleHelp: 'The analytical boundary is a view, not an actor.',
       onToggleBoundary: () => {}, onSelectNode: () => {}, onSelectEdge: () => {},
     })
+  } else {
+    $('#authoring-graph').classList.remove('react-canvas-host')
   }
+}
+
+function syncAuthoringUrl() {
+  if (!authoringDraft?.draft_id) return
+  const url = new URL(window.location)
+  url.searchParams.set('draft', authoringDraft.draft_id)
+  url.searchParams.delete('run')
+  window.history.replaceState({}, '', url)
+}
+
+async function openAuthoringDraft(draftId) {
+  authoringDraft = await request(`/api/authoring/drafts/${encodeURIComponent(draftId)}`)
+  await loadAuthoringPreview()
+  setWorkspaceView('authoring')
+  renderAuthoring()
+  syncAuthoringUrl()
 }
 
 async function loadAuthoringPreview() {
@@ -1347,11 +1377,25 @@ $('#authoring-draft').onclick = async () => {
       }),
     })
     await loadAuthoringPreview()
+    syncAuthoringUrl()
+    if (authoringDraft.status === 'needs_input') $('#authoring-message').value = ''
     renderAuthoring()
   } catch (error) {
     $('#authoring-status').textContent = error.message
   } finally {
     $('#authoring-draft').disabled = false
+  }
+}
+
+$('#authoring-copy-link').onclick = async () => {
+  if (!authoringDraft) return
+  syncAuthoringUrl()
+  const link = window.location.href
+  try {
+    await navigator.clipboard.writeText(link)
+    $('#authoring-status').textContent = `Saved draft link copied · revision ${authoringDraft.revision}.`
+  } catch (error) {
+    $('#authoring-status').textContent = `Saved draft link: ${link}`
   }
 }
 
@@ -1362,6 +1406,7 @@ $('#authoring-approve').onclick = async () => {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({expected_revision:authoringDraft.revision}),
     })
+    syncAuthoringUrl()
     renderAuthoring()
   } catch (error) {
     $('#authoring-status').textContent = error.message
@@ -1388,8 +1433,11 @@ $('#authoring-run').onclick = async () => {
 Promise.all([loadConfig(), loadHistory()])
   .then(async () => {
     renderLifecycleControls()
-    const retainedId = new URLSearchParams(window.location.search).get('run')
+    const search = new URLSearchParams(window.location.search)
+    const retainedId = search.get('run')
+    const draftId = search.get('draft')
     if (retainedId) await openRetained(retainedId)
+    else if (draftId) await openAuthoringDraft(draftId)
     else await loadScenarioPreview()
   })
   .catch((error) => { $('#run-status').textContent = error.message })
