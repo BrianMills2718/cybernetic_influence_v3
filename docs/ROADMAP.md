@@ -45,13 +45,23 @@ live-spend authorization and current route certification, preserves the
 retained model policy, and holds the single-live-run lock through narration.
 Exact scenario mechanisms make no model call.
 
-The next gate is stakeholder observation of the complete authored flow:
-describe or revise a scenario, edit its people, approve it, inspect Spatial
-topology and Configured interaction pathways, run it live, then decide whether
-the narrative, Realized causal graph, and participant/composite traces make the
-modeled behavior understandable. The existing trace evidence establishes
-bounded technical execution, not empirical psychological validity, predictive
-accuracy, or a claim that any one profile field caused an action.
+The complete authored flow was technically replayed on the deployed host on
+2026-07-25. Draft `draft_5464c3c150cf` was generated in one structured Terra
+attempt, directly revised to make its assessment officer skeptical of
+politically charged claims, rejected a stale approval, exposed three authored
+places plus its configured pathways, and ran live as
+`run_6ff09016a6e0`. DeepSeek completed the source decision, exact delivery,
+recipient assessment, exact recording, and four sequential narratives in six
+calls for `$0.00101175`.
+
+Full trace inspection found the edited profile in the recipient's system
+context, only the delivered claim in its new observations, native JSON-schema
+output with no retry or validation error, and narrative citations to retained
+events. Technical execution is therefore observed. The remaining gate is the
+stakeholder's short judgment: do the authored maps, narrative, and
+participant/composite traces make the modeled behavior understandable and
+useful? This evidence does not establish empirical psychological validity,
+predictive accuracy, or that any one profile field caused the assessment.
 
 V0.12.2 is retained as the earlier narrated and browser-certified baseline. It adds
 the separate run-history workspace and stable in-place scale/time inspection
@@ -399,11 +409,10 @@ and sequential evidence-citing narration. Its analytical boundaries remained
 execution-inert. This establishes technical execution, not empirical
 psychological validity or a claim that any one profile field caused the action.
 
-The next decision is stakeholder observation of the complete authored flow:
-revise people, approve, inspect both maps, run live, and decide whether the
-narrative and person traces make the modeled behavior understandable. Extend
-the compiler beyond the two reviewed templates only after that check identifies
-a concrete blocked scenario or approves the current interaction.
+The next decision is the stakeholder's comprehension and usefulness judgment
+on the retained authored run above. Extend the compiler beyond the two reviewed
+templates only after that check identifies a concrete blocked scenario or
+approves the current interaction.
 
 ### 10. Comparative causal analysis — post-MVP
 
