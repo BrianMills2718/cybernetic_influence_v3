@@ -44,6 +44,11 @@ class _DraftMessage(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     message_id: str
     content: str
+    model: str | None = None
+    reasoning_effort: str | None = None
+    assistant_summary: str | None = None
+    result_status: str | None = None
+    trace_ids: list[str] = Field(default_factory=list)
 
 
 class _DraftAttempt(BaseModel):

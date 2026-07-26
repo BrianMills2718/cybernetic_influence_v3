@@ -19,7 +19,11 @@ from cybernetic_influence.authoring.service import (
     AUTHORING_MAX_ATTEMPTS,
     AUTHORING_MAX_BUDGET,
     AUTHORING_MODEL,
+    AUTHORING_MODEL_OPTIONS,
     AUTHORING_REASONING_EFFORT,
+    AUTHORING_REASONING_EFFORTS,
+    AuthoringModel,
+    AuthoringReasoningEffort,
     DraftAuthoringService,
     StructuredCall,
 )
@@ -122,6 +126,8 @@ class DraftMessageRequest(BaseModel):
     expected_revision: int
     message_id: str
     message: str
+    model: AuthoringModel = AUTHORING_MODEL
+    reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT
 
 
 class DraftApprovalRequest(BaseModel):
@@ -324,6 +330,8 @@ def create_app(
             "authoring": {
                 "model": AUTHORING_MODEL,
                 "reasoning_effort": AUTHORING_REASONING_EFFORT,
+                "models": list(AUTHORING_MODEL_OPTIONS),
+                "reasoning_efforts": list(AUTHORING_REASONING_EFFORTS),
                 "maximum_attempts_per_message": AUTHORING_MAX_ATTEMPTS,
                 "maximum_cost_per_attempt": AUTHORING_MAX_BUDGET,
                 "templates": ["resource_request_v1", "information_campaign_v1"],
@@ -364,6 +372,8 @@ def create_app(
                     expected_revision=body.expected_revision,
                     message_id=body.message_id,
                     message=body.message,
+                    model=body.model,
+                    reasoning_effort=body.reasoning_effort,
                 )
             except DraftConflictError as error:
                 raise HTTPException(status_code=409, detail=str(error)) from error

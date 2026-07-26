@@ -93,9 +93,12 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Run history" in page.text
     assert "Read me" in page.text
     assert "Author scenario" in page.text
-    assert "Describe a bounded situation" in page.text
-    assert "up to three structured authoring calls" in page.text
+    assert "Describe what you want" in page.text
+    assert "Choose the model and thinking level independently for every message" in page.text
     assert 'id="authoring-view"' in page.text
+    assert 'id="authoring-chat"' in page.text
+    assert 'id="authoring-model"' in page.text
+    assert 'id="authoring-reasoning"' in page.text
     assert "Copy saved draft link" in page.text
     assert 'id="authoring-spatial-layout"' in page.text
     assert 'id="authoring-causal-layout"' in page.text
@@ -136,6 +139,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function loadScenarioPreview" in app_script.content
     assert b"/api/authoring/drafts" in app_script.content
     assert b"function renderAuthoring" in app_script.content
+    assert b"function renderAuthoringChat" in app_script.content
+    assert b"reasoning_effort:$('#authoring-reasoning').value" in app_script.content
     assert b"let previewRequestSerial = 0" in app_script.content
     assert b"requestSerial !== previewRequestSerial" in app_script.content
     assert b"/api/scenarios/${encodeURIComponent(scenario)}/preview" in app_script.content

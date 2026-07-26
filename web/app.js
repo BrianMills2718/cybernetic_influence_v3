@@ -31,7 +31,7 @@ const buttonTooltips = {
   'authoring-tab': 'Describe a situation and review a typed scenario draft.',
   'history-tab': 'Open or remove previously retained simulation runs.',
   'readme-tab': 'Read how the simulator, maps, and evidence should be interpreted.',
-  'authoring-draft': 'Ask the authoring assistant to create or repair a typed scenario draft. Up to three bounded calls may be used.',
+  'authoring-draft': 'Send this message with the selected model and thinking level to generate the next saved draft revision.',
   'authoring-copy-link': 'Copy a link that reopens this automatically saved draft.',
   'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
   'authoring-run': 'Run the approved draft with the zero-cost reference policy.',
@@ -103,8 +103,40 @@ function authoringSummary(proposal) {
   return `<span class="eyebrow">Compiled typed proposal · ${html(proposal.workflow?.template_id || 'unknown template')}</span><h3>${html(proposal.title || 'Untitled draft')}</h3><p>${html(proposal.description || '')}</p><p><strong>People:</strong> ${html(people)}. <strong>Places:</strong> ${html(places)}.</p><p><strong>Exact workflow:</strong> ${html(workflow)} The analytical boundary remains a view, not an executor.</p>`
 }
 
+function authoringModelLabel(model) {
+  const option = (runtimeConfig.authoring?.models || []).find((item) => item.model === model)
+  return option?.label || model || 'earlier model'
+}
+
+function renderAuthoringChat(draft) {
+  const messages = draft?.messages || []
+  const welcome = `
+    <article class="chat-message assistant">
+      <span>Authoring assistant</span>
+      <p>Describe the bounded situation you want to model. After I produce a draft, tell me what to change and I will generate the next saved revision.</p>
+    </article>`
+  const conversation = messages.map((message, index) => {
+    const model = authoringModelLabel(message.model)
+    const reasoning = message.reasoning_effort
+      ? `${String(message.reasoning_effort).replaceAll('_', ' ')} thinking`
+      : 'earlier thinking setting not retained'
+    const fallbackReply = index === messages.length - 1 ? draft.authoring_summary : ''
+    const reply = message.assistant_summary || fallbackReply
+    return `
+      <article class="chat-message user">
+        <span>You · revision ${index + 1}</span>
+        <p>${html(message.content)}</p>
+        <small>${html(model)} · ${html(reasoning)}</small>
+      </article>
+      ${reply ? `<article class="chat-message assistant"><span>Authoring assistant</span><p>${html(reply)}</p></article>` : ''}`
+  }).join('')
+  $('#authoring-chat').innerHTML = welcome + conversation
+  $('#authoring-chat').scrollTop = $('#authoring-chat').scrollHeight
+}
+
 function renderAuthoring() {
   const draft = authoringDraft
+  renderAuthoringChat(draft)
   $('#authoring-review').hidden = !draft || (!draft.proposal && !(draft.diagnostics || []).length)
   $('#authoring-copy-link').hidden = !draft
   if (!draft) return
@@ -113,12 +145,16 @@ function renderAuthoring() {
   const question = diagnostics.find((item) => item.severity === 'question')?.message || ''
   $('#authoring-status').textContent = `Saved automatically · revision ${draft.revision}. ${draft.authoring_summary || `Draft status: ${draft.status}.`}`
   $('#authoring-message-label').firstChild.nodeValue = needsInput
-    ? 'Answer the open question to continue:'
-    : 'What situation should be modeled?'
+    ? 'Reply to the authoring assistant:'
+    : draft.messages?.length
+      ? 'Tell the assistant what to change:'
+      : 'Message the authoring assistant:'
   $('#authoring-message').placeholder = needsInput && question
     ? question
     : 'For example: A campaign operator publishes a false claim about a diplomatic position through a media channel. A public-diplomacy analyst in another location receives and assesses it; both organizations are analytical views, not actors.'
-  $('#authoring-draft').textContent = needsInput ? 'Continue saved draft' : (draft.messages?.length ? 'Update saved draft' : 'Draft scenario')
+  $('#authoring-draft').textContent = needsInput
+    ? 'Answer and generate next revision'
+    : (draft.messages?.length ? 'Generate next draft revision' : 'Generate first draft')
   const visibleDiagnostics = diagnostics.filter((item) => !(needsInput && item.severity === 'question'))
   $('#authoring-diagnostics').innerHTML = visibleDiagnostics.length
     ? visibleDiagnostics.map((item) => `<p class="warning"><strong>${html(item.severity)}:</strong> ${html(item.message)}</p>`).join('')
@@ -261,8 +297,23 @@ async function loadConfig() {
   const config = await request('/api/config')
   runtimeConfig = config
   const authoring = config.authoring || {}
-  $('#authoring-runtime').textContent = authoring.model
-    ? `Drafting uses ${authoring.model} with ${authoring.reasoning_effort || 'default'} reasoning. One message may make up to ${authoring.maximum_attempts_per_message || 1} structured attempt(s), each capped at $${Number(authoring.maximum_cost_per_attempt || 0).toFixed(2)}; the retained attempt record shows observed cost.`
+  const authoringModels = authoring.models || (
+    authoring.model ? [{model:authoring.model, label:authoring.model, provider:'configured provider'}] : []
+  )
+  $('#authoring-model').innerHTML = authoringModels.map((choice) =>
+    `<option value="${html(choice.model)}">${html(choice.label)} · ${html(choice.provider)}</option>`
+  ).join('')
+  $('#authoring-model').value = authoring.model || authoringModels[0]?.model || ''
+  const authoringReasoning = authoring.reasoning_efforts || [authoring.reasoning_effort || 'medium']
+  $('#authoring-reasoning').innerHTML = authoringReasoning.map((effort) => {
+    const label = {none:'None', low:'Low', medium:'Medium', high:'High', xhigh:'Extra high', max:'Max'}[effort] || effort
+    return `<option value="${html(effort)}">${html(label)}</option>`
+  }).join('')
+  $('#authoring-reasoning').value = authoring.reasoning_effort || authoringReasoning[0]
+  $('#authoring-model').title = 'The model selected here will produce only the next saved draft revision.'
+  $('#authoring-reasoning').title = 'The thinking level selected here will apply only to the next saved draft revision.'
+  $('#authoring-runtime').textContent = authoringModels.length
+    ? `Your selected model and thinking level apply only to the next message. One message may make up to ${authoring.maximum_attempts_per_message || 1} structured attempt(s), each capped at $${Number(authoring.maximum_cost_per_attempt || 0).toFixed(2)}. The saved conversation records the selection, trace, and observed cost for every revision.`
     : 'Structured authoring configuration is unavailable.'
   scenarioCatalog = config.scenarios || {}
   $('#scenario').innerHTML = Object.entries(scenarioCatalog).map(([id, item]) =>
@@ -1420,11 +1471,13 @@ $('#authoring-draft').onclick = async () => {
       body:JSON.stringify({
         expected_revision:authoringDraft.revision,
         message_id:crypto.randomUUID(), message,
+        model:$('#authoring-model').value,
+        reasoning_effort:$('#authoring-reasoning').value,
       }),
     })
     await loadAuthoringPreview()
     syncAuthoringUrl()
-    if (authoringDraft.status === 'needs_input') $('#authoring-message').value = ''
+    $('#authoring-message').value = ''
     renderAuthoring()
   } catch (error) {
     $('#authoring-status').textContent = error.message

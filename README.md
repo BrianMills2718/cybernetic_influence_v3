@@ -64,6 +64,7 @@ The simulator currently includes:
   Desk runs, including live LLM runs on the same deployment and configuration;
 - recoverable deletion and visible failed/interrupted records.
 - conversational typed authoring through a task-tested structured model, with
+  retained feedback revisions and per-message Terra/Sol plus thinking selection,
   revisioned review and approval for reviewed resource-request and
   information-campaign templates;
 - an exact information-campaign reference path that distinguishes a source's

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=authoring-layout-v4">
+  <link rel="stylesheet" href="/assets/styles.css?v=authoring-chat-v1">
   <link rel="stylesheet" href="/assets/graph-canvas.css?v=readable-run-v2">
 </head>
 <body>
@@ -25,12 +25,29 @@
   <main>
     <section id="authoring-view" class="app-view authoring-card" hidden>
       <span class="eyebrow">Typed scenario authoring</span>
-      <h2>Describe a bounded situation</h2>
-      <p class="muted">The drafting assistant selects a reviewed resource-request or information-campaign template, then proposes a typed world around it. One message may use up to three structured authoring calls for visible validation repair. It cannot create executable code or make an analytical composite act. Review the compiled map before approving it.</p>
-      <label id="authoring-message-label" for="authoring-message">What situation should be modeled?
-        <textarea id="authoring-message" rows="5" placeholder="For example: A campaign operator publishes a false claim about a diplomatic position through a media channel. A public-diplomacy analyst in another location receives and assesses it; both organizations are analytical views, not actors."></textarea>
-      </label>
-      <div class="authoring-actions"><button id="authoring-draft" type="button">Draft scenario</button><button id="authoring-copy-link" type="button" hidden>Copy saved draft link</button><button id="authoring-approve" type="button" hidden>Approve this draft</button><button id="authoring-run" type="button" hidden>Play approved reference run</button></div>
+      <h2>Build a scenario through conversation</h2>
+      <p class="muted">Describe what you want, inspect the typed proposal, then send feedback to generate another saved revision. Choose the model and thinking level independently for every message. The assistant can use only reviewed executable templates; it cannot create mechanism code or make an analytical composite act.</p>
+      <section id="authoring-chat" class="authoring-chat" aria-label="Scenario authoring conversation">
+        <article class="chat-message assistant">
+          <span>Authoring assistant</span>
+          <p>Describe the bounded situation you want to model. After I produce a draft, tell me what to change and I will generate the next saved revision.</p>
+        </article>
+      </section>
+      <section class="authoring-composer">
+        <label id="authoring-message-label" for="authoring-message">Message the authoring assistant
+          <textarea id="authoring-message" rows="4" placeholder="For example: Model a campaign operator publishing a false diplomatic claim through a public channel to an analyst who assesses it."></textarea>
+        </label>
+        <div class="authoring-compose-controls">
+          <label for="authoring-model">Model
+            <select id="authoring-model"></select>
+          </label>
+          <label for="authoring-reasoning">Thinking
+            <select id="authoring-reasoning"></select>
+          </label>
+          <button id="authoring-draft" type="button">Generate first draft</button>
+        </div>
+      </section>
+      <div class="authoring-actions"><button id="authoring-copy-link" type="button" hidden>Copy saved draft link</button><button id="authoring-approve" type="button" hidden>Approve this draft</button><button id="authoring-run" type="button" hidden>Play approved reference run</button></div>
       <details class="authoring-details">
         <summary>Drafting model and cost</summary>
         <p id="authoring-runtime" class="muted">Loading the structured authoring model…</p>
@@ -213,6 +230,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=readable-run-v2"></script>
-  <script src="/assets/app.js?v=topology-preview-v5"></script>
+  <script src="/assets/app.js?v=authoring-chat-v1"></script>
 </body>
 </html>

@@ -23,9 +23,26 @@ from cybernetic_influence.run_store import now_iso
 StructuredCall = Callable[..., tuple[Any, Any]]
 AUTHORING_TASK = "cybernetic_influence_v3_scenario_draft"
 AUTHORING_MAX_BUDGET = 0.10
-AUTHORING_MODEL = "openrouter/openai/gpt-5.6-terra"
-AUTHORING_REASONING_EFFORT = "medium"
+AuthoringModel = Literal["openrouter/openai/gpt-5.6-terra", "gpt-5.6"]
+AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
+AUTHORING_MODEL: AuthoringModel = "openrouter/openai/gpt-5.6-terra"
+AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
+AUTHORING_MODEL_OPTIONS: tuple[dict[str, str], ...] = (
+    {
+        "model": "openrouter/openai/gpt-5.6-terra",
+        "label": "Terra",
+        "provider": "OpenRouter",
+    },
+    {
+        "model": "gpt-5.6",
+        "label": "Sol",
+        "provider": "OpenAI direct",
+    },
+)
+AUTHORING_REASONING_EFFORTS: tuple[AuthoringReasoningEffort, ...] = (
+    "none", "low", "medium", "high", "xhigh", "max",
+)
 
 
 class _PersonConsumer(BaseModel):
@@ -176,15 +193,27 @@ class DraftAuthoringService:
         self.call = call or _structured_call()
 
     def advance(
-        self, draft_id: str, *, expected_revision: int, message_id: str, message: str
+        self, draft_id: str, *, expected_revision: int, message_id: str, message: str,
+        model: AuthoringModel = AUTHORING_MODEL,
+        reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT,
     ) -> dict[str, object]:
+        if model not in {item["model"] for item in AUTHORING_MODEL_OPTIONS}:
+            raise ValueError("unsupported authoring model")
+        if reasoning_effort not in AUTHORING_REASONING_EFFORTS:
+            raise ValueError("unsupported authoring reasoning effort")
         current = self.store.get(draft_id)
         messages = current["messages"]
         assert isinstance(messages, list)
         existing = next((item for item in messages if item.get("message_id") == message_id), None)
         if existing is not None:
-            if existing.get("content") != message:
-                raise DraftConflictError("message ID was already used with different content")
+            if (
+                existing.get("content") != message
+                or existing.get("model") not in (None, model)
+                or existing.get("reasoning_effort") not in (None, reasoning_effort)
+            ):
+                raise DraftConflictError(
+                    "message ID was already used with different content or model settings"
+                )
             return current
         if current["revision"] != expected_revision:
             raise DraftConflictError("draft revision has changed; reload before editing")
@@ -202,7 +231,7 @@ class DraftAuthoringService:
             )
             try:
                 parsed, meta = self.call(
-                    AUTHORING_MODEL,
+                    model,
                     [{"role": "system", "content": system}, {"role": "user", "content": user}],
                     response_model=_ProposalConsumer,
                     task=AUTHORING_TASK,
@@ -213,7 +242,7 @@ class DraftAuthoringService:
                         "Select and populate one reviewed executable scenario template "
                         "from a bounded natural-language situation."
                     ),
-                    reasoning_effort=AUTHORING_REASONING_EFFORT,
+                    reasoning_effort=reasoning_effort,
                 )
                 if isinstance(parsed, ScenarioDraftProposal):
                     proposal = parsed
@@ -243,16 +272,20 @@ class DraftAuthoringService:
                 attempts.append(_attempt(trace_id, attempt_number, "repair", repair_feedback, meta))
                 proposal = None
             except Exception as error:
-                capability_error = _is_capability_error(error)
+                terminal_provider_error = _is_terminal_provider_error(error)
                 repair_feedback = _concise_provider_error(error)
                 diagnostics = [{"severity": "error", "code": "drafting", "message": repair_feedback}]
                 attempts.append(_attempt(trace_id, attempt_number, "provider_error", repair_feedback, meta))
-                if capability_error:
+                if terminal_provider_error:
                     break
         successful = proposal is not None and not diagnostics
         if successful:
+            assert proposal is not None
             status = "ready_for_review"
-            summary = f"Ready to review after {len(attempts)} authoring attempt(s)."
+            summary = (
+                f"Ready to review: {proposal.title}. "
+                f"{proposal.description}"
+            )
             approval: dict[str, object] | None = None
         elif (
             attempts
@@ -281,8 +314,7 @@ class DraftAuthoringService:
         else:
             status = "needs_input"
             summary = (
-                "A typed draft is ready to inspect, but it needs your answer to the "
-                "question below before approval."
+                f"I drafted {proposal.title}, but I need your answer before approval."
                 if proposal is not None and diagnostics
                 else (
                     f"The authoring assistant tried {len(attempts)} time(s) without producing "
@@ -291,11 +323,39 @@ class DraftAuthoringService:
                 )
             )
             approval = None
+        assistant_details = [
+            str(item["message"])
+            for item in diagnostics
+            if isinstance(item.get("message"), str)
+        ]
+        if (
+            attempts
+            and all(item["status"] == "provider_error" for item in attempts)
+            and isinstance(attempts[-1].get("message"), str)
+            and attempts[-1]["message"] not in assistant_details
+        ):
+            assistant_details.append(str(attempts[-1]["message"]))
+        assistant_summary = " ".join([summary, *assistant_details])
         updated = {
             **current,
             "revision": expected_revision + 1,
             "status": status,
-            "messages": [*messages, {"message_id": message_id, "content": message}],
+            "messages": [
+                *messages,
+                {
+                    "message_id": message_id,
+                    "content": message,
+                    "model": model,
+                    "reasoning_effort": reasoning_effort,
+                    "assistant_summary": assistant_summary,
+                    "result_status": status,
+                    "trace_ids": [
+                        str(item["trace_id"])
+                        for item in attempts
+                        if isinstance(item.get("trace_id"), str)
+                    ],
+                },
+            ],
             "attempts": attempts,
             "authoring_summary": summary,
             "proposal": proposal.model_dump(mode="json") if proposal else None,
@@ -428,7 +488,47 @@ def _is_capability_error(error: Exception) -> bool:
     return isinstance(error, LLMCapabilityError)
 
 
+def _is_terminal_provider_error(error: Exception) -> bool:
+    try:
+        from llm_client import (
+            LLMAuthError,
+            LLMBudgetExceededError,
+            LLMCapabilityError,
+            LLMConfigurationError,
+            LLMContentFilterError,
+            LLMModelNotFoundError,
+            LLMQuotaExhaustedError,
+        )
+    except ImportError:
+        return False
+    return isinstance(
+        error,
+        (
+            LLMAuthError,
+            LLMBudgetExceededError,
+            LLMCapabilityError,
+            LLMConfigurationError,
+            LLMContentFilterError,
+            LLMModelNotFoundError,
+            LLMQuotaExhaustedError,
+        ),
+    )
+
+
+def _is_quota_error(error: Exception) -> bool:
+    try:
+        from llm_client import LLMQuotaExhaustedError
+    except ImportError:
+        return False
+    return isinstance(error, LLMQuotaExhaustedError)
+
+
 def _concise_provider_error(error: Exception) -> str:
+    if _is_quota_error(error):
+        return (
+            "Sol could not run because the direct OpenAI project has no usable quota. "
+            "The prior draft was preserved; choose Terra or restore that project's credits."
+        )
     if _is_capability_error(error):
         return f"The selected authoring route cannot accept this structured schema: {error}"
     return f"The provider did not produce a usable typed draft: {type(error).__name__}."

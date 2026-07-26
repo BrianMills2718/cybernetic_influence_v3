@@ -85,6 +85,15 @@ Simulation workspace from a saved-draft URL loads the selected configured
 scenario preview so spatial topology and configured interaction pathways remain
 visible before Play.
 
+The authoring screen is a retained conversation rather than a one-shot form.
+Each user message and assistant result remain visible in order. Before sending
+any message, the user may independently select Terra through OpenRouter or Sol
+through direct OpenAI, plus that message's thinking level. The selection applies
+only to the next generated revision and is retained beside that message with
+its trace IDs; changing it never silently reroutes an earlier or later revision.
+Older drafts that predate this metadata remain readable and explicitly show
+that their earlier selection was not retained.
+
 OpenAI-strict provider output represents placements as typed
 `{entity_id, place_id}` records; the local consumer converts them to the
 canonical placement map and rejects duplicates. A semantically valid draft

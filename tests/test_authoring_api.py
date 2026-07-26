@@ -9,9 +9,11 @@ from fastapi.testclient import TestClient
 from cybernetic_influence.api import create_app
 from cybernetic_influence.authoring.service import (
     _ProposalConsumer,
+    _prompt,
     _provider_candidate_from_proposal,
 )
-from llm_client import LLMCapabilityError
+from cybernetic_influence.authoring.models import ResourceRequestWorkflowDraft
+from llm_client import LLMCapabilityError, LLMQuotaExhaustedError
 from test_authoring_compiler import _proposal
 from test_authoring_information_campaign import information_campaign_proposal
 
@@ -71,6 +73,90 @@ def test_draft_is_idempotent_revisioned_previewable_approved_and_runnable(tmp_pa
     assert run.json()["execution"] == "scripted"
     assert run.json()["cost"] == 0.0
     assert run.json()["authoring"]["draft_id"] == draft_id
+
+
+def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: Path) -> None:
+    calls: list[tuple[object, object]] = []
+
+    def recording_proposer(*args: object, **kwargs: object) -> tuple[object, object]:
+        calls.append((args[0], kwargs["reasoning_effort"]))
+        proposal = _proposal().model_copy(deep=True)
+        if len(calls) == 2:
+            assert isinstance(proposal.workflow, ResourceRequestWorkflowDraft)
+            proposal.workflow.resource_available = False
+            proposal.description = "The requested laptop is unavailable."
+        return proposal, _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=recording_proposer,
+        )
+    )
+    config = api.get("/api/config").json()["authoring"]
+    assert [(item["label"], item["model"]) for item in config["models"]] == [
+        ("Terra", "openrouter/openai/gpt-5.6-terra"),
+        ("Sol", "gpt-5.6"),
+    ]
+    assert config["reasoning_efforts"] == ["none", "low", "medium", "high", "xhigh", "max"]
+
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    first = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "m1",
+            "message": "Model equipment checkout.",
+            "model": "openrouter/openai/gpt-5.6-terra",
+            "reasoning_effort": "low",
+        },
+    ).json()
+    second = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": first["revision"],
+            "message_id": "m2",
+            "message": "Make the laptop unavailable.",
+            "model": "gpt-5.6",
+            "reasoning_effort": "high",
+        },
+    ).json()
+
+    assert calls == [
+        ("openrouter/openai/gpt-5.6-terra", "low"),
+        ("gpt-5.6", "high"),
+    ]
+    assert [
+        (message["model"], message["reasoning_effort"])
+        for message in second["messages"]
+    ] == [
+        ("openrouter/openai/gpt-5.6-terra", "low"),
+        ("gpt-5.6", "high"),
+    ]
+    assert second["messages"][0]["trace_ids"] == [
+        f"{draft_id}/revision/1/attempt/1"
+    ]
+    assert second["messages"][1]["trace_ids"] == [
+        f"{draft_id}/revision/2/attempt/1"
+    ]
+    assert second["messages"][1]["assistant_summary"].startswith(
+        "Ready to review: Equipment checkout desk"
+    )
+    assert second["proposal"]["workflow"]["resource_available"] is False
+
+    reused = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": second["revision"],
+            "message_id": "m2",
+            "message": "Make the laptop unavailable.",
+            "model": "openrouter/openai/gpt-5.6-terra",
+            "reasoning_effort": "high",
+        },
+    )
+    assert reused.status_code == 409
 
 
 def test_provider_failure_becomes_a_visible_bounded_needs_input_state(tmp_path: Path) -> None:
@@ -154,6 +240,53 @@ def test_nonretryable_capability_failure_stops_after_one_visible_attempt(tmp_pat
     assert "selected route rejects this schema" in failed["diagnostics"][0]["message"]
 
 
+def test_quota_failure_stops_once_and_explains_that_the_prior_draft_is_safe(
+    tmp_path: Path,
+) -> None:
+    calls = 0
+
+    def exhausted(*_args: object, **_kwargs: object) -> tuple[object, object]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return _proposal(), _Meta()
+        raise LLMQuotaExhaustedError("insufficient quota")
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=exhausted,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    ready = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "m1",
+            "message": "A request.",
+            "model": "openrouter/openai/gpt-5.6-terra",
+            "reasoning_effort": "medium",
+        },
+    ).json()
+    failed = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": ready["revision"],
+            "message_id": "m2",
+            "message": "Change the request.",
+            "model": "gpt-5.6",
+            "reasoning_effort": "medium",
+        },
+    ).json()
+    assert calls == 2
+    assert len(failed["attempts"]) == 1
+    assert failed["proposal"] == ready["proposal"]
+    assert "direct OpenAI project has no usable quota" in failed["messages"][-1]["assistant_summary"]
+
+
 def test_unapproved_draft_cannot_run(tmp_path: Path) -> None:
     api = _client(tmp_path)
     draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
@@ -175,6 +308,18 @@ def test_provider_schema_exposes_nested_template_fields() -> None:
     assert "template_id" in schema["$defs"]["_WorkflowConsumer"]["required"]
     assert "template_id" in schema["$defs"]["_InformationCampaignWorkflowConsumer"]["required"]
     assert schema["properties"]["workflow"]["discriminator"]["propertyName"] == "template_id"
+
+
+def test_authoring_prompt_keeps_compiler_owned_details_out_of_user_questions() -> None:
+    system, _user = _prompt(
+        message="Model checkout.",
+        prior={},
+        repair_feedback=None,
+        candidate=None,
+    )
+    assert "Place only declared people and objects" in system
+    assert "Never put a statement, assumption, compiler-owned detail" in system
+    assert "When the compiler owns a missing detail" in system
 
 
 def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) -> None:
