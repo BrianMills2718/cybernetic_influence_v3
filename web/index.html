@@ -177,8 +177,11 @@
       <section class="turn-narratives">
         <span class="eyebrow">Causal-step narrative</span>
         <h2>How the run unfolded</h2>
-        <p class="muted">An LLM writes one concise account per causal step from the retained trace. Each account carries the earlier story forward; exact evidence remains available below.</p>
-        <div id="turn-narratives"></div>
+        <p class="muted">The concise timeline makes the causal sequence scannable. The detailed account beside it stays narrative while explaining the decisions, exact effects, and unresolved questions that make up the realized causal graph.</p>
+        <div class="narrative-layout">
+          <div><h3>Concise timeline</h3><div id="turn-narratives"></div></div>
+          <div><h3>Detailed narrative</h3><div id="detailed-narrative" aria-label="Detailed causal-step narrative"></div></div>
+        </div>
         <footer class="story" aria-label="Run outcome">
           <span class="eyebrow">Outcome</span>
           <h2 id="story-headline"></h2>
@@ -251,7 +254,7 @@
         <article><h3>Choose and play</h3><p>Select a scenario and condition, then run it. Live runs let LLM-modeled people act from their retained memory, position, observations, and interfaces. Reference runs use fixed zero-cost policies.</p></article>
         <article><h3>Read the map</h3><p><strong>Spatial topology</strong> shows authored places, occupants, and physical links. <strong>Configured interaction pathways</strong> show relationships that may support information or action when exact mechanisms permit them; they do not grant authority. <strong>Realized causal graph</strong> shows what happened in the selected run.</p></article>
         <article><h3>Change analytical scale</h3><p>The graph’s analytical-scale control collapses or expands an execution-inert composite such as the service desk. It changes what is summarized, not what exists or acts in the simulation.</p></article>
-        <article><h3>Follow the account</h3><p>The narrative is an LLM-written account grounded in each step’s retained trace. Use the rolled-up causal-step inspector and advanced evidence when you need to step down to exact events and state.</p></article>
+        <article><h3>Follow the account</h3><p>The narrative has a concise timeline and a detailed evidence-cited account. Use the causal-step inspector and advanced evidence when you need to step down to exact events and state.</p></article>
       </div>
     </section>
   </main>

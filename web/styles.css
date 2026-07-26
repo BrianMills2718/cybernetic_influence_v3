@@ -126,6 +126,8 @@ summary { cursor:pointer; font-weight:700; }
 .step-account { padding:22px; border:1px solid #316698; border-radius:14px; background:linear-gradient(145deg,#17283a,var(--surface)); }
 .step-account h2 { margin:7px 0; font-size:24px; }
 .step-account > p { max-width:90ch; font-size:17px; line-height:1.6; }
+#step-account-body { display:grid; gap:12px; }
+#step-account-body span { display:block; }
 .step-account > .muted { font-size:12px; }
 .step-account .event-detail { margin-top:16px; }
 .moment-events { display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; }
@@ -134,12 +136,21 @@ summary { cursor:pointer; font-weight:700; }
 .turn-narratives { padding:22px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
 .turn-narratives h2 { margin:7px 0; }
 .turn-narratives > .muted { max-width:86ch; }
-#turn-narratives { display:grid; gap:10px; }
+.narrative-layout { display:grid; grid-template-columns:minmax(280px,.8fr) minmax(0,1.4fr); gap:16px; align-items:start; }
+.narrative-layout h3 { margin:0 0 10px; font-size:14px; color:#b9d7f5; }
+#turn-narratives,#detailed-narrative { display:grid; gap:10px; }
+#detailed-narrative { max-height:680px; overflow:auto; padding-right:4px; }
 .turn-narrative { display:grid; gap:7px; padding:14px 16px; border-left:4px solid #487ca7; border-radius:8px; background:var(--surface2); text-align:left; font-weight:500; }
 .turn-narrative span { color:#b9d7f5; font-size:12px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
 .turn-narrative p { margin:0; line-height:1.5; }
 .turn-narrative small { color:var(--muted); }
 .turn-narrative.active { border-color:#fff; background:#203b56; }
+.detailed-narrative-moment { display:grid; gap:8px; padding:16px 18px; border-left:4px solid #567c9e; border-radius:8px; background:#111c28; cursor:pointer; }
+.detailed-narrative-moment > span { color:#b9d7f5; font-size:12px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.detailed-narrative-moment p { max-width:84ch; margin:0; line-height:1.62; }
+.detailed-narrative-moment small { color:var(--muted); font-size:11px; }
+.detailed-narrative-moment.active { border-color:#fff; background:#203b56; }
+.detailed-narrative-moment.legacy { border-style:dashed; }
 .turn-narratives > .story { margin-top:16px; }
 .flow-controls { padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
 .canvas-replaced { display:none !important; }
@@ -188,4 +199,4 @@ pre { max-height:520px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywh
 .trace-step p { color:var(--muted); }
 .trace-step.event-match { border-color:#fff; background:#203b56; }
 .advanced { padding:18px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
-@media (max-width:900px) { .run-card,.workspace,.settings-grid,.assumption-columns,.readme-grid,.authoring-compose-controls { grid-template-columns:1fr; } .run-card > .live,.run-card > #run { grid-column:auto; } .chat-message { width:94%; } .graph { grid-template-columns:repeat(2,minmax(130px,1fr)); } .timeline-controls { grid-template-columns:auto 1fr auto; } #event-count { grid-column:1/-1; } .projection-toolbar { display:block; } .projection-toolbar p { text-align:left; } .projection-toolbar .tabs { margin-bottom:9px; } header,main { padding:16px; } header { align-items:flex-start; flex-wrap:wrap; gap:10px; } .header-actions { width:100%; justify-content:space-between; gap:8px; } .app-tabs { flex:1; justify-content:space-between; } .app-tabs button { padding-inline:7px; } #run-status { display:none; } }
+@media (max-width:900px) { .run-card,.workspace,.settings-grid,.assumption-columns,.readme-grid,.authoring-compose-controls,.narrative-layout { grid-template-columns:1fr; } .run-card > .live,.run-card > #run { grid-column:auto; } .chat-message { width:94%; } .graph { grid-template-columns:repeat(2,minmax(130px,1fr)); } .timeline-controls { grid-template-columns:auto 1fr auto; } #event-count { grid-column:1/-1; } .projection-toolbar { display:block; } .projection-toolbar p { text-align:left; } .projection-toolbar .tabs { margin-bottom:9px; } header,main { padding:16px; } header { align-items:flex-start; flex-wrap:wrap; gap:10px; } .header-actions { width:100%; justify-content:space-between; gap:8px; } .app-tabs { flex:1; justify-content:space-between; } .app-tabs button { padding-inline:7px; } #run-status { display:none; } }

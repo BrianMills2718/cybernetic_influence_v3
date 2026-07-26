@@ -14,11 +14,32 @@ import pytest
 from cybernetic_influence.api import create_app
 from cybernetic_influence.narration import (
     CausalMomentNarration,
+    NarrativeParagraph,
     narrate_live_moments,
 )
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def narrated_response(
+    response_model: type[CausalMomentNarration],
+    *,
+    concise: str,
+    current_event_id: str,
+    detailed_event_ids: list[str] | None = None,
+) -> CausalMomentNarration:
+    """Create a valid dual-level narrator response for focused tests."""
+    return response_model(
+        concise_narrative=concise,
+        concise_source_event_ids=[current_event_id],
+        detailed_paragraphs=[
+            NarrativeParagraph(
+                text="The retained trace records the decision, exact result, and remaining uncertainty.",
+                source_event_ids=detailed_event_ids or [current_event_id],
+            )
+        ],
+    )
 
 
 def test_live_moment_narration_groups_participants_and_cites_current_events(
@@ -43,9 +64,10 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
         call_options.append(kwargs)
         source_ids = re.findall(r'"event_id":\s*"([^"]+)"', messages[1]["content"])
         return (
-            response_model(
-                narrative=f"Narrated causal moment {len(prompts)}.",
-                source_event_ids=[source_ids[-1]],
+            narrated_response(
+                response_model,
+                concise=f"Narrated causal moment {len(prompts)}.",
+                current_event_id=source_ids[-1],
             ),
             SimpleNamespace(cost=0.01, cost_source="provider_reported"),
         )
@@ -65,6 +87,9 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     moments = narration["moments"]
     assert isinstance(moments, list)
     assert moments[0]["source_event_ids"]
+    assert moments[0]["narrative_version"] == 2
+    assert moments[0]["concise_narrative"] == moments[0]["narrative"]
+    assert moments[0]["detailed_paragraphs"]
     assert [moment["causal_time"] for moment in moments] == list(
         range(1, len(moments) + 1)
     )
@@ -74,10 +99,11 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     assert any(len(moment["participants"]) > 1 for moment in moments)
     assert "Earlier causal-moment narratives, in order:\n[]" in prompts[0]
     assert "Never describe scenario_start as an internal" in prompts[0]
-    assert "exactly one sentence of at most 240 characters" in prompts[0]
-    assert "never write an event ID" in system_prompts[0]
+    assert "concise_narrative must be exactly one sentence of at most 240 characters" in prompts[0]
+    assert "detailed_paragraphs must contain one to three connected prose paragraphs" in prompts[0]
+    assert "never write an event ID" in " ".join(system_prompts[0].split())
     assert "Narrated causal moment 1." in prompts[1]
-    assert all(item["max_tokens"] == 96 for item in call_options)
+    assert all(item["max_tokens"] == 640 for item in call_options)
     assert all(item["reasoning_effort"] == "high" for item in call_options)
     calls = narration["calls"]
     assert isinstance(calls, list)
@@ -105,9 +131,10 @@ def test_narrator_citation_outside_current_moment_is_retained_as_unavailable(
         **_kwargs: Any,
     ) -> tuple[CausalMomentNarration, object]:
         return (
-            response_model(
-                narrative="This should not be retained as a supported account.",
-                source_event_ids=["event_not_in_this_turn"],
+            narrated_response(
+                response_model,
+                concise="This should not be retained as a supported account.",
+                current_event_id="event_not_in_this_turn",
             ),
             SimpleNamespace(cost=0.01, cost_source="provider_reported"),
         )
@@ -149,9 +176,10 @@ def test_narrator_reserves_the_full_account_before_any_provider_call(
             messages[1]["content"],
         )
         return (
-            response_model(
-                narrative="One authorized account.",
-                source_event_ids=[source_ids[-1]],
+            narrated_response(
+                response_model,
+                concise="One authorized account.",
+                current_event_id=source_ids[-1],
             ),
             SimpleNamespace(cost=0.01, cost_source="provider_reported"),
         )
@@ -220,9 +248,10 @@ def test_narrator_retains_observed_over_ceiling_cost_as_failure(
             messages[1]["content"],
         )
         return (
-            response_model(
-                narrative="An unexpectedly expensive account.",
-                source_event_ids=[source_ids[-1]],
+            narrated_response(
+                response_model,
+                concise="An unexpectedly expensive account.",
+                current_event_id=source_ids[-1],
             ),
             SimpleNamespace(cost=0.021, cost_source="provider_reported"),
         )
@@ -270,9 +299,10 @@ def test_narrator_receives_representation_scope_and_private_update_evidence(
             user["content"],
         )
         return (
-            response_model(
-                narrative=f"Narrated causal moment {len(prompts)}.",
-                source_event_ids=[source_ids[-1]],
+            narrated_response(
+                response_model,
+                concise=f"Narrated causal moment {len(prompts)}.",
+                current_event_id=source_ids[-1],
             ),
             SimpleNamespace(cost=0.01, cost_source="provider_reported"),
         )
@@ -307,3 +337,97 @@ def test_narrator_receives_representation_scope_and_private_update_evidence(
         "Protected private state changed for ap_clerk."
         in prompts[-1][1]
     )
+
+
+def test_detailed_narration_can_cite_prior_evidence_but_must_cite_current_evidence(
+    tmp_path: Path,
+) -> None:
+    document = TestClient(create_app(ROOT / "web", tmp_path)).post(
+        "/api/runs",
+        json={"execution": "scripted"},
+    ).json()
+    call_number = 0
+    first_event_id = ""
+
+    def fake_call(
+        _model: str,
+        messages: list[dict[str, str]],
+        response_model: type[CausalMomentNarration],
+        **_kwargs: Any,
+    ) -> tuple[CausalMomentNarration, object]:
+        nonlocal call_number, first_event_id
+        call_number += 1
+        source_ids = re.findall(r'"event_id":\s*"([^"]+)"', messages[1]["content"])
+        current_event_id = source_ids[-1]
+        if call_number == 1:
+            first_event_id = current_event_id
+        detailed_ids = [current_event_id]
+        if call_number > 1:
+            detailed_ids.insert(0, first_event_id)
+        return (
+            narrated_response(
+                response_model,
+                concise=f"Moment {call_number} has a retained account.",
+                current_event_id=current_event_id,
+                detailed_event_ids=detailed_ids,
+            ),
+            SimpleNamespace(cost=0.01, cost_source="provider_reported"),
+        )
+
+    narration = narrate_live_moments(
+        document,
+        model="test-model",
+        trace_id_prefix="run_prior_evidence",
+        structured_call=fake_call,
+    )
+
+    assert narration["status"] == "completed"
+    moments = narration["moments"]
+    assert isinstance(moments, list)
+    assert first_event_id in moments[1]["detailed_paragraphs"][0]["source_event_ids"]
+
+
+def test_detailed_narration_without_current_evidence_fails_loudly(tmp_path: Path) -> None:
+    document = TestClient(create_app(ROOT / "web", tmp_path)).post(
+        "/api/runs",
+        json={"execution": "scripted"},
+    ).json()
+    call_number = 0
+    first_event_id = ""
+
+    def forged_call(
+        _model: str,
+        messages: list[dict[str, str]],
+        response_model: type[CausalMomentNarration],
+        **_kwargs: Any,
+    ) -> tuple[CausalMomentNarration, object]:
+        nonlocal call_number, first_event_id
+        call_number += 1
+        source_ids = re.findall(r'"event_id":\s*"([^"]+)"', messages[1]["content"])
+        current_event_id = source_ids[-1]
+        if call_number == 1:
+            first_event_id = current_event_id
+        detailed_ids = [current_event_id] if call_number == 1 else [first_event_id]
+        return (
+            narrated_response(
+                response_model,
+                concise=f"Moment {call_number} account.",
+                current_event_id=current_event_id,
+                detailed_event_ids=detailed_ids,
+            ),
+            SimpleNamespace(cost=0.01, cost_source="provider_reported"),
+        )
+
+    narration = narrate_live_moments(
+        document,
+        model="test-model",
+        trace_id_prefix="run_missing_current_evidence",
+        structured_call=forged_call,
+    )
+
+    assert narration["status"] == "unavailable"
+    calls = narration["calls"]
+    assert isinstance(calls, list)
+    assert isinstance(calls[1], Mapping)
+    assert calls[1]["error_type"] == "ValueError"
+    assert "did not cite the current causal moment" in str(calls[1]["error_message"])

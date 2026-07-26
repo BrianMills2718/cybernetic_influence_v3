@@ -16,20 +16,32 @@ NARRATOR_TASK = "cybernetic_causal_moment_narration"
 NARRATOR_MAX_BUDGET = 0.02
 # The analyst card needs one compact account; a bounded completion prevents a
 # provider-accepted but locally overlong response from breaking the sequence.
-NARRATOR_MAX_TOKENS = 96
+# One response now contains a compact timeline account and the readable
+# evidence-bound passage.  The hard observed-cost ceiling remains unchanged.
+NARRATOR_MAX_TOKENS = 640
 NARRATOR_REASONING_EFFORT = "low"
 
 StructuredCall = Callable[..., tuple[Any, Any]]
 _FORBID = ConfigDict(extra="forbid", strict=True)
 
 
-class CausalMomentNarration(BaseModel):
-    """One bounded natural-language account with explicit causal provenance."""
+class NarrativeParagraph(BaseModel):
+    """One detailed paragraph and the retained evidence it interprets."""
 
     model_config = _FORBID
 
-    narrative: str = Field(min_length=1, max_length=360)
-    source_event_ids: list[str] = Field(min_length=1, max_length=4)
+    text: str = Field(min_length=1, max_length=900)
+    source_event_ids: list[str] = Field(min_length=1, max_length=6)
+
+
+class CausalMomentNarration(BaseModel):
+    """Dual-level natural-language account with explicit causal provenance."""
+
+    model_config = _FORBID
+
+    concise_narrative: str = Field(min_length=1, max_length=360)
+    concise_source_event_ids: list[str] = Field(min_length=1, max_length=4)
+    detailed_paragraphs: list[NarrativeParagraph] = Field(min_length=1, max_length=3)
 
 
 def narrate_live_moments(
@@ -150,20 +162,44 @@ def narrate_live_moments(
                 else parsed
             )
             events = cast(list[dict[str, object]], moment["events"])
-            allowed_ids = {str(event["event_id"]) for event in events}
-            if not set(narration.source_event_ids) <= allowed_ids:
+            current_ids = {str(event["event_id"]) for event in events}
+            if not set(narration.concise_source_event_ids) <= current_ids:
                 raise ValueError(
                     "narrator cited an event outside its current causal moment"
                 )
+            prior_ids = _prior_source_event_ids(prior)
+            detailed_ids = {
+                source_event_id
+                for paragraph in narration.detailed_paragraphs
+                for source_event_id in paragraph.source_event_ids
+            }
+            if not detailed_ids <= current_ids | prior_ids:
+                raise ValueError(
+                    "narrator detailed account cited evidence outside the supplied "
+                    "causal context"
+                )
+            if not detailed_ids & current_ids:
+                raise ValueError(
+                    "narrator detailed account did not cite the current causal moment"
+                )
             record = {
+                "narrative_version": 2,
                 "moment": index,
                 "activation": moment["activation"],
                 "participants": moment["participants"],
                 "causal_time": moment["causal_time"],
                 "causal_timestamp": moment["causal_timestamp"],
                 "logical_time": moment["logical_time"],
-                "narrative": narration.narrative,
-                "source_event_ids": narration.source_event_ids,
+                # Preserve the original fields so existing retained-run consumers
+                # render the concise account without a migration.
+                "narrative": narration.concise_narrative,
+                "source_event_ids": narration.concise_source_event_ids,
+                "concise_narrative": narration.concise_narrative,
+                "concise_source_event_ids": narration.concise_source_event_ids,
+                "detailed_paragraphs": [
+                    paragraph.model_dump(mode="json")
+                    for paragraph in narration.detailed_paragraphs
+                ],
             }
             narrated.append(record)
             prior.append(record)
@@ -338,6 +374,27 @@ def _list_of_mappings(value: object) -> list[dict[str, object]]:
     if not isinstance(value, list):
         return []
     return [dict(item) for item in value if isinstance(item, Mapping)]
+
+
+def _prior_source_event_ids(prior: Sequence[Mapping[str, object]]) -> set[str]:
+    """Return only evidence IDs already exposed through prior narration."""
+    source_ids: set[str] = set()
+    for record in prior:
+        for key in ("source_event_ids", "concise_source_event_ids"):
+            value = record.get(key)
+            if isinstance(value, list):
+                source_ids.update(item for item in value if isinstance(item, str))
+        paragraphs = record.get("detailed_paragraphs")
+        if isinstance(paragraphs, list):
+            for paragraph in paragraphs:
+                if not isinstance(paragraph, Mapping):
+                    continue
+                paragraph_ids = paragraph.get("source_event_ids")
+                if isinstance(paragraph_ids, list):
+                    source_ids.update(
+                        item for item in paragraph_ids if isinstance(item, str)
+                    )
+    return source_ids
 
 
 def _render_prompt(

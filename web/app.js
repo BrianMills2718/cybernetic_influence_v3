@@ -1297,8 +1297,13 @@ function renderStepAccount(event) {
     const momentNumber = narration.moment || narration.turn
     const participants = narration.participants || [narration.person || 'system']
     $('#step-account-title').textContent = `Causal step ${momentNumber} · ${causalTime(narration, momentNumber)} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
-    $('#step-account-body').textContent = narration.narrative
-    $('#step-account-source').textContent = `Live LLM narrator · grounded in ${narration.source_event_ids.join(', ')}. It received this moment’s trace and the earlier moment narratives.`
+    const paragraphs = narration.detailed_paragraphs || []
+    $('#step-account-body').innerHTML = paragraphs.length
+      ? paragraphs.map((paragraph) => `<span>${html(paragraph.text)}</span>`).join('')
+      : html(narration.concise_narrative || narration.narrative)
+    $('#step-account-source').textContent = paragraphs.length
+      ? `Live LLM narrator · concise account grounded in ${(narration.concise_source_event_ids || narration.source_event_ids || []).join(', ')}; each detailed paragraph retains its own evidence citations.`
+      : `Live LLM narrator · grounded in ${(narration.source_event_ids || []).join(', ')}. This older run retained only its concise account.`
   } else if (exactProcess) {
     $('#step-account-title').textContent = title
     const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The exact process'
@@ -1324,11 +1329,15 @@ function renderStepAccount(event) {
   document.querySelectorAll('.turn-narrative').forEach((card) => {
     card.classList.toggle('active', card.dataset.activation === event.activation)
   })
+  document.querySelectorAll('.detailed-narrative-moment').forEach((card) => {
+    card.classList.toggle('active', card.dataset.activation === event.activation)
+  })
 }
 
 function renderTurnNarratives() {
   const narration = current.narration || {}
   const container = $('#turn-narratives')
+  const detailed = $('#detailed-narrative')
   const moments = narration.moments || narration.turns || []
   if (narration.status === 'completed' && moments.length) {
     container.innerHTML = moments.map((moment) => {
@@ -1341,9 +1350,31 @@ function renderTurnNarratives() {
         <small>${html((moment.source_event_ids || []).join(' · '))}</small>
       </button>`
     }).join('')
+    detailed.innerHTML = moments.map((moment) => {
+      const momentNumber = moment.moment || moment.turn
+      const participants = moment.participants || [moment.person || 'system']
+      const paragraphs = moment.detailed_paragraphs || []
+      if (!paragraphs.length) {
+        return `<article class="detailed-narrative-moment legacy" data-activation="${html(moment.activation)}">
+          <span>Causal step ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
+          <p>${html(moment.concise_narrative || moment.narrative)}</p>
+          <small>Detailed account was not retained for this older run.</small>
+        </article>`
+      }
+      return `<article class="detailed-narrative-moment" data-activation="${html(moment.activation)}">
+        <span>Causal step ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
+        ${paragraphs.map((paragraph) => `<p>${html(paragraph.text)}</p><small>${html((paragraph.source_event_ids || []).join(' · '))}</small>`).join('')}
+      </article>`
+    }).join('')
     document.querySelectorAll('.turn-narrative').forEach((button) => {
       button.onclick = () => {
         const index = causalMoments().findIndex((moment) => moment.activation === button.dataset.activation)
+        if (index >= 0) selectMoment(index)
+      }
+    })
+    document.querySelectorAll('.detailed-narrative-moment').forEach((article) => {
+      article.onclick = () => {
+        const index = causalMoments().findIndex((moment) => moment.activation === article.dataset.activation)
         if (index >= 0) selectMoment(index)
       }
     })
@@ -1351,6 +1382,7 @@ function renderTurnNarratives() {
   }
   const reason = narration.reason || 'No causal-moment narration was retained for this run.'
   container.innerHTML = `<p class="muted">${html(reason)}</p>`
+  detailed.innerHTML = ''
 }
 
 function renderTimeline(run) {
