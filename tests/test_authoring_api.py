@@ -98,7 +98,7 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
     config = api.get("/api/config").json()["authoring"]
     assert [(item["label"], item["model"]) for item in config["models"]] == [
         ("Terra", "openrouter/openai/gpt-5.6-terra"),
-        ("Sol", "gpt-5.6"),
+        ("Sol", "openrouter/openai/gpt-5.6-sol"),
     ]
     assert config["reasoning_efforts"] == ["none", "low", "medium", "high", "xhigh", "max"]
 
@@ -119,21 +119,21 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
             "expected_revision": first["revision"],
             "message_id": "m2",
             "message": "Make the laptop unavailable.",
-            "model": "gpt-5.6",
+            "model": "openrouter/openai/gpt-5.6-sol",
             "reasoning_effort": "high",
         },
     ).json()
 
     assert calls == [
         ("openrouter/openai/gpt-5.6-terra", "low"),
-        ("gpt-5.6", "high"),
+        ("openrouter/openai/gpt-5.6-sol", "high"),
     ]
     assert [
         (message["model"], message["reasoning_effort"])
         for message in second["messages"]
     ] == [
         ("openrouter/openai/gpt-5.6-terra", "low"),
-        ("gpt-5.6", "high"),
+        ("openrouter/openai/gpt-5.6-sol", "high"),
     ]
     assert second["messages"][0]["trace_ids"] == [
         f"{draft_id}/revision/1/attempt/1"
@@ -277,14 +277,14 @@ def test_quota_failure_stops_once_and_explains_that_the_prior_draft_is_safe(
             "expected_revision": ready["revision"],
             "message_id": "m2",
             "message": "Change the request.",
-            "model": "gpt-5.6",
+            "model": "openrouter/openai/gpt-5.6-sol",
             "reasoning_effort": "medium",
         },
     ).json()
     assert calls == 2
     assert len(failed["attempts"]) == 1
     assert failed["proposal"] == ready["proposal"]
-    assert "direct OpenAI project has no usable quota" in failed["messages"][-1]["assistant_summary"]
+    assert "selected OpenRouter route has no usable quota" in failed["messages"][-1]["assistant_summary"]
 
 
 def test_unapproved_draft_cannot_run(tmp_path: Path) -> None:

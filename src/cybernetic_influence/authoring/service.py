@@ -23,7 +23,10 @@ from cybernetic_influence.run_store import now_iso
 StructuredCall = Callable[..., tuple[Any, Any]]
 AUTHORING_TASK = "cybernetic_influence_v3_scenario_draft"
 AUTHORING_MAX_BUDGET = 0.10
-AuthoringModel = Literal["openrouter/openai/gpt-5.6-terra", "gpt-5.6"]
+AuthoringModel = Literal[
+    "openrouter/openai/gpt-5.6-terra",
+    "openrouter/openai/gpt-5.6-sol",
+]
 AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
 AUTHORING_MODEL: AuthoringModel = "openrouter/openai/gpt-5.6-terra"
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
@@ -35,9 +38,9 @@ AUTHORING_MODEL_OPTIONS: tuple[dict[str, str], ...] = (
         "provider": "OpenRouter",
     },
     {
-        "model": "gpt-5.6",
+        "model": "openrouter/openai/gpt-5.6-sol",
         "label": "Sol",
-        "provider": "OpenAI direct",
+        "provider": "OpenRouter",
     },
 )
 AUTHORING_REASONING_EFFORTS: tuple[AuthoringReasoningEffort, ...] = (
@@ -526,8 +529,8 @@ def _is_quota_error(error: Exception) -> bool:
 def _concise_provider_error(error: Exception) -> str:
     if _is_quota_error(error):
         return (
-            "Sol could not run because the direct OpenAI project has no usable quota. "
-            "The prior draft was preserved; choose Terra or restore that project's credits."
+            "Sol could not run because the selected OpenRouter route has no usable quota. "
+            "The prior draft was preserved; choose Terra or restore OpenRouter credits."
         )
     if _is_capability_error(error):
         return f"The selected authoring route cannot accept this structured schema: {error}"

@@ -87,8 +87,8 @@ visible before Play.
 
 The authoring screen is a retained conversation rather than a one-shot form.
 Each user message and assistant result remain visible in order. Before sending
-any message, the user may independently select Terra through OpenRouter or Sol
-through direct OpenAI, plus that message's thinking level. The selection applies
+any message, the user may independently select Terra or Sol through OpenRouter,
+plus that message's thinking level. The selection applies
 only to the next generated revision and is retained beside that message with
 its trace IDs; changing it never silently reroutes an earlier or later revision.
 Older drafts that predate this metadata remain readable and explicitly show
