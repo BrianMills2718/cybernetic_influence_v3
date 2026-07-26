@@ -14,11 +14,16 @@ instructions to continue their former “next slice” sections.
 
 ## Active packet
 
+[Slice 18: BDM-informed person review](018-bdm-informed-person-review.md) is
+completed evidence: authored people now have concise, directly editable
+behavioral assumptions organized as internal values, goals, beliefs, decision
+tendencies, perceived social conditions, current state, capabilities, and
+limitations. Direct edits are revisioned and make no LLM call. These profiles
+are not yet claimed to drive the scripted reference workflows.
+
 [Slice 17: Typed scenario authoring](017-conversational-scenario-authoring.md)
-is completed evidence: one bounded equipment-checkout template can be drafted
-conversationally, reviewed as a typed map, explicitly approved, and run through
-the zero-cost scripted reference path without loosening existing causal,
-spatial, or execution-inert-boundary contracts.
+is retained completed evidence for the two bounded reviewed templates,
+conversational revisions, approval, maps, and zero-cost reference execution.
 
 [Slice 16: Canonical analyst demo](016-canonical-analyst-demo.md) is completed
 design evidence for the current closed scenario catalog.
@@ -48,6 +53,8 @@ is implemented and retained as completed design evidence.
 | [011](011-purchase-payment-representation-boundary.md) | Coarse processor and representation depth |
 | [012](012-event-driven-purchase-payment.md) | Event-driven purchase-to-payment causal chain |
 | [013](013-configurable-explainable-runs.md) | Configurable model, reasoning, spend, and fidelity explanation |
+| [017](017-conversational-scenario-authoring.md) | Conversational typed authoring for two reviewed templates |
+| [018](018-bdm-informed-person-review.md) | Directly editable BDM-informed person assumptions |
 
 No completed plan is archived or deleted: each contains unique acceptance
 evidence and design lineage, while this index and explicit completion statuses

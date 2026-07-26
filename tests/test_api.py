@@ -99,6 +99,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="authoring-chat"' in page.text
     assert 'id="authoring-model"' in page.text
     assert 'id="authoring-reasoning"' in page.text
+    assert 'id="authoring-people"' in page.text
+    assert "editable scenario assumptions" in page.text
     assert "Copy saved draft link" in page.text
     assert 'id="authoring-spatial-layout"' in page.text
     assert 'id="authoring-causal-layout"' in page.text
@@ -140,6 +142,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"/api/authoring/drafts" in app_script.content
     assert b"function renderAuthoring" in app_script.content
     assert b"function renderAuthoringChat" in app_script.content
+    assert b"function renderAuthoringPeople" in app_script.content
+    assert b"/people/${encodeURIComponent(person.entity_id)}" in app_script.content
     assert b"reasoning_effort:$('#authoring-reasoning').value" in app_script.content
     assert b"let previewRequestSerial = 0" in app_script.content
     assert b"requestSerial !== previewRequestSerial" in app_script.content

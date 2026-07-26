@@ -297,10 +297,21 @@ def test_unapproved_draft_cannot_run(tmp_path: Path) -> None:
 def test_provider_schema_exposes_nested_template_fields() -> None:
     schema = _ProposalConsumer.model_json_schema()
     person = schema["$defs"]["_PersonConsumer"]["properties"]
+    behavioral_profile = schema["$defs"]["_BehavioralProfileConsumer"]
     workflow = schema["$defs"]["_WorkflowConsumer"]["properties"]
     campaign = schema["$defs"]["_InformationCampaignWorkflowConsumer"]["properties"]
     placement = schema["$defs"]["_PlacementConsumer"]["properties"]
-    assert {"entity_id", "label", "memories"} <= set(person)
+    assert {"entity_id", "label", "memories", "behavioral_profile"} <= set(person)
+    assert {
+        "values",
+        "goals",
+        "beliefs",
+        "decision_tendencies",
+        "social_perceptions",
+        "current_state",
+        "capabilities",
+        "limitations",
+    } == set(behavioral_profile["required"])
     assert {"requester_id", "resource_id", "request_delivery_minutes"} <= set(workflow)
     assert {"source_id", "claim_information_id", "publication_delivery_minutes"} <= set(campaign)
     assert {"entity_id", "place_id"} <= set(placement)
@@ -320,6 +331,109 @@ def test_authoring_prompt_keeps_compiler_owned_details_out_of_user_questions() -
     assert "Place only declared people and objects" in system
     assert "Never put a statement, assumption, compiler-owned detail" in system
     assert "When the compiler owns a missing detail" in system
+    assert "Alice is skeptical of official sources" in system
+    assert "A social_perception is what the person thinks" in system
+    assert "never creates or removes an interface" in system
+    assert "describe the in-world human" in system
+    assert "current_state is only current emotion" in system
+
+
+def test_direct_person_edit_is_revisioned_idempotent_and_makes_no_llm_call(
+    tmp_path: Path,
+) -> None:
+    calls = 0
+
+    def counted_proposer(*_args: object, **_kwargs: object) -> tuple[object, object]:
+        nonlocal calls
+        calls += 1
+        return _proposal(), _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=counted_proposer,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    drafted = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={"expected_revision": 0, "message_id": "m1", "message": "Model checkout."},
+    ).json()
+    person = drafted["proposal"]["people"][0]
+    person["disposition"] = "Ari is cautious about relying on unverified equipment records."
+    person["behavioral_profile"]["beliefs"] = [
+        "Ari believes the inventory record may be stale."
+    ]
+    request = {
+        "expected_revision": drafted["revision"],
+        "edit_id": "person-edit-1",
+        "person": person,
+    }
+
+    edited = api.put(
+        f"/api/authoring/drafts/{draft_id}/people/{person['entity_id']}",
+        json=request,
+    )
+    assert edited.status_code == 200
+    body = edited.json()
+    assert calls == 1
+    assert body["revision"] == drafted["revision"] + 1
+    assert body["approval"] is None
+    assert body["proposal"]["people"][0]["behavioral_profile"]["beliefs"] == [
+        "Ari believes the inventory record may be stale."
+    ]
+    assert body["messages"][-1]["source"] == "direct_person_edit"
+    assert body["messages"][-1]["trace_ids"] == []
+    assert body["attempts"] == drafted["attempts"]
+
+    duplicate = api.put(
+        f"/api/authoring/drafts/{draft_id}/people/{person['entity_id']}",
+        json=request,
+    )
+    assert duplicate.status_code == 200
+    assert duplicate.json()["revision"] == body["revision"]
+    assert calls == 1
+    assert api.get(f"/api/authoring/drafts/{draft_id}/preview").status_code == 200
+
+
+def test_direct_person_edit_rejects_stale_or_mismatched_content(tmp_path: Path) -> None:
+    api = _client(tmp_path)
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    drafted = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={"expected_revision": 0, "message_id": "m1", "message": "Model checkout."},
+    ).json()
+    person = drafted["proposal"]["people"][0]
+    request = {
+        "expected_revision": drafted["revision"],
+        "edit_id": "person-edit-1",
+        "person": person,
+    }
+    saved = api.put(
+        f"/api/authoring/drafts/{draft_id}/people/{person['entity_id']}",
+        json=request,
+    )
+    assert saved.status_code == 200
+
+    stale_person = dict(person)
+    stale_person["label"] = "Changed after save"
+    stale = api.put(
+        f"/api/authoring/drafts/{draft_id}/people/{person['entity_id']}",
+        json={**request, "edit_id": "person-edit-2", "person": stale_person},
+    )
+    assert stale.status_code == 409
+
+    mismatch = api.put(
+        f"/api/authoring/drafts/{draft_id}/people/not_the_person",
+        json={
+            "expected_revision": saved.json()["revision"],
+            "edit_id": "person-edit-3",
+            "person": person,
+        },
+    )
+    assert mismatch.status_code == 422
 
 
 def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) -> None:

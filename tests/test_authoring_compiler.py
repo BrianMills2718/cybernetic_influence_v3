@@ -27,6 +27,16 @@ def _proposal(*, resource_available: bool = True) -> ScenarioDraftProposal:
                     "position": "field researcher",
                     "disposition": "careful about preparing for fieldwork",
                     "memories": ["Ari needs a laptop for the next field visit."],
+                    "behavioral_profile": {
+                        "values": ["Ari values being prepared for fieldwork."],
+                        "goals": ["Ari wants laptop access before the next visit."],
+                        "beliefs": ["Ari believes the checkout desk has suitable equipment."],
+                        "decision_tendencies": ["Ari tends to prepare equipment early."],
+                        "social_perceptions": [],
+                        "current_state": ["Ari is focused on the approaching field visit."],
+                        "capabilities": ["Ari can submit an equipment request."],
+                        "limitations": ["Ari cannot reserve equipment without desk review."],
+                    },
                 },
                 {
                     "entity_id": "clerk",
@@ -34,6 +44,16 @@ def _proposal(*, resource_available: bool = True) -> ScenarioDraftProposal:
                     "position": "equipment desk clerk",
                     "disposition": "attentive to the request record and copied policy",
                     "memories": ["Mina recognizes the desk's current equipment process."],
+                    "behavioral_profile": {
+                        "values": ["Mina values accurate equipment records."],
+                        "goals": ["Mina wants eligible requests handled consistently."],
+                        "beliefs": ["Mina believes the copied policy governs this request."],
+                        "decision_tendencies": ["Mina tends to check records before deciding."],
+                        "social_perceptions": [],
+                        "current_state": ["Mina is attentive to the current request."],
+                        "capabilities": ["Mina can review the delivered request."],
+                        "limitations": ["Mina cannot bypass the exact reservation gate."],
+                    },
                 },
             ],
             "objects": [
@@ -128,6 +148,27 @@ def test_compiler_builds_a_reviewable_timed_exact_scenario() -> None:
     }
     assert all(item.executor is False for item in scenario.analytical_boundaries)
     assert compiled.proposal_digest == compile_resource_request(_proposal()).proposal_digest
+
+
+def test_legacy_person_without_behavioral_profile_remains_valid() -> None:
+    payload = _proposal().model_dump(mode="json")
+    del payload["people"][0]["behavioral_profile"]
+
+    restored = ScenarioDraftProposal.model_validate(payload)
+
+    assert restored.people[0].behavioral_profile.goals == []
+
+
+def test_behavioral_profile_rejects_blank_statements() -> None:
+    payload = _proposal().model_dump(mode="json")
+    payload["people"][0]["behavioral_profile"]["goals"] = ["   "]
+
+    try:
+        ScenarioDraftProposal.model_validate(payload)
+    except ValueError as error:
+        assert "goals.0" in str(error)
+    else:
+        raise AssertionError("blank behavioral-profile statement was accepted")
 
 
 def test_scripted_template_reserves_available_resource_and_replays() -> None:

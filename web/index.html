@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=authoring-chat-v1">
+  <link rel="stylesheet" href="/assets/styles.css?v=person-review-v1">
   <link rel="stylesheet" href="/assets/graph-canvas.css?v=readable-run-v2">
 </head>
 <body>
@@ -62,6 +62,12 @@
           <p id="authoring-attempts" class="muted"></p>
         </details>
         <article id="authoring-summary" class="assumption-panel"></article>
+        <section id="authoring-people-section" class="authoring-people-section" hidden>
+          <div class="heading-help"><h2>People in this scenario</h2><button class="help-button" type="button" data-help="authoring-people-help" aria-expanded="false" aria-controls="authoring-people-help">?</button></div>
+          <p id="authoring-people-help" class="inline-help" hidden>These are editable scenario assumptions, not hidden instructions or measured psychological facts. A perceived norm may be wrong, and a described capability does not grant an interface, credential, permission, or successful effect.</p>
+          <p class="muted">Review what the scenario assumes about each person. Expand a card to edit these statements directly without making another model call.</p>
+          <div id="authoring-people" class="authoring-people"></div>
+        </section>
         <div class="projection-toolbar" aria-label="Authored scenario map layout">
           <div class="tabs">
             <button id="authoring-spatial-layout" type="button">Spatial topology</button>
@@ -230,6 +236,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=readable-run-v2"></script>
-  <script src="/assets/app.js?v=authoring-chat-v1"></script>
+  <script src="/assets/app.js?v=person-review-v1"></script>
 </body>
 </html>

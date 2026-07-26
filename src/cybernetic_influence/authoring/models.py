@@ -9,15 +9,56 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 
 _FORBID = ConfigDict(extra="forbid", strict=True)
 _ID_PATTERN = r"^[a-z][a-z0-9_]*$"
+ProfileStatement = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1),
+]
 
 
 class _StrictModel(BaseModel):
     model_config = _FORBID
+
+
+class BehavioralProfileDraft(_StrictModel):
+    """Scenario-relevant descriptions of one person, not behavioral commands."""
+
+    values: list[ProfileStatement] = Field(
+        default_factory=list,
+        description="Principles or outcomes the person regards as important.",
+    )
+    goals: list[ProfileStatement] = Field(
+        default_factory=list,
+        description="Outcomes the person currently wants to bring about.",
+    )
+    beliefs: list[ProfileStatement] = Field(
+        default_factory=list,
+        description="Claims the person currently takes to be true and may be wrong about.",
+    )
+    decision_tendencies: list[ProfileStatement] = Field(
+        default_factory=list,
+        description="Scenario-relevant habits, biases, or ways the person tends to decide.",
+    )
+    social_perceptions: list[ProfileStatement] = Field(
+        default_factory=list,
+        description="What the person thinks others do, value, or expect.",
+    )
+    current_state: list[ProfileStatement] = Field(
+        default_factory=list,
+        description="Current affect, attention, confidence, fatigue, or intent.",
+    )
+    capabilities: list[ProfileStatement] = Field(
+        default_factory=list,
+        description="Relevant real-world skills or knowledge attributed to the person.",
+    )
+    limitations: list[ProfileStatement] = Field(
+        default_factory=list,
+        description="Relevant real-world skill, knowledge, physical, or practical limits.",
+    )
 
 
 class PersonDraft(_StrictModel):
@@ -26,6 +67,9 @@ class PersonDraft(_StrictModel):
     position: str = Field(min_length=1)
     disposition: str = Field(min_length=1)
     memories: list[str] = Field(min_length=1)
+    behavioral_profile: BehavioralProfileDraft = Field(
+        default_factory=BehavioralProfileDraft
+    )
 
 
 class ObjectDraft(_StrictModel):

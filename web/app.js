@@ -59,6 +59,7 @@ function explainButton(button) {
   if (!explanation && button.classList.contains('turn-narrative')) explanation = 'Select this causal step and inspect its grounded evidence.'
   if (!explanation && button.classList.contains('timeline-marker')) explanation = 'Select this causal step.'
   if (!explanation && button.classList.contains('story-event')) explanation = 'Inspect the exact event behind this outcome step.'
+  if (!explanation && button.classList.contains('save-person')) explanation = 'Validate and save these person assumptions as a new draft revision without calling an LLM.'
   if (!explanation && button.dataset.eventId) explanation = 'Inspect this exact event in the selected causal step.'
   if (!explanation && button.dataset.person) explanation = 'Show this participant or analytical composite account.'
   if (!explanation && button.dataset.nodeId) explanation = 'Inspect this retained node on the map.'
@@ -108,6 +109,131 @@ function authoringModelLabel(model) {
   return option?.label || model || 'earlier model'
 }
 
+const behavioralProfileFields = [
+  ['values', 'values', 'Principles or outcomes this person regards as important.'],
+  ['goals', 'goals', 'What this person currently wants to achieve.'],
+  ['beliefs', 'beliefs', 'What this person presently takes to be true; these beliefs may be wrong.'],
+  ['decision_tendencies', 'decision tendencies', 'Scenario-relevant habits, biases, or ways this person tends to decide.'],
+  ['social_perceptions', 'perceived social conditions', 'What this person thinks others do, value, or expect—not proof of an external norm.'],
+  ['current_state', 'current state', 'Current emotions, attention, confidence, fatigue, or intent relevant to this scenario.'],
+  ['capabilities', 'described capabilities', 'Things this person is believed able to do; this does not grant an interface or permission.'],
+  ['limitations', 'described limitations', 'Relevant skill, knowledge, physical, or practical limits.'],
+]
+
+function statementLines(values) {
+  return Array.isArray(values) ? values.join('\n') : ''
+}
+
+function readStatementLines(value) {
+  return String(value || '').split('\n').map((item) => item.trim()).filter(Boolean)
+}
+
+function personCard(person) {
+  const profile = person.behavioral_profile || {}
+  const highlights = [
+    person.disposition,
+    profile.goals?.[0],
+    profile.beliefs?.[0],
+  ].filter(Boolean)
+  const fields = behavioralProfileFields.map(([key, label, help]) => `
+    <label>${html(person.label)} ${html(label)}
+      <textarea data-profile-field="${html(key)}" rows="3">${html(statementLines(profile[key]))}</textarea>
+      <small>${html(help)} Put one direct statement on each line.</small>
+    </label>`).join('')
+  return `
+    <article class="person-card" data-person-id="${html(person.entity_id)}">
+      <header>
+        <span class="eyebrow">Person · editable scenario assumptions</span>
+        <h3>${html(person.label)}</h3>
+        <p>${html(person.position)}</p>
+      </header>
+      <div class="person-card-summary">
+        ${highlights.map((item) => `<p>${html(item)}</p>`).join('') || '<p class="muted">No behavioral assumptions have been described yet.</p>'}
+      </div>
+      <details>
+        <summary>Review or edit ${html(person.label)}’s person model</summary>
+        <div class="person-editor">
+          <label>Person’s displayed name
+            <input data-person-field="label" value="${html(person.label)}">
+          </label>
+          <label>${html(person.label)} is positioned as…
+            <textarea data-person-field="position" rows="2">${html(person.position)}</textarea>
+            <small>This is descriptive social context, not a command.</small>
+          </label>
+          <label>${html(person.label)} is…
+            <textarea data-person-field="disposition" rows="2">${html(person.disposition)}</textarea>
+            <small>A concise descriptive tendency, written as a statement about the person.</small>
+          </label>
+          <label>${html(person.label)} remembers…
+            <textarea data-person-field="memories" rows="3">${html(statementLines(person.memories))}</textarea>
+            <small>Initial retained experiences or information, one statement per line.</small>
+          </label>
+          ${fields}
+          <div class="person-edit-actions">
+            <button type="button" class="save-person">Save person revision</button>
+            <span class="person-edit-status" aria-live="polite"></span>
+          </div>
+        </div>
+      </details>
+    </article>`
+}
+
+function personFromCard(card, original) {
+  const behavioralProfile = {}
+  behavioralProfileFields.forEach(([key]) => {
+    behavioralProfile[key] = readStatementLines(card.querySelector(`[data-profile-field="${key}"]`).value)
+  })
+  return {
+    entity_id:original.entity_id,
+    label:card.querySelector('[data-person-field="label"]').value.trim(),
+    position:card.querySelector('[data-person-field="position"]').value.trim(),
+    disposition:card.querySelector('[data-person-field="disposition"]').value.trim(),
+    memories:readStatementLines(card.querySelector('[data-person-field="memories"]').value),
+    behavioral_profile:behavioralProfile,
+  }
+}
+
+function renderAuthoringPeople(draft) {
+  const people = draft?.proposal?.people || []
+  $('#authoring-people-section').hidden = !people.length
+  $('#authoring-people').innerHTML = people.map(personCard).join('')
+  $('#authoring-people').querySelectorAll('.person-card').forEach((card) => {
+    const original = people.find((person) => person.entity_id === card.dataset.personId)
+    const button = card.querySelector('.save-person')
+    const status = card.querySelector('.person-edit-status')
+    button.onclick = async () => {
+      const person = personFromCard(card, original)
+      if (!person.label || !person.position || !person.disposition || !person.memories.length) {
+        status.textContent = 'Name, position, “is” description, and at least one memory are required.'
+        return
+      }
+      button.disabled = true
+      status.textContent = 'Saving this typed revision…'
+      try {
+        authoringDraft = await request(
+          `/api/authoring/drafts/${encodeURIComponent(draft.draft_id)}/people/${encodeURIComponent(person.entity_id)}`,
+          {
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              expected_revision:draft.revision,
+              edit_id:`person_edit_${crypto.randomUUID()}`,
+              person,
+            }),
+          },
+        )
+        await loadAuthoringPreview()
+        renderAuthoring()
+        syncAuthoringUrl()
+      } catch (error) {
+        status.textContent = error.message
+        button.disabled = false
+      }
+    }
+  })
+  applyButtonTooltips($('#authoring-people'))
+}
+
 function renderAuthoringChat(draft) {
   const messages = draft?.messages || []
   const welcome = `
@@ -116,6 +242,7 @@ function renderAuthoringChat(draft) {
       <p>Describe the bounded situation you want to model. After I produce a draft, tell me what to change and I will generate the next saved revision.</p>
     </article>`
   const conversation = messages.map((message, index) => {
+    const directEdit = message.source === 'direct_person_edit'
     const model = authoringModelLabel(message.model)
     const reasoning = message.reasoning_effort
       ? `${String(message.reasoning_effort).replaceAll('_', ' ')} thinking`
@@ -124,9 +251,9 @@ function renderAuthoringChat(draft) {
     const reply = message.assistant_summary || fallbackReply
     return `
       <article class="chat-message user">
-        <span>You · revision ${index + 1}</span>
+        <span>You · ${directEdit ? 'direct edit' : 'message'} ${index + 1}</span>
         <p>${html(message.content)}</p>
-        <small>${html(model)} · ${html(reasoning)}</small>
+        <small>${directEdit ? 'Typed edit · no LLM call' : `${html(model)} · ${html(reasoning)}`}</small>
       </article>
       ${reply ? `<article class="chat-message assistant"><span>Authoring assistant</span><p>${html(reply)}</p></article>` : ''}`
   }).join('')
@@ -169,6 +296,7 @@ function renderAuthoring() {
   $('#authoring-summary').innerHTML = draft.proposal
     ? authoringSummary(draft.proposal)
     : '<span class="eyebrow">Draft needs correction</span><h3>No executable proposal yet</h3><p>The provider response was retained only as a validation diagnostic. Send a follow-up after correcting the shown schema issue; the earlier draft remains intact.</p>'
+  renderAuthoringPeople(draft)
   const approvable = !!draft.proposal && diagnostics.length === 0 && draft.status === 'ready_for_review'
   $('#authoring-approve').hidden = !approvable
   $('#authoring-run').hidden = draft.status !== 'approved'

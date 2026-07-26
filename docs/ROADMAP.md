@@ -25,12 +25,14 @@ claim to reproduce every omitted computation or predict a real system.
 
 ## Current Stage and Truth
 
-Stage: MVP/PoC. [Slice 17: Typed scenario authoring]
-(plans/017-conversational-scenario-authoring.md) is complete: the equipment
-checkout template removes one closed-catalog restriction while preserving the
-implemented analyst flow and its causal contracts. The next packet must select
-the smallest new user-visible capability rather than treating this one-template
-authoring seam as a general scenario language.
+Stage: MVP/PoC. [Slice 18: BDM-informed person review]
+(plans/018-bdm-informed-person-review.md) is complete on the current
+implementation branch. Authored people now expose directly editable,
+behavior-specific values, goals, beliefs, decision tendencies, social
+perceptions, current state, capabilities, and limitations. Direct edits create
+retained draft revisions without model calls. The authored reference workflows
+remain scripted, so this does not yet claim that those assumptions caused their
+actions.
 
 V0.13 plus live checkpoint continuation is implemented and deployed as the
 current private demo candidate on the Mac development host at simulator
@@ -410,6 +412,15 @@ through one configured channel followed by a recipient assessment record. It
 does not infer persuasion, truth, virality, or geopolitical outcome.
 Unsupported mechanisms remain unresolved or explicitly coarse; they never
 become silently generated adjudication code.
+
+Slice 18 makes each authored person’s scenario assumptions tractable before
+approval. It uses the Behavioural Drivers Model as a selective vocabulary, not
+an exhaustive personality taxonomy: perceived social conditions remain
+fallible beliefs, while actual policies, incentives, relationships, information
+deliveries, interfaces, and constraints remain external world state. A later
+slice may connect reviewed profiles to live authored people through the existing
+observation and interface boundary; until that trace exists, the UI and docs
+must not describe scripted outcomes as psychologically caused.
 
 ### 10. Comparative causal analysis — post-MVP
 

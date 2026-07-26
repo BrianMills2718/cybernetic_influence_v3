@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
 from cybernetic_influence.authoring.compiler import AuthoringCompilationError
+from cybernetic_influence.authoring.models import PersonDraft
 from cybernetic_influence.authoring.service import (
     AUTHORING_MAX_ATTEMPTS,
     AUTHORING_MAX_BUDGET,
@@ -133,6 +134,15 @@ class DraftMessageRequest(BaseModel):
 class DraftApprovalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     expected_revision: int
+
+
+class DraftPersonEditRequest(BaseModel):
+    """One idempotent direct edit to a person in a retained proposal."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    expected_revision: int
+    edit_id: str
+    person: PersonDraft
 
 
 class AuthoredRunRequest(BaseModel):
@@ -410,6 +420,32 @@ def create_app(
             "boundaries": analyst_boundaries(compiled.scenario.analytical_boundaries, temporal_states, edges, []),
             "draft_id": draft_id, "draft_revision": document["revision"],
         }
+
+    @app.put("/api/authoring/drafts/{draft_id}/people/{person_id}")
+    def edit_draft_person(
+        draft_id: str,
+        person_id: str,
+        body: DraftPersonEditRequest,
+        request: Request,
+    ) -> dict[str, object]:
+        _require_access(request)
+        with authoring_lock:
+            try:
+                return authoring.edit_person(
+                    draft_id,
+                    expected_revision=body.expected_revision,
+                    edit_id=body.edit_id,
+                    person_id=person_id,
+                    person=body.person,
+                )
+            except DraftConflictError as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
+            except DraftNotFoundError as error:
+                raise HTTPException(
+                    status_code=404, detail="authoring draft not found"
+                ) from error
+            except (ValueError, AuthoringCompilationError) as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
 
     @app.post("/api/authoring/drafts/{draft_id}/approve")
     def approve_draft(

@@ -67,6 +67,10 @@ The simulator currently includes:
   retained feedback revisions and per-message Terra/Sol plus thinking selection,
   revisioned review and approval for reviewed resource-request and
   information-campaign templates;
+- BDM-informed authored-person cards exposing directly editable dispositions,
+  memories, values, goals, beliefs, decision tendencies, perceived social
+  conditions, current state, capabilities, and limitations; direct edits are
+  retained without an LLM call and do not grant runtime authority or interfaces;
 - an exact information-campaign reference path that distinguishes a source's
   publication attempt, configured channel delivery, and recipient assessment
   without pretending to infer persuasion or geopolitical effects.

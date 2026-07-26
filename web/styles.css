@@ -73,6 +73,22 @@ summary { cursor:pointer; font-weight:700; }
 .authoring-actions { display:flex; flex-wrap:wrap; gap:10px; }
 #authoring-review { display:grid; gap:14px; }
 #authoring-status { padding:10px 13px; border-left:3px solid var(--accent); background:#101923; }
+.authoring-people-section { display:grid; gap:10px; }
+.authoring-people-section h2 { margin:0; }
+.authoring-people { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:12px; }
+.person-card { display:grid; gap:11px; padding:16px; border:1px solid #3d6f9d; border-radius:12px; background:#101923; }
+.person-card header { position:static; display:block; padding:0; border:0; background:transparent; backdrop-filter:none; }
+.person-card header h3 { margin:3px 0 5px; }
+.person-card header p { margin:0; color:#b9c8da; line-height:1.45; }
+.person-card-summary { display:grid; gap:6px; padding:10px 12px; border-left:3px solid #58a6ff; background:#152433; }
+.person-card-summary p { margin:0; line-height:1.4; }
+.person-card details { border-top:1px solid var(--border); padding-top:10px; }
+.person-editor { display:grid; gap:11px; margin-top:12px; }
+.person-editor textarea,.person-editor input { width:100%; min-height:40px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); color:inherit; padding:8px 10px; resize:vertical; }
+.person-editor textarea { min-height:72px; }
+.person-editor small { max-width:unset; }
+.person-edit-actions { display:flex; align-items:center; gap:10px; }
+.person-edit-status { color:var(--muted); font-size:12px; }
 #authoring-graph { min-height:680px; }
 .warning { color:#ffc46b; }
 #result { display:grid; gap:24px; }

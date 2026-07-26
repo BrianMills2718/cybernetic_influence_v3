@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from hashlib import sha256
 from importlib import resources
 import json
 from typing import Annotated, Any, Literal, cast
@@ -16,7 +17,11 @@ from cybernetic_influence.authoring.compiler import (
     CompiledScenario,
     compile_scenario,
 )
-from cybernetic_influence.authoring.models import ScenarioDraftProposal
+from cybernetic_influence.authoring.models import (
+    PersonDraft,
+    ProfileStatement,
+    ScenarioDraftProposal,
+)
 from cybernetic_influence.authoring.store import AuthoringDraftStore, DraftConflictError
 from cybernetic_influence.run_store import now_iso
 
@@ -48,6 +53,34 @@ AUTHORING_REASONING_EFFORTS: tuple[AuthoringReasoningEffort, ...] = (
 )
 
 
+class _BehavioralProfileConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    values: list[ProfileStatement] = Field(
+        description="Principles or outcomes the person regards as important."
+    )
+    goals: list[ProfileStatement] = Field(
+        description="Outcomes the person currently wants to bring about."
+    )
+    beliefs: list[ProfileStatement] = Field(
+        description="Claims the person currently takes to be true and may be wrong about."
+    )
+    decision_tendencies: list[ProfileStatement] = Field(
+        description="Scenario-relevant habits, biases, or ways the person tends to decide."
+    )
+    social_perceptions: list[ProfileStatement] = Field(
+        description="What the person thinks others do, value, or expect."
+    )
+    current_state: list[ProfileStatement] = Field(
+        description="Current affect, attention, confidence, fatigue, or intent."
+    )
+    capabilities: list[ProfileStatement] = Field(
+        description="Relevant real-world skills or knowledge attributed to the person."
+    )
+    limitations: list[ProfileStatement] = Field(
+        description="Relevant real-world skill, knowledge, physical, or practical limits."
+    )
+
+
 class _PersonConsumer(BaseModel):
     model_config = ConfigDict(extra="ignore")
     entity_id: str
@@ -55,6 +88,7 @@ class _PersonConsumer(BaseModel):
     position: str
     disposition: str
     memories: list[str]
+    behavioral_profile: _BehavioralProfileConsumer
 
 
 class _ObjectConsumer(BaseModel):
@@ -367,6 +401,92 @@ class DraftAuthoringService:
             "updated_at": now_iso(),
         }
         return self.store.replace(draft_id, expected_revision=expected_revision, document=updated)
+
+    def edit_person(
+        self,
+        draft_id: str,
+        *,
+        expected_revision: int,
+        edit_id: str,
+        person_id: str,
+        person: PersonDraft,
+    ) -> dict[str, object]:
+        """Persist one direct, typed person edit without making a model call."""
+        current = self.store.get(draft_id)
+        messages = current["messages"]
+        assert isinstance(messages, list)
+        edit_digest = sha256(
+            person.model_dump_json(exclude_none=False).encode("utf-8")
+        ).hexdigest()
+        existing = next(
+            (item for item in messages if item.get("message_id") == edit_id),
+            None,
+        )
+        if existing is not None:
+            if (
+                existing.get("source") != "direct_person_edit"
+                or existing.get("edit_digest") != edit_digest
+            ):
+                raise DraftConflictError(
+                    "edit ID was already used with different person content"
+                )
+            return current
+        if current["revision"] != expected_revision:
+            raise DraftConflictError("draft revision has changed; reload before editing")
+        if person.entity_id != person_id:
+            raise ValueError("edited person ID must match the requested person")
+        raw_proposal = current.get("proposal")
+        if not isinstance(raw_proposal, dict):
+            raise AuthoringCompilationError("draft has no valid proposal")
+        proposal = ScenarioDraftProposal.model_validate(raw_proposal)
+        person_index = next(
+            (
+                index
+                for index, existing_person in enumerate(proposal.people)
+                if existing_person.entity_id == person_id
+            ),
+            None,
+        )
+        if person_index is None:
+            raise ValueError("draft does not contain the requested person")
+        proposal.people[person_index] = person
+        diagnostics = _diagnostics(proposal)
+        if any(item["severity"] == "error" for item in diagnostics):
+            raise AuthoringCompilationError(
+                "edited person would make the scenario unpreviewable"
+            )
+        status = "needs_input" if diagnostics else "ready_for_review"
+        summary = (
+            f"Saved direct edits to {person.label}. "
+            "No authoring model call was made."
+        )
+        updated = {
+            **current,
+            "revision": expected_revision + 1,
+            "status": status,
+            "messages": [
+                *messages,
+                {
+                    "message_id": edit_id,
+                    "content": f"Edited {person.label}'s person model directly.",
+                    "source": "direct_person_edit",
+                    "edit_digest": edit_digest,
+                    "assistant_summary": summary,
+                    "result_status": status,
+                    "trace_ids": [],
+                },
+            ],
+            "authoring_summary": summary,
+            "proposal": proposal.model_dump(mode="json"),
+            "diagnostics": diagnostics,
+            "approval": None,
+            "updated_at": now_iso(),
+        }
+        return self.store.replace(
+            draft_id,
+            expected_revision=expected_revision,
+            document=updated,
+        )
 
     def compile(self, document: dict[str, object]) -> CompiledScenario:
         raw = document.get("proposal")
