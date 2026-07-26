@@ -24,6 +24,7 @@ let activeRunId = null
 let previewRequestSerial = 0
 let authoringDraft = null
 let authoringPreview = null
+let selectedAuthoringGraphView = 'causal'
 
 const buttonTooltips = {
   'simulation-tab': 'Choose and run a configured simulation.',
@@ -34,6 +35,9 @@ const buttonTooltips = {
   'authoring-copy-link': 'Copy a link that reopens this automatically saved draft.',
   'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
   'authoring-run': 'Run the approved draft with the zero-cost reference policy.',
+  'authoring-spatial-layout': 'Show the proposed places, occupants, and physical links. This does not grant access or permission.',
+  'authoring-causal-layout': 'Show the proposed configured interaction pathways. A pathway does not itself grant authority.',
+  'authoring-trajectory-layout': 'A realized causal graph becomes available only after the approved scenario runs.',
   'run': 'Run the selected scenario and condition.',
   'pause': 'Request a pause after the current causal step is safely retained.',
   'resume': 'Continue a paused run from its retained causal checkpoint.',
@@ -115,12 +119,16 @@ function renderAuthoring() {
     ? question
     : 'For example: A campaign operator publishes a false claim about a diplomatic position through a media channel. A public-diplomacy analyst in another location receives and assesses it; both organizations are analytical views, not actors.'
   $('#authoring-draft').textContent = needsInput ? 'Continue saved draft' : (draft.messages?.length ? 'Update saved draft' : 'Draft scenario')
-  $('#authoring-diagnostics').innerHTML = diagnostics.length
-    ? diagnostics.map((item) => `<p class="warning"><strong>${html(item.severity)}:</strong> ${html(item.message)}</p>`).join('')
-    : '<p class="muted">No unresolved compiler questions. Review the map, then approve this exact proposal.</p>'
+  const visibleDiagnostics = diagnostics.filter((item) => !(needsInput && item.severity === 'question'))
+  $('#authoring-diagnostics').innerHTML = visibleDiagnostics.length
+    ? visibleDiagnostics.map((item) => `<p class="warning"><strong>${html(item.severity)}:</strong> ${html(item.message)}</p>`).join('')
+    : needsInput
+      ? '<p class="muted">The proposal is saved. Answer the question above to make it ready for approval.</p>'
+      : '<p class="muted">No unresolved compiler questions. Review the map, then approve this exact proposal.</p>'
   const attempts = draft.attempts || []
-  $('#authoring-diagnostics').innerHTML += attempts.length
-    ? `<p class="muted">Authoring attempts: ${attempts.map((attempt) => `${html(attempt.attempt)} (${html(attempt.status)})`).join(' · ')}. Each attempt is traceable; no hidden retry loop is running.</p>`
+  $('#authoring-attempt-details').hidden = !attempts.length
+  $('#authoring-attempts').textContent = attempts.length
+    ? `Attempts: ${attempts.map((attempt) => `${attempt.attempt} (${attempt.status})`).join(' · ')}. Each attempt is traceable; no hidden retry loop is running.`
     : ''
   $('#authoring-summary').innerHTML = draft.proposal
     ? authoringSummary(draft.proposal)
@@ -128,6 +136,7 @@ function renderAuthoring() {
   const approvable = !!draft.proposal && diagnostics.length === 0 && draft.status === 'ready_for_review'
   $('#authoring-approve').hidden = !approvable
   $('#authoring-run').hidden = draft.status !== 'approved'
+  renderAuthoringProjectionControls()
   if (authoringPreview?.nodes && window.CyberneticGraph) {
     $('#authoring-graph').classList.add('react-canvas-host')
     const revision = authoringPreview.initial_revision ?? 0
@@ -140,7 +149,8 @@ function renderAuthoring() {
         routeIds:edge.exact_route_ids || [edge.id],
       })),
       boundaries: authoringPreview.boundaries || [], world,
-      viewMode: 'causal', event: null,
+      trajectory: authoringPreview.trajectory || {nodes: [], edges: []},
+      viewMode: selectedAuthoringGraphView, event: null,
       initialRevision: authoringPreview.initial_revision, selectedNodeId: null, selectedEdgeId: null,
       boundary: null, collapsedBoundaryId: null,
       analyticalScaleHelp: 'The analytical boundary is a view, not an actor.',
@@ -149,6 +159,23 @@ function renderAuthoring() {
   } else {
     $('#authoring-graph').classList.remove('react-canvas-host')
   }
+}
+
+function renderAuthoringProjectionControls() {
+  const hasPreview = Boolean(authoringPreview?.nodes)
+  const hasWorld = Boolean(authoringPreview?.world)
+  $('#authoring-spatial-layout').disabled = !hasWorld
+  $('#authoring-causal-layout').disabled = !hasPreview
+  $('#authoring-trajectory-layout').disabled = true
+  $('#authoring-spatial-layout').classList.toggle('active', selectedAuthoringGraphView === 'world')
+  $('#authoring-causal-layout').classList.toggle('active', selectedAuthoringGraphView === 'causal')
+  $('#authoring-trajectory-layout').classList.remove('active')
+  $('#authoring-spatial-layout').setAttribute('aria-pressed', String(selectedAuthoringGraphView === 'world'))
+  $('#authoring-causal-layout').setAttribute('aria-pressed', String(selectedAuthoringGraphView === 'causal'))
+  $('#authoring-trajectory-layout').setAttribute('aria-pressed', 'false')
+  $('#authoring-projection-help').textContent = selectedAuthoringGraphView === 'world'
+    ? 'Spatial topology shows proposed places, occupants, and physical links. Adjacency does not grant access, communication, or authority.'
+    : 'Configured interaction pathways show how information or action may travel in the proposed scenario. The realized causal graph becomes available only after execution.'
 }
 
 function syncAuthoringUrl() {
@@ -170,6 +197,7 @@ async function openAuthoringDraft(draftId) {
 async function loadAuthoringPreview() {
   if (!authoringDraft?.proposal) return
   authoringPreview = await request(`/api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/preview`)
+  selectedAuthoringGraphView = 'causal'
 }
 
 function modeledElapsedTime(event) {
@@ -1225,10 +1253,28 @@ function render(run) {
 $('#event-slider').oninput = (event) => selectMoment(Number(event.target.value))
 $('#previous-event').onclick = () => selectMoment(selectedMomentIndex - 1)
 $('#next-event').onclick = () => selectMoment(selectedMomentIndex + 1)
-$('#simulation-tab').onclick = () => setWorkspaceView('simulation')
+$('#simulation-tab').onclick = async () => {
+  setWorkspaceView('simulation')
+  if (current) return
+  try {
+    await loadScenarioPreview()
+  } catch (error) {
+    $('#run-status').textContent = error.message
+  }
+}
 $('#authoring-tab').onclick = () => setWorkspaceView('authoring')
 $('#history-tab').onclick = () => setWorkspaceView('history')
 $('#readme-tab').onclick = () => setWorkspaceView('readme')
+$('#authoring-spatial-layout').onclick = () => {
+  if (!authoringPreview?.world) return
+  selectedAuthoringGraphView = 'world'
+  renderAuthoring()
+}
+$('#authoring-causal-layout').onclick = () => {
+  if (!authoringPreview) return
+  selectedAuthoringGraphView = 'causal'
+  renderAuthoring()
+}
 $('#scenario').onchange = async (event) => {
   configureScenario(event.target.value)
   try {

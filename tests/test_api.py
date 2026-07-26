@@ -97,7 +97,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "up to three structured authoring calls" in page.text
     assert 'id="authoring-view"' in page.text
     assert "Copy saved draft link" in page.text
-    assert "Configured interaction pathways in this proposed scenario" in page.text
+    assert 'id="authoring-spatial-layout"' in page.text
+    assert 'id="authoring-causal-layout"' in page.text
+    assert 'id="authoring-trajectory-layout"' in page.text
     assert "How to read a cybernetic simulation" in page.text
     assert 'id="model"' in page.text
     assert 'id="reasoning"' in page.text

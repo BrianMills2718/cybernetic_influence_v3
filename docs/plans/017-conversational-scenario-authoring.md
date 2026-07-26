@@ -79,8 +79,11 @@ Drafts save automatically after every retained revision. The Author scenario
 screen labels that state, provides a copyable draft URL that reopens the exact
 retained draft, and turns a material unresolved question into a focused
 follow-up field rather than an opaque failed state. Its pre-run map defaults to
-configured interaction pathways; the spatial and realized-causal views remain
-available in the simulation workspace.
+configured interaction pathways, permits switching to spatial topology, and
+shows the realized causal graph as unavailable until execution. Entering the
+Simulation workspace from a saved-draft URL loads the selected configured
+scenario preview so spatial topology and configured interaction pathways remain
+visible before Play.
 
 OpenAI-strict provider output represents placements as typed
 `{entity_id, place_id}` records; the local consumer converts them to the

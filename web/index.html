@@ -31,14 +31,28 @@
         <textarea id="authoring-message" rows="5" placeholder="For example: A campaign operator publishes a false claim about a diplomatic position through a media channel. A public-diplomacy analyst in another location receives and assesses it; both organizations are analytical views, not actors."></textarea>
       </label>
       <div class="authoring-actions"><button id="authoring-draft" type="button">Draft scenario</button><button id="authoring-copy-link" type="button" hidden>Copy saved draft link</button><button id="authoring-approve" type="button" hidden>Approve this draft</button><button id="authoring-run" type="button" hidden>Play approved reference run</button></div>
-      <p id="authoring-runtime" class="muted">Loading the structured authoring model…</p>
+      <details class="authoring-details">
+        <summary>Drafting model and cost</summary>
+        <p id="authoring-runtime" class="muted">Loading the structured authoring model…</p>
+      </details>
       <p id="authoring-status" class="muted" aria-live="polite">Describe a situation to begin.</p>
       <section id="authoring-review" hidden>
         <div class="heading-help"><h2 id="authoring-title">Draft review</h2><button class="help-button" type="button" data-help="authoring-help" aria-expanded="false" aria-controls="authoring-help">?</button></div>
         <p id="authoring-help" class="inline-help" hidden>Every draft is saved automatically. The copied link reopens this exact retained draft. Approval freezes its exact typed proposal; a later message creates a new revision and removes approval.</p>
         <div id="authoring-diagnostics"></div>
+        <details id="authoring-attempt-details" class="authoring-details" hidden>
+          <summary>Authoring attempt details</summary>
+          <p id="authoring-attempts" class="muted"></p>
+        </details>
         <article id="authoring-summary" class="assumption-panel"></article>
-        <p class="muted">Configured interaction pathways in this proposed scenario. This map shows who can exchange the retained claim through the modeled channel; it does not grant authority or imply that an analytical composite acts.</p>
+        <div class="projection-toolbar" aria-label="Authored scenario map layout">
+          <div class="tabs">
+            <button id="authoring-spatial-layout" type="button">Spatial topology</button>
+            <button id="authoring-causal-layout" type="button">Configured interaction pathways</button>
+            <button id="authoring-trajectory-layout" type="button" disabled>Realized causal graph</button>
+          </div>
+          <p id="authoring-projection-help" class="muted"></p>
+        </div>
         <div id="authoring-graph" class="graph" aria-label="Compiled authored scenario map"></div>
       </section>
     </section>
@@ -199,6 +213,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=readable-run-v2"></script>
-  <script src="/assets/app.js?v=authoring-v4"></script>
+  <script src="/assets/app.js?v=topology-preview-v5"></script>
 </body>
 </html>
