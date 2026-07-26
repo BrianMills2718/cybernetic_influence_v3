@@ -26,18 +26,18 @@ claim to reproduce every omitted computation or predict a real system.
 ## Current Stage and Truth
 
 Stage: MVP/PoC. [Slice 19: live authored people]
-(plans/019-live-authored-people.md) is technically complete on the current
-implementation branch. An analyst can conversationally produce either of two
+(plans/019-live-authored-people.md) is technically complete on canonical
+`main` and the private Mac development host. An analyst can conversationally produce either of two
 reviewed scenario templates, inspect and directly edit BDM-informed person
 assumptions, approve the compiled graph, and choose a zero-cost reference or a
 live run. Live people receive only reviewed descriptive context, private
 memory, delivered observations, and currently exposed interfaces; exact
 mechanisms alone deliver information and commit world effects.
 
-The current branch is a candidate, not yet the canonical `main` revision or Mac
-deployment. [Mac development operations](operations/mac-mini.md) owns the
-separately dated last-observed deployed revision and route evidence. Do not
-infer that a branch canary is deployed merely because it is documented here.
+[Mac development operations](operations/mac-mini.md) owns the separately dated
+last-observed deployed revision and route evidence. The current exact-revision
+Service Desk canary completed with DeepSeek V4 Flash; technical deployment is
+therefore observed, while the stakeholder usability gate below remains open.
 
 Technical execution is observed for both authored templates and for the
 configured Service Desk live/pause/resume path. Resume now rechecks explicit

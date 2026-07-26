@@ -23,7 +23,8 @@ stored in the repository or LaunchAgent plist.
 
 Last verified 2026-07-25:
 
-- simulator: `23e2f37017d802911bb02b27c364c2d7c39194d5`;
+- simulator behavior revision:
+  `6ec752fc5842673a4934fc159905089092abf3d5`;
 - shared client: `9f61bd7c9419c93961a722a7ef6209adcf593382`;
 - advertised routes: Terra and DeepSeek V4 Flash;
 - Terra certification:
@@ -32,6 +33,10 @@ Last verified 2026-07-25:
   `routeobs1_029097c508a11554b6b9301f,routeobs1_ba61b37be133f07f47177352`;
 - default route: DeepSeek V4 Flash with `none` participant and narrator
   reasoning;
+- current behavior-revision deployment canary: `run_40fffe835670`, completed
+  `closed_confirmed` with 37 participant and narrator calls, one exact
+  mechanism denial of a premature closure attempt, and `$0.006233523`
+  provider-observed cost;
 - exact-revision complete canary: `run_954220d513c3`, completed
   `closed_confirmed`, seven participant calls plus eight causal-moment narrator
   calls, `$0.0034581043` provider-observed;
