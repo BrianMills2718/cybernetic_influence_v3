@@ -31,6 +31,14 @@ checkpoint to a completed analyst document. The same continuation path is now
 enabled for live Service Desk runs, and the browser exposes pause/resume
 according to retained lifecycle state.
 
+The 2026-07-25 repository audit found that the resume endpoint reused the
+retained model configuration but did not recheck `CYBERNETIC_INFLUENCE_LIVE`,
+and released the single-live-run lock before resumed narration. The repaired
+contract now rejects resume when live spend is disabled, revalidates the
+retained model/reasoning route against current certification, and holds the lock
+through narration and the terminal save. A focused negative test proves the 403
+denial, stale-certification rejection, and concurrent-live-run rejection.
+
 The deployed DeepSeek canary `run_abcd00000000` is current evidence that a live
 run can complete from a retained checkpoint. It finished with lifecycle
 `completed_from_checkpoint`, 12 causal moments, 105 events, 11 participant
@@ -77,9 +85,9 @@ only open demo gate.
 
 ## Demo completion gate
 
-This packet is the sole active path to calling the current private PoC demo
-finished. It does not require conversational scenario authoring or broader
-scenario fidelity.
+This historical checklist is now owned by successor
+[Slice 16](016-canonical-analyst-demo.md). It does not require broader scenario
+fidelity.
 
 - [x] A current DeepSeek V4 Flash `none` Service Desk run completes with eight
   grounded moment narratives, participant traces, exact evidence, retained

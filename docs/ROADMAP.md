@@ -25,56 +25,33 @@ claim to reproduce every omitted computation or predict a real system.
 
 ## Current Stage and Truth
 
-Stage: MVP/PoC. [Slice 18: BDM-informed person review]
-(plans/018-bdm-informed-person-review.md) is complete on the current
-implementation branch. Authored people now expose directly editable,
-behavior-specific values, goals, beliefs, decision tendencies, social
-perceptions, current state, capabilities, and limitations. Direct edits create
-retained draft revisions without model calls. The authored reference workflows
-remain scripted, so this does not yet claim that those assumptions caused their
-actions.
+Stage: MVP/PoC. [Slice 19: live authored people]
+(plans/019-live-authored-people.md) is technically complete on the current
+implementation branch. An analyst can conversationally produce either of two
+reviewed scenario templates, inspect and directly edit BDM-informed person
+assumptions, approve the compiled graph, and choose a zero-cost reference or a
+live run. Live people receive only reviewed descriptive context, private
+memory, delivered observations, and currently exposed interfaces; exact
+mechanisms alone deliver information and commit world effects.
 
-V0.13 plus live checkpoint continuation is implemented and deployed as the
-current private demo candidate on the Mac development host at simulator
-`ecce006c77e99f968230d9e5fb0f78cfcac727b4` with shared-client revision
-`9f61bd7c9419c93961a722a7ef6209adcf593382`. The API reports DeepSeek V4
-Flash with `none` reasoning as the default and Terra as the other certified
-route. DeepSeek `high` and `xhigh` remain explicitly experimental; `medium` is
-rejected by shared-client policy. Exact scenario mechanisms make no model call.
+The current branch is a candidate, not yet the canonical `main` revision or Mac
+deployment. [Mac development operations](operations/mac-mini.md) owns the
+separately dated last-observed deployed revision and route evidence. Do not
+infer that a branch canary is deployed merely because it is documented here.
 
-Current participant/narrator route observations are:
+Technical execution is observed for both authored templates and for the
+configured Service Desk live/pause/resume path. Resume now rechecks explicit
+live-spend authorization and current route certification, preserves the
+retained model policy, and holds the single-live-run lock through narration.
+Exact scenario mechanisms make no model call.
 
-- Terra: `routeobs1_7cc1c51f065c181a33ff422d` and
-  `routeobs1_bb5643a65107960dadc76a36`;
-- DeepSeek V4 Flash `none`: `routeobs1_029097c508a11554b6b9301f` and
-  `routeobs1_ba61b37be133f07f47177352`.
-
-The deployed DeepSeek baseline `run_954220d513c3` reached
-`closed_confirmed` in eight causal moments with seven participant calls, eight
-narrator calls, eight narratives, and `$0.0034581043` observed cost. The
-deployed continuation canary `run_abcd00000000` later completed from a retained
-live checkpoint with lifecycle `completed_from_checkpoint`, 12 causal moments,
-105 events, 11 participant calls, 12 narrator calls, 12 narratives, and
-`$0.0054597981` observed cost.
-
-Technical execution is observed for the configured live path and one live
-checkpoint continuation. Full-trace inspection found no duplicated causal event
-or provider logical call, preserved the complete sequential narrative context,
-and reconciled every provider-reported receipt to retained cost. Those facts do
-not establish a usable analyst experience: the current operator reported that a
-pause did not expose a Resume control and that the causal/time labels did not
-explain what to inspect. Slice 16 owns reproduction, repair, and an integrated
-browser review of that user-visible flow.
-
-The operator's first review found that repeated scenario-clock values were
-misleadingly displayed as elapsed seconds. The deployed correction now shows
-successive causal moments as unique `c1`, `c2`, and so on, gives exact trace
-events stable positions such as `c1.1`, and retains the separate uncalibrated
-Service Desk process clock only in advanced evidence. Scripted deployment
-canary `run_7124717c9dcd` produced `c1` through `c8` and 67 unique exact trace
-positions. A rendered desktop check reopened both that run and the older live
-run `run_251610100415`; legacy narratives also displayed unique causal time,
-with no console, network, or new backend error.
+The next gate is stakeholder observation of the complete authored flow:
+describe or revise a scenario, edit its people, approve it, inspect Spatial
+topology and Configured interaction pathways, run it live, then decide whether
+the narrative, Realized causal graph, and participant/composite traces make the
+modeled behavior understandable. The existing trace evidence establishes
+bounded technical execution, not empirical psychological validity, predictive
+accuracy, or a claim that any one profile field caused an action.
 
 V0.12.2 is retained as the earlier narrated and browser-certified baseline. It adds
 the separate run-history workspace and stable in-place scale/time inspection
@@ -173,21 +150,14 @@ The UI is technically reviewable; operator comprehension and analytical
 usefulness remain under iterative stakeholder review rather than being treated
 as proven.
 
-## Active Direction: Positive-Duration Modeled Time
+## Completed Foundation: Positive-Duration Modeled Time
 
-The next substantial fidelity improvement is to replace the Service Desk's
-uncalibrated process ticks and zero-delay causal cascades with retained positive
-durations. Human activities, deliveries, exact-process transitions, and
-stipulated external feedback become scheduled future work, allowing independent
-work to overlap without treating LLM/provider latency as scenario time.
-
-[Slice 15](plans/015-calibrated-elapsed-time.md) owns the proposed contract,
-initial Service Desk vertical, realized activity/event causal graph, and
-acceptance checks. Timing values are ordinary typed scenario configuration:
-humans may supply empirical values when available, and a future scenario
-compiler may propose model estimates for review. Context-dependent omissions
-may use bounded runtime LLM adjudication, but every world transition must have a
-positive, source-labelled duration before it enters the scheduler.
+[Slice 15](plans/015-calibrated-elapsed-time.md) established the Service Desk's
+retained positive-duration contract and realized activity/event causal graph.
+Timing values are ordinary typed scenario configuration: humans may supply
+empirical values when available, and authoring may propose estimates for
+review. This foundation does not make the current durations empirically
+calibrated, and other legacy scenarios may still retain zero-duration traces.
 
 Stakeholder observation has occurred repeatedly on the deployed workflow: the
 operator ran and inspected authored scenarios and directly shaped the map,
@@ -372,7 +342,7 @@ project. If it stopped after Service Desk passed, the analyst would have a small
 but useful simulation whose realized causal chain is temporally meaningful and
 inspectable.
 
-### 8. Canonical analyst demo — active
+### 8. Canonical analyst demo — technically implemented; operator gate active
 
 The MVP outcome is one clear answerable flow: an analyst chooses or later
 authors a bounded Service Desk condition, presses Play, reads what changed and
@@ -391,7 +361,7 @@ It also distinguishes unique causal order (`c1`, `c2`, …) from **modeled elaps
 time**. The initial display must not call uncalibrated process ticks seconds or
 wall-clock timestamps.
 
-### 9. Add conversational scenario drafting behind a typed compiler — active
+### 9. Add conversational scenario drafting behind a typed compiler — technically implemented; operator gate active
 
 This comes before comparisons: it removes the closed scenario catalog while
 preserving human review of the executable world model.

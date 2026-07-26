@@ -6,7 +6,7 @@ import os
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from threading import Event, Lock
-from typing import Literal
+from typing import Literal, cast
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
@@ -166,27 +166,30 @@ def _scenario_preview(
             raise ValueError("unknown Service Desk condition")
         if cognition_profile not in {"position_context", "procedural_control"}:
             raise ValueError("unknown Service Desk cognition profile")
-        fixture = service_desk_fixture(arm, cognition_profile=cognition_profile)
+        compiled_scenario = service_desk_fixture(
+            arm,
+            cognition_profile=cast(ServiceDeskCognitionProfile, cognition_profile),
+        ).scenario
     elif scenario == "physical_access":
-        arm = next(
+        physical_arm = next(
             (item for item in physical_access_arm_configurations() if item.arm_id == arm_id),
             None,
         )
-        if arm is None:
+        if physical_arm is None:
             raise ValueError("unknown Physical Access condition")
-        fixture = physical_access_fixture(arm)
+        compiled_scenario = physical_access_fixture(physical_arm).scenario
     elif scenario == "purchase_payment":
-        arm = next(
+        purchase_arm = next(
             (item for item in purchase_payment_arm_configurations() if item.arm_id == arm_id),
             None,
         )
-        if arm is None:
+        if purchase_arm is None:
             raise ValueError("unknown Purchase to Payment condition")
-        fixture = purchase_payment_fixture(arm)
+        compiled_scenario = purchase_payment_fixture(purchase_arm).scenario
     else:
         raise ValueError("unknown scenario")
 
-    state = fixture.scenario.initial_state
+    state = compiled_scenario.initial_state
     revision = str(state.revision)
     temporal_states = {revision: state}
     edges = analyst_edges(state)
@@ -202,7 +205,7 @@ def _scenario_preview(
         "snapshots": {revision: analyst_nodes(state)},
         "edges": edges,
         "boundaries": analyst_boundaries(
-            fixture.scenario.analytical_boundaries,
+            compiled_scenario.analytical_boundaries,
             temporal_states,
             edges,
             [],
@@ -258,6 +261,7 @@ def create_app(
     @app.get("/api/config")
     def config() -> dict[str, object]:
         live_options = live_options_contract()
+        live_defaults = cast(dict[str, object], live_options["defaults"])
         return {
             "version": __version__,
             "build_commit": os.getenv("CYBERNETIC_INFLUENCE_BUILD_COMMIT", "development"),
@@ -330,8 +334,8 @@ def create_app(
             },
             "profiles": ["position_context", "procedural_control"],
             "arms": [arm.arm_id for arm in service_desk_arm_configurations()],
-            "model": live_options["defaults"]["model"],
-            "reasoning_effort": live_options["defaults"]["agent_reasoning_effort"],
+            "model": live_defaults["model"],
+            "reasoning_effort": live_defaults["agent_reasoning_effort"],
             "live_authorized": os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1",
             "access_restricted": bool(_allowed_tailscale_users()),
             "scripted_cost": 0.0,
@@ -704,12 +708,41 @@ def create_app(
         live = paused.get("execution") == "live"
         effective_llm: EffectiveRunLlmConfiguration | None = None
         if live:
+            if os.getenv("CYBERNETIC_INFLUENCE_LIVE") != "1":
+                raise HTTPException(
+                    status_code=403,
+                    detail="live execution requires CYBERNETIC_INFLUENCE_LIVE=1",
+                )
             try:
                 effective_llm = EffectiveRunLlmConfiguration.model_validate(paused["llm_configuration"])
             except (KeyError, TypeError, ValueError) as error:
                 raise HTTPException(status_code=422, detail="paused live run has invalid LLM configuration") from error
             if effective_llm.llm_client_revision != llm_client_revision():
                 raise HTTPException(status_code=409, detail="paused live run requires its original shared-client revision")
+            try:
+                current_llm = resolve_live_configuration(
+                    RunLlmOptions(
+                        model=effective_llm.model,
+                        agent_reasoning_effort=effective_llm.agent_reasoning_effort,
+                        max_total_cost=effective_llm.max_total_cost,
+                    )
+                )
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=409,
+                    detail="paused live run route is not currently certified",
+                ) from error
+            if (
+                current_llm.model != effective_llm.model
+                or current_llm.agent_reasoning_effort
+                != effective_llm.agent_reasoning_effort
+                or current_llm.narrator_reasoning_effort
+                != effective_llm.narrator_reasoning_effort
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="paused live run requires its original model policy",
+                )
             if not live_lock.acquire(blocking=False):
                 raise HTTPException(status_code=409, detail="another live run is already active")
         try:
@@ -721,14 +754,21 @@ def create_app(
             )
             bindings = service_desk_native_bindings(fixture, trace_id_prefix=run_id, model=effective_llm.model, reasoning_effort=effective_llm.agent_reasoning_effort) if effective_llm else service_desk_scripted_bindings(fixture)
             resumed = run_event_driven_service_desk(fixture, bindings, run_id=run_id, checkpoint=checkpoint)
+            readout = event_driven_service_desk_outcome(resumed)
+            document = build_service_desk_analyst_document(fixture=fixture, result=resumed, readout=readout, profile=profile, arm_id=arm.arm_id, execution="live" if live else "scripted", created_at=str(paused["created_at"]))
+            document["llm_configuration"] = paused.get("llm_configuration")
+            document["continuation"] = {"schema_version": 1, "phase": "causal", "lifecycle": "completed_from_checkpoint", "checkpoint_digest": checkpoint.record_digest}
+            return runs.save(
+                _attach_narration(
+                    document,
+                    live=live,
+                    run_id=run_id,
+                    effective_llm=effective_llm,
+                )
+            )
         finally:
             if live:
                 live_lock.release()
-        readout = event_driven_service_desk_outcome(resumed)
-        document = build_service_desk_analyst_document(fixture=fixture, result=resumed, readout=readout, profile=profile, arm_id=arm.arm_id, execution="live" if live else "scripted", created_at=str(paused["created_at"]))
-        document["llm_configuration"] = paused.get("llm_configuration")
-        document["continuation"] = {"schema_version": 1, "phase": "causal", "lifecycle": "completed_from_checkpoint", "checkpoint_digest": checkpoint.record_digest}
-        return runs.save(_attach_narration(document, live=live, run_id=run_id, effective_llm=effective_llm))
 
     @app.post("/api/runs")
     def run(request_body: RunRequest, request: Request) -> dict[str, object]:

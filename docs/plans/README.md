@@ -60,6 +60,9 @@ is implemented and retained as completed design evidence.
 | [011](011-purchase-payment-representation-boundary.md) | Coarse processor and representation depth |
 | [012](012-event-driven-purchase-payment.md) | Event-driven purchase-to-payment causal chain |
 | [013](013-configurable-explainable-runs.md) | Configurable model, reasoning, spend, and fidelity explanation |
+| [014](014-pausable-live-runs.md) | Durable live pause/resume evidence |
+| [015](015-calibrated-elapsed-time.md) | Positive-duration modeled time |
+| [016](016-canonical-analyst-demo.md) | Integrated analyst demo contract |
 | [017](017-conversational-scenario-authoring.md) | Conversational typed authoring for two reviewed templates |
 | [018](018-bdm-informed-person-review.md) | Directly editable BDM-informed person assumptions |
 | [019](019-live-authored-people.md) | Reviewed profiles connected to grounded live authored people |

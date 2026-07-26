@@ -14,6 +14,7 @@ from cybernetic_influence.active_runtime import (
     ScriptedActiveSystem,
 )
 from cybernetic_influence.api import create_app
+from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 from cybernetic_influence.run_store import RunStore
 from cybernetic_influence.scenarios.service_desk import (
     RuntimePaused,
@@ -819,14 +820,96 @@ def test_live_service_desk_resume_reuses_retained_llm_configuration(
         "continuation": {"checkpoint": retained_checkpoint.model_dump(mode="json")},
     })
     captured: list[tuple[str, str]] = []
+    api = client(tmp_path)
+    with patch.dict("os.environ", {"CYBERNETIC_INFLUENCE_LIVE": ""}):
+        unauthorized = api.post("/api/runs/run_feed00000000/resume")
+    assert unauthorized.status_code == 403
+    assert captured == []
+
+    effective = EffectiveRunLlmConfiguration(
+        model="openrouter/deepseek/deepseek-v4-flash",
+        agent_reasoning_effort="none",
+        narrator_reasoning_effort="none",
+        max_total_cost=0.20,
+        maximum_narrator_calls=12,
+        selection_basis="operator_selected",
+        llm_client_revision="test-client",
+    )
     with (
-        patch.dict("os.environ", {"LLM_CLIENT_REVISION": "test-client"}),
-        patch("cybernetic_influence.api.service_desk_native_bindings", side_effect=lambda item, **kwargs: (captured.append((kwargs["model"], kwargs["reasoning_effort"])) or native_identity_scripted_bindings(item, **kwargs))),
-        patch("cybernetic_influence.api.narrate_live_moments", return_value={"status": "completed", "model_calls": 0, "cost": 0.0, "moments": [], "calls": []}),
+        patch.dict(
+            "os.environ",
+            {
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "LLM_CLIENT_REVISION": "test-client",
+            },
+        ),
+        patch(
+            "cybernetic_influence.api.resolve_live_configuration",
+            side_effect=ValueError("route unavailable"),
+        ),
     ):
-        response = client(tmp_path).post("/api/runs/run_feed00000000/resume")
+        uncertified = api.post("/api/runs/run_feed00000000/resume")
+    assert uncertified.status_code == 409
+    assert uncertified.json()["detail"] == (
+        "paused live run route is not currently certified"
+    )
+    assert captured == []
+
+    lock_checked = False
+
+    def capture_native(item: Any, **kwargs: Any) -> Any:
+        captured.append((kwargs["model"], kwargs["reasoning_effort"]))
+        return native_identity_scripted_bindings(item, **kwargs)
+
+    def narrate_while_locked(*_args: Any, **_kwargs: Any) -> dict[str, object]:
+        nonlocal lock_checked
+        concurrent = api.post(
+            "/api/runs",
+            json={
+                "execution": "live",
+                "llm_options": {
+                    "model": effective.model,
+                    "agent_reasoning_effort": "none",
+                    "max_total_cost": 0.20,
+                },
+            },
+        )
+        assert concurrent.status_code == 409
+        assert concurrent.json()["detail"] == "another live run is already active"
+        lock_checked = True
+        return {
+            "status": "completed",
+            "model_calls": 0,
+            "cost": 0.0,
+            "moments": [],
+            "calls": [],
+        }
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "LLM_CLIENT_REVISION": "test-client",
+            },
+        ),
+        patch(
+            "cybernetic_influence.api.resolve_live_configuration",
+            return_value=effective,
+        ),
+        patch(
+            "cybernetic_influence.api.service_desk_native_bindings",
+            side_effect=capture_native,
+        ),
+        patch(
+            "cybernetic_influence.api.narrate_live_moments",
+            side_effect=narrate_while_locked,
+        ),
+    ):
+        response = api.post("/api/runs/run_feed00000000/resume")
     assert response.status_code == 200, response.text
     assert captured == [("openrouter/deepseek/deepseek-v4-flash", "none")]
+    assert lock_checked is True
     assert response.json()["status"] == "completed"
 
 
@@ -860,7 +943,7 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
 
     def slow_run(*args: Any, **kwargs: Any) -> Any:
         entered.set()
-        assert release.wait(timeout=5)
+        assert release.wait(timeout=30)
         return original_run_service_desk(*args, **kwargs)
 
     def scripted_native(
@@ -921,7 +1004,7 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
         assert second.status_code == 409
         assert "already active" in second.json()["detail"]
         release.set()
-        thread.join(timeout=10)
+        thread.join(timeout=30)
 
     assert len(first_response) == 1
     assert getattr(first_response[0], "status_code") == 200

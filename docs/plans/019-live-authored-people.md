@@ -128,7 +128,6 @@ Stop and report rather than adding a workaround if:
   the failed run, observed cost, and attached provider evidence for later
   inspection. The live-spend lock covers both participant execution and live
   narration.
-- `101` repository tests passed. Focused strict typing, JavaScript syntax,
+- `101` repository tests passed. Full strict typing, JavaScript syntax,
   deployment-script syntax, diff checks, and the production React Flow build
-  passed. The broad `api.py` type check retains only its nine pre-existing
-  scenario-preview narrowing errors.
+  passed.

@@ -10,8 +10,9 @@ programs.
 
 Current direction and MVP boundaries are maintained in
 [docs/ROADMAP.md](docs/ROADMAP.md). Binding architectural decisions live under
-[`docs/adr/`](docs/adr/README.md), and the roadmap links the sole active packet indexed
-under [`docs/plans/`](docs/plans/README.md).
+[`docs/adr/`](docs/adr/README.md), and
+[`docs/plans/`](docs/plans/README.md) indexes the completed implementation
+evidence behind the roadmap's current operator gate.
 
 ## Working simulator
 
@@ -62,7 +63,7 @@ The simulator currently includes:
 - a separate run-history workspace that survives refreshes and server restarts;
 - pause at a validated causal boundary and continuation of retained Service
   Desk runs, including live LLM runs on the same deployment and configuration;
-- recoverable deletion and visible failed/interrupted records.
+- recoverable deletion and visible failed/interrupted records;
 - conversational typed authoring through a task-tested structured model, with
   retained feedback revisions and per-message Terra/Sol plus thinking selection,
   revisioned review and approval for reviewed resource-request and
@@ -102,7 +103,7 @@ research vision: exercise one DeepSeek-default Service Desk run through map,
 narrative, traces, cost, pause/resume, and history; verify the resumed trace and
 desktop interaction; then obtain the operator's short usability judgment. The
 canonical checklist is in
-[Slice 14](docs/plans/014-pausable-live-runs.md). Typed scenario authoring now
+[Slice 16](docs/plans/016-canonical-analyst-demo.md). Typed scenario authoring now
 supports two bounded reviewed templates; its compiler and approval contract is in
 [Slice 17](docs/plans/017-conversational-scenario-authoring.md).
 Reviewed authored people can now drive either approved template through the
