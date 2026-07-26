@@ -25,19 +25,22 @@ claim to reproduce every omitted computation or predict a real system.
 
 ## Current Stage and Truth
 
-Stage: MVP/PoC. [Slice 19: live authored people]
-(plans/019-live-authored-people.md) is technically complete on canonical
-`main` and the private Mac development host. An analyst can conversationally produce either of two
-reviewed scenario templates, inspect and directly edit BDM-informed person
-assumptions, approve the compiled graph, and choose a zero-cost reference or a
-live run. Live people receive only reviewed descriptive context, private
-memory, delivered observations, and currently exposed interfaces; exact
-mechanisms alone deliver information and commit world effects.
+Stage: MVP/PoC.
+[Slice 19: live authored people](plans/019-live-authored-people.md) is
+technically complete on canonical
+`main` and the private Mac development host. An analyst can conversationally
+produce either of two reviewed scenario templates, inspect and directly edit
+BDM-informed person assumptions, approve the compiled graph, and choose a
+zero-cost reference or a live run. Live people receive only reviewed
+descriptive context, private memory, delivered observations, and currently
+exposed interfaces; exact mechanisms alone deliver information and commit
+world effects.
 
 [Mac development operations](operations/mac-mini.md) owns the separately dated
 last-observed deployed revision and route evidence. The current exact-revision
 Service Desk canary completed with DeepSeek V4 Flash; technical deployment is
-therefore observed, while the stakeholder usability gate below remains open.
+therefore observed. The operator has also inspected the authored flow; the
+remaining limitation is the active extended-run outcome below.
 
 Technical execution is observed for both authored templates and for the
 configured Service Desk live/pause/resume path. Resume now rechecks explicit
@@ -57,11 +60,21 @@ calls for `$0.00101175`.
 Full trace inspection found the edited profile in the recipient's system
 context, only the delivered claim in its new observations, native JSON-schema
 output with no retry or validation error, and narrative citations to retained
-events. Technical execution is therefore observed. The remaining gate is the
-stakeholder's short judgment: do the authored maps, narrative, and
-participant/composite traces make the modeled behavior understandable and
-useful? This evidence does not establish empirical psychological validity,
-predictive accuracy, or that any one profile field caused the assessment.
+events. The operator subsequently judged that flow good so far. Stakeholder
+observation has therefore advanced on the authored example, but it exposed the
+next material limitation: both authored templates are one short transaction,
+the moment accounts are too terse for a larger causal DAG, and run completion
+does not plainly distinguish terminal conditions, scenario outcome, horizon,
+quiescence, operator stop, and safety limits.
+
+[Slice 20: inspectable extended runs](plans/020-inspectable-extended-runs.md) is
+the active packet. It adds concise plus detailed evidence-bound narration and a
+typed completion/horizon contract without manufacturing empty turns.
+[Slice 21: coordination-environment assay](plans/021-coordination-environment-assay.md)
+then supplies the first naturally multi-episode research scenario, grounded in
+[Waltzman's coordination framework](research/001-from-minds-to-coordination.md).
+This evidence does not establish empirical psychological validity, predictive
+accuracy, or that any one profile field caused an action.
 
 V0.12.2 is retained as the earlier narrated and browser-certified baseline. It adds
 the separate run-history workspace and stable in-place scale/time inspection
@@ -156,9 +169,9 @@ using its declared minimum duration; any trace-serialization delay is retained
 separately from that scenario assumption. It exposes its realized event DAG. Physical
 access and purchase-to-payment remain legacy zero-duration traces until a
 concrete timing slice migrates them.
-The UI is technically reviewable; operator comprehension and analytical
-usefulness remain under iterative stakeholder review rather than being treated
-as proven.
+The current authored UI is technically reviewable and was understandable on
+the retained information-campaign example. Analytical usefulness for a
+multi-episode research question remains unobserved.
 
 ## Completed Foundation: Positive-Duration Modeled Time
 
@@ -172,11 +185,10 @@ calibrated, and other legacy scenarios may still retain zero-duration traces.
 Stakeholder observation has occurred repeatedly on the deployed workflow: the
 operator ran and inspected authored scenarios and directly shaped the map,
 narrative, configuration, and lifecycle controls. This licenses the current
-integrated demo completion pass and the later conversational-authoring
-direction. It does not establish analytical usefulness on a real research
-question.
+extended-run and coordination-assay direction. It does not establish
+analytical usefulness on a real research question.
 
-## Canonical MVP Probe
+## Completed Demo Probe
 
 Starting state: one stale-session login incident, concrete people, policy and
 incentive copies, credentials, records, exact routing/remediation/closure
@@ -204,34 +216,60 @@ Non-claims: this probe does not establish realistic organizations, general
 human psychology, calibrated human timing, continuous time, or fidelity outside
 its stipulated service workflow.
 
-## Current Demo Completion Boundary
+## Active Outcome Probe
+
+Starting state: the synthetic multinational bio-surveillance decision described
+in [Slice 21](plans/021-coordination-environment-assay.md), with concrete people,
+documents, sources, meetings, commitments, channels, locations, and exact
+decision mechanisms.
+
+Operator action: choose an ordinary baseline, heterogeneous information
+pressure, or pressure-plus-stabilization condition; review its purpose, stop
+conditions, horizon, assumptions, and people; run it through multiple decision
+episodes; then inspect the narrative, maps, measures, and exact evidence.
+
+Inspectable result:
+
+- a concise causal-step timeline plus a detailed evidence-cited narrative;
+- an explicit reason why the run ended;
+- spatial topology, configured interaction pathways, and realized causal DAG;
+- direct outcome, verification, issue, commitment, and timing measures;
+- evidence-coded indicators kept visibly separate from exact measures;
+- baseline/pressure/stabilization comparison with per-run uncertainty; and
+- reversible partnership and pressure-source aggregate views that never act.
+
+Negative cases: concerning messages without behavioral/state consequences must
+not be labeled system-level influence; a legitimate environmental event must
+remain distinguishable from hostile attribution; invalid evidence citations or
+a safety-limit termination invalidate the measurement rather than becoming a
+low social score.
+
+Non-claims: the probe does not predict a real partnership, validate the paper's
+constructs, attribute intent, establish a universal trust/risk/coordination
+score, or make an organization or campaign into a hidden executor.
+
+## MVP Completion Boundary
 
 “Finished” currently means a reviewable private PoC demo, not completion of the
-North Star or a production simulator. [Slice 16](plans/016-canonical-analyst-demo.md)
-is the sole demo-completion boundary. It integrates the prior pause/resume and
-timing implementation evidence into the operator's actual workflow. The demo
-is complete when:
+North Star or a production simulator. The earlier
+[Slice 16](plans/016-canonical-analyst-demo.md) Service Desk boundary and the
+authored-flow interaction are complete and have received operator observation.
+The current research MVP is complete when:
 
-1. the current DeepSeek-default Service Desk run exposes Spatial topology,
-   Configured interaction pathways, and a Realized causal graph, grounded step
-   narratives, participant/composite traces, exact evidence, effective
-   configuration, and observed cost;
-2. a live run pauses at a validated causal boundary, visibly offers Resume
-   after reload/history reopening, and resumes without
-   duplicated pre-pause causal events or provider logical calls, with continuous
-   narration and receipt-supported observed cost;
-3. the current desktop path—choose scenario, Play, map, narrative, traces,
-   pause/resume, and Run history—has no demo-blocking error, scroll jump, or
-   misleading lifecycle control;
-4. the roadmap, plan index, README, Mac operations page, and deployed
-   configuration agree; and
-5. the operator uses the current build for five to ten minutes and finds no
-   remaining demo-blocking comprehension or control defect.
+1. Slice 20's concise/detailed narrative and typed completion contract pass
+   their negative controls and an operator can tell why a run ended;
+2. Slice 21A produces one valid scripted and one valid live multi-episode
+   trajectory with at least twelve meaningful causal moments;
+3. Slice 21B's exact and evidence-coded measures pass positive, negative,
+   environmental-event, and corruption controls;
+4. Slice 21C compares baseline, pressure, and stabilization with every run,
+   invalid-run count, uncertainty, and evidence step-down visible; and
+5. the operator can explain the synthetic result from the narrative and maps,
+   dispute any measured claim through exact evidence, and finds no
+   demo-blocking comprehension or control defect.
 
-Earlier implementation evidence supports parts of checks 1 through 4, but the
-operator's reported confusion reopens the integrated UI claim. Once this packet
-passes, mark Slice 16 and the current demo complete. Do not add another
-substrate or feature packet to this gate.
+Do not broaden to evasion, generalized swarm infrastructure, or
+composite-agency scoring before this active outcome probe is observed.
 
 ## Approved Outcome Extension
 
@@ -248,6 +286,12 @@ Natural language will propose a typed draft; validation,
 template-backed mechanism composition, explicit coarse boundaries, and human
 approval remain separate gates.
 
+The next extension preserves that approval boundary while adding reviewed run
+terminal conditions, horizons, recurring processes, and measurement
+specifications. A
+longer run must contain more modeled dynamics; a larger turn limit alone is not
+a valid extension.
+
 ## Binding Architectural Direction
 
 - [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md): aggregate
@@ -258,6 +302,10 @@ approval remain separate gates.
   processes evolve on their own timescales; causal moments batch due updates.
 - [ADR 011](adr/011-declared-representation-depth.md): subsystem representation
   depth is explicit, question-relative, and replaceable behind typed boundaries.
+- [ADR 012](adr/012-decision-environment-measures-are-derived.md):
+  trust structure, perceived risk, coordination readiness, and candidate
+  directional patterns are derived evidence-bound analyst views, not hidden
+  causal state.
 
 ## Critical Path
 
@@ -352,7 +400,7 @@ project. If it stopped after Service Desk passed, the analyst would have a small
 but useful simulation whose realized causal chain is temporally meaningful and
 inspectable.
 
-### 8. Canonical analyst demo — technically implemented; operator gate active
+### 8. Canonical analyst demo — complete for the bounded examples
 
 The MVP outcome is one clear answerable flow: an analyst chooses or later
 authors a bounded Service Desk condition, presses Play, reads what changed and
@@ -371,7 +419,7 @@ It also distinguishes unique causal order (`c1`, `c2`, …) from **modeled elaps
 time**. The initial display must not call uncalibrated process ticks seconds or
 wall-clock timestamps.
 
-### 9. Add conversational scenario drafting behind a typed compiler — technically implemented; operator gate active
+### 9. Add conversational scenario drafting behind a typed compiler — complete for two reviewed templates
 
 This comes before comparisons: it removes the closed scenario catalog while
 preserving human review of the executable world model.
@@ -409,42 +457,87 @@ and sequential evidence-citing narration. Its analytical boundaries remained
 execution-inert. This establishes technical execution, not empirical
 psychological validity or a claim that any one profile field caused the action.
 
-The next decision is the stakeholder's comprehension and usefulness judgment
-on the retained authored run above. Extend the compiler beyond the two reviewed
-templates only after that check identifies a concrete blocked scenario or
-approves the current interaction.
+The operator judged the authored interaction good so far. The next limitation
+is no longer basic authoring comprehension: both reviewed templates describe
+one short transaction, and their terse moment accounts do not yet support
+inspection of a larger causal DAG. Do not broaden the compiler before the
+multi-episode scenario below proves another reviewed template is needed.
 
-### 10. Comparative causal analysis — post-MVP
+### 10. Make extended runs understandable and explicit about termination — active
 
-Compare approved conditions only after an analyst can author/review one bounded
-scenario. The comparison must explain the outcome, modeled delay, and changed
-path with exact evidence rather than presenting two disconnected graphs.
+Implement [Slice 20](plans/020-inspectable-extended-runs.md):
 
-### 11. Run one Levin-style composite-agency assay — post-MVP
+- one existing narrator call returns both a concise causal-step account and a
+  detailed evidence-cited passage;
+- a typed run-control plan distinguishes terminal conditions, scenario outcome,
+  modeled horizon, quiescence, operator pause/stop, and safety bounds; and
+- compatibility is proved on the current Service Desk and authored examples
+  before the first longer research scenario consumes the contracts.
 
-Use one authored scenario and its execution-inert analytical boundary to ask a
-specific multiscale question: does the candidate composite preserve or restore
-a declared outcome under shocks and member replacement, and which concrete
-policies, information routes, memories, incentives, and feedback mechanisms
-make that behavior possible?
+Current runs stop when their concrete work becomes quiescent. No general game
+master currently judges completion or outcome. Exact world-state terminal
+conditions are the default; a retained semantic judge is optional only for a
+reviewed termination criterion that cannot be expressed exactly and must never
+commit world state.
 
-The first assay must compare component-level, structural, and
-feedback-disruption interventions across repeated trajectories. Its output is
-an intervention-specific influence profile with uncertainty and exact
-trace/graph step-down—not a claim that the aggregate is another executor, a
-mind, or a single additive percentage of causation.
+### 11. Run one coordination-environment assay — next after Slice 20
+
+Implement [Slice 21](plans/021-coordination-environment-assay.md) as the first
+naturally multi-episode research scenario. It models a synthetic multinational
+bio-surveillance decision through concrete people, messages, records, meetings,
+commitments, exact mechanisms, and source processes. It compares baseline,
+heterogeneous pressure, and stabilization only after one scripted vertical is
+understandable.
+
+Trust structure, perceived risk, and coordination readiness are evidence-bound
+analytical measures under
+[ADR 012](adr/012-decision-environment-measures-are-derived.md), not hidden
+global variables in people's prompts. Exact measures and LLM-coded indicators
+remain visibly distinct. The first comparison reports per-run trajectories and
+uncertainty; it does not claim attribution, prediction, or empirical validation.
+
+### 12. Challenge the assay with evasion dimensions — gated by Slice 21C
+
+Add temporal fragmentation, structural segmentation, oscillation, variable
+switching, or environmental masking one at a time only after a named detector
+failure and matched control justify it. This is Slice 21D, not parallel feature
+breadth.
+
+### 13. Run one Levin-style composite-agency assay — gated by Slice 21C
+
+Use the observed coordination scenario and its execution-inert analytical
+boundaries to ask a specific multiscale question: does the candidate composite
+preserve or restore a declared outcome under shocks and member replacement,
+and which concrete policies, information routes, memories, incentives, and
+feedback mechanisms make that behavior possible?
+
+The assay compares component-level, structural, and feedback-disruption
+interventions across repeated trajectories. Its output is an
+intervention-specific influence profile with uncertainty and exact trace/graph
+step-down—not a claim that the aggregate is another executor, a mind, or a
+single additive percentage of causation.
 [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) owns that
 interpretation.
 
-This is post-MVP. It follows conversational authoring and comparison because
-those flows must first make an authored scenario and its intervention evidence
-inspectable to the analyst.
-
-### 12. Expand representation depth only through concrete pressure
+### 14. Expand representation depth only through concrete pressure
 
 Add overlapping/nested aggregate views, richer composite analysis, additional
 process implementations, or representation refinement only when a scenario
 requires them to answer an analyst question that current contracts cannot.
+
+## Cadence and Observation State
+
+- **Last representative observation:** 2026-07-25, authored
+  information-campaign flow; the operator judged the interaction good so far.
+- **Observed limitation:** the available scenarios are one short transaction,
+  their moment narration is too terse for a larger causal DAG, and terminal
+  status does not explain why the run ended.
+- **Non-vertical packets since that observation:** zero.
+- **Next integrated replay:** Slice 20C on the current Service Desk and authored
+  examples, followed by Slice 21A's scripted decision with at least twelve
+  meaningful causal moments.
+- **Current limiting cause:** scenario depth and inspectability, not scheduler
+  throughput, model availability, or graph rendering.
 
 ## Explicit MVP Deferrals
 
@@ -453,12 +546,12 @@ requires them to answer an analyst question that current contracts cannot.
 - universal attention or cognition scheduling;
 - generalized stochastic-process and surrogate libraries;
 - learned-policy calibration infrastructure;
-- automatic fidelity scoring or representation switching;
+- automatic general-purpose fidelity scoring or representation switching;
 - stock exchanges, HFT systems, or market calibration;
 - treating an organization, market, policy, or incentive system as an
   ungrounded acting mind;
 - a universal scalar “agency score,” organization-level executor, or
-  consciousness claim; the next research slice may test one
+  consciousness claim; a later gated assay may test one
   intervention-specific composite-control hypothesis under
   [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) without changing
   the component-grounded execution model;

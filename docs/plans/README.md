@@ -12,15 +12,32 @@ and current truth. This directory preserves one bounded design and its evidence
 per completed slice; completed plans are historical evidence, not independent
 instructions to continue their former “next slice” sections.
 
-## Current packet
+## Current sequence
+
+[Slice 20: Inspectable extended runs](020-inspectable-extended-runs.md) is ready
+for implementation. Complete 20A's dual-level evidence-bound narration, audit
+and commit it, then complete 20B's typed completion/horizon contract, audit and
+commit it, and finally observe 20C's compatibility proof on current runs. Do
+not manufacture empty turns or add a general game-master actor.
+
+[Slice 21: Coordination-environment assay](021-coordination-environment-assay.md)
+is planned after Slice 20. It builds one synthetic, recurring multinational
+decision first; only then does it add paper-inspired evidence measures and a
+baseline/pressure/stabilization comparison. Its evasion and composite-agency
+extensions remain gated.
+
+The source interpretation is retained in
+[From Minds to Coordination](../research/001-from-minds-to-coordination.md);
+[ADR 012](../adr/012-decision-environment-measures-are-derived.md) prevents its
+analytical constructs from becoming hidden causal state.
+
+## Most recent completed evidence
 
 [Slice 19: Live authored people](019-live-authored-people.md) is completed
 technical evidence: either approved authoring template can replace its fixed
 person policies with configuration-bound LLM people. Reviewed profiles are
 projected as descriptive context; private memory, delivered observations, and
-current interfaces remain the only runtime input. The next gate is the
-operator's comprehension and usefulness judgment on the complete authored
-flow, not another enabling slice.
+current interfaces remain the only runtime input.
 
 [Slice 18: BDM-informed person review](018-bdm-informed-person-review.md) is
 completed evidence: authored people now have concise, directly editable

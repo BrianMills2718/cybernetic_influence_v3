@@ -11,8 +11,8 @@ programs.
 Current direction and MVP boundaries are maintained in
 [docs/ROADMAP.md](docs/ROADMAP.md). Binding architectural decisions live under
 [`docs/adr/`](docs/adr/README.md), and
-[`docs/plans/`](docs/plans/README.md) indexes the completed implementation
-evidence behind the roadmap's current operator gate.
+[`docs/plans/`](docs/plans/README.md) identifies the active implementation
+packet and indexes completed evidence.
 
 ## Working simulator
 
@@ -98,17 +98,40 @@ DeepSeek `high` and `xhigh` are visibly experimental, and unsupported
 `medium` is rejected by shared-client policy. Configured candidates that fail
 route or full-run evidence stay absent.
 
-The current private-demo finish line is intentionally smaller than the full
-research vision: exercise one DeepSeek-default Service Desk run through map,
-narrative, traces, cost, pause/resume, and history; verify the resumed trace and
-desktop interaction; then obtain the operator's short usability judgment. The
-canonical checklist is in
-[Slice 16](docs/plans/016-canonical-analyst-demo.md). Typed scenario authoring now
-supports two bounded reviewed templates; its compiler and approval contract is in
-[Slice 17](docs/plans/017-conversational-scenario-authoring.md).
-Reviewed authored people can now drive either approved template through the
-same native LLM boundary; [Slice 19](docs/plans/019-live-authored-people.md)
-owns that profile-to-trace contract and its bounded OpenRouter evidence.
+The current short Service Desk and authored-template flows have completed their
+bounded technical proofs and received operator observation. Their main product
+limitation is now explicit: each authored template is one short transaction,
+the retained moment account is intentionally concise, and a completed run does
+not yet explain whether a terminal condition, horizon, quiescence, operator
+stop, or safety bound ended it.
+
+[Slice 20](docs/plans/020-inspectable-extended-runs.md) is the active packet. It
+adds a detailed evidence-cited narrative alongside the concise timeline and a
+typed run-control/completion contract, proved first on current runs. No general
+game master currently judges completion. Exact reviewed world-state terminal
+conditions remain the default, with a semantic stop judge left optional and
+non-authoritative.
+
+[Slice 21](docs/plans/021-coordination-environment-assay.md) is the next
+representative vertical. It will model a synthetic multinational
+bio-surveillance decision across recurring meetings and compare baseline,
+heterogeneous information pressure, and stabilization. The proposed measures
+come from the complete
+[paper source note](docs/research/001-from-minds-to-coordination.md) and remain
+derived evidence-bound analyst views under
+[ADR 012](docs/adr/012-decision-environment-measures-are-derived.md), not hidden
+global state inserted into people's prompts.
+
+Slice 21—not filler added to an existing transaction—is where the first
+naturally longer run must appear: at least four meeting cycles and twelve
+meaningful causal moments.
+
+Typed scenario authoring currently supports two bounded reviewed templates;
+its compiler and approval contract is in
+[Slice 17](docs/plans/017-conversational-scenario-authoring.md). Reviewed
+authored people can drive either approved template through the same native LLM
+boundary; [Slice 19](docs/plans/019-live-authored-people.md) owns that
+profile-to-trace contract and its bounded OpenRouter evidence.
 
 The user-facing Service Desk simulation is autonomous and event driven. Its
 initial customer report starts the triager; thereafter, newly delivered
