@@ -38,6 +38,11 @@ from cybernetic_influence import __version__
 from cybernetic_influence.active_runtime import (
     ActiveRuntimeCheckpoint,
 )
+from cybernetic_influence.active_runtime.run_control import (
+    ResolvedRunControlPlan,
+    RunControlSelection,
+    resolve_run_control,
+)
 from cybernetic_influence.presentation import (
     analyst_boundaries,
     analyst_edges,
@@ -72,6 +77,7 @@ from cybernetic_influence.scenarios.service_desk import (
     ServiceDeskCognitionProfile,
     run_event_driven_service_desk,
     service_desk_runtime_config,
+    service_desk_run_control_options,
     service_desk_arm_configurations,
     service_desk_fixture,
     service_desk_native_bindings,
@@ -117,6 +123,7 @@ class RunRequest(BaseModel):
     arm_id: str = "baseline"
     execution: Literal["scripted", "live"] = "scripted"
     llm_options: RunLlmOptions | None = None
+    run_control: RunControlSelection | None = None
     run_id: str | None = None
 
 
@@ -236,6 +243,7 @@ def create_app(
     authoring_lock = Lock()
     live_lock = Lock()
     pause_requests: dict[str, Event] = {}
+    stop_requests: dict[str, Event] = {}
     pause_lock = Lock()
 
     @app.middleware("http")
@@ -270,6 +278,7 @@ def create_app(
                 "service_desk": {
                     "label": "Service desk",
                     **_scenario_explanation("service_desk"),
+                    "run_control_options": service_desk_run_control_options().model_dump(mode="json"),
                     "profiles": ["position_context", "procedural_control"],
                     "arms": [
                         {
@@ -681,6 +690,28 @@ def create_app(
         runs.save(document)
         return {"run_id": run_id, "status": "pause_requested"}
 
+    @app.post("/api/runs/{run_id}/stop")
+    def stop_run(run_id: str, request: Request) -> dict[str, object]:
+        """Request irreversible completion at the next retained causal boundary."""
+        _require_access(request)
+        try:
+            document = runs.get(run_id)
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except RunNotFoundError as error:
+            raise HTTPException(status_code=404, detail="run not found") from error
+        with pause_lock:
+            stop = stop_requests.get(run_id)
+        if document.get("scenario") != "service_desk" or stop is None:
+            raise HTTPException(status_code=409, detail="this run cannot be stopped")
+        if document.get("status") not in {"running", "pause_requested"}:
+            raise HTTPException(status_code=409, detail="run is not active")
+        stop.set()
+        document["status"] = "stop_requested"
+        document["stop_message"] = "Stop will take effect after the current causal step."
+        runs.save(document)
+        return {"run_id": run_id, "status": "stop_requested"}
+
     @app.post("/api/runs/{run_id}/resume")
     def resume_run(run_id: str, request: Request) -> dict[str, object]:
         _require_access(request)
@@ -746,6 +777,14 @@ def create_app(
             if not live_lock.acquire(blocking=False):
                 raise HTTPException(status_code=409, detail="another live run is already active")
         try:
+            run_control = (
+                ResolvedRunControlPlan.model_validate(paused["run_control"])
+                if paused.get("run_control") is not None
+                else resolve_run_control(service_desk_run_control_options(), None)
+            )
+        except (TypeError, ValueError) as error:
+            raise HTTPException(status_code=422, detail="paused run has an invalid run-control plan") from error
+        try:
             fixture = service_desk_fixture(
                 arm,
                 cognition_profile=profile,
@@ -753,10 +792,22 @@ def create_app(
                 reasoning_effort=effective_llm.agent_reasoning_effort if effective_llm else SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
             )
             bindings = service_desk_native_bindings(fixture, trace_id_prefix=run_id, model=effective_llm.model, reasoning_effort=effective_llm.agent_reasoning_effort) if effective_llm else service_desk_scripted_bindings(fixture)
-            resumed = run_event_driven_service_desk(fixture, bindings, run_id=run_id, checkpoint=checkpoint)
+            resumed = run_event_driven_service_desk(
+                fixture,
+                bindings,
+                run_id=run_id,
+                checkpoint=checkpoint,
+                run_control=run_control,
+            )
             readout = event_driven_service_desk_outcome(resumed)
             document = build_service_desk_analyst_document(fixture=fixture, result=resumed, readout=readout, profile=profile, arm_id=arm.arm_id, execution="live" if live else "scripted", created_at=str(paused["created_at"]))
             document["llm_configuration"] = paused.get("llm_configuration")
+            document["run_control"] = run_control.model_dump(mode="json")
+            document["completion"] = (
+                resumed.completion.model_dump(mode="json")
+                if resumed.completion is not None
+                else None
+            )
             document["continuation"] = {"schema_version": 1, "phase": "causal", "lifecycle": "completed_from_checkpoint", "checkpoint_digest": checkpoint.record_digest}
             return runs.save(
                 _attach_narration(
@@ -776,6 +827,7 @@ def create_app(
         service_arm = None
         physical_arm = None
         purchase_arm = None
+        resolved_run_control: ResolvedRunControlPlan | None = None
         selected_profile: str = request_body.cognition_profile
         if request_body.scenario == "service_desk":
             service_arm = next(
@@ -791,6 +843,12 @@ def create_app(
                     status_code=422,
                     detail="unknown service-desk intervention arm",
                 )
+            try:
+                resolved_run_control = resolve_run_control(
+                    service_desk_run_control_options(), request_body.run_control
+                )
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
         elif request_body.scenario == "physical_access":
             physical_arm = next(
                 (
@@ -821,6 +879,11 @@ def create_app(
                     detail="unknown purchase-payment intervention arm",
                 )
             selected_profile = "position_context"
+        if request_body.scenario != "service_desk" and request_body.run_control is not None:
+            raise HTTPException(
+                status_code=422,
+                detail="run_control is not available for this scenario",
+            )
         live = request_body.execution == "live"
         if not live and request_body.llm_options is not None:
             raise HTTPException(
@@ -872,11 +935,18 @@ def create_app(
                 if effective_llm is not None
                 else None
             ),
+            "run_control": (
+                resolved_run_control.model_dump(mode="json")
+                if resolved_run_control is not None
+                else None
+            ),
         }
         runs.save(initial)
         pause = Event()
+        stop = Event()
         with pause_lock:
             pause_requests[run_id] = pause
+            stop_requests[run_id] = stop
         latest_checkpoint: ActiveRuntimeCheckpoint | None = None
 
         def retain_checkpoint(checkpoint: ActiveRuntimeCheckpoint) -> None:
@@ -890,12 +960,17 @@ def create_app(
                         latest_checkpoint,
                         lifecycle="paused" if pause.is_set() else "running",
                     ),
-                    "status": "pause_requested" if pause.is_set() else "running",
+                    "status": (
+                        "stop_requested"
+                        if stop.is_set()
+                        else "pause_requested" if pause.is_set() else "running"
+                    ),
                 }
             )
 
         try:
             if service_arm is not None:
+                assert resolved_run_control is not None
                 service_fixture = service_desk_fixture(
                     service_arm,
                     cognition_profile=request_body.cognition_profile,
@@ -933,6 +1008,8 @@ def create_app(
                     ),
                     checkpoint_observer=retain_checkpoint,
                     pause_requested=pause.is_set,
+                    stop_requested=stop.is_set,
+                    run_control=resolved_run_control,
                 )
                 readout = event_driven_service_desk_outcome(result)
                 document = build_service_desk_analyst_document(
@@ -943,6 +1020,12 @@ def create_app(
                     arm_id=service_arm.arm_id,
                     execution=request_body.execution,
                     created_at=created_at,
+                )
+                document["run_control"] = resolved_run_control.model_dump(mode="json")
+                document["completion"] = (
+                    result.completion.model_dump(mode="json")
+                    if result.completion is not None
+                    else None
                 )
             elif physical_arm is not None:
                 physical_fixture = physical_access_fixture(
@@ -1093,6 +1176,7 @@ def create_app(
         finally:
             with pause_lock:
                 pause_requests.pop(run_id, None)
+                stop_requests.pop(run_id, None)
             if lock_acquired:
                 live_lock.release()
 

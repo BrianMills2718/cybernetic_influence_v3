@@ -1,9 +1,9 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: ready
+status: in_progress
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-07-26
 ---
 
 # Slice 20: Inspectable extended runs
@@ -23,6 +23,18 @@ pause/resume behavior, and shared `llm_client` boundary.
 Use scripted/reference evidence for implementation checks. Before a paid live
 canary or deployment, report the exact call topology and configured budget and
 obtain explicit authorization.
+
+## Implementation progress
+
+- **20A complete:** one retained narrator call now returns a concise timeline
+  account and one to three evidence-cited detailed paragraphs per causal
+  moment, with legacy records remaining readable.
+- **20B complete in this worktree:** Service Desk resolves only its compiled
+  terminal condition, horizon, and safety bounds before execution; it retains
+  a separate completion record, preserves the plan across resume, and exposes
+  pause/irreversible stop at causal boundaries. A horizon or stop retains
+  pending exact work as explicit non-execution rather than silently dropping
+  it. The remaining Slice 20 task is 20C’s explicitly authorized live canary.
 
 ## Outcome
 

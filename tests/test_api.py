@@ -62,6 +62,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "purchase_payment",
     }
     assert config.json()["scenarios"]["physical_access"]["arms"][0]["description"]
+    controls = config.json()["scenarios"]["service_desk"]["run_control_options"]
+    assert controls["default_terminal_condition_ids"] == ["confirmed_closure"]
+    assert controls["default_horizon"] >= 87
     assert [choice["model"] for choice in config.json()["live_options"]["models"]] == [
         "openrouter/openai/gpt-5.6-terra",
         "openrouter/deepseek/deepseek-v4-flash",
@@ -199,7 +202,9 @@ def test_scripted_position_context_run_is_zero_cost_and_inspectable(tmp_path: Pa
     assert body["narration"]["status"] == "not_requested"
     assert body["narration_model_calls"] == 0
     assert len(body["moments"]) == body["outcome"]["causal_moment_count"]
-    assert body["moments"][-1]["silent"] is True
+    assert body["completion"]["reason"] == "terminal_condition_met"
+    assert body["completion"]["condition_ids"] == ["confirmed_closure"]
+    assert body["outcome"]["final_status"] == "closed_confirmed"
     assert body["outcome"]["causal_moment_count"] > body["outcome"][
         "participant_activation_count"
     ]
@@ -295,6 +300,26 @@ def test_scripted_run_rejects_live_options_before_dispatch(tmp_path: Path) -> No
     assert response.status_code == 422
     assert "only to live" in response.json()["detail"]
     assert client(tmp_path).get("/api/runs").json()["runs"] == []
+
+
+def test_service_desk_run_control_is_compiled_and_retained(tmp_path: Path) -> None:
+    api = client(tmp_path)
+    rejected = api.post(
+        "/api/runs",
+        json={"run_control": {"terminal_condition_ids": ["arbitrary_fact"]}},
+    )
+    assert rejected.status_code == 422
+    assert "unknown terminal condition" in rejected.json()["detail"]
+
+    bounded = api.post(
+        "/api/runs",
+        json={"run_control": {"modeled_time_horizon": 0}},
+    )
+    assert bounded.status_code == 200, bounded.text
+    body = bounded.json()
+    assert body["completion"]["reason"] == "modeled_time_horizon"
+    assert body["run_control"]["modeled_time_horizon"]["logical_time"] == 0
+    assert body["outcome"]["final_status"] != "closed_confirmed"
 
 
 def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:

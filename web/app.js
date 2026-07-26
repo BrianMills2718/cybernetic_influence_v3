@@ -41,6 +41,7 @@ const buttonTooltips = {
   'authoring-trajectory-layout': 'A realized causal graph becomes available only after the approved scenario runs.',
   'run': 'Run the selected scenario and condition.',
   'pause': 'Request a pause after the current causal step is safely retained.',
+  'stop': 'End this run after the current causal step. A stopped run cannot be resumed.',
   'resume': 'Continue a paused run from its retained causal checkpoint.',
   'spatial-layout': 'Show authored places, occupants, and physical links. This does not grant access or permission.',
   'causal-layout': 'Show configured interaction pathways. A pathway does not itself grant authority.',
@@ -391,6 +392,8 @@ function renderLifecycleControls(run = current) {
   $('#resume').disabled = false
   $('#pause').hidden = true
   $('#pause').disabled = false
+  $('#stop').hidden = true
+  $('#stop').disabled = false
   if (paused) {
     $('#run-status').textContent = 'Paused'
     $('#lifecycle-help').textContent = run.pause_message || 'This run stopped at a validated causal boundary. Resume continues from the retained checkpoint.'
@@ -399,7 +402,10 @@ function renderLifecycleControls(run = current) {
     $('#lifecycle-help').textContent = run.pause_message || 'The current causal step is finishing before the checkpoint is retained.'
   } else if (status === 'completed') {
     $('#run-status').textContent = 'Completed'
-    $('#lifecycle-help').textContent = 'This run is complete. Choose another condition or open a saved run from Run history.'
+    $('#lifecycle-help').textContent = run.completion?.public_summary || 'This run is complete. Choose another condition or open a saved run from Run history.'
+  } else if (status === 'stop_requested') {
+    $('#run-status').textContent = 'Stop requested'
+    $('#lifecycle-help').textContent = run.stop_message || 'The current causal step is finishing before this run ends.'
   } else if (status === 'failed' || status === 'interrupted') {
     $('#run-status').textContent = status === 'failed' ? 'Failed' : 'Interrupted'
     $('#lifecycle-help').textContent = run.error || 'This run did not reach a resumable checkpoint.'
@@ -509,6 +515,14 @@ function configureScenario(scenarioId) {
   fillList('#scenario-assumptions', selected.assumptions)
   fillList('#scenario-omissions', selected.known_omissions)
   fillList('#scenario-questions', selected.fidelity_questions)
+  const controls = selected.run_control_options
+  $('#run-control-field').hidden = !controls
+  if (controls) {
+    $('#modeled-horizon').min = controls.minimum_horizon
+    $('#modeled-horizon').max = controls.maximum_horizon
+    $('#modeled-horizon').value = controls.default_horizon
+    $('#modeled-horizon-help').textContent = 'The simulation stops before activating a later causal step once this modeled time is reached, unless its compiled terminal condition is met first.'
+  }
   updateAuthorizationPreview()
   describeCondition()
 }
@@ -1451,6 +1465,13 @@ function render(run) {
     <strong>Reference execution</strong>
     <span>Fixed zero-call policies · $0 observed</span>
   `
+  if (current.run_control) {
+    const terminal = current.run_control.terminal_conditions?.map((item) => item.public_description).join(' ') || 'Compiled terminal condition.'
+    $('#run-config-readout').innerHTML += `<span><strong>Run end:</strong> ${html(terminal)} Horizon: ${html(current.run_control.modeled_time_horizon?.logical_time ?? 'none')} modeled seconds.</span>`
+  }
+  if (current.completion) {
+    $('#run-config-readout').innerHTML += `<span><strong>Ended:</strong> ${html(current.completion.public_summary)}</span>`
+  }
   $('#story-headline').textContent = current.story.headline
   $('#story-summary').textContent = current.story.summary
   $('#story-steps').innerHTML = ''
@@ -1583,6 +1604,7 @@ $('#run').onclick = async () => {
   activeRunId = `run_${crypto.getRandomValues(new Uint32Array(3)).join('').slice(0, 12)}`
   const pausable = $('#scenario').value === 'service_desk'
   $('#pause').hidden = !pausable
+  $('#stop').hidden = !pausable
   try {
     const body = await request('/api/runs', {
       method:'POST',
@@ -1593,6 +1615,9 @@ $('#run').onclick = async () => {
         arm_id:$('#arm').value,
         execution:$('#live').checked ? 'live' : 'scripted',
         run_id:activeRunId,
+        ...($('#scenario').value === 'service_desk' ? {
+          run_control:{modeled_time_horizon:Number($('#modeled-horizon').value)},
+        } : {}),
         ...($('#live').checked ? {
           llm_options:{
             model:$('#model').value,
@@ -1614,6 +1639,7 @@ $('#run').onclick = async () => {
   } finally {
     $('#run').disabled = false
     $('#pause').hidden = true
+    $('#stop').hidden = true
   }
 }
 
@@ -1623,6 +1649,17 @@ $('#pause').onclick = async () => {
   try {
     await request(`/api/runs/${activeRunId}/pause`, {method:'POST'})
     $('#run-status').textContent = 'Pause requested; finishing this causal step…'
+  } catch (error) {
+    $('#run-status').textContent = error.message
+  }
+}
+
+$('#stop').onclick = async () => {
+  if (!activeRunId) return
+  $('#stop').disabled = true
+  try {
+    await request(`/api/runs/${activeRunId}/stop`, {method:'POST'})
+    $('#run-status').textContent = 'Stop requested; finishing this causal step…'
   } catch (error) {
     $('#run-status').textContent = error.message
   }

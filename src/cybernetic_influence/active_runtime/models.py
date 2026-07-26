@@ -23,6 +23,7 @@ from cybernetic_influence.causal_core.models import (
     state_digest,
     trace_digest,
 )
+from cybernetic_influence.active_runtime.run_control import CompletionRecord
 
 RUNTIME_CONTRACT = "active-runtime.v1"
 SCHEMA_VERSION = 1
@@ -721,6 +722,7 @@ class ActiveRuntimeResult(_StrictModel):
     model_calls: int = Field(ge=0)
     total_observed_cost: float = Field(ge=0.0)
     cost_fully_observable: bool
+    completion: CompletionRecord | None = None
     outcome_summary: str = Field(min_length=1)
     record_digest: str = Field(pattern=_DIGEST_PATTERN)
 

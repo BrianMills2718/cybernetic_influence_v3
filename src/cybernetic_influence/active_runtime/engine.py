@@ -29,6 +29,7 @@ from cybernetic_influence.active_runtime.models import (
     project_action_interfaces,
     with_record_digest,
 )
+from cybernetic_influence.active_runtime.run_control import CompletionRecord
 from cybernetic_influence.active_runtime.protocol import (
     ActiveSystemBinding,
     ActiveSystemExecutionError,
@@ -565,12 +566,25 @@ class ActiveRuntimeSession:
         session._next_commit_index = validated.next_commit_index
         return session
 
-    def complete(self) -> ActiveRuntimeResult:
+    def complete(
+        self,
+        *,
+        completion: CompletionRecord | None = None,
+        discard_pending_effects: bool = False,
+    ) -> ActiveRuntimeResult:
         """Complete exact mechanics and bind them to all protected active evidence."""
         with self._lock:
             self._require_active()
             before = self._core.checkpoint()
             try:
+                if discard_pending_effects:
+                    self._discard_pending_exact_work(
+                        reason=(
+                            completion.reason
+                            if completion is not None
+                            else "runtime_completion"
+                        )
+                    )
                 core_result = self._core.complete()
                 result = ActiveRuntimeResult.model_validate(
                     with_record_digest(
@@ -613,6 +627,11 @@ class ActiveRuntimeSession:
                             ),
                             "total_observed_cost": self.total_observed_cost,
                             "cost_fully_observable": self.cost_fully_observable,
+                            "completion": (
+                                completion.model_dump(mode="json")
+                                if completion is not None
+                                else None
+                            ),
                             "outcome_summary": (
                                 f"completed {self._next_commit_index} active "
                                 f"activation(s), {len(core_result.accepted_action_ids)} "
@@ -720,6 +739,36 @@ class ActiveRuntimeSession:
             )
         )
         self._exact_work.append(record)
+
+    def _discard_pending_exact_work(self, *, reason: str) -> None:
+        """Retain deliberate non-execution as exact work at a terminal boundary."""
+        before = self._core.checkpoint()
+        self._core.discard_pending_effects(reason=reason)
+        after = self._core.checkpoint()
+        event_ids = [
+            event.event_id
+            for event in after.events[len(before.events):]
+            if event.event_kind != "run_completed"
+        ]
+        if not event_ids:
+            return
+        self._exact_work.append(
+            ExactWorkRecord.model_validate(
+                with_record_digest(
+                    {
+                        "work_index": len(self._exact_work),
+                        "work_id": f"exact_work_{len(self._exact_work):06d}",
+                        "prior_attempt_count": self._next_attempt_index,
+                        "logical_time": after.state.logical_time,
+                        "pre_core_state_digest": before.state_digest,
+                        "pre_core_event_tail_digest": before.event_tail_digest,
+                        "post_core_state_digest": after.state_digest,
+                        "post_core_event_tail_digest": after.event_tail_digest,
+                        "core_event_ids": event_ids,
+                    }
+                )
+            )
+        )
 
     @staticmethod
     def _validate_step_result(raw: object) -> ActiveStepResult:

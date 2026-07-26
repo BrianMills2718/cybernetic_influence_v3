@@ -565,6 +565,56 @@ class CausalSession:
             self._terminal = True
             return result
 
+    def discard_pending_effects(self, *, reason: str) -> list[CausalEvent]:
+        """Close an intentionally bounded run without pretending future work occurred.
+
+        Pending effects become explicit dissipation events before the caller
+        appends the ordinary terminal record. This is deliberately narrow: a
+        partially delivered fan-out cannot be compressed into a dissipation
+        without changing the causal contract, so it fails loudly instead.
+        """
+        with self._lock:
+            if self._terminal:
+                raise RuntimeError("causal session is already terminal")
+            existing_routed = {
+                event.effect_id
+                for event in self._events
+                if event.event_kind == "effect_routed" and event.effect_id is not None
+            }
+            pending = [work for _, _, work in sorted(self._queue)]
+            pending_effect_ids = {
+                (work if isinstance(work, EffectEnvelope) else work.effect).effect_id
+                for work in pending
+            }
+            if existing_routed & pending_effect_ids:
+                raise RuntimeError(
+                    "cannot stop with a partially delivered fan-out; retain a checkpoint instead"
+                )
+            events: list[CausalEvent] = []
+            for work in pending:
+                effect = work if isinstance(work, EffectEnvelope) else work.effect
+                if isinstance(work, EffectEnvelope):
+                    self._metrics.effects_processed += 1
+                events.append(
+                    self._append_event(
+                        event_kind="effect_dissipated",
+                        logical_time=effect.logical_time,
+                        causal_parent_event_ids=effect.causal_parent_event_ids,
+                        summary=(
+                            f"Effect {effect.effect_id} did not execute because the run "
+                            f"ended at a configured boundary: {reason}."
+                        ),
+                        variance_source=self._effect_variance(effect),
+                        effect_id=effect.effect_id,
+                        source_port_id=effect.source_port_id,
+                        representation_id=effect.representation_id,
+                        details={"completion_boundary": reason},
+                    )
+                )
+                self._metrics.dissipated_effects += 1
+            self._queue = []
+            return events
+
     def _validate_action(self, action: ActionAttempt) -> None:
         """Validate the full attempt surface without mutating the session."""
         if action.action_id in self._accepted_action_ids:

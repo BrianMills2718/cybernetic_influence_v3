@@ -20,6 +20,12 @@ from cybernetic_influence.active_runtime import (
     UpdateScheduleDirective,
 )
 from cybernetic_influence.active_runtime.llm import render_llm_prompts
+from cybernetic_influence.active_runtime.run_control import (
+    ExactFactTerminalCondition,
+    ResolvedRunControlPlan,
+    RunControlSelection,
+    resolve_run_control,
+)
 from cybernetic_influence.api import _checkpoint_progress_projection
 from cybernetic_influence.causal_core.engine import (
     CausalSession,
@@ -59,6 +65,7 @@ from cybernetic_influence.scenarios.service_desk import (
     service_desk_fixture,
     service_desk_native_bindings,
     service_desk_personas,
+    service_desk_run_control_options,
     service_desk_scripted_bindings,
 )
 from cybernetic_influence.scenarios.purchase_payment import (
@@ -69,6 +76,54 @@ from cybernetic_influence.scenarios.purchase_payment import (
 
 
 ALTERNATE_MODEL = "openrouter/deepseek/deepseek-v4-flash"
+
+
+def test_service_desk_retains_terminal_horizon_quiescence_and_stop_reasons() -> None:
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0], cognition_profile="position_context"
+    )
+    bindings = service_desk_scripted_bindings(fixture)
+    default_plan = resolve_run_control(service_desk_run_control_options(), None)
+    completed = run_event_driven_service_desk(
+        fixture, bindings, run_id="service_desk_terminal", run_control=default_plan
+    )
+    assert completed.completion is not None
+    assert completed.completion.reason == "terminal_condition_met"
+    assert completed.completion.condition_ids == ["confirmed_closure"]
+    assert completed.core_result.final_state.fact("incident_17.status").value == "closed_confirmed"
+
+    horizon_plan = resolve_run_control(
+        service_desk_run_control_options(),
+        RunControlSelection(modeled_time_horizon=0),
+    )
+    horizon = run_event_driven_service_desk(
+        fixture, bindings, run_id="service_desk_horizon", run_control=horizon_plan
+    )
+    assert horizon.completion is not None
+    assert horizon.completion.reason == "modeled_time_horizon"
+    assert horizon.core_result.final_state.fact("incident_17.status").value != "closed_confirmed"
+
+    unreachable_plan = ResolvedRunControlPlan(
+        terminal_conditions=[
+            ExactFactTerminalCondition(
+                condition_id="unreachable", fact_id="incident_17.status",
+                expected_value="never", public_description="Never reached.",
+            )
+        ],
+        terminal_mode="any", max_causal_moments=24, max_participant_calls=48,
+    )
+    quiescent = run_event_driven_service_desk(
+        fixture, bindings, run_id="service_desk_quiescent", run_control=unreachable_plan
+    )
+    assert quiescent.completion is not None
+    assert quiescent.completion.reason == "quiescent_before_terminal"
+
+    stopped = run_event_driven_service_desk(
+        fixture, bindings, run_id="service_desk_stopped", run_control=default_plan,
+        stop_requested=lambda: True,
+    )
+    assert stopped.completion is not None
+    assert stopped.completion.reason == "operator_stopped"
 
 
 def _crossing_attempt_after_badge(

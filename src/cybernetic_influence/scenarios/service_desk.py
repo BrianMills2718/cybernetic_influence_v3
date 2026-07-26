@@ -26,6 +26,13 @@ from cybernetic_influence.active_runtime import (
     UpdateScheduleDirective,
     bound_native_llm_implementation_id,
 )
+from cybernetic_influence.active_runtime.run_control import (
+    CompletionRecord,
+    ExactFactTerminalCondition,
+    ResolvedRunControlPlan,
+    RunControlOptions,
+    terminal_condition_ids,
+)
 from cybernetic_influence.causal_core.engine import (
     ExactMechanismBinding,
     MechanismContext,
@@ -71,6 +78,27 @@ SERVICE_DESK_SCHEDULE: tuple[tuple[int, str], ...] = (
 )
 SERVICE_DESK_MAX_CAUSAL_MOMENTS = 24
 REMEDIATION_PROCESS_IMPLEMENTATION_ID = "exact_remediation_process_controller_v1"
+
+
+def service_desk_run_control_options() -> RunControlOptions:
+    """Expose only reviewed, scenario-compiled terminal choices."""
+    return RunControlOptions(
+        available_terminal_conditions=[
+            ExactFactTerminalCondition(
+                condition_id="confirmed_closure",
+                fact_id="incident_17.status",
+                expected_value="closed_confirmed",
+                public_description="Stop when incident_17 is safely closed after confirmation.",
+            )
+        ],
+        default_terminal_condition_ids=["confirmed_closure"],
+        allowed_terminal_modes=["any"],
+        minimum_horizon=0,
+        default_horizon=120,
+        maximum_horizon=360,
+        max_causal_moments_cap=SERVICE_DESK_MAX_CAUSAL_MOMENTS,
+        max_participant_calls_cap=48,
+    )
 
 CUSTOMER_REPORT_ENCODING = "application/vnd.cybernetic.customer-report+json"
 POLICY_ENCODING = "application/vnd.cybernetic.escalation-policy+json"
@@ -655,6 +683,8 @@ def run_event_driven_service_desk(
     runtime_config: ActiveRuntimeConfig | None = None,
     checkpoint: ActiveRuntimeCheckpoint | None = None,
     pause_requested: Callable[[], bool] | None = None,
+    stop_requested: Callable[[], bool] | None = None,
+    run_control: ResolvedRunControlPlan | None = None,
 ) -> ActiveRuntimeResult:
     """Run due-set moments until no observation or internal wake remains.
 
@@ -687,6 +717,50 @@ def run_event_driven_service_desk(
         if pause_requested is not None and pause_requested():
             raise RuntimePaused(current_checkpoint)
 
+    def completion_at_boundary(
+        *,
+        reason: Literal[
+            "terminal_condition_met",
+            "modeled_time_horizon",
+            "quiescent_before_terminal",
+            "operator_stopped",
+            "safety_limit",
+        ],
+        condition_ids: list[str] | None = None,
+    ) -> CompletionRecord:
+        attempts = session.attempts
+        evidence_event_ids = attempts[-1].core_event_ids if attempts else []
+        logical_time = session.core_state.logical_time
+        if reason == "terminal_condition_met":
+            summary = "A configured terminal condition was met; the scenario outcome is reported separately."
+        elif reason == "modeled_time_horizon":
+            summary = "The configured modeled-time horizon was reached before a terminal condition."
+        elif reason == "safety_limit":
+            summary = "A configured safety limit ended the run before a terminal condition."
+        elif reason == "operator_stopped":
+            summary = "The operator stopped the run at a completed causal boundary."
+        else:
+            summary = "No further modeled work remained before a terminal condition was met."
+        return CompletionRecord(
+            reason=reason,
+            condition_ids=condition_ids or [],
+            causal_time=len(attempts),
+            logical_time=logical_time,
+            public_summary=summary,
+            evidence_event_ids=evidence_event_ids,
+        )
+
+    def terminal_completion() -> CompletionRecord | None:
+        if run_control is None:
+            return None
+        matched = terminal_condition_ids(run_control, session.core_state)
+        if matched:
+            return completion_at_boundary(
+                reason="terminal_condition_met",
+                condition_ids=matched,
+            )
+        return None
+
     if checkpoint is None:
         try:
             session.activate(
@@ -711,9 +785,41 @@ def run_event_driven_service_desk(
         observe()
 
     while (due := session.next_due_activation()) is not None:
-        if len(session.attempts) >= SERVICE_DESK_MAX_CAUSAL_MOMENTS:
-            raise RuntimeError(
-                "service-desk event scheduler exceeded its causal-moment bound"
+        completion = terminal_completion()
+        if completion is not None:
+            return session.complete(completion=completion)
+        if (
+            run_control is not None
+            and run_control.modeled_time_horizon is not None
+            and due.logical_time > run_control.modeled_time_horizon.logical_time
+        ):
+            return session.complete(
+                completion=completion_at_boundary(reason="modeled_time_horizon"),
+                discard_pending_effects=True,
+            )
+        if stop_requested is not None and stop_requested():
+            return session.complete(
+                completion=completion_at_boundary(reason="operator_stopped"),
+                discard_pending_effects=True,
+            )
+        moment_cap = (
+            run_control.max_causal_moments
+            if run_control is not None
+            else SERVICE_DESK_MAX_CAUSAL_MOMENTS
+        )
+        if len(session.attempts) >= moment_cap:
+            return session.complete(
+                completion=completion_at_boundary(reason="safety_limit"),
+                discard_pending_effects=True,
+            )
+        if run_control is not None and sum(
+            len(participant.call_evidence)
+            for attempt in session.attempts
+            for participant in attempt.participants
+        ) >= run_control.max_participant_calls:
+            return session.complete(
+                completion=completion_at_boundary(reason="safety_limit"),
+                discard_pending_effects=True,
             )
         try:
             session.activate(
@@ -724,8 +830,18 @@ def run_event_driven_service_desk(
         except Exception:
             observe()
             raise
+        completion = terminal_completion()
+        if completion is not None:
+            return session.complete(completion=completion)
         observe()
-    return session.complete()
+    completion = terminal_completion()
+    if completion is not None:
+        return session.complete(completion=completion)
+    return session.complete(
+        completion=completion_at_boundary(reason="quiescent_before_terminal")
+        if run_control is not None
+        else None
+    )
 
 
 def _entities(arm: ServiceDeskArmConfiguration) -> dict[str, EntityState]:
