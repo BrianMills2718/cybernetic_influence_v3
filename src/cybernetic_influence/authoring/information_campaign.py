@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict
 
@@ -12,7 +13,11 @@ from cybernetic_influence.active_runtime import (
     ActiveRuntimeSession, ActiveStepResult, ActiveSystemBinding, ActiveSystemInput,
     ActiveSystemSpec, ActionIntent, ScriptedActiveSystem,
 )
-from cybernetic_influence.authoring.models import ScenarioDraftProposal
+from cybernetic_influence.authoring.models import (
+    InformationCampaignWorkflowDraft,
+    ScenarioDraftProposal,
+)
+from cybernetic_influence.authoring.live import bind_authored_people
 from cybernetic_influence.causal_core.engine import ExactMechanismBinding, MechanismContext
 from cybernetic_influence.causal_core.models import (
     AnalyticalBoundary, CarrierState, CausalScenario, CausalState, ConnectionState,
@@ -23,6 +28,10 @@ from cybernetic_influence.causal_core.models import (
 
 _ENCODING = "application/vnd.cybernetic.information-claim+json"
 _ASSESSMENT_ENCODING = "application/vnd.cybernetic.claim-assessment+json"
+AssessmentDisposition = Literal["accepted", "contested", "uncertain", "deferred"]
+_ASSESSMENT_DISPOSITIONS = frozenset(
+    {"accepted", "contested", "uncertain", "deferred"}
+)
 
 
 class _Claim(BaseModel):
@@ -35,7 +44,7 @@ class _Claim(BaseModel):
 class _Assessment(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     campaign_id: str
-    disposition: str
+    disposition: AssessmentDisposition
 
 
 @dataclass(frozen=True)
@@ -95,9 +104,29 @@ def information_campaign_fixture(proposal: ScenarioDraftProposal) -> Information
             link_kind="authored_pathway", description=item.description,
         ) for item in proposal.spatial_links},
         ports={
-            "source_publish_out": PortState(port_id="source_publish_out", owner_ref=workflow.source_id, direction="output", effect_type="publish_claim", description="Attempt publication of the retained claim."),
+            "source_publish_out": PortState(
+                port_id="source_publish_out",
+                owner_ref=workflow.source_id,
+                direction="output",
+                effect_type="publish_claim",
+                description=(
+                    "Attempt publication of the selected retained claim "
+                    "representation. Payload must be empty {}."
+                ),
+            ),
             "publication_in": PortState(port_id="publication_in", owner_ref="exact_publication_delivery", direction="input", effect_type="publish_claim", description="Receive a publication attempt."),
-            "recipient_assess_out": PortState(port_id="recipient_assess_out", owner_ref=workflow.recipient_id, direction="output", effect_type="record_assessment", description="Record the recipient's assessment attempt."),
+            "recipient_assess_out": PortState(
+                port_id="recipient_assess_out",
+                owner_ref=workflow.recipient_id,
+                direction="output",
+                effect_type="record_assessment",
+                description=(
+                    "Record an assessment of the delivered claim. Payload must "
+                    'contain one field named "disposition", equal to accepted, '
+                    "contested, uncertain, or deferred. Put explanatory detail "
+                    "in orientation and public_summary, not in the disposition."
+                ),
+            ),
             "assessment_in": PortState(port_id="assessment_in", owner_ref="exact_assessment_recording", direction="input", effect_type="record_assessment", description="Receive an assessment for exact recording."),
         },
         connections={
@@ -183,14 +212,61 @@ def information_campaign_scripted_bindings(fixture: InformationCampaignFixture) 
     return result
 
 
+def information_campaign_native_fixture_and_bindings(
+    fixture: InformationCampaignFixture,
+    *,
+    trace_id_prefix: str,
+    model: str,
+    reasoning_effort: str,
+    structured_call: Any = None,
+) -> tuple[InformationCampaignFixture, dict[str, ActiveSystemBinding]]:
+    """Bind reviewed source and recipient profiles to native LLM policies."""
+
+    workflow = fixture.proposal.workflow
+    if not isinstance(workflow, InformationCampaignWorkflowDraft):
+        raise ValueError("information campaign live binding requires its matching workflow")
+    people = {person.entity_id: person for person in fixture.proposal.people}
+    specs, bindings = bind_authored_people(
+        fixture.active_specs,
+        {
+            "campaign_source": people[workflow.source_id],
+            "campaign_recipient": people[workflow.recipient_id],
+        },
+        trace_id_prefix=trace_id_prefix,
+        model=model,
+        reasoning_effort=reasoning_effort,
+        retained_context={
+            "campaign_source": (
+                (
+                    "retained_claim",
+                    fixture.scenario.initial_state.representations[
+                        "claim_copy"
+                    ].content,
+                ),
+            ),
+        },
+        structured_call=structured_call,
+    )
+    return replace(fixture, active_specs=specs), bindings
+
+
 def run_information_campaign(
-    fixture: InformationCampaignFixture, bindings: Mapping[str, ActiveSystemBinding], *, run_id: str,
+    fixture: InformationCampaignFixture,
+    bindings: Mapping[str, ActiveSystemBinding],
+    *,
+    run_id: str,
+    runtime_config: ActiveRuntimeConfig | None = None,
 ) -> ActiveRuntimeResult:
     session = ActiveRuntimeSession(
         fixture.scenario, fixture.exact_bindings, fixture.active_specs, bindings,
-        run_id=run_id, config=ActiveRuntimeConfig(
-            per_call_budget=0.01, per_run_budget=0.02, max_actions_per_system=1,
-            max_observations_per_system=8, max_private_state_bytes=8192,
+        run_id=run_id,
+        config=runtime_config
+        or ActiveRuntimeConfig(
+            per_call_budget=0.01,
+            per_run_budget=0.02,
+            max_actions_per_system=1,
+            max_observations_per_system=8,
+            max_private_state_bytes=8192,
         ),
     )
     session.activate(["campaign_source"], logical_time=0, activation_causes={
@@ -232,6 +308,8 @@ def _exact_bindings() -> dict[str, ExactMechanismBinding]:
 
 
 def _deliver(context: MechanismContext) -> MechanismOutcome:
+    if context.effect.payload:
+        raise ValueError("claim publication payload must be empty")
     source = _source_representation(context)
     representation_id = f"delivered_{context.route_event_id}"
     return MechanismOutcome(
@@ -252,7 +330,15 @@ def _deliver(context: MechanismContext) -> MechanismOutcome:
 
 def _record_assessment(context: MechanismContext) -> MechanismOutcome:
     claim = _Claim.model_validate_json(_source_representation(context).content)
-    disposition = str(context.effect.payload.get("disposition", "unassessed"))
+    disposition_value = context.effect.payload.get("disposition")
+    if (
+        not isinstance(disposition_value, str)
+        or disposition_value not in _ASSESSMENT_DISPOSITIONS
+    ):
+        raise ValueError(
+            "assessment disposition must be accepted, contested, uncertain, or deferred"
+        )
+    disposition = cast(AssessmentDisposition, disposition_value)
     assessment = _Assessment(campaign_id=claim.campaign_id, disposition=disposition)
     return MechanismOutcome(
         outcome_code="assessment_recorded",

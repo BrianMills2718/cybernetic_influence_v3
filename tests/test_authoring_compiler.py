@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+import re
+from types import SimpleNamespace
+from typing import Any
+
+import pytest
+
 from cybernetic_influence.authoring import (
     AuthoringCompilationError,
     ScenarioDraftProposal,
@@ -197,6 +203,69 @@ def test_exact_gate_denies_unavailable_resource_after_reviewer_attempt() -> None
         and "denied_unavailable" in event.summary
         for event in result.core_result.events
     )
+
+
+def test_live_resource_people_use_the_reviewed_profile_and_exact_gate() -> None:
+    compiled = compile_resource_request(_proposal())
+    system_prompts: list[str] = []
+
+    def decide(
+        _model: str,
+        messages: list[dict[str, str]],
+        **kwargs: Any,
+    ) -> tuple[object, object]:
+        system_prompts.append(messages[0]["content"])
+        trace_id = str(kwargs["trace_id"])
+        response_model = kwargs["response_model"]
+        requester = "/requester/" in trace_id
+        permitted = re.search(
+            r"permitted representation IDs:\s+([a-z][a-z0-9_]*)",
+            messages[1]["content"],
+        )
+        assert permitted is not None
+        return (
+            response_model.model_validate(
+                {
+                    "orientation": "I will act using the available record and interface.",
+                    "memory_update": "I remember the action I attempted.",
+                    "actions": [
+                        {
+                            "output_port_id": (
+                                "requester_submit_out"
+                                if requester
+                                else "reviewer_decision_out"
+                            ),
+                            "representation_id": permitted.group(1),
+                            "payload": "{}" if requester else '{"approve":true}',
+                            "public_summary": (
+                                "Ari submitted the equipment request."
+                                if requester
+                                else "Mina requested reservation approval."
+                            ),
+                        }
+                    ],
+                    "silence_reason": None,
+                }
+            ),
+            SimpleNamespace(cost=0.01, cost_source="provider_reported"),
+        )
+
+    result = compiled.run_live(
+        run_id="equipment_checkout_live_profiles",
+        model="openrouter/openai/gpt-5.6-terra",
+        reasoning_effort="medium",
+        per_call_budget=0.05,
+        per_run_budget=0.20,
+        structured_call=decide,
+    )
+
+    assert result.model_calls == 2
+    assert result.total_observed_cost == pytest.approx(0.02)
+    assert result.core_result.final_state.fact("laptop_12.availability").value == (
+        "reserved"
+    )
+    assert "Ari values being prepared for fieldwork." in system_prompts[0]
+    assert "Mina tends to check records before deciding." in system_prompts[1]
 
 
 def test_compiler_rejects_unknown_boundary_referent() -> None:

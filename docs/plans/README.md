@@ -12,14 +12,21 @@ and current truth. This directory preserves one bounded design and its evidence
 per completed slice; completed plans are historical evidence, not independent
 instructions to continue their former “next slice” sections.
 
-## Active packet
+## Current packet
+
+[Slice 19: Live authored people](019-live-authored-people.md) is completed
+technical evidence: either approved authoring template can replace its fixed
+person policies with configuration-bound LLM people. Reviewed profiles are
+projected as descriptive context; private memory, delivered observations, and
+current interfaces remain the only runtime input. The next gate is the
+operator's comprehension and usefulness judgment on the complete authored
+flow, not another enabling slice.
 
 [Slice 18: BDM-informed person review](018-bdm-informed-person-review.md) is
 completed evidence: authored people now have concise, directly editable
 behavioral assumptions organized as internal values, goals, beliefs, decision
 tendencies, perceived social conditions, current state, capabilities, and
-limitations. Direct edits are revisioned and make no LLM call. These profiles
-are not yet claimed to drive the scripted reference workflows.
+limitations. Direct edits are revisioned and make no LLM call.
 
 [Slice 17: Typed scenario authoring](017-conversational-scenario-authoring.md)
 is retained completed evidence for the two bounded reviewed templates,
@@ -55,6 +62,7 @@ is implemented and retained as completed design evidence.
 | [013](013-configurable-explainable-runs.md) | Configurable model, reasoning, spend, and fidelity explanation |
 | [017](017-conversational-scenario-authoring.md) | Conversational typed authoring for two reviewed templates |
 | [018](018-bdm-informed-person-review.md) | Directly editable BDM-informed person assumptions |
+| [019](019-live-authored-people.md) | Reviewed profiles connected to grounded live authored people |
 
 No completed plan is archived or deleted: each contains unique acceptance
 evidence and design lineage, while this index and explicit completion statuses

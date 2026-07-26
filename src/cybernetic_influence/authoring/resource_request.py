@@ -8,8 +8,9 @@ world-transition code.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,6 +31,7 @@ from cybernetic_influence.authoring.models import (
     ResourceRequestWorkflowDraft,
     ScenarioDraftProposal,
 )
+from cybernetic_influence.authoring.live import bind_authored_people
 from cybernetic_influence.causal_core.engine import (
     ExactMechanismBinding,
     MechanismContext,
@@ -221,11 +223,56 @@ def resource_request_scripted_bindings(
     return bindings
 
 
+def resource_request_native_fixture_and_bindings(
+    fixture: ResourceRequestFixture,
+    *,
+    trace_id_prefix: str,
+    model: str,
+    reasoning_effort: str,
+    structured_call: Any = None,
+) -> tuple[ResourceRequestFixture, dict[str, ActiveSystemBinding]]:
+    """Bind reviewed requester and reviewer profiles to native LLM policies."""
+
+    workflow = fixture.proposal.workflow
+    if not isinstance(workflow, ResourceRequestWorkflowDraft):
+        raise ValueError("resource request live binding requires its matching workflow")
+    people = {person.entity_id: person for person in fixture.proposal.people}
+    policy = next(
+        item
+        for item in fixture.proposal.information
+        if item.information_id == workflow.policy_information_id
+    )
+    specs, bindings = bind_authored_people(
+        fixture.active_specs,
+        {
+            "requester": people[workflow.requester_id],
+            "reviewer": people[workflow.reviewer_id],
+        },
+        trace_id_prefix=trace_id_prefix,
+        model=model,
+        reasoning_effort=reasoning_effort,
+        retained_context={
+            "requester": (
+                (
+                    "retained_request",
+                    fixture.scenario.initial_state.representations[
+                        "request_copy"
+                    ].content,
+                ),
+            ),
+            "reviewer": (("written_policy", policy.content),),
+        },
+        structured_call=structured_call,
+    )
+    return replace(fixture, active_specs=specs), bindings
+
+
 def run_resource_request(
     fixture: ResourceRequestFixture,
     bindings: Mapping[str, ActiveSystemBinding],
     *,
     run_id: str,
+    runtime_config: ActiveRuntimeConfig | None = None,
 ) -> ActiveRuntimeResult:
     """Run the known template event by event, without a provider call."""
 
@@ -235,7 +282,8 @@ def run_resource_request(
         fixture.active_specs,
         bindings,
         run_id=run_id,
-        config=ActiveRuntimeConfig(
+        config=runtime_config
+        or ActiveRuntimeConfig(
             per_call_budget=0.01,
             per_run_budget=0.02,
             max_actions_per_system=1,
@@ -322,7 +370,11 @@ def _ports(requester_id: str, reviewer_id: str) -> dict[str, PortState]:
     return {
         "requester_submit_out": PortState(
             port_id="requester_submit_out", owner_ref=requester_id, direction="output",
-            effect_type="resource_request", description="Submit the retained request to the configured route.",
+            effect_type="resource_request",
+            description=(
+                "Submit the selected retained request representation to the "
+                "configured route. Payload must be empty {}."
+            ),
         ),
         "reviewer_request_in": PortState(
             port_id="reviewer_request_in", owner_ref="exact_request_delivery", direction="input",
@@ -330,7 +382,12 @@ def _ports(requester_id: str, reviewer_id: str) -> dict[str, PortState]:
         ),
         "reviewer_decision_out": PortState(
             port_id="reviewer_decision_out", owner_ref=reviewer_id, direction="output",
-            effect_type="review_decision", description="Record the reviewer's requested disposition.",
+            effect_type="review_decision",
+            description=(
+                "Submit the delivered request to the exact reservation gate. "
+                'Payload must be {"approve": true} to request reservation or '
+                '{"approve": false} to request denial.'
+            ),
         ),
         "reservation_gate_in": PortState(
             port_id="reservation_gate_in", owner_ref="exact_reservation_gate", direction="input",
@@ -467,6 +524,8 @@ def _exact_bindings() -> dict[str, ExactMechanismBinding]:
 
 
 def _deliver(context: MechanismContext) -> MechanismOutcome:
+    if context.effect.payload:
+        raise ValueError("resource delivery payload must be empty")
     source = _source(context)
     carrier_id = {
         "exact_request_delivery": "reviewer_request_buffer",
@@ -492,7 +551,10 @@ def _deliver(context: MechanismContext) -> MechanismOutcome:
 def _reserve(context: MechanismContext) -> MechanismOutcome:
     request = _Request.model_validate_json(_source(context).content)
     policy = _Policy.model_validate_json(context.read_representation("policy_copy").content)
-    approved = context.effect.payload.get("approve") is True
+    approve_value = context.effect.payload.get("approve")
+    if not isinstance(approve_value, bool):
+        raise ValueError("review decision approve must be a boolean")
+    approved = approve_value
     available = context.read(f"{request.resource_id}.availability") == "available"
     eligible = request.requester_id in policy.eligible_requester_ids
     status = "reserved" if approved and available and eligible else (
@@ -531,8 +593,11 @@ def _delivery_valid(context: MechanismContext, outcome: MechanismOutcome) -> boo
 def _reservation_valid(context: MechanismContext, outcome: MechanismOutcome) -> bool:
     request = _Request.model_validate_json(_source(context).content)
     policy = _Policy.model_validate_json(context.read_representation("policy_copy").content)
+    approve_value = context.effect.payload.get("approve")
+    if not isinstance(approve_value, bool):
+        return False
     expected = "reserved" if (
-        context.effect.payload.get("approve") is True
+        approve_value is True
         and context.read(f"{request.resource_id}.availability") == "available"
         and request.requester_id in policy.eligible_requester_ids
     ) else ("denied_unavailable" if context.read(f"{request.resource_id}.availability") != "available" else "denied_ineligible")

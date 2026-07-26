@@ -5,14 +5,22 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from pytest import MonkeyPatch
 
+import cybernetic_influence.api as api_module
+from cybernetic_influence.active_runtime import (
+    ActiveSystemExecutionError,
+    ModelCallEvidence,
+)
 from cybernetic_influence.api import create_app
+from cybernetic_influence.authoring.compiler import CompiledScenario
 from cybernetic_influence.authoring.service import (
     _ProposalConsumer,
     _prompt,
     _provider_candidate_from_proposal,
 )
 from cybernetic_influence.authoring.models import ResourceRequestWorkflowDraft
+from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 from llm_client import LLMCapabilityError, LLMQuotaExhaustedError
 from test_authoring_compiler import _proposal
 from test_authoring_information_campaign import information_campaign_proposal
@@ -73,6 +81,140 @@ def test_draft_is_idempotent_revisioned_previewable_approved_and_runnable(tmp_pa
     assert run.json()["execution"] == "scripted"
     assert run.json()["cost"] == 0.0
     assert run.json()["authoring"]["draft_id"] == draft_id
+
+
+def test_authored_live_run_requires_authorization_and_live_options(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CYBERNETIC_INFLUENCE_LIVE", raising=False)
+    api = _client(tmp_path)
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "m1",
+            "message": "Model equipment checkout.",
+        },
+    )
+    api.post(
+        f"/api/authoring/drafts/{draft_id}/approve",
+        json={"expected_revision": 1},
+    )
+    options = {
+        "model": "openrouter/openai/gpt-5.6-terra",
+        "agent_reasoning_effort": "medium",
+        "max_total_cost": 0.20,
+    }
+
+    unauthorized = api.post(
+        f"/api/authoring/drafts/{draft_id}/runs",
+        json={"execution": "live", "llm_options": options},
+    )
+    scripted_with_spend = api.post(
+        f"/api/authoring/drafts/{draft_id}/runs",
+        json={"execution": "scripted", "llm_options": options},
+    )
+
+    assert unauthorized.status_code == 403
+    assert scripted_with_spend.status_code == 422
+
+
+def test_failed_authored_live_run_is_retained_with_provider_evidence(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    effective = EffectiveRunLlmConfiguration(
+        model="openrouter/deepseek/deepseek-v3.2",
+        agent_reasoning_effort="none",
+        narrator_reasoning_effort="none",
+        max_total_cost=0.20,
+        selection_basis="operator_selected",
+        llm_client_revision="package:0.7.0",
+    )
+    monkeypatch.setattr(
+        api_module,
+        "resolve_live_configuration",
+        lambda _options: effective,
+    )
+    evidence = ModelCallEvidence(
+        status="failed",
+        trace_id="authored/failure/active/source",
+        model=effective.model,
+        task="cybernetic_influence.active_system.resource_request_v1.source",
+        reasoning_effort="none",
+        system_prompt="Act only from the bounded input.",
+        user_prompt="The bounded input.",
+        cost=0.01,
+        cost_source="provider_reported",
+        error_type="ForcedProviderError",
+        error_message="forced provider failure",
+    )
+
+    def fail_live(
+        _compiled: CompiledScenario,
+        **_kwargs: object,
+    ) -> object:
+        raise ActiveSystemExecutionError(
+            "forced provider failure",
+            call_evidence=(evidence,),
+        )
+
+    monkeypatch.setattr(CompiledScenario, "run_live", fail_live)
+    api = _client(tmp_path)
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    drafted = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "m1",
+            "message": "Model equipment checkout.",
+        },
+    ).json()
+    api.post(
+        f"/api/authoring/drafts/{draft_id}/approve",
+        json={"expected_revision": drafted["revision"]},
+    )
+
+    failed = api.post(
+        f"/api/authoring/drafts/{draft_id}/runs",
+        json={
+            "execution": "live",
+            "llm_options": {
+                "model": effective.model,
+                "agent_reasoning_effort": "none",
+                "max_total_cost": 0.20,
+            },
+        },
+    )
+
+    assert failed.status_code == 500
+    assert failed.json()["detail"] == (
+        "authored simulation failed; retained for inspection"
+    )
+    retained = api.get("/api/runs").json()["runs"][0]
+    assert retained["status"] == "failed"
+    run = api.get(f"/api/runs/{retained['run_id']}").json()
+    assert run["model_calls"] == 1
+    assert run["cost"] == 0.01
+    assert run["model_call_summaries"] == [
+        {
+            "status": "failed",
+            "trace_id": "authored/failure/active/source",
+            "task": (
+                "cybernetic_influence.active_system."
+                "resource_request_v1.source"
+            ),
+            "model": effective.model,
+            "reasoning_effort": "none",
+            "cost": 0.01,
+            "cost_source": "provider_reported",
+            "error_type": "ForcedProviderError",
+            "error_message": "forced provider failure",
+        }
+    ]
 
 
 def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: Path) -> None:

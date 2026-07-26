@@ -71,6 +71,10 @@ The simulator currently includes:
   memories, values, goals, beliefs, decision tendencies, perceived social
   conditions, current state, capabilities, and limitations; direct edits are
   retained without an LLM call and do not grant runtime authority or interfaces;
+- explicit zero-cost-reference and live-person execution for approved authored
+  scenarios; live people receive those reviewed profiles plus only private
+  memory, delivered observations, and currently exposed interfaces, while
+  existing exact mechanisms alone commit world effects;
 - an exact information-campaign reference path that distinguishes a source's
   publication attempt, configured channel delivery, and recipient assessment
   without pretending to infer persuasion or geopolitical effects.
@@ -101,6 +105,9 @@ canonical checklist is in
 [Slice 14](docs/plans/014-pausable-live-runs.md). Typed scenario authoring now
 supports two bounded reviewed templates; its compiler and approval contract is in
 [Slice 17](docs/plans/017-conversational-scenario-authoring.md).
+Reviewed authored people can now drive either approved template through the
+same native LLM boundary; [Slice 19](docs/plans/019-live-authored-people.md)
+owns that profile-to-trace contract and its bounded OpenRouter evidence.
 
 The user-facing Service Desk simulation is autonomous and event driven. Its
 initial customer report starts the triager; thereafter, newly delivered

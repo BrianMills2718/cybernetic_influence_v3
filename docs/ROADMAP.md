@@ -417,10 +417,23 @@ Slice 18 makes each authored person’s scenario assumptions tractable before
 approval. It uses the Behavioural Drivers Model as a selective vocabulary, not
 an exhaustive personality taxonomy: perceived social conditions remain
 fallible beliefs, while actual policies, incentives, relationships, information
-deliveries, interfaces, and constraints remain external world state. A later
-slice may connect reviewed profiles to live authored people through the existing
-observation and interface boundary; until that trace exists, the UI and docs
-must not describe scripted outcomes as psychologically caused.
+deliveries, interfaces, and constraints remain external world state.
+
+Slice 19 connects those reviewed profiles to live authored people through the
+existing private-memory, delivered-observation, and exposed-interface boundary.
+The approved-draft UI now distinguishes a fixed zero-cost reference from live
+people with an explicit model, reasoning, and hard-cost selection. The
+information-campaign canary retained the source's publication decision, exact
+claim delivery, the recipient's grounded contested assessment, exact recording,
+and sequential evidence-citing narration. Its analytical boundaries remained
+execution-inert. This establishes technical execution, not empirical
+psychological validity or a claim that any one profile field caused the action.
+
+The next decision is stakeholder observation of the complete authored flow:
+revise people, approve, inspect both maps, run live, and decide whether the
+narrative and person traces make the modeled behavior understandable. Extend
+the compiler beyond the two reviewed templates only after that check identifies
+a concrete blocked scenario or approves the current interaction.
 
 ### 10. Comparative causal analysis — post-MVP
 

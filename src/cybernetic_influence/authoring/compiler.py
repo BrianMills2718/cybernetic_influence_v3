@@ -11,8 +11,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+from typing import Any
 
-from cybernetic_influence.active_runtime import ActiveRuntimeResult
+from cybernetic_influence.active_runtime import ActiveRuntimeConfig, ActiveRuntimeResult
 from cybernetic_influence.authoring.models import (
     InformationCampaignWorkflowDraft,
     ResourceRequestWorkflowDraft,
@@ -21,12 +22,14 @@ from cybernetic_influence.authoring.models import (
 from cybernetic_influence.authoring.information_campaign import (
     InformationCampaignFixture,
     information_campaign_fixture,
+    information_campaign_native_fixture_and_bindings,
     information_campaign_scripted_bindings,
     run_information_campaign,
 )
 from cybernetic_influence.authoring.resource_request import (
     ResourceRequestFixture,
     resource_request_fixture,
+    resource_request_native_fixture_and_bindings,
     resource_request_scripted_bindings,
     run_resource_request,
 )
@@ -106,6 +109,57 @@ class CompiledScenario:
             self.fixture,
             resource_request_scripted_bindings(self.fixture),
             run_id=run_id,
+        )
+
+    def run_live(
+        self,
+        *,
+        run_id: str,
+        model: str,
+        reasoning_effort: str,
+        per_call_budget: float,
+        per_run_budget: float,
+        structured_call: Any = None,
+    ) -> ActiveRuntimeResult:
+        """Run reviewed people through native LLM policies and exact mechanisms."""
+
+        runtime_config = ActiveRuntimeConfig(
+            per_call_budget=per_call_budget,
+            per_run_budget=per_run_budget,
+            max_actions_per_system=1,
+            max_observations_per_system=8,
+            max_private_state_bytes=16_384,
+        )
+        if isinstance(self.fixture, InformationCampaignFixture):
+            campaign_fixture, campaign_bindings = (
+                information_campaign_native_fixture_and_bindings(
+                    self.fixture,
+                    trace_id_prefix=run_id,
+                    model=model,
+                    reasoning_effort=reasoning_effort,
+                    structured_call=structured_call,
+                )
+            )
+            return run_information_campaign(
+                campaign_fixture,
+                campaign_bindings,
+                run_id=run_id,
+                runtime_config=runtime_config,
+            )
+        request_fixture, request_bindings = (
+            resource_request_native_fixture_and_bindings(
+                self.fixture,
+                trace_id_prefix=run_id,
+                model=model,
+                reasoning_effort=reasoning_effort,
+                structured_call=structured_call,
+            )
+        )
+        return run_resource_request(
+            request_fixture,
+            request_bindings,
+            run_id=run_id,
+            runtime_config=runtime_config,
         )
 
 

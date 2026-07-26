@@ -34,7 +34,8 @@ const buttonTooltips = {
   'authoring-draft': 'Send this message with the selected model and thinking level to generate the next saved draft revision.',
   'authoring-copy-link': 'Copy a link that reopens this automatically saved draft.',
   'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
-  'authoring-run': 'Run the approved draft with the zero-cost reference policy.',
+  'authoring-run': 'Run the approved draft with fixed zero-cost reference actions. This checks the compiled routes and exact mechanisms, not the reviewed personalities.',
+  'authoring-live-run': 'Run the approved draft with each concrete person driven by an LLM from their reviewed profile, private memory, delivered observations, and exposed interfaces.',
   'authoring-spatial-layout': 'Show the proposed places, occupants, and physical links. This does not grant access or permission.',
   'authoring-causal-layout': 'Show the proposed configured interaction pathways. A pathway does not itself grant authority.',
   'authoring-trajectory-layout': 'A realized causal graph becomes available only after the approved scenario runs.',
@@ -300,6 +301,10 @@ function renderAuthoring() {
   const approvable = !!draft.proposal && diagnostics.length === 0 && draft.status === 'ready_for_review'
   $('#authoring-approve').hidden = !approvable
   $('#authoring-run').hidden = draft.status !== 'approved'
+  const authoredLiveAvailable = runtimeConfig.live_authorized &&
+    ((runtimeConfig.live_options?.models || []).length > 0)
+  $('#authoring-live-run').hidden = draft.status !== 'approved' || !authoredLiveAvailable
+  $('#authoring-live-settings').hidden = draft.status !== 'approved' || !authoredLiveAvailable
   renderAuthoringProjectionControls()
   if (authoringPreview?.nodes && window.CyberneticGraph) {
     $('#authoring-graph').classList.add('react-canvas-host')
@@ -458,6 +463,16 @@ async function loadConfig() {
     liveOptions.defaults?.agent_reasoning_effort || config.reasoning_effort
   )
   $('#max-cost').value = Number(liveOptions.defaults?.max_total_cost || config.maximum_live_cost).toFixed(2)
+  $('#authoring-live-model').innerHTML = choices.map((choice) =>
+    `<option value="${html(choice.model)}">${html(choice.label)}</option>`
+  ).join('')
+  $('#authoring-live-model').value = liveOptions.defaults?.model || config.model
+  configureAuthoringLiveReasoning(
+    liveOptions.defaults?.agent_reasoning_effort || config.reasoning_effort
+  )
+  $('#authoring-live-cost').value = Number(
+    liveOptions.defaults?.max_total_cost || config.maximum_live_cost
+  ).toFixed(2)
   $('#max-cost').max = liveOptions.limits?.server_max_total_cost || config.maximum_live_cost
   const help = liveOptions.help || {}
   $('#model-help').textContent = help.model || ''
@@ -563,6 +578,19 @@ function configureReasoningChoices(preferred = null) {
     ? preferred
     : choice?.default_agent_reasoning_effort || efforts[0]
   updateReasoningHelp()
+}
+
+function configureAuthoringLiveReasoning(preferred = null) {
+  const choices = runtimeConfig.live_options?.models || []
+  const choice = choices.find((item) => item.model === $('#authoring-live-model').value)
+  const efforts = choice?.agent_reasoning_efforts || ['low', 'medium', 'high']
+  const experimental = new Set(choice?.experimental_agent_reasoning_efforts || [])
+  $('#authoring-live-reasoning').innerHTML = efforts.map((effort) =>
+    `<option value="${html(effort)}">${html(formatReasoningEffort(effort))}${experimental.has(effort) ? ' (experimental)' : ''}</option>`
+  ).join('')
+  $('#authoring-live-reasoning').value = efforts.includes(preferred)
+    ? preferred
+    : choice?.default_agent_reasoning_effort || efforts[0]
 }
 
 function formatReasoningEffort(effort) {
@@ -1502,6 +1530,7 @@ $('#model').onchange = () => {
   configureReasoningChoices()
   updateAuthorizationPreview()
 }
+$('#authoring-live-model').onchange = () => configureAuthoringLiveReasoning()
 $('#reasoning').onchange = () => {
   updateReasoningHelp()
   updateAuthorizationPreview()
@@ -1653,6 +1682,39 @@ $('#authoring-run').onclick = async () => {
   } catch (error) {
     $('#authoring-status').textContent = error.message
   } finally {
+    $('#authoring-run').disabled = false
+  }
+}
+
+$('#authoring-live-run').onclick = async () => {
+  if (!authoringDraft) return
+  $('#authoring-live-run').disabled = true
+  $('#authoring-run').disabled = true
+  $('#authoring-status').textContent = 'Running the approved scenario with live people…'
+  try {
+    const run = await request(`/api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/runs`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        execution:'live',
+        llm_options:{
+          model:$('#authoring-live-model').value,
+          agent_reasoning_effort:$('#authoring-live-reasoning').value,
+          max_total_cost:Number($('#authoring-live-cost').value),
+        },
+      }),
+    })
+    setWorkspaceView('simulation')
+    render(run)
+    const url = new URL(window.location)
+    url.searchParams.delete('draft')
+    url.searchParams.set('run', run.run_id)
+    window.history.replaceState({}, '', url)
+    await loadHistory()
+  } catch (error) {
+    $('#authoring-status').textContent = error.message
+  } finally {
+    $('#authoring-live-run').disabled = false
     $('#authoring-run').disabled = false
   }
 }

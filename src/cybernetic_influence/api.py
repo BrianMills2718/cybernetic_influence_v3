@@ -147,7 +147,8 @@ class DraftPersonEditRequest(BaseModel):
 
 class AuthoredRunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    execution: Literal["scripted"] = "scripted"
+    execution: Literal["scripted", "live"] = "scripted"
+    llm_options: RunLlmOptions | None = None
 
 
 def _scenario_preview(
@@ -466,56 +467,159 @@ def create_app(
         draft_id: str, body: AuthoredRunRequest, request: Request
     ) -> dict[str, object]:
         _require_access(request)
+        live = body.execution == "live"
+        if not live and body.llm_options is not None:
+            raise HTTPException(
+                status_code=422,
+                detail="llm_options apply only to live execution",
+            )
+        if live and os.getenv("CYBERNETIC_INFLUENCE_LIVE") != "1":
+            raise HTTPException(
+                status_code=403,
+                detail="live execution requires CYBERNETIC_INFLUENCE_LIVE=1",
+            )
+        effective_llm: EffectiveRunLlmConfiguration | None = None
+        if live:
+            try:
+                effective_llm = resolve_live_configuration(body.llm_options)
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
         try:
             compiled = authoring.approved_compile(draft_id)
         except DraftNotFoundError as error:
-            raise HTTPException(status_code=404, detail="authoring draft not found") from error
+            raise HTTPException(
+                status_code=404,
+                detail="authoring draft not found",
+            ) from error
         except (ValueError, AuthoringCompilationError) as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
+
+        lock_acquired = live and live_lock.acquire(blocking=False)
+        if live and not lock_acquired:
+            raise HTTPException(
+                status_code=409,
+                detail="another live run is already active",
+            )
         run_id = f"run_{uuid4().hex[:12]}"
-        result = compiled.run_scripted(run_id=run_id)
-        workflow = compiled.proposal.workflow
-        outcome_entity_id = (
-            workflow.request_id
-            if workflow.template_id == "resource_request_v1"
-            else workflow.campaign_id
-        )
-        outcome_status = result.core_result.final_state.entities[
-            outcome_entity_id
-        ].attributes["status"].value
-        title = compiled.proposal.title
-        resource_request = workflow.template_id == "resource_request_v1"
-        outcome: dict[str, object] = {
-            "status": outcome_status,
-            "draft_id": draft_id,
-            "template_id": workflow.template_id,
-        }
-        if resource_request:
-            outcome["request_status"] = outcome_status
-        document = build_analyst_document(
-            initial_state=compiled.scenario.initial_state,
-            analytical_boundaries=compiled.scenario.analytical_boundaries,
-            result=result,
-            scenario=compiled.scenario.scenario_id,
-            profile="authored_typed_scenario",
-            arm_id="approved_draft",
-            execution=body.execution,
-            created_at=now_iso(),
-            outcome=outcome,
-            headline=(
-                ("Resource reserved" if outcome_status == "reserved" else "Resource request denied")
-                if resource_request
-                else ("Claim delivered and assessed" if str(outcome_status).startswith("assessed_") else "Claim was not delivered")
+        created_at = now_iso()
+        initial: dict[str, object] = {
+            "run_id": run_id,
+            "created_at": created_at,
+            "status": "running",
+            "scenario": compiled.scenario.scenario_id,
+            "profile": "authored_typed_scenario",
+            "arm": "approved_draft",
+            "execution": body.execution,
+            "model_calls": 0,
+            "cost": 0.0,
+            "llm_configuration": (
+                effective_llm.model_dump(mode="json")
+                if effective_llm is not None
+                else None
             ),
-            summary=(
-                f"{title}: the exact {'reservation' if resource_request else 'information-delivery'} mechanisms recorded {outcome_status}."
-            ),
-        )
-        document["authoring"] = {
-            "draft_id": draft_id, "proposal_digest": compiled.proposal_digest,
-            "template_id": compiled.proposal.workflow.template_id,
+            "authoring": {
+                "draft_id": draft_id,
+                "proposal_digest": compiled.proposal_digest,
+                "template_id": compiled.proposal.workflow.template_id,
+            },
         }
-        return runs.save(_attach_narration(document, live=False, run_id=run_id, effective_llm=None))
+        runs.save(initial)
+        result: object | None = None
+        try:
+            result = (
+                compiled.run_live(
+                    run_id=run_id,
+                    model=effective_llm.model,
+                    reasoning_effort=effective_llm.agent_reasoning_effort,
+                    per_call_budget=effective_llm.participant_per_call_ceiling,
+                    per_run_budget=effective_llm.max_total_cost,
+                )
+                if effective_llm is not None
+                else compiled.run_scripted(run_id=run_id)
+            )
+            workflow = compiled.proposal.workflow
+            outcome_entity_id = (
+                workflow.request_id
+                if workflow.template_id == "resource_request_v1"
+                else workflow.campaign_id
+            )
+            outcome_status = result.core_result.final_state.entities[
+                outcome_entity_id
+            ].attributes["status"].value
+            title = compiled.proposal.title
+            resource_request = workflow.template_id == "resource_request_v1"
+            outcome: dict[str, object] = {
+                "status": outcome_status,
+                "draft_id": draft_id,
+                "template_id": workflow.template_id,
+            }
+            if resource_request:
+                outcome["request_status"] = outcome_status
+            document = build_analyst_document(
+                initial_state=compiled.scenario.initial_state,
+                analytical_boundaries=compiled.scenario.analytical_boundaries,
+                result=result,
+                scenario=compiled.scenario.scenario_id,
+                profile="authored_typed_scenario",
+                arm_id="approved_draft",
+                execution=body.execution,
+                created_at=created_at,
+                outcome=outcome,
+                headline=(
+                    (
+                        "Resource reserved"
+                        if outcome_status == "reserved"
+                        else "Resource request denied"
+                    )
+                    if resource_request
+                    else (
+                        "Claim delivered and assessed"
+                        if str(outcome_status).startswith("assessed_")
+                        else "Claim was not delivered"
+                    )
+                ),
+                summary=(
+                    f"{title}: the exact "
+                    f"{'reservation' if resource_request else 'information-delivery'} "
+                    f"mechanisms recorded {outcome_status}."
+                ),
+            )
+            document["authoring"] = initial["authoring"]
+            narrated = _attach_narration(
+                document,
+                live=live,
+                run_id=run_id,
+                effective_llm=effective_llm,
+            )
+            narrated["llm_configuration"] = initial["llm_configuration"]
+            narrated["model_call_summaries"] = _result_call_summaries(result)
+            return runs.save(narrated)
+        except Exception as error:
+            call_summaries = (
+                _result_call_summaries(result)
+                if result is not None
+                else []
+            )
+            call_summaries.extend(_error_call_summaries(error))
+            failed = {
+                **initial,
+                "status": "failed",
+                "error": f"{type(error).__name__}: {error}",
+                "model_call_summaries": call_summaries,
+                "model_calls": len(call_summaries),
+                "cost": sum(
+                    _nonnegative_float(item.get("cost"))
+                    for item in call_summaries
+                ),
+            }
+            runs.save(failed)
+            raise HTTPException(
+                status_code=500,
+                detail="authored simulation failed; retained for inspection",
+            ) from error
+        finally:
+            if lock_acquired:
+                live_lock.release()
 
     @app.get("/api/scenarios/{scenario}/preview")
     def scenario_preview(
@@ -1020,6 +1124,27 @@ def _attach_narration(
 def _result_call_summaries(result: object) -> list[dict[str, object]]:
     attempts = getattr(result, "attempts", ())
     return _attempt_call_summaries(attempts)
+
+
+def _error_call_summaries(error: Exception) -> list[dict[str, object]]:
+    """Project directly attached provider evidence from a failed activation."""
+
+    summaries: list[dict[str, object]] = []
+    for call in getattr(error, "call_evidence", ()):
+        summaries.append(
+            {
+                "status": getattr(call, "status", "failed"),
+                "trace_id": getattr(call, "trace_id", ""),
+                "model": getattr(call, "model", ""),
+                "task": getattr(call, "task", ""),
+                "reasoning_effort": getattr(call, "reasoning_effort", None),
+                "cost": getattr(call, "cost", None),
+                "cost_source": getattr(call, "cost_source", "unavailable"),
+                "error_type": getattr(call, "error_type", None),
+                "error_message": getattr(call, "error_message", None),
+            }
+        )
+    return summaries
 
 
 def _attempt_call_summaries(attempts: object) -> list[dict[str, object]]:

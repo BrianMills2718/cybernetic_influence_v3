@@ -47,7 +47,27 @@
           <button id="authoring-draft" type="button">Generate first draft</button>
         </div>
       </section>
-      <div class="authoring-actions"><button id="authoring-copy-link" type="button" hidden>Copy saved draft link</button><button id="authoring-approve" type="button" hidden>Approve this draft</button><button id="authoring-run" type="button" hidden>Play approved reference run</button></div>
+      <div class="authoring-actions">
+        <button id="authoring-copy-link" type="button" hidden>Copy saved draft link</button>
+        <button id="authoring-approve" type="button" hidden>Approve this draft</button>
+        <button id="authoring-run" type="button" hidden>Play zero-cost reference</button>
+        <button id="authoring-live-run" type="button" hidden>Play with live people</button>
+      </div>
+      <details id="authoring-live-settings" class="authoring-details" hidden>
+        <summary>Live people: model, thinking, and cost limit</summary>
+        <div class="settings-grid">
+          <label for="authoring-live-model">People and narrator model
+            <select id="authoring-live-model"></select>
+          </label>
+          <label for="authoring-live-reasoning">People's thinking
+            <select id="authoring-live-reasoning"></select>
+          </label>
+          <label for="authoring-live-cost">Hard run cost limit
+            <input id="authoring-live-cost" type="number" min="0.01" step="0.01">
+          </label>
+        </div>
+        <p class="muted">Live people receive only their reviewed profile, private memory, delivered observations, and exposed interfaces. Exact mechanisms still decide what changes in the world.</p>
+      </details>
       <details class="authoring-details">
         <summary>Drafting model and cost</summary>
         <p id="authoring-runtime" class="muted">Loading the structured authoring model…</p>
