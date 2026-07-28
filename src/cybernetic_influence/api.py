@@ -1100,8 +1100,9 @@ def create_app(
             }
             return runs.save(retain_progress_history(paused_document, run_id))
         except Exception as error:
+            latest = runs.get(run_id)
             failed = {
-                **paused,
+                **latest,
                 "status": "failed",
                 "error": f"{type(error).__name__}: {error}",
             }

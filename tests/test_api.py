@@ -945,6 +945,55 @@ def test_scripted_service_desk_pauses_at_a_boundary_and_resumes(
     assert resumed.json()["outcome"]["final_status"] == "closed_confirmed"
 
 
+def test_failed_resumed_run_retains_latest_checkpoint_evidence(tmp_path: Path) -> None:
+    api = client(tmp_path)
+    run_id = "run_feed00000000"
+
+    def pause_after_first_checkpoint(*args: Any, **kwargs: Any) -> Any:
+        observer = kwargs["checkpoint_observer"]
+
+        def stop_at_checkpoint(checkpoint: Any) -> None:
+            observer(checkpoint)
+            raise RuntimePaused(checkpoint)
+
+        kwargs["checkpoint_observer"] = stop_at_checkpoint
+        return original_run_service_desk(*args, **kwargs)
+
+    with patch(
+        "cybernetic_influence.api.run_event_driven_service_desk",
+        side_effect=pause_after_first_checkpoint,
+    ):
+        paused_response = api.post(
+            "/api/runs", json={"execution": "scripted", "run_id": run_id}
+        )
+    assert paused_response.status_code == 200, paused_response.text
+    paused = api.get(f"/api/runs/{run_id}").json()
+    assert paused["status"] == "paused"
+    paused_attempt_count = len(paused["continuation"]["checkpoint"]["attempts"])
+
+    def retain_then_fail(*args: Any, **kwargs: Any) -> Any:
+        observer = kwargs["checkpoint_observer"]
+
+        def fail_after_new_checkpoint(checkpoint: Any) -> None:
+            observer(checkpoint)
+            if len(checkpoint.attempts) > paused_attempt_count:
+                raise RuntimeError("resume failed after checkpoint retention")
+
+        kwargs["checkpoint_observer"] = fail_after_new_checkpoint
+        return original_run_service_desk(*args, **kwargs)
+
+    with patch(
+        "cybernetic_influence.api.run_event_driven_service_desk",
+        side_effect=retain_then_fail,
+    ):
+        with pytest.raises(RuntimeError, match="resume failed after checkpoint retention"):
+            api.post(f"/api/runs/{run_id}/resume")
+
+    retained = api.get(f"/api/runs/{run_id}").json()
+    assert retained["status"] == "failed"
+    assert len(retained["continuation"]["checkpoint"]["attempts"]) > paused_attempt_count
+
+
 def test_live_service_desk_resume_reuses_retained_llm_configuration(
     tmp_path: Path,
 ) -> None:

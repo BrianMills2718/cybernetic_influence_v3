@@ -788,6 +788,18 @@ def run_event_driven_service_desk(
             )
         return None
 
+    def complete_after_terminal_condition(
+        completion: CompletionRecord,
+    ) -> ActiveRuntimeResult:
+        """Settle effects already caused by the terminal action before sealing.
+
+        This intentionally does not activate people who receive those final
+        deliveries.  The configured terminal condition ends discretionary
+        participant behavior, not exact causal consequences already emitted.
+        """
+        session.drain_pending_exact_work()
+        return session.complete(completion=completion)
+
     if checkpoint is None:
         try:
             session.activate(
@@ -814,14 +826,14 @@ def run_event_driven_service_desk(
     while True:
         completion = terminal_completion()
         if completion is not None:
-            return session.complete(completion=completion)
+            return complete_after_terminal_condition(completion)
         if stop_requested is not None and stop_requested():
             # Drain only exact work already due at the current boundary. A stop
             # must never advance the world through a later scheduled delivery.
             session.next_due_activation(through=session.core_state.logical_time)
             completion = terminal_completion()
             if completion is not None:
-                return session.complete(completion=completion)
+                return complete_after_terminal_condition(completion)
             return session.complete(
                 completion=completion_at_boundary(reason="operator_stopped"),
                 discard_pending_effects=True,
@@ -854,7 +866,7 @@ def run_event_driven_service_desk(
         if due is None:
             completion = terminal_completion()
             if completion is not None:
-                return session.complete(completion=completion)
+                return complete_after_terminal_condition(completion)
             if horizon is not None and session.next_scheduled_time() is not None:
                 return session.complete(
                     completion=completion_at_boundary(reason="modeled_time_horizon"),
@@ -876,7 +888,7 @@ def run_event_driven_service_desk(
             raise
         completion = terminal_completion()
         if completion is not None:
-            return session.complete(completion=completion)
+            return complete_after_terminal_condition(completion)
         observe()
 
 

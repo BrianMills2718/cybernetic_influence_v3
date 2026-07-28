@@ -217,6 +217,24 @@ class ActiveRuntimeSession:
                 )
             return min(times) if times else None
 
+    def drain_pending_exact_work(self) -> None:
+        """Commit already-triggered exact work without activating new participants.
+
+        A terminal fact can become true while its mechanism still has retained
+        deliveries queued (for example, the closure receipt).  Those effects
+        are part of the committed causal consequence of the terminal action;
+        complete them before sealing the run, but do not schedule a new
+        participant decision after the selected terminal boundary.
+        """
+        with self._lock:
+            self._require_active()
+            while (due := self._core.next_pending_time) is not None:
+                if not self._settle_exact_due(due):
+                    raise ActiveRuntimeError(
+                        "pending exact work did not advance while draining a "
+                        "terminal boundary"
+                    )
+
     def _next_due_activation_after_exact_work(
         self, *, through: int | None = None
     ) -> DueActivation | None:

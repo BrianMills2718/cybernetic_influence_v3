@@ -594,6 +594,28 @@ def test_event_driven_service_desk_resumes_one_validated_prefix_without_duplicat
     assert resumed.core_result.final_state == uninterrupted.core_result.final_state
 
 
+def test_terminal_condition_drains_already_emitted_exact_effects() -> None:
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0],
+        cognition_profile="position_context",
+    )
+    result = run_event_driven_service_desk(
+        fixture,
+        service_desk_scripted_bindings(fixture),
+        run_id="service_desk_terminal_exact_drain",
+        run_control=resolve_run_control(service_desk_run_control_options(), None),
+    )
+
+    assert result.completion is not None
+    assert result.completion.reason == "terminal_condition_met"
+    assert result.core_result.final_state.fact("incident_17.status").value == "closed_confirmed"
+    assert any(
+        observation.via_port_id == "supervisor_closure_receipt_in"
+        for observation in result.core_result.final_state.observations.values()
+    )
+    assert result.core_result.events[-1].event_kind == "run_completed"
+
+
 def test_event_driven_checkpoint_retains_future_route_work() -> None:
     fixture = service_desk_fixture(
         service_desk_arm_configurations()[0],
