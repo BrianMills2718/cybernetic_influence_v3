@@ -1204,3 +1204,62 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
                 break
             time.sleep(0.01)
         assert api.get(f"/api/runs/{run_id}").json()["status"] == "completed"
+
+
+def test_invalid_live_run_id_does_not_leave_the_live_lock_held(tmp_path: Path) -> None:
+    """Reject IDs before acquiring the single-live-run lock."""
+
+    def scripted_native(
+        fixture: Any,
+        *,
+        trace_id_prefix: str,
+        model: str,
+        reasoning_effort: str,
+    ) -> Any:
+        del trace_id_prefix, model, reasoning_effort
+        return service_desk_scripted_bindings(fixture)
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
+            },
+        ),
+        patch(
+            "cybernetic_influence.api.service_desk_native_bindings",
+            side_effect=scripted_native,
+        ),
+        patch(
+            "cybernetic_influence.api.narrate_live_moments",
+            return_value={
+                "status": "completed",
+                "model_calls": 0,
+                "cost": 0.0,
+                "moments": [],
+                "calls": [],
+            },
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+    ):
+        api = client(tmp_path)
+        rejected = api.post(
+            "/api/runs",
+            json={"execution": "live", "run_id": "invalid"},
+        )
+        assert rejected.status_code == 422
+        assert rejected.json()["detail"] == "invalid run ID"
+
+        started = api.post("/api/runs", json={"execution": "live"})
+        assert started.status_code == 202, started.text
+        run_id = started.json()["run_id"]
+        for _ in range(200):
+            if api.get(f"/api/runs/{run_id}").json()["status"] == "completed":
+                break
+            time.sleep(0.01)
+        assert api.get(f"/api/runs/{run_id}").json()["status"] == "completed"

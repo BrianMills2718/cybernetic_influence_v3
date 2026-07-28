@@ -1199,9 +1199,19 @@ def create_app(
                 )
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error)) from error
+        run_id = request_body.run_id or f"run_{uuid4().hex[:12]}"
         worker_execution = live and bool(
             getattr(live_worker_context, "active", False)
         )
+        if not worker_execution:
+            try:
+                runs.get(run_id)
+            except RunNotFoundError:
+                pass
+            except InvalidRunIdError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+            else:
+                raise HTTPException(status_code=409, detail="run ID already exists")
         lock_acquired = (
             True
             if worker_execution
@@ -1213,7 +1223,6 @@ def create_app(
                 detail="another live run is already active",
             )
 
-        run_id = request_body.run_id or f"run_{uuid4().hex[:12]}"
         if worker_execution:
             try:
                 initial = runs.get(run_id)
@@ -1226,14 +1235,6 @@ def create_app(
             if pause is None or stop is None:
                 raise RuntimeError("live worker lost its control handles")
         else:
-            try:
-                runs.get(run_id)
-            except RunNotFoundError:
-                pass
-            except InvalidRunIdError as error:
-                raise HTTPException(status_code=422, detail=str(error)) from error
-            else:
-                raise HTTPException(status_code=409, detail="run ID already exists")
             created_at = now_iso()
             initial = {
                 "run_id": run_id,
