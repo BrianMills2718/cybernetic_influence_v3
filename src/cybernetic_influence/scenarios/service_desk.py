@@ -15,6 +15,7 @@ from cybernetic_influence.active_runtime import (
     ActiveRuntimeCheckpoint,
     ActiveRuntimeConfig,
     ActiveRuntimeResult,
+    RuntimeProgressObserver,
     ActiveRuntimeSession,
     ActiveStepResult,
     ActiveSystemBinding,
@@ -638,6 +639,7 @@ def run_service_desk(
     *,
     run_id: str,
     checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
+    progress_observer: RuntimeProgressObserver | None = None,
     runtime_config: ActiveRuntimeConfig | None = None,
 ) -> ActiveRuntimeResult:
     """Execute the fixed schedule and optionally expose each forensic prefix."""
@@ -653,6 +655,7 @@ def run_service_desk(
         bindings,
         run_id=run_id,
         config=runtime_config or service_desk_runtime_config(),
+        progress_observer=progress_observer,
     )
     for logical_time, participant_id in SERVICE_DESK_SCHEDULE:
         try:
@@ -685,6 +688,7 @@ def run_event_driven_service_desk(
     pause_requested: Callable[[], bool] | None = None,
     stop_requested: Callable[[], bool] | None = None,
     run_control: ResolvedRunControlPlan | None = None,
+    progress_observer: RuntimeProgressObserver | None = None,
 ) -> ActiveRuntimeResult:
     """Run due-set moments until no observation or internal wake remains.
 
@@ -698,6 +702,7 @@ def run_event_driven_service_desk(
             fixture.exact_bindings,
             bindings,
             checkpoint,
+            progress_observer=progress_observer,
         )
         if checkpoint is not None
         else ActiveRuntimeSession(
@@ -707,6 +712,7 @@ def run_event_driven_service_desk(
             bindings,
             run_id=run_id,
             config=runtime_config or service_desk_runtime_config(),
+            progress_observer=progress_observer,
         )
     )
 

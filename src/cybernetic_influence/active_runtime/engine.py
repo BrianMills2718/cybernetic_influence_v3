@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 import threading
 
@@ -25,6 +25,8 @@ from cybernetic_influence.active_runtime.models import (
     ExactWorkRecord,
     ModelCallEvidence,
     ParticipantAttempt,
+    RuntimeProgressKind,
+    RuntimeProgressUpdate,
     private_state_size,
     project_action_interfaces,
     with_record_digest,
@@ -84,6 +86,9 @@ class DueActivation:
         return sorted(self.causes)
 
 
+RuntimeProgressObserver = Callable[[RuntimeProgressUpdate, ActiveRuntimeCheckpoint], None]
+
+
 class ActiveRuntimeSession:
     """One canonical active run composing a single exact causal-core session."""
 
@@ -97,6 +102,7 @@ class ActiveRuntimeSession:
         run_id: str,
         config: ActiveRuntimeConfig,
         causal_limits: CausalLimits | None = None,
+        progress_observer: RuntimeProgressObserver | None = None,
     ) -> None:
         self._scenario = CausalScenario.model_validate(
             scenario.model_dump(mode="json")
@@ -136,6 +142,7 @@ class ActiveRuntimeSession:
         self._next_commit_index = 0
         self._terminal = False
         self._lock = threading.RLock()
+        self._progress_observer = progress_observer
 
     @property
     def core_state(self) -> CausalState:
@@ -407,6 +414,12 @@ class ActiveRuntimeSession:
                 )
                 for active_system_id in canonical_ids
             }
+            self._emit_progress(
+                kind="activation_started",
+                logical_time=logical_time,
+                participant_ids=canonical_ids,
+                activation_id=activation_id,
+            )
 
             collection_error: Exception | None = None
             for active_system_id in supplied_ids:
@@ -530,6 +543,13 @@ class ActiveRuntimeSession:
             self._attempts = attempts
             self._next_attempt_index += 1
             self._next_commit_index += 1
+            self._emit_progress(
+                kind="causal_moment_committed",
+                logical_time=logical_time,
+                participant_ids=canonical_ids,
+                activation_id=record.activation_id,
+                event_ids=record.core_event_ids,
+            )
             return record.model_copy(deep=True)
 
     def checkpoint(self) -> ActiveRuntimeCheckpoint:
@@ -544,6 +564,43 @@ class ActiveRuntimeSession:
                 next_commit_index=self._next_commit_index,
             )
 
+    def _emit_progress(
+        self,
+        *,
+        kind: RuntimeProgressKind,
+        logical_time: int,
+        participant_ids: Sequence[str] = (),
+        activation_id: str | None = None,
+        exact_work_id: str | None = None,
+        event_ids: Sequence[str] = (),
+    ) -> None:
+        """Notify one observer from a validated immutable runtime prefix.
+
+        Observers receive no mutable session reference.  An observer failure is
+        deliberately allowed to propagate: claiming live progress while
+        silently dropping it would make the retained execution misleading.
+        """
+        if self._progress_observer is None:
+            return
+        checkpoint = self._build_checkpoint(
+            core_checkpoint=self._core.checkpoint(),
+            states=self._states,
+            attempts=self._attempts,
+            next_attempt_index=self._next_attempt_index,
+            next_commit_index=self._next_commit_index,
+        )
+        update = RuntimeProgressUpdate(
+            kind=kind,
+            logical_time=logical_time,
+            participant_ids=sorted(participant_ids),
+            activation_id=activation_id,
+            exact_work_id=exact_work_id,
+            event_ids=sorted(event_ids),
+            state_revision=checkpoint.core_checkpoint.state.revision,
+            checkpoint_digest=checkpoint.record_digest,
+        )
+        self._progress_observer(update.model_copy(deep=True), checkpoint.model_copy(deep=True))
+
     @classmethod
     def restore(
         cls,
@@ -551,6 +608,8 @@ class ActiveRuntimeSession:
         exact_bindings: Mapping[str, ExactMechanismBinding],
         active_bindings: Mapping[str, ActiveSystemBinding],
         checkpoint: ActiveRuntimeCheckpoint,
+        *,
+        progress_observer: RuntimeProgressObserver | None = None,
     ) -> "ActiveRuntimeSession":
         """Restore one strictly matching aggregate checkpoint and registries."""
         validated = ActiveRuntimeCheckpoint.model_validate(
@@ -580,6 +639,7 @@ class ActiveRuntimeSession:
                     validated.core_checkpoint.max_zero_time_depth
                 ),
             ),
+            progress_observer=progress_observer,
         )
         session._core = CausalSession.restore(
             scenario,
@@ -781,6 +841,12 @@ class ActiveRuntimeSession:
             )
         )
         self._exact_work.append(record)
+        self._emit_progress(
+            kind="exact_work_committed",
+            logical_time=record.logical_time,
+            exact_work_id=record.work_id,
+            event_ids=record.core_event_ids,
+        )
         return True
 
     def _discard_pending_exact_work(self, *, reason: str) -> None:
@@ -795,8 +861,7 @@ class ActiveRuntimeSession:
         ]
         if not event_ids:
             return
-        self._exact_work.append(
-            ExactWorkRecord.model_validate(
+        record = ExactWorkRecord.model_validate(
                 with_record_digest(
                     {
                         "work_index": len(self._exact_work),
@@ -810,7 +875,13 @@ class ActiveRuntimeSession:
                         "core_event_ids": event_ids,
                     }
                 )
-            )
+        )
+        self._exact_work.append(record)
+        self._emit_progress(
+            kind="exact_work_committed",
+            logical_time=record.logical_time,
+            exact_work_id=record.work_id,
+            event_ids=record.core_event_ids,
         )
 
     @staticmethod
@@ -1051,6 +1122,12 @@ class ActiveRuntimeSession:
         )
         self._attempts = attempts
         self._next_attempt_index += 1
+        self._emit_progress(
+            kind="activation_failed",
+            logical_time=logical_time,
+            participant_ids=canonical_ids,
+            activation_id=record.activation_id,
+        )
         return record
 
     @staticmethod

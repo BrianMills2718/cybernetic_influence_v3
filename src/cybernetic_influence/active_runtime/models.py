@@ -645,6 +645,62 @@ class ExactWorkRecord(_StrictModel):
         return self
 
 
+RuntimeProgressKind = Literal[
+    "activation_started",
+    "causal_moment_committed",
+    "exact_work_committed",
+    "activation_failed",
+]
+
+
+class RuntimeProgressUpdate(_StrictModel):
+    """One observer-safe lifecycle update from the shared active runtime.
+
+    The update names only public execution identities.  The paired checkpoint
+    supplied to an observer remains the authoritative continuation artifact;
+    presentation code must project it before exposing anything to an analyst.
+    """
+
+    kind: RuntimeProgressKind
+    logical_time: int = Field(ge=0)
+    participant_ids: list[str] = Field(default_factory=list)
+    activation_id: str | None = Field(default=None, pattern=_ACTIVATION_PATTERN)
+    exact_work_id: str | None = Field(default=None, pattern=_EXACT_WORK_PATTERN)
+    event_ids: list[str] = Field(default_factory=list)
+    state_revision: int = Field(ge=0)
+    checkpoint_digest: str = Field(pattern=_DIGEST_PATTERN)
+
+    @model_validator(mode="after")
+    def validate_progress_shape(self) -> "RuntimeProgressUpdate":
+        if self.participant_ids != sorted(set(self.participant_ids)):
+            raise ValueError("progress participant ids must be unique and sorted")
+        if self.event_ids != sorted(set(self.event_ids)):
+            raise ValueError("progress event ids must be unique and sorted")
+        if self.kind == "activation_started":
+            if self.activation_id is None or not self.participant_ids:
+                raise ValueError("activation start requires an activation and participants")
+            if self.exact_work_id is not None or self.event_ids:
+                raise ValueError("activation start cannot claim exact work or events")
+        elif self.kind == "causal_moment_committed":
+            if self.activation_id is None or not self.participant_ids:
+                raise ValueError("committed activation requires an activation and participants")
+            if self.exact_work_id is not None:
+                raise ValueError("committed activation cannot name exact work")
+        elif self.kind == "exact_work_committed":
+            if self.exact_work_id is None:
+                raise ValueError("exact-work progress requires an exact-work id")
+            if self.activation_id is not None or self.participant_ids:
+                raise ValueError("exact-work progress cannot name an activation or participants")
+            if not self.event_ids:
+                raise ValueError("exact-work progress requires retained events")
+        else:
+            if self.activation_id is None or not self.participant_ids:
+                raise ValueError("failed activation requires an activation and participants")
+            if self.exact_work_id is not None or self.event_ids:
+                raise ValueError("failed activation cannot claim committed work")
+        return self
+
+
 class ActiveRuntimeCheckpoint(_StrictModel):
     """Complete nonterminal continuation record for one active runtime."""
 

@@ -5,6 +5,7 @@ from cybernetic_influence.active_runtime.engine import (
     ActiveRuntimeError,
     ActiveRuntimeSession,
     ParticipantContractError,
+    RuntimeProgressObserver,
 )
 from cybernetic_influence.active_runtime.llm import (
     NATIVE_LLM_CONFIGURATION_CONTRACT,
@@ -32,6 +33,7 @@ from cybernetic_influence.active_runtime.models import (
     ActivationAttemptRecord,
     ExactWorkRecord,
     ModelCallEvidence,
+    RuntimeProgressUpdate,
     RUNTIME_CONTRACT,
     SCHEMA_VERSION,
     UpdateScheduleDirective,
@@ -64,6 +66,8 @@ __all__ = [
     "LlmActionDecision",
     "LlmPrivateState",
     "ModelCallEvidence",
+    "RuntimeProgressUpdate",
+    "RuntimeProgressObserver",
     "NATIVE_LLM_CONFIGURATION_CONTRACT",
     "DECISION_WIRE_CONTRACT_V1",
     "DECISION_WIRE_CONTRACT_V2",

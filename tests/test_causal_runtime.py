@@ -11,11 +11,13 @@ from cybernetic_influence.active_runtime import (
     ActiveBudgetError,
     ActiveRuntimeCheckpoint,
     ActiveRuntimeConfig,
+    ActiveRuntimeSession,
     ActiveSystemBinding,
     ActiveStepResult,
     ActiveSystemInput,
     ParticipantContractError,
     ModelCallEvidence,
+    RuntimeProgressUpdate,
     ScriptedActiveSystem,
     UpdateScheduleDirective,
 )
@@ -76,6 +78,100 @@ from cybernetic_influence.scenarios.purchase_payment import (
 
 
 ALTERNATE_MODEL = "openrouter/deepseek/deepseek-v4-flash"
+
+
+def test_runtime_progress_updates_are_strict_and_observer_bound() -> None:
+    digest = "a" * 64
+    started = RuntimeProgressUpdate(
+        kind="activation_started",
+        logical_time=0,
+        participant_ids=["triager"],
+        activation_id="activation_000000",
+        state_revision=0,
+        checkpoint_digest=digest,
+    )
+    assert started.event_ids == []
+    with pytest.raises(ValueError, match="cannot claim exact work or events"):
+        RuntimeProgressUpdate(
+            kind="activation_started",
+            logical_time=0,
+            participant_ids=["triager"],
+            activation_id="activation_000000",
+            event_ids=["event_000001"],
+            state_revision=0,
+            checkpoint_digest=digest,
+        )
+    with pytest.raises(ValueError, match="unique and sorted"):
+        RuntimeProgressUpdate(
+            kind="causal_moment_committed",
+            logical_time=0,
+            participant_ids=["supervisor", "specialist"],
+            activation_id="activation_000000",
+            state_revision=0,
+            checkpoint_digest=digest,
+        )
+
+    fixture = service_desk_fixture(
+        service_desk_arm_configurations()[0], cognition_profile="position_context"
+    )
+    observed: list[tuple[RuntimeProgressUpdate, ActiveRuntimeCheckpoint]] = []
+    run_event_driven_service_desk(
+        fixture,
+        service_desk_scripted_bindings(fixture),
+        run_id="progress_runtime_gate",
+        progress_observer=lambda update, checkpoint: observed.append(
+            (update, checkpoint)
+        ),
+    )
+
+    kinds = [item.kind for item, _checkpoint in observed]
+    assert kinds[:2] == ["activation_started", "causal_moment_committed"]
+    assert "exact_work_committed" in kinds
+    committed, checkpoint = observed[1]
+    assert committed.event_ids
+    assert committed.checkpoint_digest == checkpoint.record_digest
+    exact, exact_checkpoint = next(
+        item for item in observed if item[0].kind == "exact_work_committed"
+    )
+    assert exact.event_ids
+    assert exact.participant_ids == []
+    assert exact.checkpoint_digest == exact_checkpoint.record_digest
+
+    class FailingTriager:
+        implementation_id = service_desk_scripted_bindings(fixture)[
+            "triager"
+        ].implementation_id
+        provider_bound = False
+
+        def step(self, _active_input: ActiveSystemInput) -> ActiveStepResult:
+            raise RuntimeError("observer failure fixture")
+
+    failed_updates: list[RuntimeProgressUpdate] = []
+    broken_bindings = service_desk_scripted_bindings(fixture)
+    broken_bindings["triager"] = ActiveSystemBinding(
+        FailingTriager.implementation_id, FailingTriager()
+    )
+    broken_session = ActiveRuntimeSession(
+        fixture.scenario,
+        fixture.exact_bindings,
+        fixture.active_specs,
+        broken_bindings,
+        run_id="progress_failed_activation",
+        config=ActiveRuntimeConfig(
+            per_call_budget=0.01,
+            per_run_budget=0.10,
+            max_actions_per_system=2,
+            max_observations_per_system=8,
+            max_private_state_bytes=16_384,
+        ),
+        progress_observer=lambda update, _checkpoint: failed_updates.append(update),
+    )
+    with pytest.raises(RuntimeError, match="observer failure fixture"):
+        broken_session.activate(["triager"], logical_time=0)
+    assert [item.kind for item in failed_updates] == [
+        "activation_started",
+        "activation_failed",
+    ]
 
 
 def test_service_desk_retains_terminal_horizon_quiescence_and_stop_reasons() -> None:
