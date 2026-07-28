@@ -520,10 +520,10 @@ Implement [Slice 20](plans/020-inspectable-extended-runs.md):
 - compatibility is proved on the current Service Desk and authored examples
   before the first longer research scenario consumes the contracts.
 
-Packets 20A–20C are complete. Packet 20D1 is the active direct blocker: move
-narrative provenance from model-selected event IDs to the immutable exact
-context supplied by the simulator. Packet 20D2 then owns the separately
-authorized integrated proof and operator readout.
+Packets 20A–20D1 are complete. Packet 20D1 moved narrative provenance from
+model-selected event IDs to immutable simulator-owned evidence context. Packet
+20D2 is now the active separately authorized integrated proof and operator
+readout.
 
 Current runs stop when their concrete work becomes quiescent. No general game
 master currently judges completion or outcome. Exact world-state terminal
@@ -595,10 +595,12 @@ requires them to answer an analyst question that current contracts cannot.
 - **Observed limitation:** model-selected arbitrary event IDs do not remain
   reliable across a full sequential narration, although the prose and causal
   execution are valid.
-- **Next implementation packet:** 20D1; **next integrated replay:** 20D2.
-- **Current limiting cause:** truthful narration provenance, followed by the
-  still-unobserved naturally multi-episode Slice-21 scenario—not scheduler
-  throughput, provider transport, or graph rendering.
+- **Next implementation packet:** 20D2 only after explicit
+  certification/deployment/spend authorization; **next integrated replay:**
+  its paused/resumed fully narrated Service Desk proof.
+- **Current limiting cause:** the still-unobserved integrated v3 narrator
+  proof, followed by the naturally multi-episode Slice-21 scenario—not
+  scheduler throughput, provider transport, or graph rendering.
 
 ## Explicit MVP Deferrals
 

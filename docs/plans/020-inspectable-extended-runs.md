@@ -66,11 +66,13 @@ obtain explicit authorization.
   before the same failure family recurred. Both runs failed narration visibly
   while retaining completed world trajectories and exact observed spend. This
   is not a transport or empty-structured-output failure.
-- **20D1 is the active direct blocker:** replace model-selected citation IDs
-  with a simulator-owned evidence-context envelope that truthfully records all
-  exact evidence supplied to each narrator call. Do not weaken prose
-  generation, silently discard invalid IDs, or claim that context provenance
-  proves semantic entailment.
+- **20D1 complete:** v3 narrator output contains prose only. The simulator now
+  retains an immutable evidence-context envelope per account with exact current
+  event IDs, earlier narrated-record IDs, prompt version, run identity, and a
+  canonical digest of the analyst-visible prompt context. Reopening validates
+  the envelope and fails visibly on unknown/cross-run/future/digest corruption;
+  v1/v2 records remain readable. The UI labels this **Evidence supplied to the
+  narrator** and explicitly distinguishes provenance from proof of entailment.
 - **20D2 remains:** certify the changed narrator schema, run one separately
   authorized integrated DeepSeek proof, inspect every participant/narrator
   trace, rerender the retained authored example, and obtain the three human

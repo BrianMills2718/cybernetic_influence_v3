@@ -1388,9 +1388,12 @@ function renderStepAccount(event) {
     $('#step-account-body').innerHTML = paragraphs.length
       ? paragraphs.map((paragraph) => `<span>${html(paragraph.text)}</span>`).join('')
       : html(narration.concise_narrative || narration.narrative)
-    $('#step-account-source').textContent = paragraphs.length
-      ? `Live LLM narrator · concise account grounded in ${(narration.concise_source_event_ids || narration.source_event_ids || []).join(', ')}; each detailed paragraph retains its own evidence citations.`
-      : `Live LLM narrator · grounded in ${(narration.source_event_ids || []).join(', ')}. This older run retained only its concise account.`
+    const context = narration.evidence_context
+    $('#step-account-source').textContent = context
+      ? `Evidence supplied to the narrator · current exact events: ${(context.current_event_ids || []).join(', ')}; earlier narrated accounts: ${(context.prior_narrative_record_ids || []).join(', ') || 'none'}. This records what the narrator could use, not proof that the prose is entailed by it.`
+      : paragraphs.length
+        ? `Live LLM narrator · concise account grounded in ${(narration.concise_source_event_ids || narration.source_event_ids || []).join(', ')}; each detailed paragraph retains its own evidence citations.`
+        : `Live LLM narrator · grounded in ${(narration.source_event_ids || []).join(', ')}. This older run retained only its concise account.`
   } else if (exactProcess) {
     $('#step-account-title').textContent = title
     const name = person ? `${person[0].toUpperCase()}${person.slice(1)}` : 'The exact process'
@@ -1434,13 +1437,17 @@ function renderTurnNarratives() {
       <button class="turn-narrative" data-activation="${html(moment.activation)}">
         <span>Causal step ${html(momentNumber)} · ${html(causalTime(moment, momentNumber))} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
         <p>${html(moment.narrative)}</p>
-        <small>${html((moment.source_event_ids || []).join(' · '))}</small>
+        <small>${moment.evidence_context ? 'Evidence supplied to the narrator' : html((moment.source_event_ids || []).join(' · '))}</small>
       </button>`
     }).join('')
     detailed.innerHTML = moments.map((moment) => {
       const momentNumber = moment.moment || moment.turn
       const participants = moment.participants || [moment.person || 'system']
       const paragraphs = moment.detailed_paragraphs || []
+      const context = moment.evidence_context
+      const priorNarratives = (context?.prior_narrative_record_ids || []).map((recordId) =>
+        `<button type="button" class="prior-narrative-link" data-narrative-record-id="${html(recordId)}">${html(recordId)}</button>`
+      ).join(' · ')
       if (!paragraphs.length) {
         return `<article class="detailed-narrative-moment legacy" data-activation="${html(moment.activation)}">
           <span>Causal step ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
@@ -1450,7 +1457,10 @@ function renderTurnNarratives() {
       }
       return `<article class="detailed-narrative-moment" data-activation="${html(moment.activation)}">
         <span>Causal step ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
-        ${paragraphs.map((paragraph) => `<p>${html(paragraph.text)}</p><small>${html((paragraph.source_event_ids || []).join(' · '))}</small>`).join('')}
+        ${paragraphs.map((paragraph) => `<p>${html(paragraph.text)}</p>`).join('')}
+        ${context
+          ? `<button type="button" class="evidence-context-button" data-activation="${html(moment.activation)}">Evidence supplied to the narrator</button><small>Current exact events: ${html((context.current_event_ids || []).join(' · '))} · earlier narrated accounts: ${priorNarratives || 'none'} · provenance, not proof of entailment</small>`
+          : `<small>${html(paragraphs.flatMap((paragraph) => paragraph.source_event_ids || []).join(' · '))}</small>`}
       </article>`
     }).join('')
     document.querySelectorAll('.turn-narrative').forEach((button) => {
@@ -1462,6 +1472,21 @@ function renderTurnNarratives() {
     document.querySelectorAll('.detailed-narrative-moment').forEach((article) => {
       article.onclick = () => {
         const index = causalMoments().findIndex((moment) => moment.activation === article.dataset.activation)
+        if (index >= 0) selectMoment(index)
+      }
+    })
+    document.querySelectorAll('.evidence-context-button').forEach((button) => {
+      button.onclick = (event) => {
+        event.stopPropagation()
+        const index = causalMoments().findIndex((moment) => moment.activation === button.dataset.activation)
+        if (index >= 0) selectMoment(index)
+      }
+    })
+    document.querySelectorAll('.prior-narrative-link').forEach((button) => {
+      button.onclick = (event) => {
+        event.stopPropagation()
+        const prior = moments.find((moment) => moment.narrative_record_id === button.dataset.narrativeRecordId)
+        const index = prior ? causalMoments().findIndex((moment) => moment.activation === prior.activation) : -1
         if (index >= 0) selectMoment(index)
       }
     })

@@ -120,6 +120,17 @@ If one is absent, report the pending event once and stop active execution. When
 the user supplies it, resume the same goal at the named packet without
 restarting completed work.
 
+## Current State
+
+- **Demonstrated:** Packet 20D1 replaces model-selected event IDs with v3
+  simulator-owned narration context, including locally validated digest,
+  run-identity, current-event, and prior-record chains. Focused narration,
+  API-corruption, run-configuration, type, browser-script, and graph-build
+  checks pass without a provider call.
+- **Current increment:** Packet 20D2.
+- **Resume event:** explicit certification, deployment, and spend authorization
+  after the agent reports the exact 20D2 topology and hard cap.
+
 ## Done
 
 The agent-executable goal is complete only when C1–C6 are demonstrated and

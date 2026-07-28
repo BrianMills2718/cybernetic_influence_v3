@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
+from hashlib import sha256
 from importlib import resources
 import json
 from typing import Any, cast
@@ -20,27 +21,27 @@ NARRATOR_MAX_BUDGET = 0.02
 # evidence-bound passage.  The hard observed-cost ceiling remains unchanged.
 NARRATOR_MAX_TOKENS = 640
 NARRATOR_REASONING_EFFORT = "low"
+NARRATOR_PROMPT_VERSION = "causal_moment_narrator/v3"
+NARRATIVE_VERSION = 3
 
 StructuredCall = Callable[..., tuple[Any, Any]]
 _FORBID = ConfigDict(extra="forbid", strict=True)
 
 
 class NarrativeParagraph(BaseModel):
-    """One detailed paragraph and the retained evidence it interprets."""
+    """One detailed prose paragraph; provenance is assigned by the simulator."""
 
     model_config = _FORBID
 
     text: str = Field(min_length=1, max_length=900)
-    source_event_ids: list[str] = Field(min_length=1, max_length=6)
 
 
 class CausalMomentNarration(BaseModel):
-    """Dual-level natural-language account with explicit causal provenance."""
+    """Dual-level natural-language account; the simulator retains provenance."""
 
     model_config = _FORBID
 
     concise_narrative: str = Field(min_length=1, max_length=360)
-    concise_source_event_ids: list[str] = Field(min_length=1, max_length=4)
     detailed_paragraphs: list[NarrativeParagraph] = Field(min_length=1, max_length=3)
 
 
@@ -56,9 +57,9 @@ def narrate_live_moments(
 ) -> dict[str, object]:
     """Narrate each retained causal moment without giving the narrator authority.
 
-    The narrator sees only analyst-visible fields.  It returns evidence IDs that
-    must be drawn from that moment, making a fluent account step down to exact
-    retained events rather than become another world model.
+    The narrator sees only analyst-visible fields and returns prose only. The
+    simulator records the exact context supplied to each call, so provenance is
+    not delegated to a model reproducing arbitrary identifiers.
     """
     moments = _moment_inputs(document)
     if not moments:
@@ -113,11 +114,18 @@ def narrate_live_moments(
         }
 
     call = structured_call or _resolve_structured_call()
+    run_id = _required_run_id(document)
     prior: list[dict[str, object]] = []
     narrated: list[dict[str, object]] = []
     calls: list[dict[str, object]] = []
     total_cost = 0.0
     for index, moment in enumerate(moments, start=1):
+        context = _evidence_context(
+            run_id=run_id,
+            moment=moment,
+            moment_number=index,
+            prior=prior,
+        )
         system, user = _render_prompt(moment=moment, prior=prior)
         trace_id = (
             f"{trace_id_prefix}/narrator/moment/{moment['activation']}"
@@ -161,43 +169,24 @@ def narrate_live_moments(
                 if isinstance(parsed, BaseModel)
                 else parsed
             )
-            events = cast(list[dict[str, object]], moment["events"])
-            current_ids = {str(event["event_id"]) for event in events}
-            if not set(narration.concise_source_event_ids) <= current_ids:
-                raise ValueError(
-                    "narrator cited an event outside its current causal moment"
-                )
-            prior_ids = _prior_source_event_ids(prior)
-            detailed_ids = {
-                source_event_id
-                for paragraph in narration.detailed_paragraphs
-                for source_event_id in paragraph.source_event_ids
-            }
-            if not detailed_ids <= current_ids | prior_ids:
-                raise ValueError(
-                    "narrator detailed account cited evidence outside the supplied "
-                    "causal context"
-                )
-            if not detailed_ids & current_ids:
-                raise ValueError(
-                    "narrator detailed account did not cite the current causal moment"
-                )
             record = {
-                "narrative_version": 2,
+                "narrative_version": NARRATIVE_VERSION,
+                "narrative_record_id": context["narrative_record_id"],
                 "moment": index,
                 "activation": moment["activation"],
                 "participants": moment["participants"],
                 "causal_time": moment["causal_time"],
                 "causal_timestamp": moment["causal_timestamp"],
                 "logical_time": moment["logical_time"],
-                # Preserve the original fields so existing retained-run consumers
-                # render the concise account without a migration.
                 "narrative": narration.concise_narrative,
-                "source_event_ids": narration.concise_source_event_ids,
                 "concise_narrative": narration.concise_narrative,
-                "concise_source_event_ids": narration.concise_source_event_ids,
+                "evidence_context": context,
+                "concise_evidence_context_id": context["context_id"],
                 "detailed_paragraphs": [
-                    paragraph.model_dump(mode="json")
+                    {
+                        "text": paragraph.text,
+                        "evidence_context_id": context["context_id"],
+                    }
                     for paragraph in narration.detailed_paragraphs
                 ],
             }
@@ -376,25 +365,159 @@ def _list_of_mappings(value: object) -> list[dict[str, object]]:
     return [dict(item) for item in value if isinstance(item, Mapping)]
 
 
-def _prior_source_event_ids(prior: Sequence[Mapping[str, object]]) -> set[str]:
-    """Return only evidence IDs already exposed through prior narration."""
-    source_ids: set[str] = set()
-    for record in prior:
-        for key in ("source_event_ids", "concise_source_event_ids"):
-            value = record.get(key)
-            if isinstance(value, list):
-                source_ids.update(item for item in value if isinstance(item, str))
-        paragraphs = record.get("detailed_paragraphs")
-        if isinstance(paragraphs, list):
-            for paragraph in paragraphs:
-                if not isinstance(paragraph, Mapping):
-                    continue
-                paragraph_ids = paragraph.get("source_event_ids")
-                if isinstance(paragraph_ids, list):
-                    source_ids.update(
-                        item for item in paragraph_ids if isinstance(item, str)
-                    )
-    return source_ids
+def validate_retained_narration(document: Mapping[str, object]) -> None:
+    """Fail loudly if a v3 retained narrative no longer matches its context.
+
+    v1/v2 records remain readable because they predate simulator-owned context.
+    A completed v3 sequence must be wholly reconstructable from this run's
+    retained analyst-visible trace and its earlier retained narrative records.
+    """
+    narration = document.get("narration")
+    if not isinstance(narration, Mapping) or narration.get("status") != "completed":
+        return
+    records = narration.get("moments")
+    if not isinstance(records, list):
+        raise ValueError("completed narration lacks retained moments")
+    v3_records = [
+        record for record in records
+        if isinstance(record, Mapping) and record.get("narrative_version") == NARRATIVE_VERSION
+    ]
+    if not v3_records:
+        return
+    if len(v3_records) != len(records):
+        raise ValueError("retained narration mixes v3 and legacy moment records")
+    moments = _moment_inputs(document)
+    if len(records) != len(moments):
+        raise ValueError("retained v3 narration does not cover every causal moment")
+    run_id = _required_run_id(document)
+    prior: list[dict[str, object]] = []
+    for index, (raw_record, moment) in enumerate(zip(records, moments, strict=True), start=1):
+        if not isinstance(raw_record, Mapping):
+            raise ValueError("retained v3 narration has a malformed moment record")
+        record = dict(raw_record)
+        _validate_v3_record(
+            record=record,
+            run_id=run_id,
+            moment=moment,
+            moment_number=index,
+            prior=prior,
+        )
+        prior.append(record)
+
+
+def _required_run_id(document: Mapping[str, object]) -> str:
+    run_id = document.get("run_id")
+    if not isinstance(run_id, str) or not run_id:
+        raise ValueError("narration requires a retained run ID")
+    return run_id
+
+
+def _evidence_context(
+    *,
+    run_id: str,
+    moment: Mapping[str, object],
+    moment_number: int,
+    prior: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    record_id = _narrative_record_id(run_id, moment_number)
+    material = _context_material(run_id=run_id, moment=moment, prior=prior)
+    events = cast(list[dict[str, object]], moment["events"])
+    return {
+        "context_version": 1,
+        "context_id": _context_id(run_id, moment_number),
+        "run_id": run_id,
+        "narrative_record_id": record_id,
+        "current_event_ids": [str(event["event_id"]) for event in events],
+        "prior_narrative_record_ids": [
+            _required_narrative_record_id(record) for record in prior
+        ],
+        "prompt_version": NARRATOR_PROMPT_VERSION,
+        "context_digest": _context_digest(material),
+    }
+
+
+def _validate_v3_record(
+    *,
+    record: Mapping[str, object],
+    run_id: str,
+    moment: Mapping[str, object],
+    moment_number: int,
+    prior: Sequence[Mapping[str, object]],
+) -> None:
+    if record.get("moment") != moment_number or record.get("activation") != moment["activation"]:
+        raise ValueError("retained v3 narration moment does not match the causal trace")
+    paragraphs = record.get("detailed_paragraphs")
+    if not isinstance(paragraphs, list):
+        raise ValueError("retained v3 narration paragraphs are malformed")
+    try:
+        CausalMomentNarration.model_validate({
+            "concise_narrative": record.get("concise_narrative"),
+            "detailed_paragraphs": [
+                {"text": paragraph.get("text")}
+                for paragraph in paragraphs
+                if isinstance(paragraph, Mapping)
+            ],
+        })
+    except Exception as error:
+        raise ValueError("retained v3 narration prose is malformed") from error
+    context = record.get("evidence_context")
+    if not isinstance(context, Mapping):
+        raise ValueError("retained v3 narration lacks an evidence context")
+    expected = _evidence_context(
+        run_id=run_id,
+        moment=moment,
+        moment_number=moment_number,
+        prior=prior,
+    )
+    if dict(context) != expected:
+        raise ValueError("retained v3 narration evidence context is corrupt")
+    context_id = expected["context_id"]
+    if record.get("narrative_record_id") != expected["narrative_record_id"]:
+        raise ValueError("retained v3 narration record ID is corrupt")
+    if record.get("concise_evidence_context_id") != context_id:
+        raise ValueError("retained v3 concise context reference is corrupt")
+    if any(
+        not isinstance(paragraph, Mapping)
+        or paragraph.get("evidence_context_id") != context_id
+        for paragraph in paragraphs
+    ):
+        raise ValueError("retained v3 detailed context reference is corrupt")
+
+
+def _context_material(
+    *, run_id: str, moment: Mapping[str, object], prior: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    return {
+        "run_id": run_id,
+        "prompt_version": NARRATOR_PROMPT_VERSION,
+        "current_moment": dict(moment),
+        "prior_narratives": [dict(record) for record in prior],
+    }
+
+
+def _context_digest(material: Mapping[str, object]) -> str:
+    encoded = json.dumps(
+        material,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return sha256(encoded).hexdigest()
+
+
+def _context_id(run_id: str, moment_number: int) -> str:
+    return f"narration_context:{run_id}:{moment_number:04d}"
+
+
+def _narrative_record_id(run_id: str, moment_number: int) -> str:
+    return f"narrative_moment:{run_id}:{moment_number:04d}"
+
+
+def _required_narrative_record_id(record: Mapping[str, object]) -> str:
+    value = record.get("narrative_record_id")
+    if not isinstance(value, str) or not value:
+        raise ValueError("prior v3 narration record lacks a record ID")
+    return value
 
 
 def _render_prompt(
@@ -410,16 +533,11 @@ def _render_prompt(
     environment.filters["tojson"] = lambda value: json.dumps(
         value, ensure_ascii=False, sort_keys=True
     )
-    events = cast(list[dict[str, object]], moment["events"])
-    current_event_ids = [str(event["event_id"]) for event in events]
-    prior_event_ids = sorted(_prior_source_event_ids(prior))
     return (
         environment.from_string(str(template["system"])).render(),
         environment.from_string(str(template["user"])).render(
             moment=moment,
             prior=list(prior),
-            current_event_ids=current_event_ids,
-            prior_event_ids=prior_event_ids,
         ),
     )
 

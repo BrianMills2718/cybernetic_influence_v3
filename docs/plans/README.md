@@ -18,9 +18,8 @@ instructions to continue their former “next slice” sections.
 includes generic polling-backed live progress: strict runtime checkpoints keep
 the existing Simulation graph visible, animate only retained causal evidence,
 and defer narration until causal execution completes. Its zero-cost 20C
-cross-scenario proof is complete. Packet 20D1 is active: replace unreliable
-model-selected citation IDs with immutable simulator-owned evidence context.
-Packet 20D2 then owns the separately authorized integrated compatibility proof
+cross-scenario proof and Packet 20D1 provenance repair are complete. Packet
+20D2 now owns the separately authorized integrated compatibility proof
 and human readout. Do not manufacture empty turns or add a general game-master
 actor.
 

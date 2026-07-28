@@ -26,24 +26,14 @@ system: |
   still contain a private update or retained scheduling change. Never broaden
   “no external action” into “no process state changed.”
 
-  Return the requested structured response. The concise account must cite one
-  to four decisive event IDs from the current causal moment only. Each detailed
-  paragraph may cite current event IDs or evidence IDs already cited in the
-  supplied earlier accounts, but across the detailed passage at least one cited
-  ID must be from this current moment. These IDs are provenance, not prose for
-  the reader. Put IDs only in the structured provenance fields: never write an
-  event ID, parenthetical citation, or an "ID" label in prose.
+  Return the requested structured response with prose only. The simulator—not
+  you—retains the exact current trace and earlier narrated accounts supplied to
+  this call as provenance. Never write an event ID, parenthetical citation, or
+  an "ID" label in prose. Supplied context is not permission to claim a fact
+  that the retained trace does not support.
 user: |
   Earlier causal-moment narratives, in order:
   {{ prior | tojson }}
-
-  Allowed provenance IDs for this response:
-  - Current-moment IDs (the concise account must use only these):
-    {{ current_event_ids | tojson }}
-  - Earlier-account IDs (detailed paragraphs may additionally use these):
-    {{ prior_event_ids | tojson }}
-  Every source_event_ids value must be copied exactly from one of these
-  lists. Do not cite an event merely mentioned in prose or infer an ID.
 
   Current causal moment:
   {{ moment | tojson }}

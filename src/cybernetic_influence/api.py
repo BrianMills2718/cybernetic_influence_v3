@@ -57,6 +57,7 @@ from cybernetic_influence.presentation import (
 from cybernetic_influence.narration import (
     narrate_live_moments,
     reference_narration,
+    validate_retained_narration,
 )
 from cybernetic_influence.run_store import (
     InvalidRunIdError,
@@ -773,13 +774,20 @@ def create_app(
     def retained_run(run_id: str, request: Request) -> dict[str, object]:
         _require_access(request)
         try:
-            return runs.get(run_id)
+            document = runs.get(run_id)
+            validate_retained_narration(document)
+            return document
         except InvalidRunIdError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         except RunNotFoundError as error:
             raise HTTPException(status_code=404, detail="run not found") from error
         except RunCorruptError as error:
             raise HTTPException(status_code=409, detail="retained run is corrupt") from error
+        except ValueError as error:
+            raise HTTPException(
+                status_code=409,
+                detail="retained narration evidence context is corrupt",
+            ) from error
 
     @app.get("/api/runs/{run_id}/progress")
     def retained_progress(
