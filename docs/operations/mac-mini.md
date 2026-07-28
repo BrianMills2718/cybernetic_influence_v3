@@ -21,7 +21,30 @@ service `cybernetic-influence-v3-openrouter`, then an owner-only raw secret file
 when the Keychain is locked to noninteractive services. The credential is not
 stored in the repository or LaunchAgent plist.
 
-Last exact-revision execution verified 2026-07-27:
+Current V3 deployment observed 2026-07-28:
+
+- simulator behavior revision:
+  `5465e012db5a3328fb06117eb7e11facbdd0a3c2`;
+- the private config endpoint reports `openrouter/deepseek/deepseek-v4-flash`
+  at `none` reasoning, with the unchanged participant observation
+  `routeobs1_029097c508a11554b6b9301f` and fresh V3 narrator observation
+  `routeobs1_16e4dfd28d81316f24dc81ec` bound to the current narrator schema;
+- `run_20d2a0000001` paused after one committed causal step, then resumed the
+  same checkpoint without replaying its prefix. It retained eight participant
+  calls and `$0.001218052` provider-observed cost before failing closed;
+- the retained failure is an LLM action that supplied `representation_id: null`
+  for a Service Desk remediation interface with a required representation. The
+  action escaped the active-runtime interface check and the exact mechanism
+  rejected it with `ValueError: service-desk mechanism requires a
+  representation`;
+- Packet 20D2 is therefore **not accepted**: it has no terminal outcome or V3
+  narrative. Do not repeat the paid run, switch to Terra, or relax the V3
+  contract without an operator decision on the model/action-contract topology;
+- after the service restart, retained authored run `run_6ff09016a6e0` reopened
+  with its completed narration and unchanged retained `$0.00101175` cost; this
+  readback made no provider call.
+
+Earlier exact-revision execution verified 2026-07-27:
 
 - simulator behavior revision:
   `08614b4e9f4c7d6bd84c34922c16e83314faa814`;

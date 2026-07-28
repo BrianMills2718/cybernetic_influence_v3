@@ -128,8 +128,16 @@ restarting completed work.
   API-corruption, run-configuration, type, browser-script, and graph-build
   checks pass without a provider call.
 - **Current increment:** Packet 20D2.
-- **Resume event:** explicit certification, deployment, and spend authorization
-  after the agent reports the exact 20D2 topology and hard cap.
+- **Observed 20D2 boundary:** the private Mac is on `5465e012`; DeepSeek Flash
+  `none` has a fresh V3 narrator-schema route observation. Baseline
+  `run_20d2a0000001` paused and resumed correctly, then failed closed when the
+  model selected `representation_id: null` for an interface that required one.
+  It retained eight calls and `$0.001218052` provider-observed cost; no V3
+  narration or terminal outcome exists.
+- **Resume event:** an operator decision whether to repair the participant
+  action contract/prompt and authorize a replacement bounded DeepSeek run, or
+  to choose a different explicitly authorized model/call topology. Do not
+  silently retry, switch models, or relax the contract.
 
 ## Done
 
