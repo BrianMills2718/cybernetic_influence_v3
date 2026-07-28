@@ -89,6 +89,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Scenario condition" in page.text
     assert "Simulation map" in page.text
     assert "Live evidence" in page.text
+    assert 'id="narrative-section"' in page.text
     assert "Spatial topology" in page.text
     assert "Configured interaction pathways" in page.text
     assert "Realized causal graph" in page.text

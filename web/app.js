@@ -1523,6 +1523,7 @@ function render(run) {
     describeCondition()
   }
   $('#result').hidden = false
+  $('#narrative-section').hidden = false
   renderLifecycleControls(current)
   renderProjectionControls()
   $('#result-status').textContent = `${current.status} · ${String(current.scenario || '').replaceAll('_',' ')} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
@@ -1708,6 +1709,7 @@ $('#run').onclick = async () => {
     })
     if (body.status === 'running' && $('#live').checked) {
       $('#result').hidden = false
+      $('#narrative-section').hidden = true
       $('#result-status').textContent = `running · ${String(body.scenario || '').replaceAll('_',' ')}`
       $('#result-cost').textContent = 'Waiting for the first retained causal update…'
       renderLifecycleControls(body)
@@ -1876,6 +1878,7 @@ $('#authoring-live-run').onclick = async () => {
     selectedGraphView = current.world ? 'world' : 'causal'
     $('#map-section').hidden = false
     $('#result').hidden = false
+    $('#narrative-section').hidden = true
     $('#result-status').textContent = 'running · approved authored scenario'
     $('#result-cost').textContent = 'Waiting for the first retained causal update…'
     $('#live-evidence').hidden = false
