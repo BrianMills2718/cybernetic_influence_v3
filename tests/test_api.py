@@ -101,6 +101,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Play simulation" in page.text
     assert 'id="lifecycle-help"' in page.text
     assert "Run history" in page.text
+    assert "Each entry includes its exact run ID." in page.text
     assert "Read me" in page.text
     assert "Author scenario" in page.text
     assert "Describe what you want" in page.text

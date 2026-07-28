@@ -670,6 +670,7 @@ async function loadHistory() {
         <strong>${html(run.headline || run.status)}</strong>
         <span>${html(run.scenario?.replaceAll('_',' '))} · ${html(run.arm?.replaceAll('_',' '))}</span>
         <small>${html(run.status)} · ${html(new Date(run.created_at).toLocaleString())}</small>
+        <small class="history-run-id">Run ID · ${html(run.run_id)}</small>
       </button>
       <button class="trash-run" data-run-id="${run.run_id}" aria-label="Move ${run.run_id} to trash">×</button>
     </article>
