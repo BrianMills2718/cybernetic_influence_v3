@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-07-23.
+Accepted — 2026-07-23; boundary-flow clarification accepted 2026-07-28.
 
 ## Context
 
@@ -36,6 +36,55 @@ Project each authored `AnalyticalBoundary` as a derived operator view:
 The canonical state, event log, and exact graph remain unchanged. Aggregate
 identities are namespaced operator-view IDs and cannot collide with runtime
 referents.
+
+### Derived boundary activity and coordination episodes
+
+At an analytical scale, a concrete routed effect crossing the selected
+membership boundary is the observable input/output of the composite view:
+
+- an exact `effect_routed` event whose source-port owner is outside and whose
+  target-port owner is inside is a **boundary input**;
+- the reverse is a **boundary output** and may be described in the UI as a
+  derived composite-scale action;
+- a routed effect whose endpoint owners are both inside is internal
+  coordination; and
+- an event whose endpoint owners are both outside is unrelated to that
+  boundary.
+
+This vocabulary does not make the boundary an executor. A boundary output is
+the coarse description of an exact member/mechanism effect that crossed the
+chosen boundary. It remains distinct from any downstream mechanism decision or
+committed external outcome. The presentation must therefore show the output
+attempt and its exact downstream result separately.
+
+For each boundary output, a derived **coordination episode** follows exact
+causal-parent links backward through boundary-relevant internal events until it
+reaches the nearest boundary inputs, prior boundary outputs, or retained root
+triggers. One output anchors one episode in the first contract; outputs are not
+merged by timestamp, textual similarity, or an LLM judgment. Shared internal
+ancestry may consequently appear in more than one episode. An input with no
+downstream output at the selected causal position is shown as coordination in
+progress. The exact internal path remains expandable.
+
+Configured routes alone do not establish activity. Focus overlap, temporal
+proximity, and narrative prose do not establish a crossing. The projector must
+resolve endpoint owners from exact ports at the event's retained revision. A
+member mechanism directly mutating nonmember-owned state is unsupported by this
+first contract, even when the same execution also emits an outgoing effect. It
+must fail the projection loudly rather than manufacture a boundary output or
+external result; a separate outside mechanism owns the outside commit.
+
+Analytical membership is not a spatial boundary. Entering a place, changing a
+job, or changing an authorization does not become a boundary crossing unless a
+separate reviewed analytical membership or spatial-boundary contract says so.
+Nested and overlapping analytical boundaries remain deferred.
+
+The current implementation partitions configured routes and retains member-
+focused events but does not yet retain typed boundary crossings or coordination
+episodes. Packet 21A2 is the first planned implementation; Slice 22 reuses it
+without changing runtime authority. The projection may be recomputed from the
+currently retained event prefix while a run is live; “analytical” does not mean
+“available only after completion.”
 
 ## Deferred Research Question: Systemic Influence Without Reification
 

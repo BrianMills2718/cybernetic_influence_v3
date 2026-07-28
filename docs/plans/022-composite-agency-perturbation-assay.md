@@ -3,7 +3,7 @@ doc_role: implementation_plan
 authority: bounded_design
 status: gated_by_slice_21c
 created: 2026-07-27
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
 # Slice 22: Composite-agency perturbation assay
@@ -55,6 +55,11 @@ The concrete causal runtime remains authoritative. Aggregate interpretations
 are reversible measurements over retained runs under
 [ADR 006](../adr/006-boundaries-are-derived-coarse-grainings.md) and
 [ADR 012](../adr/012-decision-environment-measures-are-derived.md).
+
+Slice 22 consumes the typed `BoundaryActivityProjection` produced and observed
+in Packet 21A2. It must not reconstruct crossings or coordination episodes from
+prose, timestamps, focus overlap, or configured routes, and it must not change
+the v1 one-output-per-episode rule during the assay.
 
 ## Frozen target artifact
 
@@ -167,6 +172,10 @@ class CompositeControlReadout(_ProducedModel):
     boundary_id: str
     perturbation_id: str
     exact_values: dict[str, JsonValue]
+    boundary_activity_ref: str
+    input_crossing_ids: list[str]
+    output_crossing_ids: list[str]
+    coordination_episode_ids: list[str]
     coordination_measurement_ref: str
     coded_patterns: list[IndicatorEvidence]
     source_run_ids: list[str]
@@ -211,6 +220,12 @@ retention.
    observed pattern as consistent with competence loss, goal drift/capture,
    fragmentation, defensive adaptation, rational caution, or unclear. It must
    cite retained evidence and cannot establish a causal mechanism from one run.
+10. **Boundary-output rule — exact calculator:** a composite-scale action counts
+    only when a retained Slice-21 `outgoing` crossing exists. The output attempt,
+    downstream external result, and terminal outcome remain separate values.
+11. **Episode-reuse rule — analysis service:** correction, recovery, and
+    rerouting may reference only validated Slice-21 coordination episodes and
+    their exact event IDs. Analysis never regroups events by timing or prose.
 
 ## Measurement vector
 
@@ -228,6 +243,9 @@ retention.
 - repeated terminal-proposal denials;
 - Slice-21 verification, reopening, commitment-divergence, and source-reliance
   measures by reference rather than duplication.
+- incoming/outgoing boundary-crossing counts and IDs;
+- completed/in-progress coordination-episode counts and IDs; and
+- output attempts with their separate downstream external-result IDs.
 
 ### Evidence-coded patterns
 
@@ -283,6 +301,11 @@ aggregate boundary as executor, missing control, missing Slice-21 measurement,
 duplicate run ID, invalid evidence ID, and an apparent fast decision that
 violates a blocking constraint.
 
+Also reject a missing/mismatched boundary-activity reference, an episode that
+names an event outside its source run, a claimed composite output without an
+outgoing crossing, a terminal outcome conflated with an output attempt, and any
+attempt to rederive an episode from prose or event-time proximity.
+
 Do not edit runtime, API, UI, scenario, prompt, or `llm_client` paths in 22A0.
 Audit and commit before 22A1.
 
@@ -299,6 +322,8 @@ Acceptance:
   configured/spatial graph, and every scheduled perturbation is visible in the
   causal DAG and narrative;
 - correction, recovery, and rerouting calculations cite exact event IDs;
+- every row retains the exact boundary input/output and coordination-episode
+  IDs inherited from Slice 21A2, with attempts and external results separate;
 - position-matched member replacement preserves the structure but changes the
   component identity, reviewed person assumptions, and exercised behavior
   visibly;
@@ -313,6 +338,12 @@ Add the matched-condition table to the existing comparison/run-history UI,
 with step-down to the selected run, analytical boundary, graph moment,
 narrative, exact measures, and coded reference pattern. Do not build a separate
 application or generic perturbation editor.
+
+Selecting the partnership row first shows its boundary inputs, derived
+coordination episodes, boundary outputs, and separate external results; the
+analyst can then expand the same retained episode into exact people,
+mechanisms, routes, events, and the Slice-21 Waltzman-inspired measurements.
+Do not add a pseudo-agent orientation or organization-level chain of thought.
 
 The human readout asks:
 

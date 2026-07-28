@@ -3,7 +3,7 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
 # Research MVP Continuous-Execution Goal
@@ -61,7 +61,7 @@ and [Slice 21](plans/021-coordination-environment-assay.md) are binding.
 |---|---|---|
 | C1 | Packet 20D1 replaces model-selected citation IDs with valid simulator-owned evidence context while retaining v1/v2 readability and all failure controls | Commit, focused pytest/mypy/frontend-build output, `git diff --check`, and owned-diff audit |
 | C2 | Packet 20D2 produces one authorized, certified, paused/resumed, fully narrated Service Desk proof and a zero-spend retained authored rerender | Exact revision/config, run/trace IDs, unique event/call counts, provider-observed cost, restart/reopen result, and full-trace inspection |
-| C3 | Slice 21A produces all three zero-cost recurring fixtures and one authorized valid live baseline with four meeting cycles and 12–28 meaningful moments | Packet commits/checks, scenario fingerprints, run/trace IDs, completion reason, graphs/evidence inspection, and observed cost |
+| C3 | Slice 21A produces all three zero-cost recurring fixtures and one authorized valid live baseline with four meeting cycles and 12–28 meaningful moments; its execution-inert partnership account separates exact boundary inputs, internal coordination episodes, boundary outputs, and downstream external results | Packet commits/checks, scenario fingerprints, run/trace IDs, typed crossing/episode IDs, pre-output/output/final selected-moment inspection, completion reason, graphs/evidence inspection, and observed cost |
 | C4 | Slice 21B exact and evidence-coded measures pass positive, negative, environmental-event, corruption, incomplete-run, and fingerprint controls without feeding analysis into world state | Packet commits/checks, retained artifacts, both-sign fixture results, live canary trace IDs/costs, and provenance readout inspection |
 | C5 | Slice 21C retains a valid two-per-condition comparison with every run, invalid-run disposition, uncertainty/range, subgroup disagreement, limitations, and evidence step-down visible | Frozen batch fingerprint, six run/trace records, comparison tests, independent sign-off disposition, frontend build, and `make check` |
 | C6 | Canonical `main` and `origin/main` contain the coherent completed packet sequence and documentation names the demonstrated scope and remaining non-claims | Final revisions, clean status, push evidence, and roadmap/plan status audit |

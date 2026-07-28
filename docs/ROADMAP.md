@@ -547,6 +547,16 @@ global variables in people's prompts. Exact measures and LLM-coded indicators
 remain visibly distinct. The first comparison reports per-run trajectories and
 uncertainty; it does not claim attribution, prediction, or empirical validation.
 
+Packet 21A2 also establishes the shared scale bridge used by the later Levin
+assay: exact routed effects crossing the partnership's execution-inert boundary
+become derived inputs and outputs, while the exact multi-member causal ancestry
+between them becomes an expandable coordination episode. One outgoing crossing
+anchors one episode; output attempt, external mechanism result, and terminal
+outcome remain distinct. This analyst projection is computed at presentation
+time from the retained event prefix, so it can update during a live run without
+becoming a new active system, making a model call, or feeding anything back
+into execution.
+
 ### 12. Challenge the assay with evasion dimensions — gated by Slice 21C
 
 Add temporal fragmentation, structural segmentation, oscillation, variable
@@ -569,6 +579,11 @@ person-local dispositions; Waltzman-inspired measures describe derived changes
 in coordination; Levin-style perturbations test candidate goal preservation,
 correction, recovery, and rerouting at the composite boundary. These layers do
 not merge into hidden world state.
+
+Slice 22 reuses the validated Slice-21 boundary crossings and coordination
+episodes. It cannot infer composite actions from prose, configured edges, or
+timing, and it cannot regroup the exact trajectory into a more convenient
+organization narrative.
 
 The first scripted assay compares a matched control with component replacement,
 structural interruption, feedback interruption, and a legitimate external

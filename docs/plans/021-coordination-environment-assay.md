@@ -3,7 +3,7 @@ doc_role: implementation_plan
 authority: bounded_design
 status: planned_after_slice_20
 created: 2026-07-25
-updated: 2026-07-27
+updated: 2026-07-28
 ---
 
 # Slice 21: Coordination-environment assay
@@ -96,6 +96,14 @@ changes. It does not yet ask whether that boundary is a useful composite-agent
 model. The latter question is owned by
 [Slice 22](022-composite-agency-perturbation-assay.md) after 21C.
 
+At this scale, exact routed effects entering the partnership are derived
+boundary inputs, exact routed effects leaving it are derived boundary outputs,
+and the member-level causal chain between them is a coordination episode under
+[ADR 006](../adr/006-boundaries-are-derived-coarse-grainings.md). This is a
+presentation-time analyst projection over the retained event prefix, not
+organization cognition or world state. It may update while a run is in
+progress, but it never feeds back into execution.
+
 ## Canonical scenario
 
 Use the paper's multinational bio-surveillance deployment problem as a
@@ -141,6 +149,9 @@ At minimum:
 - proposed scope and decision threshold;
 - participant commitments and partner participation;
 - meeting/decision record;
+- one concrete external decision-receipt record and exact receiver outside the
+  partnership boundary, reached only through the reviewed terminal-decision
+  output route;
 - configured communication channels and spatial locations; and
 - exact final status:
   `deploy_on_time | delayed | scope_reduced | partner_disengaged |
@@ -161,6 +172,12 @@ At minimum:
 - The first vertical uses three source processes—technical, policy, and local—
   carrying different messages while retaining one concrete shared objective
   record. No global narrative is inserted into recipient prompts.
+- The partnership boundary contains its five people, internal records, routes,
+  scheduler, and exact decision mechanisms. It excludes all three pressure
+  sources, their source-ensemble boundary, and the external decision receiver.
+  The terminal decision becomes externally observable only when an exact
+  reviewed output crosses to that receiver; its downstream receipt remains
+  distinct from the partnership's output attempt.
 
 ### Modeled cadence and causal depth
 
@@ -537,6 +554,137 @@ social variable. Keep the same `scenario_id` across arms. A fixture comparison
 that removes this one entity from each canonical scenario dump must be byte-
 identical across the three arms, while the complete fingerprints must differ.
 
+### Boundary-flow presentation contract
+
+Packet 21A2 adds one scenario-neutral presentation projection over the retained
+event prefix to each existing analytical boundary. It works for an in-progress
+or completed run. It does not change `CausalScenario`, execute an aggregate,
+add an endpoint, feed a value back into runtime, or make a model call.
+
+The following v1 decisions are fixed for implementation and are not open design
+choices: analytical membership, rather than spatial containment, defines the
+boundary; only an exact realized routed effect defines a crossing; one outgoing
+crossing anchors one completed episode; exact causal ancestry defines that
+episode; and the output crossing remains separate from downstream acceptance
+and terminal outcome. Nested/overlapping-boundary semantics, multi-output
+episode grouping, and LLM-authored grouping are deferred.
+
+```python
+class BoundaryCrossing(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    schema_version: Literal[1]
+    crossing_id: str
+    boundary_id: str
+    event_id: str
+    sequence: int
+    causal_time: int | None
+    direction: Literal["incoming", "outgoing"]
+    source_ref: str
+    target_ref: str
+    route_kind: Literal["connection", "container"]
+    route_ref: str
+    effect_id: str
+    representation_id: str | None
+
+class BoundaryCoordinationEpisode(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    schema_version: Literal[1]
+    episode_id: str
+    boundary_id: str
+    status: Literal["completed", "in_progress"]
+    input_crossing_ids: list[str]
+    prior_output_crossing_ids: list[str]
+    trigger_event_ids: list[str]
+    internal_event_ids: list[str]
+    output_crossing_id: str | None
+    external_result_event_ids: list[str]
+    contributing_member_ids: list[str]
+    start_sequence: int
+    end_sequence: int | None
+
+class BoundaryActivityProjection(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    schema_version: Literal[1]
+    boundary_id: str
+    crossings: list[BoundaryCrossing]
+    episodes: list[BoundaryCoordinationEpisode]
+```
+
+The retained analyst document adds this object as
+`boundaries[].activity`. System-assigned IDs are
+`boundary_crossing_<boundary_id>_<event_id>` and
+`boundary_episode_<boundary_id>_<output-event-id>`; an unmatched input uses its
+input event ID in the episode ID. Lists are unique and ordered by canonical
+event sequence. Legacy documents may omit `activity`; consumers must render a
+truthful legacy-unavailable state and must not reconstruct it in browser code.
+For a crossing, `route_ref` is exactly the event's `connection_id` when
+`route_kind == "connection"` and exactly its `container_id` when
+`route_kind == "container"`; the other route field must be absent on the event.
+
+The server-side projector owns these rules:
+
+1. Resolve each `effect_routed` source and target from the exact source/target
+   port owners at that event's retained revision. Exactly one endpoint inside
+   the revision-specific derived membership creates a crossing.
+2. Both endpoints inside is internal; both outside is unrelated. Configured but
+   unrealized routes, focus overlap, timestamps, and prose never create a
+   crossing.
+3. One outgoing crossing anchors one completed episode. Walk backward only on
+   exact causal-parent IDs. Stop each branch at the nearest incoming crossing,
+   prior outgoing crossing, or retained nonmember/root trigger. An event is
+   boundary-relevant only when its actor, mechanism, source-port owner,
+   target-port owner, or patch owner under rule 6 is a member at that revision;
+   include only traversed boundary-relevant internal events. Do not use
+   `focus_ids` as a substitute for this test.
+4. Follow exact descendants of the output outside the boundary until a crossing
+   returns inside or the branch ends. Retain those mechanism decisions,
+   commits, deliveries, or dissipations as `external_result_event_ids`; never
+   conflate the output attempt with acceptance or world change.
+5. An incoming crossing with no outgoing descendant produces one `in_progress`
+   episode. Do not merge different inputs or outputs by time or language in v1.
+6. A member mechanism that directly commits any nonmember-owned state raises a
+   projection error even if the same execution emits an outgoing effect; the
+   outside result must be committed by a separate outside mechanism. Resolve
+   patch ownership without prose: a fact change belongs to the entity prefix
+   before the first `.` in its validated `fact_id`; a placement change belongs
+   to its `entity_id`; carrier changes and added representations belong inside
+   when either their `carrier_id` or that carrier's `owner_ref` is a member; and
+   an added observation belongs to its `target_entity_id`. Unknown event, port,
+   route, carrier, member, parent, or duplicate ID also fails
+   retention/reopening visibly.
+7. At a selected event, the UI clips episode fields to event sequence. It must
+   show an eventual completed episode as in progress before its output crossing
+   and reveal no future member event or output in the selected-moment account.
+
+`contributing_member_ids` is the sequence-ordered unique union of inside actor
+IDs, mechanism IDs, and port-owner IDs on the retained internal events; records,
+carriers, representations, and places remain inspectable evidence but are not
+reported as contributors. `start_sequence` is the earliest retained input,
+trigger, prior-output, or internal event; `end_sequence` is the output crossing
+for a completed episode and `None` for an in-progress episode. The projector
+retains all exact IDs; prose rendering may summarize them but cannot replace or
+reorder the evidence.
+
+The analytical composite account uses the same card and selected-moment
+behavior as participant accounts during and after execution, but its content is
+scale-appropriate:
+
+```text
+Partnership · analytical composite (does not execute)
+Boundary input: <outside source -> inside recipient>
+Internal coordination: <members and exact steps summarized from retained IDs>
+Boundary output: <inside source -> outside recipient>
+External result: <separate exact decision/delivery/commit result>
+[Inspect exact causal path]
+```
+
+If no output has occurred, show `Internal coordination in progress; no boundary
+output yet.` If no crossing has occurred, say so and show the configured member
+and route scope. Never write a pseudo-orientation, pseudo-memory, or
+organization-level model rationale. Selecting a crossing or internal step uses
+the existing event/moment selection API and expands to the exact graph; no
+client-side business rule or new endpoint family is permitted.
+
 The exact decision operation owns the final-status transition. It accepts only
 typed proposals whose retained commitments, blocking issues, active partners,
 scope, and evidence threshold satisfy the reviewed condition. A syntactically
@@ -564,9 +712,14 @@ presentation, authoring, `llm_client`, or generated `web/` assets.
    ensemble boundary. Baseline disables their activity through configuration;
    it does not delete unrelated world components or alter people's minds.
 4. One execution-inert partnership boundary containing the five people,
-   decision records, routes, and exact mechanisms.
+   internal decision records, routes, scheduler, and exact mechanisms while
+   excluding the pressure sources and external decision receiver.
 5. A canonical-dump comparison proving that only the reviewed condition record
    differs across arms, plus a stable scenario fingerprint for each arm.
+6. One reviewed terminal-decision output route from an inside exact decision
+   mechanism to the outside exact decision receiver. Removing that route must
+   prevent the external terminal receipt without granting any aggregate an
+   output interface.
 
 **Positive fixture:** all three conditions validate, expose positive-duration
 routes, four scheduled meetings, a day-10 deadline, five people, and no
@@ -657,6 +810,10 @@ least one commitment changes; the exact decision or deadline mechanism commits
 the terminal state. Every transition has positive modeled duration and exact
 parents.
 
+The terminal path must contain an outgoing partnership crossing followed by a
+separate external exact receipt/commit. An internal proposal, gate decision,
+outgoing effect, external receipt, and terminal world state are distinct events.
+
 **Acceptance:**
 
 - each arm completes at zero cost with four meeting cycles and at least twelve
@@ -683,9 +840,36 @@ three existing graph meanings and Slice-20 narration/completion surfaces. Do
 not create a separate workbench, endpoint family, graph renderer, or batch
 store.
 
-**Allowed edits:** API, presentation, frontend source, generated graph assets
-only through `npm --prefix frontend run build`, and focused API/presentation/UI
-tests. Do not edit conversational authoring.
+**Allowed edits:** `src/cybernetic_influence/api.py`,
+`src/cybernetic_influence/presentation.py`, `web/app.js`, `web/index.html`,
+`web/styles.css`, the existing `frontend/` graph source only if the exact-path
+selection needs it, generated graph assets only through
+`npm --prefix frontend run build`, and focused API/presentation/UI tests. Do
+not edit conversational authoring. Mobile-specific layout work is outside this
+PoC packet.
+
+**Implement in this order:**
+
+1. Add the three strict boundary-activity models and a pure server-side
+   projector in `presentation.py`; do not put classification or causal traversal
+   in `web/app.js`.
+2. Add positive fixtures for one incoming crossing, multi-member internal
+   ancestry, one outgoing crossing, and a separate accepted external result.
+   Add positive open-input and autonomous-output fixtures.
+3. Add negative fixtures for configured-but-unrealized routes, focus-only
+   overlap, both-inside/both-outside routes, unknown ports/parents/members,
+   duplicate IDs, cross-run IDs, any direct member-to-nonmember patch (including
+   one accompanied by an outgoing effect), and selected-moment future leakage.
+4. Retain `boundaries[].activity` through the existing run document and reopen
+   it through the existing run endpoint. A changed digest or invalid reference
+   fails reopening; legacy absence remains readable and explicitly unavailable.
+5. Replace the static composite paragraph with the episode card above. Refresh
+   it from each newly retained progress document as well as the final document.
+   Preserve the `does not execute` label, attempt/result distinction, selected
+   moment, exact step-down, and existing graph projection controls.
+6. Exercise the scripted partnership path through config → preview → run →
+   retained history → reopen. Inspect the rendered composite at a pre-output
+   moment, output moment, and final moment.
 
 **Acceptance:** an analyst selects any arm, sees spatial and configured maps
 before execution, starts one zero-cost run, watches retained progress, reads the
@@ -693,6 +877,70 @@ multi-episode concise and detailed narratives, sees the explicit completion
 reason separately from the decision outcome, selects either analytical
 boundary, and steps every material claim down to exact evidence. Browser
 refresh and server restart reopen the same run without execution.
+
+Additionally, the partnership account must show at least one exact incoming
+source crossing, the multi-person internal causal path, one outgoing terminal-
+decision crossing, and its separate external result. Before the output event,
+the same episode reads `in progress` and exposes no future output. Clicking
+`Inspect exact causal path` selects only retained event IDs from that episode.
+An empty/legacy boundary is honest rather than synthesized. The output remains
+a derived analyst projection and no boundary ID appears in active-system,
+entity, port, mechanism, action, or model-call records.
+During an in-progress run, polling an unchanged retained prefix produces the
+same activity payload and no new execution; polling after a new retained event
+adds only evidence at or before that event's sequence.
+
+**Focused verification:**
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_presentation.py tests/test_api.py tests/test_coordination_decision.py -k 'boundary or coordination'
+.venv/bin/python -m mypy src/cybernetic_influence/presentation.py src/cybernetic_influence/api.py
+node --check web/app.js
+npm --prefix frontend run build
+git diff --check
+```
+
+Then run one zero-cost scripted integration, reopen it through the API, and
+inspect the normal desktop browser flow with no console/network/backend error.
+Do not claim stakeholder comprehension until the operator answers:
+
+1. Is it clear what entered and left the partnership boundary?
+2. Is the internal multi-member path understandable as one episode without
+   implying a second mind?
+3. Can every summarized step be expanded to exact members and events?
+
+**Stop conditions:** stop instead of guessing if the scenario boundary contains
+an external source/receiver, the terminal outcome occurs without an outgoing
+crossing, exact causal parents cannot reconstruct the path, direct cross-
+boundary mutation is required, or the UI would need to infer crossings from
+labels/timing. Do not begin 21A3 until the scripted episode is technically
+verified and receives its human readout.
+
+#### Assignment prompt for the implementation agent
+
+> Implement Packet 21A2 only from
+> `docs/plans/021-coordination-environment-assay.md`, starting from the clean
+> committed 21A1 descendant. First verify the 21A2 preconditions, path ownership,
+> and that the scripted partnership includes outside pressure sources, an
+> outside decision receiver, exact crossing routes, and exact causal parents.
+> Stop and report the exact failing contract if any are absent.
+>
+> Implement the strict `BoundaryCrossing`, `BoundaryCoordinationEpisode`, and
+> `BoundaryActivityProjection` contracts plus the server-owned projection rules
+> exactly as specified. One exact outgoing crossing anchors one episode. Keep
+> input, internal ancestry, output attempt, and external result separate. Do not
+> merge by time/text, call an LLM, create an organization executor, infer a
+> crossing in browser code, add an endpoint family, or change the causal core.
+> Preserve legacy run readability and fail loudly on corrupt references or
+> direct unmodeled member-to-nonmember mutation.
+>
+> Wire the projection through the existing run document/API and replace only
+> the existing composite account with the specified selected-moment episode
+> cards and exact step-down. Implement every positive and negative fixture,
+> focused command, zero-cost scripted integration/reopen, and desktop browser
+> check named in 21A2. Audit the complete owned diff, commit the coherent packet,
+> report exact evidence, and stop for the three-question human readout. Do not
+> begin 21A3, deploy, spend, or modify `llm_client`.
 
 ### Packet 21A3 — Native participant seam and canary gate
 
