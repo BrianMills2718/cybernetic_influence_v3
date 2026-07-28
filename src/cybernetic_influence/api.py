@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from threading import Event, Lock
+from threading import Event, Lock, Thread, local
 from typing import Literal, cast
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
@@ -37,6 +37,7 @@ from cybernetic_influence.authoring.store import (
 from cybernetic_influence import __version__
 from cybernetic_influence.active_runtime import (
     ActiveRuntimeCheckpoint,
+    RuntimeProgressUpdate,
 )
 from cybernetic_influence.active_runtime.run_control import (
     ResolvedRunControlPlan,
@@ -46,6 +47,7 @@ from cybernetic_influence.active_runtime.run_control import (
 from cybernetic_influence.presentation import (
     analyst_boundaries,
     analyst_edges,
+    analyst_progress_projection,
     analyst_nodes,
     analyst_world,
     build_analyst_document,
@@ -242,9 +244,62 @@ def create_app(
     authoring = DraftAuthoringService(drafts, call=authoring_call)
     authoring_lock = Lock()
     live_lock = Lock()
+    live_worker_context = local()
+    authored_live_worker_context = local()
     pause_requests: dict[str, Event] = {}
     stop_requests: dict[str, Event] = {}
     pause_lock = Lock()
+    progress_lock = Lock()
+
+    def retain_progress(
+        run_id: str,
+        update: RuntimeProgressUpdate,
+        checkpoint: ActiveRuntimeCheckpoint,
+    ) -> None:
+        """Append one analyst-safe live update before future runtime work.
+
+        The callback runs on the simulation worker.  It deliberately fails
+        loud if the authoritative run document cannot retain the update.
+        """
+        with progress_lock:
+            document = runs.get(run_id)
+            existing = document.get("live_progress", [])
+            if not isinstance(existing, list):
+                raise RuntimeError("retained live progress is malformed")
+            sequence = len(existing) + 1
+            record = {
+                "sequence": sequence,
+                "observed_at": now_iso(),
+                **update.model_dump(mode="json"),
+                "projection": analyst_progress_projection(checkpoint, update),
+            }
+            lifecycle = document.get("status")
+            document.update(_checkpoint_progress_projection(checkpoint))
+            document["continuation"] = _checkpoint_continuation(
+                checkpoint,
+                lifecycle=(
+                    "paused"
+                    if lifecycle == "pause_requested"
+                    else "running"
+                ),
+            )
+            document["live_progress"] = [*existing, record]
+            document["progress_sequence"] = sequence
+            runs.save(document)
+
+    def retain_progress_history(
+        document: dict[str, object], run_id: str
+    ) -> dict[str, object]:
+        """Carry public live progress into the final retained analyst record."""
+        with progress_lock:
+            prior = runs.get(run_id)
+            progress = prior.get("live_progress", [])
+            if not isinstance(progress, list):
+                raise RuntimeError("retained live progress is malformed")
+            copied = dict(document)
+            copied["live_progress"] = progress
+            copied["progress_sequence"] = len(progress)
+            return copied
 
     @app.middleware("http")
     async def security_headers(
@@ -475,10 +530,10 @@ def create_app(
         except (ValueError, AuthoringCompilationError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
-    @app.post("/api/authoring/drafts/{draft_id}/runs")
+    @app.post("/api/authoring/drafts/{draft_id}/runs", response_model=None)
     def run_approved_draft(
         draft_id: str, body: AuthoredRunRequest, request: Request
-    ) -> dict[str, object]:
+    ) -> dict[str, object] | Response:
         _require_access(request)
         live = body.execution == "live"
         if not live and body.llm_options is not None:
@@ -507,15 +562,33 @@ def create_app(
         except (ValueError, AuthoringCompilationError) as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
 
-        lock_acquired = live and live_lock.acquire(blocking=False)
+        worker_execution = live and bool(
+            getattr(authored_live_worker_context, "active", False)
+        )
+        lock_acquired = (
+            True
+            if worker_execution
+            else live and live_lock.acquire(blocking=False)
+        )
         if live and not lock_acquired:
             raise HTTPException(
                 status_code=409,
                 detail="another live run is already active",
             )
-        run_id = f"run_{uuid4().hex[:12]}"
-        created_at = now_iso()
-        initial: dict[str, object] = {
+        run_id = (
+            str(authored_live_worker_context.run_id)
+            if worker_execution
+            else f"run_{uuid4().hex[:12]}"
+        )
+        if worker_execution:
+            try:
+                initial = runs.get(run_id)
+            except (InvalidRunIdError, RunNotFoundError, RunCorruptError) as error:
+                raise RuntimeError("authored live worker could not reopen its run") from error
+            created_at = str(initial["created_at"])
+        else:
+            created_at = now_iso()
+            initial = {
             "run_id": run_id,
             "created_at": created_at,
             "status": "running",
@@ -535,8 +608,41 @@ def create_app(
                 "proposal_digest": compiled.proposal_digest,
                 "template_id": compiled.proposal.workflow.template_id,
             },
-        }
-        runs.save(initial)
+            "live_progress": [],
+            "progress_sequence": 0,
+            }
+            runs.save(initial)
+        if live and not worker_execution:
+            def execute_authored_live_worker() -> None:
+                authored_live_worker_context.active = True
+                authored_live_worker_context.run_id = run_id
+                try:
+                    run_approved_draft(draft_id, body, request)
+                except Exception as error:
+                    # This only covers failures before the normal worker body
+                    # can retain its own diagnostic.  A live lock must never
+                    # remain held merely because setup itself failed.
+                    try:
+                        runs.save(
+                            {
+                                **initial,
+                                "status": "failed",
+                                "error": f"{type(error).__name__}: {error}",
+                            }
+                        )
+                    finally:
+                        if live_lock.locked():
+                            live_lock.release()
+                finally:
+                    del authored_live_worker_context.run_id
+                    del authored_live_worker_context.active
+
+            Thread(
+                target=execute_authored_live_worker,
+                name=f"cybernetic-authored-live-{run_id}",
+                daemon=True,
+            ).start()
+            return JSONResponse(status_code=202, content=initial)
         result: object | None = None
         try:
             result = (
@@ -546,9 +652,17 @@ def create_app(
                     reasoning_effort=effective_llm.agent_reasoning_effort,
                     per_call_budget=effective_llm.participant_per_call_ceiling,
                     per_run_budget=effective_llm.max_total_cost,
+                    progress_observer=lambda update, checkpoint: retain_progress(
+                        run_id, update, checkpoint
+                    ),
                 )
                 if effective_llm is not None
-                else compiled.run_scripted(run_id=run_id)
+                else compiled.run_scripted(
+                    run_id=run_id,
+                    progress_observer=lambda update, checkpoint: retain_progress(
+                        run_id, update, checkpoint
+                    ),
+                )
             )
             workflow = compiled.proposal.workflow
             outcome_entity_id = (
@@ -604,6 +718,7 @@ def create_app(
                 run_id=run_id,
                 effective_llm=effective_llm,
             )
+            narrated = retain_progress_history(narrated, run_id)
             narrated["llm_configuration"] = initial["llm_configuration"]
             narrated["model_call_summaries"] = _result_call_summaries(result)
             return runs.save(narrated)
@@ -626,6 +741,8 @@ def create_app(
                 ),
             }
             runs.save(failed)
+            if worker_execution:
+                return runs.save(failed)
             raise HTTPException(
                 status_code=500,
                 detail="authored simulation failed; retained for inspection",
@@ -658,6 +775,50 @@ def create_app(
         except RunCorruptError as error:
             raise HTTPException(status_code=409, detail="retained run is corrupt") from error
 
+    @app.get("/api/runs/{run_id}/progress")
+    def retained_progress(
+        run_id: str,
+        request: Request,
+        after_sequence: int = 0,
+    ) -> dict[str, object]:
+        """Return only analyst-safe live updates after one retained sequence."""
+        _require_access(request)
+        if after_sequence < 0:
+            raise HTTPException(status_code=422, detail="after_sequence must be nonnegative")
+        try:
+            document = runs.get(run_id)
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except RunNotFoundError as error:
+            raise HTTPException(status_code=404, detail="run not found") from error
+        except RunCorruptError as error:
+            raise HTTPException(status_code=409, detail="retained run is corrupt") from error
+        records = document.get("live_progress", [])
+        if not isinstance(records, list):
+            raise HTTPException(status_code=409, detail="retained live progress is malformed")
+        typed = [item for item in records if isinstance(item, dict)]
+        if len(typed) != len(records):
+            raise HTTPException(status_code=409, detail="retained live progress is malformed")
+        newer = [
+            item
+            for item in typed
+            if isinstance(item.get("sequence"), int)
+            and not isinstance(item.get("sequence"), bool)
+            and int(item["sequence"]) > after_sequence
+        ]
+        latest = typed[-1] if typed else None
+        return {
+            "run_id": run_id,
+            "status": document.get("status"),
+            "latest_sequence": document.get("progress_sequence", 0),
+            "records": newer,
+            "projection": latest.get("projection") if latest is not None else None,
+            "model_calls": document.get("model_calls", 0),
+            "cost": document.get("cost", 0.0),
+            "completion": document.get("completion"),
+            "error": document.get("error"),
+        }
+
     @app.delete("/api/runs/{run_id}")
     def delete_run(run_id: str, request: Request) -> dict[str, object]:
         _require_access(request)
@@ -685,9 +846,15 @@ def create_app(
         if document.get("status") not in {"running", "pause_requested"}:
             raise HTTPException(status_code=409, detail="run is not active")
         pause.set()
-        document["status"] = "pause_requested"
-        document["pause_message"] = "Pause will take effect after the current causal step."
-        runs.save(document)
+        # Serialize the operator transition with progress persistence so a
+        # just-committed checkpoint cannot overwrite the requested pause.
+        with progress_lock:
+            current = runs.get(run_id)
+            current["status"] = "pause_requested"
+            current["pause_message"] = (
+                "Pause will take effect after the current causal step."
+            )
+            runs.save(current)
         return {"run_id": run_id, "status": "pause_requested"}
 
     @app.post("/api/runs/{run_id}/stop")
@@ -707,9 +874,13 @@ def create_app(
         if document.get("status") not in {"running", "pause_requested"}:
             raise HTTPException(status_code=409, detail="run is not active")
         stop.set()
-        document["status"] = "stop_requested"
-        document["stop_message"] = "Stop will take effect after the current causal step."
-        runs.save(document)
+        with progress_lock:
+            current = runs.get(run_id)
+            current["status"] = "stop_requested"
+            current["stop_message"] = (
+                "Stop will take effect after the current causal step."
+            )
+            runs.save(current)
         return {"run_id": run_id, "status": "stop_requested"}
 
     @app.post("/api/runs/{run_id}/resume")
@@ -798,6 +969,9 @@ def create_app(
                 run_id=run_id,
                 checkpoint=checkpoint,
                 run_control=run_control,
+                progress_observer=lambda update, item: retain_progress(
+                    run_id, update, item
+                ),
             )
             readout = event_driven_service_desk_outcome(resumed)
             document = build_service_desk_analyst_document(fixture=fixture, result=resumed, readout=readout, profile=profile, arm_id=arm.arm_id, execution="live" if live else "scripted", created_at=str(paused["created_at"]))
@@ -810,19 +984,22 @@ def create_app(
             )
             document["continuation"] = {"schema_version": 1, "phase": "causal", "lifecycle": "completed_from_checkpoint", "checkpoint_digest": checkpoint.record_digest}
             return runs.save(
-                _attach_narration(
+                retain_progress_history(
+                    _attach_narration(
                     document,
                     live=live,
                     run_id=run_id,
                     effective_llm=effective_llm,
+                    ),
+                    run_id,
                 )
             )
         finally:
             if live:
                 live_lock.release()
 
-    @app.post("/api/runs")
-    def run(request_body: RunRequest, request: Request) -> dict[str, object]:
+    @app.post("/api/runs", response_model=None)
+    def run(request_body: RunRequest, request: Request) -> dict[str, object] | Response:
         _require_access(request)
         service_arm = None
         physical_arm = None
@@ -903,7 +1080,14 @@ def create_app(
                 )
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error)) from error
-        lock_acquired = live and live_lock.acquire(blocking=False)
+        worker_execution = live and bool(
+            getattr(live_worker_context, "active", False)
+        )
+        lock_acquired = (
+            True
+            if worker_execution
+            else live and live_lock.acquire(blocking=False)
+        )
         if live and not lock_acquired:
             raise HTTPException(
                 status_code=409,
@@ -911,62 +1095,117 @@ def create_app(
             )
 
         run_id = request_body.run_id or f"run_{uuid4().hex[:12]}"
-        try:
-            runs.get(run_id)
-        except RunNotFoundError:
-            pass
-        except InvalidRunIdError as error:
-            raise HTTPException(status_code=422, detail=str(error)) from error
+        if worker_execution:
+            try:
+                initial = runs.get(run_id)
+            except (InvalidRunIdError, RunNotFoundError, RunCorruptError) as error:
+                raise RuntimeError("live worker could not reopen its retained run") from error
+            created_at = str(initial["created_at"])
+            with pause_lock:
+                pause = pause_requests.get(run_id)
+                stop = stop_requests.get(run_id)
+            if pause is None or stop is None:
+                raise RuntimeError("live worker lost its control handles")
         else:
-            raise HTTPException(status_code=409, detail="run ID already exists")
-        created_at = now_iso()
-        initial: dict[str, object] = {
-            "run_id": run_id,
-            "created_at": created_at,
-            "status": "running",
-            "scenario": request_body.scenario,
-            "profile": selected_profile,
-            "arm": request_body.arm_id,
-            "execution": request_body.execution,
-            "model_calls": 0,
-            "cost": 0.0,
-            "llm_configuration": (
-                effective_llm.model_dump(mode="json")
-                if effective_llm is not None
-                else None
-            ),
-            "run_control": (
-                resolved_run_control.model_dump(mode="json")
-                if resolved_run_control is not None
-                else None
-            ),
-        }
-        runs.save(initial)
-        pause = Event()
-        stop = Event()
-        with pause_lock:
-            pause_requests[run_id] = pause
-            stop_requests[run_id] = stop
+            try:
+                runs.get(run_id)
+            except RunNotFoundError:
+                pass
+            except InvalidRunIdError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+            else:
+                raise HTTPException(status_code=409, detail="run ID already exists")
+            created_at = now_iso()
+            initial = {
+                "run_id": run_id,
+                "created_at": created_at,
+                "status": "running",
+                "scenario": request_body.scenario,
+                "profile": selected_profile,
+                "arm": request_body.arm_id,
+                "execution": request_body.execution,
+                "model_calls": 0,
+                "cost": 0.0,
+                "llm_configuration": (
+                    effective_llm.model_dump(mode="json")
+                    if effective_llm is not None
+                    else None
+                ),
+                "run_control": (
+                    resolved_run_control.model_dump(mode="json")
+                    if resolved_run_control is not None
+                    else None
+                ),
+                "live_progress": [],
+                "progress_sequence": 0,
+            }
+            runs.save(initial)
+            pause = Event()
+            stop = Event()
+            with pause_lock:
+                pause_requests[run_id] = pause
+                stop_requests[run_id] = stop
         latest_checkpoint: ActiveRuntimeCheckpoint | None = None
 
         def retain_checkpoint(checkpoint: ActiveRuntimeCheckpoint) -> None:
             nonlocal latest_checkpoint
             latest_checkpoint = checkpoint.model_copy(deep=True)
-            runs.save(
-                {
-                    **initial,
-                    **_checkpoint_progress_projection(latest_checkpoint),
-                    "continuation": _checkpoint_continuation(
-                        latest_checkpoint,
-                        lifecycle="paused" if pause.is_set() else "running",
-                    ),
-                    "status": (
-                        "stop_requested"
-                        if stop.is_set()
-                        else "pause_requested" if pause.is_set() else "running"
-                    ),
-                }
-            )
+            with progress_lock:
+                prior = runs.get(run_id)
+                progress = prior.get("live_progress", [])
+                if not isinstance(progress, list):
+                    raise RuntimeError("retained live progress is malformed")
+                runs.save(
+                    {
+                        **initial,
+                        **_checkpoint_progress_projection(latest_checkpoint),
+                        "continuation": _checkpoint_continuation(
+                            latest_checkpoint,
+                            lifecycle="paused" if pause.is_set() else "running",
+                        ),
+                        "status": (
+                            "stop_requested"
+                            if stop.is_set()
+                            else "pause_requested" if pause.is_set() else "running"
+                        ),
+                        "live_progress": progress,
+                        "progress_sequence": len(progress),
+                    }
+                )
+
+        if live and not worker_execution:
+            worker_body = request_body.model_copy(update={"run_id": run_id})
+
+            def execute_live_worker() -> None:
+                live_worker_context.active = True
+                try:
+                    run(worker_body, request)
+                except Exception as error:
+                    # Normal execution records its own failures.  This guard
+                    # covers only setup failures before that contract begins.
+                    try:
+                        runs.save(
+                            {
+                                **initial,
+                                "status": "failed",
+                                "error": f"{type(error).__name__}: {error}",
+                            }
+                        )
+                    finally:
+                        with pause_lock:
+                            pause_requests.pop(run_id, None)
+                            stop_requests.pop(run_id, None)
+                        if live_lock.locked():
+                            live_lock.release()
+                finally:
+                    del live_worker_context.active
+
+            Thread(
+                target=execute_live_worker,
+                name=f"cybernetic-live-{run_id}",
+                daemon=True,
+            ).start()
+            return JSONResponse(status_code=202, content=initial)
 
         try:
             if service_arm is not None:
@@ -1007,6 +1246,9 @@ def create_app(
                         else None
                     ),
                     checkpoint_observer=retain_checkpoint,
+                    progress_observer=lambda update, checkpoint: retain_progress(
+                        run_id, update, checkpoint
+                    ),
                     pause_requested=pause.is_set,
                     stop_requested=stop.is_set,
                     run_control=resolved_run_control,
@@ -1063,6 +1305,9 @@ def create_app(
                         else None
                     ),
                     checkpoint_observer=retain_checkpoint,
+                    progress_observer=lambda update, checkpoint: retain_progress(
+                        run_id, update, checkpoint
+                    ),
                 )
                 physical_readout = build_physical_access_readout(result)
                 headline, summary = physical_access_summary(physical_readout)
@@ -1117,6 +1362,9 @@ def create_app(
                         else None
                     ),
                     checkpoint_observer=retain_checkpoint,
+                    progress_observer=lambda update, checkpoint: retain_progress(
+                        run_id, update, checkpoint
+                    ),
                 )
                 purchase_readout = build_purchase_payment_readout(result)
                 headline, summary = purchase_payment_summary(
@@ -1145,12 +1393,13 @@ def create_app(
                 run_id=run_id,
                 effective_llm=effective_llm,
             )
+            narrated = retain_progress_history(narrated, run_id)
             narrated["llm_configuration"] = initial["llm_configuration"]
             narrated["model_call_summaries"] = _result_call_summaries(result)
             return runs.save(narrated)
         except RuntimePaused as paused_error:
             paused_document = {**initial, "status": "paused", "pause_message": "Paused after a completed causal step.", **_checkpoint_progress_projection(paused_error.checkpoint), "continuation": _checkpoint_continuation(paused_error.checkpoint, lifecycle="paused")}
-            return runs.save(paused_document)
+            return runs.save(retain_progress_history(paused_document, run_id))
         except Exception as error:
             failed = {
                 **initial,
@@ -1168,7 +1417,9 @@ def create_app(
                     else {}
                 ),
             }
-            runs.save(failed)
+            retained_failed = runs.save(retain_progress_history(failed, run_id))
+            if worker_execution:
+                return retained_failed
             raise HTTPException(
                 status_code=500,
                 detail="simulation failed; retained for inspection",

@@ -117,6 +117,14 @@ interface CanvasOptions {
   collapsedBoundaryId: string | null
   selectedNodeId: string | null
   selectedEdgeId: string | null
+  activity?: {
+    participantIds: string[]
+    cue: {
+      source_id: string | null
+      target_id: string | null
+      edge_ids: string[]
+    } | null
+  } | null
   onSelectNode: (nodeId: string) => void
   onSelectEdge: (edge: AnalystEdge) => void
   onToggleBoundary: (boundaryId: string) => void
@@ -203,6 +211,7 @@ function toCanvasEdge(
   item: AnalystEdge,
   event: EventView | null,
   selected: boolean,
+  activity?: CanvasOptions['activity'],
 ): Edge<CanvasEdgeData> {
   const focusedRoute = item.routeIds.some((id) => event?.focus_edges.includes(id))
   const focusedSpatialLink = item.kind === 'spatial_link'
@@ -216,7 +225,12 @@ function toCanvasEdge(
       && event.spatial_focus_ids.includes(item.target)
     ),
   )
-  const active = focusedRoute || focusedSpatialLink || focusedEndpoints
+  const liveCue = Boolean(
+    activity?.cue?.edge_ids.includes(item.id)
+    || (activity?.cue?.source_id === item.source
+      && activity.cue.target_id === item.target),
+  )
+  const active = focusedRoute || focusedSpatialLink || focusedEndpoints || liveCue
   return {
     id: item.id,
     source: item.source,
@@ -501,6 +515,7 @@ function buildWorldGraph(options: CanvasOptions): {
       link,
       options.event,
       options.selectedEdgeId === link.id,
+      options.activity,
     )),
   }
 }
@@ -539,7 +554,12 @@ function buildGraph(options: CanvasOptions): {
     return { nodes: dagreLayout(nodes, edges), edges }
   }
   const event = options.event
-  const activeIds = new Set(event?.focus_ids ?? [])
+  const activeIds = new Set([
+    ...(event?.focus_ids ?? []),
+    ...(options.activity?.participantIds ?? []),
+    ...(options.activity?.cue?.source_id ? [options.activity.cue.source_id] : []),
+    ...(options.activity?.cue?.target_id ? [options.activity.cue.target_id] : []),
+  ])
   const canvasNodes = options.nodes.map((item) => {
     const boundaryActive = item.kind === 'analytical_boundary'
       && Boolean(event?.boundary_ids?.includes(item.id))
@@ -550,7 +570,7 @@ function buildGraph(options: CanvasOptions): {
     )
   })
   const canvasEdges = options.edges.map((item) =>
-    toCanvasEdge(item, event, options.selectedEdgeId === item.id),
+    toCanvasEdge(item, event, options.selectedEdgeId === item.id, options.activity),
   )
   if (options.boundary) {
     return {

@@ -15,6 +15,7 @@ from cybernetic_influence.active_runtime import (
     ActiveRuntimeConfig,
     ActiveRuntimeCheckpoint,
     ActiveRuntimeResult,
+    RuntimeProgressObserver,
     ActiveRuntimeSession,
     ActiveStepResult,
     ActiveSystemBinding,
@@ -434,6 +435,7 @@ def run_purchase_payment(
     run_id: str,
     runtime_config: ActiveRuntimeConfig | None = None,
     checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
+    progress_observer: RuntimeProgressObserver | None = None,
 ) -> ActiveRuntimeResult:
     session = ActiveRuntimeSession(
         fixture.scenario,
@@ -442,6 +444,7 @@ def run_purchase_payment(
         bindings,
         run_id=run_id,
         config=runtime_config or purchase_payment_runtime_config(),
+        progress_observer=progress_observer,
     )
     try:
         session.activate(

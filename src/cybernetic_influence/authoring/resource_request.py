@@ -19,6 +19,7 @@ from cybernetic_influence.active_runtime import (
     ActiveProposal,
     ActiveRuntimeConfig,
     ActiveRuntimeResult,
+    RuntimeProgressObserver,
     ActiveRuntimeSession,
     ActiveStepResult,
     ActiveSystemBinding,
@@ -273,6 +274,7 @@ def run_resource_request(
     *,
     run_id: str,
     runtime_config: ActiveRuntimeConfig | None = None,
+    progress_observer: RuntimeProgressObserver | None = None,
 ) -> ActiveRuntimeResult:
     """Run the known template event by event, without a provider call."""
 
@@ -290,6 +292,7 @@ def run_resource_request(
             max_observations_per_system=8,
             max_private_state_bytes=8_192,
         ),
+        progress_observer=progress_observer,
     )
     session.activate(
         ["requester"],

@@ -15,6 +15,7 @@ from cybernetic_influence.active_runtime import (
     ActiveRuntimeConfig,
     ActiveRuntimeCheckpoint,
     ActiveRuntimeResult,
+    RuntimeProgressObserver,
     ActiveRuntimeSession,
     ActiveStepResult,
     ActiveSystemBinding,
@@ -338,6 +339,7 @@ def run_physical_access(
     run_id: str,
     runtime_config: ActiveRuntimeConfig | None = None,
     checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
+    progress_observer: RuntimeProgressObserver | None = None,
 ) -> ActiveRuntimeResult:
     session = ActiveRuntimeSession(
         fixture.scenario,
@@ -346,6 +348,7 @@ def run_physical_access(
         bindings,
         run_id=run_id,
         config=runtime_config or physical_access_runtime_config(),
+        progress_observer=progress_observer,
     )
     for logical_time, participant_id in PHYSICAL_ACCESS_SCHEDULE:
         try:

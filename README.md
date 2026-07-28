@@ -112,6 +112,12 @@ game master currently judges completion. Exact reviewed world-state terminal
 conditions remain the default, with a semantic stop judge left optional and
 non-authoritative.
 
+Live runs retain ordered analyst-safe checkpoints while they execute. The map
+shows pending participants from a frozen causal moment, then only routes and
+state changes supported by committed causal events. The browser polls that
+retained evidence; it does not infer activity from scenario names or hidden
+agent state.
+
 [Slice 21](docs/plans/021-coordination-environment-assay.md) is the next
 representative vertical. It will model a synthetic multinational
 bio-surveillance decision across recurring meetings and compare baseline,

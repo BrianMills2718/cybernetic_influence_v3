@@ -3,7 +3,7 @@ doc_role: implementation_plan
 authority: bounded_design
 status: in_progress
 created: 2026-07-25
-updated: 2026-07-26
+updated: 2026-07-27
 ---
 
 # Slice 20: Inspectable extended runs
@@ -35,6 +35,14 @@ obtain explicit authorization.
   pause/irreversible stop at causal boundaries. A horizon or stop retains
   pending exact work as explicit non-execution rather than silently dropping
   it. The remaining Slice 20 task is 20C’s explicitly authorized live canary.
+- **20C implementation checkpoint:** the runtime now publishes strict,
+  ordered checkpoint updates for every scenario using the active-runtime
+  adapter. Live catalog and approved-authored runs start in a background
+  worker, retain analyst-safe progress, and expose it through a cursor-based
+  polling endpoint. The shared canvas highlights a pending frozen participant
+  set and animates only event-derived configured edges after commitment. This
+  preserves the distinction between configured pathways, world topology, and
+  realized causal trajectory. No paid canary has been run.
 
 ## Outcome
 

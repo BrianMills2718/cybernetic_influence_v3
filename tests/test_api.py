@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from threading import Event, Thread
+import time
 from typing import Any
 from unittest.mock import patch
 
@@ -392,8 +393,16 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
                 },
             },
         )
-    assert response.status_code == 200, response.text
-    body = response.json()
+        assert response.status_code == 202, response.text
+        run_id = response.json()["run_id"]
+        body: dict[str, object] | None = None
+        for _ in range(200):
+            candidate = client(tmp_path).get(f"/api/runs/{run_id}").json()
+            if candidate["status"] in {"completed", "failed"}:
+                body = candidate
+                break
+            time.sleep(0.01)
+        assert body is not None
     assert captured_bindings == [
         ("openrouter/deepseek/deepseek-v4-flash", "none")
     ]
@@ -497,6 +506,111 @@ def test_interventions_produce_distinct_grounded_accounts(tmp_path: Path) -> Non
     assert "direct report path was unavailable" in missing["story"]["summary"]
     assert "denied" in speed["story"]["summary"]
     assert missing["outcome"]["remediation_activation"] > speed["outcome"]["remediation_activation"]
+
+
+def test_retained_progress_is_ordered_analyst_safe_and_replayable(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+    run = api.post("/api/runs", json={"execution": "scripted"}).json()
+    progress = api.get(f"/api/runs/{run['run_id']}/progress").json()
+    assert progress["status"] == "completed"
+    assert progress["latest_sequence"] > 0
+    records = progress["records"]
+    assert records
+    assert [record["sequence"] for record in records] == list(
+        range(1, len(records) + 1)
+    )
+    assert records[0]["kind"] == "activation_started"
+    committed = next(
+        record for record in records if record["kind"] == "causal_moment_committed"
+    )
+    assert committed["projection"]["nodes"]
+    assert committed["projection"]["events"]
+    assert all(
+        "private_state" not in event
+        for event in committed["projection"]["events"]
+    )
+    after = api.get(
+        f"/api/runs/{run['run_id']}/progress",
+        params={"after_sequence": progress["latest_sequence"]},
+    ).json()
+    assert after["records"] == []
+
+
+def test_live_worker_retains_pending_activation_before_commit(tmp_path: Path) -> None:
+    entered = Event()
+    release = Event()
+
+    def blocking_native(
+        fixture: Any,
+        *,
+        trace_id_prefix: str,
+        model: str,
+        reasoning_effort: str,
+    ) -> dict[str, ActiveSystemBinding]:
+        del trace_id_prefix, model, reasoning_effort
+        bindings = service_desk_scripted_bindings(fixture)
+        original = bindings["triager"]
+
+        class BlockingTriager:
+            implementation_id = original.implementation_id
+            provider_bound = False
+
+            def step(self, active_input: Any) -> Any:
+                entered.set()
+                assert release.wait(timeout=5)
+                return original.implementation.step(active_input)
+
+        bindings["triager"] = ActiveSystemBinding(
+            original.implementation_id, BlockingTriager()
+        )
+        return bindings
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
+            },
+        ),
+        patch(
+            "cybernetic_influence.api.service_desk_native_bindings",
+            side_effect=blocking_native,
+        ),
+        patch(
+            "cybernetic_influence.api.narrate_live_moments",
+            return_value={
+                "status": "completed",
+                "model_calls": 0,
+                "cost": 0.0,
+                "moments": [],
+                "calls": [],
+            },
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+    ):
+        api = client(tmp_path)
+        started = api.post("/api/runs", json={"execution": "live"})
+        assert started.status_code == 202, started.text
+        run_id = started.json()["run_id"]
+        assert entered.wait(timeout=5)
+        progress = api.get(f"/api/runs/{run_id}/progress").json()
+        assert progress["status"] == "running"
+        assert progress["records"][0]["kind"] == "activation_started"
+        assert progress["records"][0]["participant_ids"] == ["triager"]
+        assert progress["records"][0]["event_ids"] == []
+        release.set()
+        for _ in range(200):
+            if api.get(f"/api/runs/{run_id}").json()["status"] == "completed":
+                break
+            time.sleep(0.01)
+        assert api.get(f"/api/runs/{run_id}").json()["status"] == "completed"
 
 
 def test_physical_access_arms_are_distinct_and_cross_scenario_arms_fail(
@@ -984,7 +1098,6 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
         del trace_id_prefix, model, reasoning_effort
         return service_desk_scripted_bindings(fixture)
 
-    first_response: list[object] = []
     with (
         patch.dict(
             "os.environ",
@@ -1020,19 +1133,16 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
     ):
         api = client(tmp_path)
 
-        def first_request() -> None:
-            first_response.append(
-                api.post("/api/runs", json={"execution": "live"})
-            )
-
-        thread = Thread(target=first_request)
-        thread.start()
+        first = api.post("/api/runs", json={"execution": "live"})
+        assert first.status_code == 202, first.text
         assert entered.wait(timeout=5)
         second = api.post("/api/runs", json={"execution": "live"})
         assert second.status_code == 409
         assert "already active" in second.json()["detail"]
         release.set()
-        thread.join(timeout=30)
-
-    assert len(first_response) == 1
-    assert getattr(first_response[0], "status_code") == 200
+        run_id = first.json()["run_id"]
+        for _ in range(200):
+            if api.get(f"/api/runs/{run_id}").json()["status"] == "completed":
+                break
+            time.sleep(0.01)
+        assert api.get(f"/api/runs/{run_id}").json()["status"] == "completed"

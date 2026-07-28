@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 
 from cybernetic_influence.active_runtime import (
     ActivationCause, ActiveProposal, ActiveRuntimeConfig, ActiveRuntimeResult,
+    RuntimeProgressObserver,
     ActiveRuntimeSession, ActiveStepResult, ActiveSystemBinding, ActiveSystemInput,
     ActiveSystemSpec, ActionIntent, ScriptedActiveSystem,
 )
@@ -256,6 +257,7 @@ def run_information_campaign(
     *,
     run_id: str,
     runtime_config: ActiveRuntimeConfig | None = None,
+    progress_observer: RuntimeProgressObserver | None = None,
 ) -> ActiveRuntimeResult:
     session = ActiveRuntimeSession(
         fixture.scenario, fixture.exact_bindings, fixture.active_specs, bindings,
@@ -268,6 +270,7 @@ def run_information_campaign(
             max_observations_per_system=8,
             max_private_state_bytes=8192,
         ),
+        progress_observer=progress_observer,
     )
     session.activate(["campaign_source"], logical_time=0, activation_causes={
         "campaign_source": [ActivationCause(kind="scenario_start", scheduled_for=0, description="The source retained the authored claim at scenario start.")]

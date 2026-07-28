@@ -21,6 +21,10 @@ let selectedEdgeId = null
 let scenarioCatalog = {}
 let runtimeConfig = {}
 let activeRunId = null
+let liveProgressSequence = 0
+let liveProjection = null
+let liveActivity = null
+let livePolling = false
 let previewRequestSerial = 0
 let authoringDraft = null
 let authoringPreview = null
@@ -763,6 +767,16 @@ function projectWorld(world, revision) {
 }
 
 function graphProjection() {
+  if (liveProjection?.nodes && liveProjection?.edges) {
+    return {
+      nodes:liveProjection.nodes,
+      edges:liveProjection.edges.map((edge) => ({
+        ...edge,
+        kind:edge.kind || 'connection',
+        routeIds:edge.exact_route_ids || edge.routeIds || [edge.id],
+      })),
+    }
+  }
   const exactNodes = nodesAtSelectedEvent()
   const exactNodeIds = new Set(exactNodes.map((node) => node.id))
   const temporalEdges = current.edges.filter((edge) =>
@@ -1116,6 +1130,7 @@ function renderGraph() {
       collapsedBoundaryId:selectedScale === 'exact' ? null : selectedScale,
       selectedNodeId,
       selectedEdgeId,
+      activity:liveActivity,
       onSelectNode:(nodeId) => {
         if (selectedGraphView === 'trajectory') {
           const index = current.timeline.findIndex((event) => event.event_id === nodeId)
@@ -1162,6 +1177,49 @@ function renderGraph() {
     route.classList.toggle('event-focus', ids.some((id) => event?.focus_edges?.includes(id)))
   })
   requestAnimationFrame(() => drawGraphLines(projection.edges))
+}
+
+function applyLiveProgress(record) {
+  const projection = record.projection || {}
+  if (projection.nodes && projection.edges) liveProjection = projection
+  const cue = projection.animation_cues?.[0] || null
+  liveActivity = {
+    participantIds:record.kind === 'activation_started' ? (record.participant_ids || []) : [],
+    cue,
+  }
+  renderGraph()
+  if (record.kind === 'activation_started') {
+    $('#run-status').textContent = `Thinking: ${(record.participant_ids || []).join(', ').replaceAll('_', ' ') || 'participant'}…`
+  } else if (cue) {
+    $('#run-status').textContent = cue.label
+  }
+}
+
+async function pollLiveRun(runId) {
+  if (livePolling) return
+  livePolling = true
+  try {
+    while (activeRunId === runId) {
+      const update = await request(`/api/runs/${encodeURIComponent(runId)}/progress?after_sequence=${liveProgressSequence}`)
+      for (const record of update.records || []) {
+        liveProgressSequence = record.sequence
+        applyLiveProgress(record)
+      }
+      if (!['running', 'pause_requested', 'stop_requested', 'narrating'].includes(update.status)) {
+        const finalRun = await request(`/api/runs/${encodeURIComponent(runId)}`)
+        liveActivity = null
+        liveProjection = null
+        render(finalRun)
+        await loadHistory()
+        return
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 400))
+    }
+  } catch (error) {
+    $('#run-status').textContent = error.message
+  } finally {
+    livePolling = false
+  }
 }
 
 function renderProjectionControls() {
@@ -1602,6 +1660,9 @@ $('#run').onclick = async () => {
   $('#run').disabled = true
   $('#run-status').textContent = 'Running…'
   activeRunId = `run_${crypto.getRandomValues(new Uint32Array(3)).join('').slice(0, 12)}`
+  liveProgressSequence = 0
+  liveProjection = null
+  liveActivity = null
   const pausable = $('#scenario').value === 'service_desk'
   $('#pause').hidden = !pausable
   $('#stop').hidden = !pausable
@@ -1627,7 +1688,15 @@ $('#run').onclick = async () => {
         } : {}),
       }),
     })
-    render(body)
+    if (body.status === 'running' && $('#live').checked) {
+      $('#result').hidden = false
+      $('#result-status').textContent = `running · ${String(body.scenario || '').replaceAll('_',' ')}`
+      $('#result-cost').textContent = 'Waiting for the first retained causal update…'
+      renderLifecycleControls(body)
+      void pollLiveRun(body.run_id)
+    } else {
+      render(body)
+    }
     const url = new URL(window.location)
     url.searchParams.set('run', body.run_id)
     window.history.replaceState({}, '', url)
@@ -1638,8 +1707,10 @@ $('#run').onclick = async () => {
     await loadHistory()
   } finally {
     $('#run').disabled = false
-    $('#pause').hidden = true
-    $('#stop').hidden = true
+    if (!$('#live').checked) {
+      $('#pause').hidden = true
+      $('#stop').hidden = true
+    }
   }
 }
 
@@ -1774,7 +1845,24 @@ $('#authoring-live-run').onclick = async () => {
       }),
     })
     setWorkspaceView('simulation')
-    render(run)
+    activeRunId = run.run_id
+    liveProgressSequence = 0
+    liveProjection = null
+    liveActivity = null
+    current = {
+      nodes: [], snapshots: {}, edges: [], boundaries: [], timeline: [], moments: [], traces: [],
+      trajectory: {nodes: [], edges: []},
+      ...authoringPreview,
+      ...run,
+    }
+    selectedGraphView = current.world ? 'world' : 'causal'
+    $('#map-section').hidden = false
+    $('#result').hidden = false
+    $('#result-status').textContent = 'running · approved authored scenario'
+    $('#result-cost').textContent = 'Waiting for the first retained causal update…'
+    renderProjectionControls()
+    renderGraph()
+    void pollLiveRun(run.run_id)
     const url = new URL(window.location)
     url.searchParams.delete('draft')
     url.searchParams.set('run', run.run_id)

@@ -4,12 +4,128 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from cybernetic_influence.active_runtime import (
     ActivationAttemptRecord,
     ActiveRuntimeResult,
+    ActiveRuntimeCheckpoint,
     ExactWorkRecord,
+    RuntimeProgressUpdate,
 )
+
+AnalystAnimationKind = Literal[
+    "action_attempt",
+    "information_transfer",
+    "mechanism_executed",
+    "state_changed",
+    "observation_delivered",
+    "effect_dissipated",
+]
+
+
+class AnalystAnimationCue(BaseModel):
+    """One analyst-safe visual cue derived from a retained causal event."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    cue_id: str = Field(min_length=1)
+    event_id: str = Field(min_length=1)
+    kind: AnalystAnimationKind
+    label: str = Field(min_length=1)
+    source_id: str | None = None
+    target_id: str | None = None
+    edge_ids: list[str] = Field(default_factory=list)
+    causal_parent_event_ids: list[str] = Field(default_factory=list)
+
+
+def analyst_progress_projection(
+    checkpoint: ActiveRuntimeCheckpoint,
+    update: RuntimeProgressUpdate,
+) -> dict[str, object]:
+    """Project one retained runtime prefix without exposing protected cognition.
+
+    The runtime owns the update and checkpoint; this presentation adapter owns
+    all event-to-animation interpretation.  No browser code needs scenario
+    identifiers or private active-system state to decide what moved.
+    """
+    state = checkpoint.core_checkpoint.state
+    by_id = {event.event_id: event for event in checkpoint.core_checkpoint.events}
+    events = []
+    cues: list[dict[str, object]] = []
+    for event_id in update.event_ids:
+        event = by_id.get(event_id)
+        if event is None:
+            raise ValueError("runtime progress references an unknown causal event")
+        events.append(analyst_event(event))
+        cues.extend(_analyst_animation_cues(event, state))
+    world = analyst_world({str(state.revision): state})
+    return {
+        "state_revision": state.revision,
+        "nodes": analyst_nodes(state),
+        "edges": analyst_edges(state),
+        "world": world,
+        "events": events,
+        "animation_cues": cues,
+    }
+
+
+def _analyst_animation_cues(
+    event: CausalEvent, state: CausalState
+) -> list[dict[str, object]]:
+    """Map exact event kinds to honest graph cues, never inferred pathways."""
+    def owner(port_id: str | None) -> str | None:
+        if port_id is None:
+            return None
+        port = state.ports.get(port_id)
+        return port.owner_ref if port is not None else None
+
+    source_id = event.actor_entity_id or owner(event.source_port_id)
+    target_id: str | None = None
+    edge_ids: list[str] = []
+    cue_kind: AnalystAnimationKind | None = None
+    if event.event_kind == "action_attempted":
+        cue_kind = "action_attempt"
+        target_id = owner(event.source_port_id)
+    elif event.event_kind == "effect_routed":
+        cue_kind = "information_transfer"
+        target_id = owner(event.target_port_id)
+        if event.connection_id is not None:
+            edge_ids = [event.connection_id]
+    elif event.event_kind == "mechanism_executed":
+        # A mechanism event proves execution, but not an unrecorded semantic
+        # judgement such as "accepted" or "denied".  Keep the visual claim
+        # exactly at the retained event's evidence level.
+        cue_kind = "mechanism_executed"
+        target_id = event.mechanism_id
+        if event.target_port_id is not None:
+            edge_ids = [f"binding_{event.target_port_id}"]
+    elif event.event_kind == "state_committed":
+        cue_kind = "state_changed"
+        source_id = event.mechanism_id
+        target_id = event.mechanism_id
+    elif event.event_kind == "observation_delivered":
+        cue_kind = "observation_delivered"
+        source_id = event.mechanism_id
+        target_id = owner(event.target_port_id)
+    elif event.event_kind == "effect_dissipated":
+        cue_kind = "effect_dissipated"
+    if cue_kind is None:
+        return []
+    return [
+        AnalystAnimationCue(
+            cue_id=f"cue_{event.event_id}_{cue_kind}",
+            event_id=event.event_id,
+            kind=cue_kind,
+            label=event.summary,
+            source_id=source_id,
+            target_id=target_id,
+            edge_ids=edge_ids,
+            causal_parent_event_ids=list(event.causal_parent_event_ids),
+        ).model_dump(mode="json")
+    ]
 from cybernetic_influence.causal_core.models import (
     AnalyticalBoundary,
     CausalEvent,

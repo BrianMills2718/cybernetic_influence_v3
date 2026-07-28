@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import time
 
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
@@ -190,13 +191,18 @@ def test_failed_authored_live_run_is_retained_with_provider_evidence(
         },
     )
 
-    assert failed.status_code == 500
-    assert failed.json()["detail"] == (
-        "authored simulation failed; retained for inspection"
-    )
-    retained = api.get("/api/runs").json()["runs"][0]
+    assert failed.status_code == 202
+    run_id = failed.json()["run_id"]
+    retained: dict[str, object] | None = None
+    for _ in range(200):
+        candidate = api.get(f"/api/runs/{run_id}").json()
+        if candidate["status"] == "failed":
+            retained = candidate
+            break
+        time.sleep(0.01)
+    assert retained is not None
     assert retained["status"] == "failed"
-    run = api.get(f"/api/runs/{retained['run_id']}").json()
+    run = api.get(f"/api/runs/{run_id}").json()
     assert run["model_calls"] == 1
     assert run["cost"] == 0.01
     assert run["model_call_summaries"] == [

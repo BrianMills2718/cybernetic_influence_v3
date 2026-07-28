@@ -13,7 +13,11 @@ from hashlib import sha256
 import json
 from typing import Any
 
-from cybernetic_influence.active_runtime import ActiveRuntimeConfig, ActiveRuntimeResult
+from cybernetic_influence.active_runtime import (
+    ActiveRuntimeConfig,
+    ActiveRuntimeResult,
+    RuntimeProgressObserver,
+)
 from cybernetic_influence.authoring.models import (
     InformationCampaignWorkflowDraft,
     ResourceRequestWorkflowDraft,
@@ -98,17 +102,21 @@ class CompiledScenario:
     def exact_bindings(self) -> dict[str, ExactMechanismBinding]:
         return self.fixture.exact_bindings
 
-    def run_scripted(self, *, run_id: str) -> ActiveRuntimeResult:
+    def run_scripted(
+        self, *, run_id: str, progress_observer: RuntimeProgressObserver | None = None
+    ) -> ActiveRuntimeResult:
         if isinstance(self.fixture, InformationCampaignFixture):
             return run_information_campaign(
                 self.fixture,
                 information_campaign_scripted_bindings(self.fixture),
                 run_id=run_id,
+                progress_observer=progress_observer,
             )
         return run_resource_request(
             self.fixture,
             resource_request_scripted_bindings(self.fixture),
             run_id=run_id,
+            progress_observer=progress_observer,
         )
 
     def run_live(
@@ -120,6 +128,7 @@ class CompiledScenario:
         per_call_budget: float,
         per_run_budget: float,
         structured_call: Any = None,
+        progress_observer: RuntimeProgressObserver | None = None,
     ) -> ActiveRuntimeResult:
         """Run reviewed people through native LLM policies and exact mechanisms."""
 
@@ -145,6 +154,7 @@ class CompiledScenario:
                 campaign_bindings,
                 run_id=run_id,
                 runtime_config=runtime_config,
+                progress_observer=progress_observer,
             )
         request_fixture, request_bindings = (
             resource_request_native_fixture_and_bindings(
@@ -160,6 +170,7 @@ class CompiledScenario:
             request_bindings,
             run_id=run_id,
             runtime_config=runtime_config,
+            progress_observer=progress_observer,
         )
 
 
