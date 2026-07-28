@@ -1435,7 +1435,7 @@ def run_scripted_coordination(
         evidence = _terminal_evidence_event_ids(session, run_control, matched)
         summaries = {
             "terminal_condition_met": (
-                "The external decision registry retained a reviewed terminal status."
+                "The team's final decision was accepted and recorded."
             ),
             "modeled_time_horizon": (
                 "The modeled deadline passed without its required exact transition."

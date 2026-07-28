@@ -43,6 +43,10 @@ summary { cursor:pointer; font-weight:700; }
 .run-config-readout { display:flex; flex-wrap:wrap; gap:7px 16px; padding:12px 16px; border:1px solid var(--border); border-radius:10px; background:var(--surface); color:var(--muted); }
 .run-config-readout strong { color:#e8eef7; }
 .run-config-readout small { flex-basis:100%; }
+.result-summary-status { width:max-content; margin:0; padding:7px 11px; border-radius:999px; background:#17314a; color:#b9d7f5; font-size:12px; font-weight:800; }
+.technical-details { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
+.technical-details[open] > summary { margin-bottom:14px; }
+.technical-details > .status-line,.technical-details > .run-config-readout,.technical-details > section,.technical-details > details,.technical-details > h3,.technical-details > pre { margin-top:12px; }
 .heading-help h2 { margin:0; }
 .summary-help { margin-left:8px; color:var(--muted); font-size:11px; font-weight:500; }
 .history-card { padding:22px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
@@ -142,6 +146,7 @@ summary { cursor:pointer; font-weight:700; }
 .initial-situation small { color:var(--muted); }
 .narrative-mode { display:flex; gap:8px; margin:16px 0 12px; }
 .narrative-mode button[aria-pressed="true"] { border-color:#fff; background:#24496d; color:#fff; }
+.narrative-count { margin:-4px 0 12px; font-size:12px; }
 .narrative-reading { min-width:0; }
 #turn-narratives,#detailed-narrative { display:grid; gap:10px; }
 #detailed-narrative { max-height:680px; overflow:auto; padding-right:4px; }

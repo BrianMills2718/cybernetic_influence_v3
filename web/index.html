@@ -182,33 +182,27 @@
       </section>
 
       <section id="result" hidden>
-      <div class="status-line"><strong id="result-status"></strong><span id="result-cost"></span></div>
-      <div id="run-config-readout" class="run-config-readout"></div>
+      <p id="result-summary-status" class="result-summary-status" aria-live="polite"></p>
 
       <section id="narrative-section" class="turn-narratives">
-        <span class="eyebrow">Causal-step narrative</span>
-        <h2>How the run unfolded</h2>
-        <p class="muted">Start with the configured situation, then read one account of the causal sequence. Switch detail when you want the longer explanation and its evidence-provenance links.</p>
+        <span class="eyebrow">Story</span>
+        <h2>What happened</h2>
+        <p class="muted">Start with the situation, then follow the decisions and events that changed the outcome. Detailed mode adds the exact mechanisms and evidence trail.</p>
         <article id="initial-situation" class="initial-situation" aria-label="Initial situation"></article>
         <div class="narrative-mode" role="group" aria-label="Narrative detail">
           <button id="narrative-concise" type="button" aria-pressed="true">Concise</button>
           <button id="narrative-detailed" type="button" aria-pressed="false">Detailed</button>
         </div>
+        <p id="narrative-count" class="muted narrative-count"></p>
         <div class="narrative-reading">
-          <div id="turn-narratives" aria-label="Concise causal-step narrative"></div>
-          <div id="detailed-narrative" aria-label="Detailed causal-step narrative" hidden></div>
+          <div id="turn-narratives" aria-label="Concise simulation story"></div>
+          <div id="detailed-narrative" aria-label="Detailed simulation story" hidden></div>
         </div>
         <footer class="story" aria-label="Run outcome">
           <span class="eyebrow">Outcome</span>
           <h2 id="story-headline"></h2>
           <p id="story-summary"></p>
-          <ol id="story-steps"></ol>
         </footer>
-      </section>
-
-      <section class="flow-controls">
-        <span class="eyebrow">Declared connections</span>
-        <div id="routes" class="routes" aria-label="Declared information routes"></div>
       </section>
 
       <section>
@@ -219,35 +213,43 @@
         <div id="trace"></div>
       </section>
 
-      <details class="moment-inspector">
-        <summary>Choose a causal step <span class="summary-help">Synchronize the map and inspect the exact evidence behind one account</span></summary>
-        <section class="timeline-panel">
-          <span class="eyebrow">Causal order and modeled time</span>
-          <div class="heading-help"><h2>Choose a step</h2><button class="help-button" type="button" data-help="moment-help" aria-expanded="false" aria-controls="moment-help">?</button></div>
-          <p id="moment-help" class="inline-help" hidden></p>
-          <p class="muted">The map, account, and inspector stay synchronized with this moment. Simulated time may advance unevenly because each process follows its own cadence.</p>
-          <div class="timeline-controls">
-            <button id="previous-event" aria-label="Previous event">←</button>
-            <input id="event-slider" type="range" min="0" value="0" aria-label="Selected causal event">
-            <button id="next-event" aria-label="Next event">→</button>
-            <span id="event-count"></span>
-          </div>
-          <div id="timeline-track" class="timeline-track"></div>
+      <details class="advanced technical-details">
+        <summary>Advanced <span class="summary-help">Run settings, exact mechanisms, and retained evidence</span></summary>
+        <div class="status-line"><strong id="result-status"></strong><span id="result-cost"></span></div>
+        <div id="run-config-readout" class="run-config-readout"></div>
+
+        <section class="flow-controls">
+          <span class="eyebrow">Configured connections</span>
+          <div id="routes" class="routes" aria-label="Configured information routes"></div>
         </section>
 
-        <section class="step-account">
-          <span class="eyebrow">Narrative for the selected causal step</span>
-          <div class="heading-help"><h2 id="step-account-title"></h2><button class="help-button" type="button" data-help="narrative-help" aria-expanded="false" aria-controls="narrative-help">?</button></div>
-          <p id="narrative-help" class="inline-help" hidden></p>
-          <p id="step-account-body"></p>
-          <p id="step-account-source" class="muted"></p>
-          <div id="moment-events" class="moment-events" aria-label="Exact events in selected causal step"></div>
-          <article id="event-detail" class="event-detail"></article>
-        </section>
-      </details>
+        <details class="moment-inspector">
+          <summary>Inspect one exact moment <span class="summary-help">Synchronize the map with the retained event trace</span></summary>
+          <section class="timeline-panel">
+            <span class="eyebrow">Causal order and modeled time</span>
+            <div class="heading-help"><h2>Choose a moment</h2><button class="help-button" type="button" data-help="moment-help" aria-expanded="false" aria-controls="moment-help">?</button></div>
+            <p id="moment-help" class="inline-help" hidden></p>
+            <p class="muted">The map, account, and inspector stay synchronized with this moment. Simulated time may advance unevenly because each process follows its own cadence.</p>
+            <div class="timeline-controls">
+              <button id="previous-event" aria-label="Previous event">←</button>
+              <input id="event-slider" type="range" min="0" value="0" aria-label="Selected causal event">
+              <button id="next-event" aria-label="Next event">→</button>
+              <span id="event-count"></span>
+            </div>
+            <div id="timeline-track" class="timeline-track"></div>
+          </section>
 
-      <details class="advanced">
-        <summary>Advanced evidence <span class="summary-help">Exact retained state and provider-call summaries</span></summary>
+          <section class="step-account">
+            <span class="eyebrow">Account for the selected moment</span>
+            <div class="heading-help"><h2 id="step-account-title"></h2><button class="help-button" type="button" data-help="narrative-help" aria-expanded="false" aria-controls="narrative-help">?</button></div>
+            <p id="narrative-help" class="inline-help" hidden></p>
+            <p id="step-account-body"></p>
+            <p id="step-account-source" class="muted"></p>
+            <div id="moment-events" class="moment-events" aria-label="Exact events in selected moment"></div>
+            <article id="event-detail" class="event-detail"></article>
+          </section>
+        </details>
+        <h3>Raw retained evidence</h3>
         <pre id="raw"></pre>
       </details>
       </section>
@@ -270,7 +272,7 @@
         <article><h3>Choose and play</h3><p>Select a scenario and condition, then run it. Live runs let LLM-modeled people act from their retained memory, position, observations, and interfaces. Reference runs use fixed zero-cost policies.</p></article>
         <article><h3>Read the map</h3><p><strong>Spatial topology</strong> shows authored places, occupants, and physical links. <strong>Configured interaction pathways</strong> show relationships that may support information or action when exact mechanisms permit them; they do not grant authority. <strong>Realized causal graph</strong> shows what happened in the selected run.</p></article>
         <article><h3>Change analytical scale</h3><p>The graph’s analytical-scale control collapses or expands an execution-inert composite such as the service desk. It changes what is summarized, not what exists or acts in the simulation.</p></article>
-        <article><h3>Follow the account</h3><p>The narrative has a concise timeline and a detailed evidence-cited account. Use the causal-step inspector and advanced evidence when you need to step down to exact events and state.</p></article>
+        <article><h3>Follow the account</h3><p>The concise story follows the people and other active participants. Detailed mode adds exact mechanism updates; Advanced lets you inspect individual retained events and state.</p></article>
       </div>
     </section>
   </main>

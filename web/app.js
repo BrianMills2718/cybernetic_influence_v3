@@ -394,6 +394,31 @@ function causalTime(item, fallback = 1) {
   return `causal order c${value}`
 }
 
+function storyTime(item, fallback = 1) {
+  const logicalTime = Number(item?.logical_time)
+  if (!Number.isFinite(logicalTime)) return `Moment ${fallback}`
+  const unit = String(current?.time_unit || 'step')
+  if (unit === 'minute') {
+    const day = Math.floor(logicalTime / (24 * 60))
+    const minute = logicalTime % (24 * 60)
+    return minute === 0 ? `Day ${day}` : `Day ${day} · ${minute} minutes later`
+  }
+  const label = unit.replaceAll('_', ' ')
+  return `${logicalTime} ${label}${logicalTime === 1 ? '' : 's'} into the simulation`
+}
+
+function storyParticipants(participants) {
+  if (participants.length > 1 && participants.every((item) => String(item).endsWith('_pressure_source'))) {
+    return 'Outside concern sources'
+  }
+  if (participants.length > 3 && participants.includes('meeting_clock')) return 'Team review'
+  if (participants.length > 3) return `${participants.length} participants`
+  return participants.map((item) => {
+    const label = String(item).replaceAll('_', ' ')
+    return `${label[0]?.toUpperCase() || ''}${label.slice(1)}`
+  }).join(' + ')
+}
+
 function renderLifecycleControls(run = current) {
   const status = run?.status || 'ready'
   const paused = status === 'paused'
@@ -1525,9 +1550,9 @@ function renderStepAccount(event) {
     state_committed:'The world state changed',
   }[event.kind] || event.kind.replaceAll('_', ' ')
   if (narration) {
-    const momentNumber = narration.moment || narration.turn
+    const momentNumber = narration.moment || narration.turn || narrations.indexOf(narration) + 1
     const participants = narration.participants || [narration.person || 'system']
-    $('#step-account-title').textContent = `Causal step ${momentNumber} · ${causalTime(narration, momentNumber)} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
+    $('#step-account-title').textContent = `Moment ${momentNumber} · ${causalTime(narration, momentNumber)} · ${participants.map((item) => String(item).replaceAll('_', ' ')).join(' + ')}`
     const paragraphs = narration.detailed_paragraphs || []
     $('#step-account-body').innerHTML = paragraphs.length
       ? paragraphs.map((paragraph) => `<span>${html(paragraph.text)}</span>`).join('')
@@ -1574,18 +1599,22 @@ function renderTurnNarratives() {
   const detailed = $('#detailed-narrative')
   const moments = narration.moments || narration.turns || []
   if (narration.status === 'completed' && moments.length) {
-    container.innerHTML = moments.map((moment) => {
-      const momentNumber = moment.moment || moment.turn
+    const conciseMoments = moments.filter((moment) => !(moment.participants || []).includes('exact_mechanisms'))
+    const readableMoments = conciseMoments.length ? conciseMoments : moments
+    $('#narrative-count').textContent = readableMoments.length === moments.length
+      ? `${moments.length} story moment${moments.length === 1 ? '' : 's'}`
+      : `${readableMoments.length} people-centered moments · Detailed mode includes ${moments.length - readableMoments.length} exact mechanism update${moments.length - readableMoments.length === 1 ? '' : 's'}.`
+    container.innerHTML = readableMoments.map((moment) => {
+      const momentNumber = moment.moment || moment.turn || moments.indexOf(moment) + 1
       const participants = moment.participants || [moment.person || 'system']
       return `
       <button class="turn-narrative" data-activation="${html(moment.activation)}">
-        <span>Causal step ${html(momentNumber)} · ${html(causalTime(moment, momentNumber))} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
-        <p>${html(moment.narrative)}</p>
-        <small>${moment.evidence_context ? 'Evidence supplied to the narrator' : html((moment.source_event_ids || []).join(' · '))}</small>
+        <span>${html(storyTime(moment, momentNumber))} · ${html(storyParticipants(participants))}</span>
+        <p>${html(moment.concise_narrative || moment.narrative)}</p>
       </button>`
     }).join('')
-    detailed.innerHTML = moments.map((moment) => {
-      const momentNumber = moment.moment || moment.turn
+    detailed.innerHTML = moments.map((moment, index) => {
+      const momentNumber = moment.moment || moment.turn || index + 1
       const participants = moment.participants || [moment.person || 'system']
       const paragraphs = moment.detailed_paragraphs || []
       const context = moment.evidence_context
@@ -1594,13 +1623,13 @@ function renderTurnNarratives() {
       ).join(' · ')
       if (!paragraphs.length) {
         return `<article class="detailed-narrative-moment legacy" data-activation="${html(moment.activation)}">
-          <span>Causal step ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
+          <span>Moment ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
           <p>${html(moment.concise_narrative || moment.narrative)}</p>
           <small>Detailed account was not retained for this older run.</small>
         </article>`
       }
       return `<article class="detailed-narrative-moment" data-activation="${html(moment.activation)}">
-        <span>Causal step ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
+        <span>Moment ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
         ${paragraphs.map((paragraph) => `<p>${html(paragraph.text)}</p>`).join('')}
         ${context
           ? `<button type="button" class="evidence-context-button" data-activation="${html(moment.activation)}">Evidence supplied to the narrator</button><small>Current exact events: ${html((context.current_event_ids || []).join(' · '))} · earlier narrated accounts: ${priorNarratives || 'none'} · provenance, not proof of entailment</small>`
@@ -1637,6 +1666,7 @@ function renderTurnNarratives() {
     return
   }
   const reason = narration.reason || 'No causal-moment narration was retained for this run.'
+  $('#narrative-count').textContent = ''
   container.innerHTML = `<p class="muted">${html(reason)}</p>`
   detailed.innerHTML = ''
 }
@@ -1647,13 +1677,12 @@ function renderInitialSituation(run) {
   const summary = scenario?.representation_summary || run.authoring?.description || run.authoring?.title
     || 'The retained run did not include a readable initial-situation summary.'
   const condition = arm?.description
-    ? ` This run starts under the ${arm.label || run.arm} condition: ${arm.description}`
+    ? ` The starting condition is ${arm.label || run.arm}: ${arm.description}`
     : ''
   $('#initial-situation').innerHTML = `
     <span class="eyebrow">Initial situation</span>
-    <h3>Before any causal step</h3>
+    <h3>The situation</h3>
     <p>${html(summary)}${html(condition)}</p>
-    <small>Configured pre-run framing and condition; this is not a simulated event or an inferred outcome.</small>
   `
 }
 
@@ -1677,7 +1706,7 @@ function renderTimeline(run) {
     marker.dataset.index = index
     const people = moment.participants.map((person) => person.replaceAll('_',' ')).join(' + ')
     const causes = Object.values(moment.activation_causes || {}).flat()
-    marker.title = `Causal step ${index + 1}, ${causalTime(moment, index + 1)}: ${people}; ${causeSummary(causes)}${moment.silent ? ' (silent)' : ''}`
+    marker.title = `Moment ${index + 1}, ${causalTime(moment, index + 1)}: ${people}; ${causeSummary(causes)}${moment.silent ? ' (silent)' : ''}`
     marker.setAttribute('aria-label', marker.title)
     marker.onclick = () => selectMoment(index)
     $('#timeline-track').append(marker)
@@ -1719,6 +1748,9 @@ function render(run) {
     describeCondition()
   }
   $('#result').hidden = false
+  $('#result-summary-status').textContent = current.status === 'completed'
+    ? 'Simulation complete'
+    : String(current.status || 'Simulation').replaceAll('_', ' ')
   $('#narrative-section').hidden = false
   renderLifecycleControls(current)
   renderProjectionControls()
@@ -1744,20 +1776,6 @@ function render(run) {
   }
   $('#story-headline').textContent = current.story.headline
   $('#story-summary').textContent = current.story.summary
-  $('#story-steps').innerHTML = ''
-  current.story.steps.forEach((step) => {
-    const item = document.createElement('li')
-    const button = document.createElement('button')
-    button.className = 'story-event'
-    button.dataset.eventId = step.event_id
-    button.textContent = step.summary
-    button.onclick = () => {
-      const index = current.timeline.findIndex((event) => event.event_id === step.event_id)
-      if (index >= 0) selectEvent(index)
-    }
-    item.append(button)
-    $('#story-steps').append(item)
-  })
   renderScaleControls()
   renderInitialSituation(current)
   renderTurnNarratives()

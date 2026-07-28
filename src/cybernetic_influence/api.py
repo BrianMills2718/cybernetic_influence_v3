@@ -200,22 +200,23 @@ def _coordination_outcome(
     )
     scope = str(state.fact("external_decision_registry.received_scope").value)
     labels = {
-        "deploy_on_time": "Full Deployment Approved",
-        "scope_reduced": "Reduced Deployment Approved",
-        "no_decision_by_horizon": "No Decision By Day 10",
+        "deploy_on_time": "The full deployment was approved",
+        "scope_reduced": "A smaller deployment was approved",
+        "no_decision_by_horizon": "The group did not reach a decision",
     }
     summaries = {
         "deploy_on_time": (
-            "The partnership completed ordinary review, retained full support, "
-            "and sent an approved full-deployment decision to the external registry."
+            "After reviewing the proposal, all five team members supported the "
+            "full plan and the final decision was recorded."
         ),
         "scope_reduced": (
-            "Outside concerns entered the partnership, bounded verification "
-            "changed commitments, and a reduced-scope decision was accepted externally."
+            "New technical, policy, and local safety concerns made the original plan "
+            "too risky. Independent checks resolved enough uncertainty for all five "
+            "team members to support a smaller version, and that decision was recorded."
         ),
         "no_decision_by_horizon": (
-            "Outside concerns remained unresolved, a partner withdrew, and the "
-            "day-10 deadline committed no decision after an earlier proposal was denied."
+            "The team could not resolve its technical, policy, and local concerns. "
+            "One partner withdrew, so no deployment was approved before the deadline."
         ),
     }
     outcome = {
@@ -250,7 +251,30 @@ def _coordination_reference_narration(
         if isinstance(item, dict) and isinstance(item.get("event_id"), str)
     }
     moments: list[dict[str, object]] = []
-    for number, raw_moment in enumerate(raw_moments, start=1):
+
+    def readable_summary(value: str) -> str:
+        replacements = {
+            "The coordinator proposed scope_reduced at reduced scope.": (
+                "The coordinator submitted the smaller plan for final approval."
+            ),
+            "changed commitment to support_reduced": "supported a smaller deployment",
+            "changed commitment to defer": "decided to wait for more information",
+            "The retained scheduler": "The schedule",
+            "modeled day": "day",
+            "technical_validation_lead": "The technical lead",
+            "local_public_health_liaison": "The local health liaison",
+            "partner_representative": "The partner representative",
+            "oversight_review": "the oversight review",
+            "sovereignty_concern": "the government-oversight concern",
+            "validation_pending": "the local concern as awaiting verification",
+            "scope_reduced": "a smaller deployment",
+        }
+        result = value
+        for source, target in replacements.items():
+            result = result.replace(source, target)
+        return result[0].upper() + result[1:] if result else result
+
+    for raw_moment in raw_moments:
         if not isinstance(raw_moment, dict):
             raise ValueError("coordination causal moment is malformed")
         event_ids = raw_moment.get("event_ids", [])
@@ -284,7 +308,7 @@ def _coordination_reference_narration(
         if not isinstance(logical_time, int) or isinstance(logical_time, bool):
             raise ValueError("coordination causal moment time is malformed")
         day, minute = divmod(logical_time, MINUTES_PER_DAY)
-        modeled_time = f"modeled day {day}, minute {minute}"
+        modeled_time = f"day {day}" if minute == 0 else f"day {day}, minute {minute}"
         if summaries:
             selected_summaries = [summaries[0]]
             if len(summaries) > 1 and summaries[-1] != summaries[0]:
@@ -300,11 +324,26 @@ def _coordination_reference_narration(
                 "scheduled opportunity without a retained external action or world change."
             )
             detailed = concise
+        action_summaries = [
+            readable_summary(str(item["summary"]))
+            for item in events
+            if item.get("kind") == "action_attempted"
+            and isinstance(item.get("summary"), str)
+        ]
+        if participants and all(item.endswith("_pressure_source") for item in participants):
+            concise = (
+                f"On {modeled_time}, new technical, government-oversight, and "
+                "local safety concerns reached the team."
+            )
+        elif action_summaries:
+            concise = f"On {modeled_time}: {' '.join(action_summaries)}"
         if len(concise) > 360:
             concise = f"{concise[:357].rstrip()}…"
+        number = len(moments) + 1
         moments.append(
             {
                 "narrative_version": 2,
+                "moment": number,
                 "activation": raw_moment.get("activation"),
                 "participants": participants,
                 "causal_time": raw_moment.get("causal_time"),
@@ -603,24 +642,24 @@ def create_app(
                             "id": "baseline",
                             "label": "Baseline",
                             "description": (
-                                "Ordinary review friction occurs without the "
-                                "three outside pressure sources becoming active."
+                                "The team reviews the proposal using only the concerns "
+                                "already available at the start."
                             ),
                         },
                         {
                             "id": "heterogeneous_pressure",
                             "label": "Heterogeneous pressure",
                             "description": (
-                                "Technical, policy, and local concerns enter "
-                                "without enough stabilizing evidence."
+                                "New technical, government-oversight, and local safety "
+                                "concerns arrive, but the team has no reliable way to resolve them."
                             ),
                         },
                         {
                             "id": "stabilization",
                             "label": "Stabilization",
                             "description": (
-                                "The same concerns enter, while bounded "
-                                "verification and feedback support reduced scope."
+                                "The same new concerns arrive, and the team can request "
+                                "independent checks and track which issues remain unresolved."
                             ),
                         },
                     ],
@@ -2202,9 +2241,10 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
                 "several people and exact mechanisms produce one decision path."
             ),
             "representation_summary": (
-                "Five people review a proposed deployment over four meetings. "
-                "Outside technical, policy, and local concerns may change their "
-                "commitments before an exact gate sends a decision to an external registry."
+                "A five-person international team must decide whether to deploy a "
+                "new public-health monitoring system. Each person is responsible for "
+                "a different concern: technical reliability, government oversight, "
+                "local safety, partner support, or keeping the decision on schedule."
             ),
             "assumptions": [
                 "People act from retained dispositions, memories, delivered observations, and owned interfaces.",

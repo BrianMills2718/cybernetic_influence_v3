@@ -102,8 +102,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Spatial topology" in page.text
     assert "Configured interaction pathways" in page.text
     assert "Realized causal graph" in page.text
-    assert "Narrative for the selected causal step" in page.text
-    assert "Causal-step narrative" in page.text
+    assert "Account for the selected moment" in page.text
+    assert "What happened" in page.text
+    assert "Advanced" in page.text
     assert 'id="initial-situation"' in page.text
     assert 'id="narrative-concise"' in page.text
     assert 'id="narrative-detailed"' in page.text
@@ -139,7 +140,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "/assets/graph-canvas.js" in page.text
     assert "/assets/graph-canvas.css" in page.text
     assert "V2 Inspect" not in page.text
-    assert "Choose a step" in page.text
+    assert "Choose a moment" in page.text
     graph_script = api.get("/assets/graph-canvas.js")
     graph_styles = api.get("/assets/graph-canvas.css")
     app_script = api.get("/assets/app.js")
@@ -1368,6 +1369,9 @@ def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
     assert all(
         item["concise_narrative"] and item["detailed_paragraphs"]
         for item in document["narration"]["moments"]
+    )
+    assert [item["moment"] for item in document["narration"]["moments"]] == list(
+        range(1, len(document["narration"]["moments"]) + 1)
     )
     partnership = next(
         item for item in document["boundaries"] if item["id"] == "deployment_partnership"
