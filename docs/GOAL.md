@@ -139,10 +139,16 @@ restarting completed work.
   16/25 moments when a valid narrator call cost `$0.0203225`, above the fixed
   `$0.02` per-call ceiling. It retained 27 calls and `$0.2113171875` observed
   cost, so it is not the required complete V3 proof.
-- **Resume event:** an operator decision on Terra's narrator per-call/cap
-  topology and authorization for one replacement bounded Terra run, or a
-  different explicitly authorized model/call topology. Do not silently retry,
-  switch models, mix routes, or relax the evidence contract.
+- **Observed `$0.025` replay:** `run_20d2c0000003` completed safely after
+  pause/resume, with 31 unique calls, 90 unique events, and
+  `$0.3051715625` observed cost. Narration still stopped at 20/25 moments when
+  a valid `$0.0252121875` call exceeded the new per-call ceiling. The trace
+  shows cumulative full-detail prior narration as the direct cost driver.
+- **Resume event:** approval to compact the narrator's model-facing prior
+  continuity input to prior narrative summaries while preserving the complete
+  simulator-owned V3 context/record chain, followed by one authorized bounded
+  Terra replay. Do not silently retry, switch models, mix routes, or relax the
+  evidence contract.
 
 ## Done
 

@@ -64,6 +64,24 @@ Terra replacement observation on 2026-07-28:
   per-call/cap topology and fresh authorization. Keep the participant and
   narrator contracts intact; do not silently raise the ceiling or mix models.
 
+Terra `$0.025` ceiling replay on 2026-07-28:
+
+- build `ebfd1414b8bed64e68c9b7ebe13080e3119648c7` raised the simulator-owned
+  narrator ceiling to `$0.025` and kept the total hard cap at `$0.74`;
+- `run_20d2c0000003` again paused after one causal step, resumed the same
+  checkpoint, and reached `closed_confirmed`. It retained 31 unique calls, 90
+  unique events, and `$0.3051715625` provider-observed cost with no provider
+  errors;
+- it is still **not accepted**: 20 of 25 V3 narrator moments were retained,
+  then the next valid narration call cost `$0.0252121875`, above the new
+  ceiling. The simulator stopped narration loudly rather than accepting an
+  over-cap call;
+- the observed cause is cumulative prompt growth: each narrator call receives
+  all prior detailed accounts even though the required continuity input is the
+  prior narrative summaries. The next bounded repair is to supply compact prior
+  summaries to the narrator while retaining the full simulator-owned evidence
+  context and prior-record chain. Do not continue raising costs blindly.
+
 Earlier exact-revision execution verified 2026-07-27:
 
 - simulator behavior revision:
