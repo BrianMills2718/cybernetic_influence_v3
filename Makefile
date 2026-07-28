@@ -23,7 +23,7 @@ ui-build:
 	npm --prefix frontend run build
 
 test:
-	$(PYTHON) -m pytest -q
+	$(PYTHON) -m pytest -q tests
 
 typecheck:
 	$(PYTHON) -m mypy

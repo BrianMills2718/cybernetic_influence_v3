@@ -127,7 +127,7 @@ restarting completed work.
   run-identity, current-event, and prior-record chains. Focused narration,
   API-corruption, run-configuration, type, browser-script, and graph-build
   checks pass without a provider call.
-- **Current increment:** Packet 20D2.
+- **Current increment:** Packet 20D2 operator readout.
 - **Observed 20D2 boundary:** the private Mac is on `5465e012`; DeepSeek Flash
   `none` has a fresh V3 narrator-schema route observation. Baseline
   `run_20d2a0000001` paused and resumed correctly, then failed closed when the
@@ -144,11 +144,19 @@ restarting completed work.
   `$0.3051715625` observed cost. Narration still stopped at 20/25 moments when
   a valid `$0.0252121875` call exceeded the new per-call ceiling. The trace
   shows cumulative full-detail prior narration as the direct cost driver.
-- **Resume event:** approval to compact the narrator's model-facing prior
-  continuity input to prior narrative summaries while preserving the complete
-  simulator-owned V3 context/record chain, followed by one authorized bounded
-  Terra replay. Do not silently retry, switch models, mix routes, or relax the
-  evidence contract.
+- **Observed compact proof:** `run_20d2d0000004` used the repaired compact
+  continuity input, paused and resumed its retained checkpoint, then completed
+  `closed_confirmed` at causal time 11 with 90 unique events, 35 unique calls,
+  `$0.1360228125` provider-observed cost, no provider errors, and all 25 V3
+  causal-moment accounts retained. The contexts are version 2 under
+  `causal_moment_narrator/v4`; complete simulator-owned evidence and prior
+  record chains remain retained outside model prompts. An older authored run
+  also reopened after restart at zero spend.
+- **Resume event:** operator answers the three packet-20D2 readout questions
+  against `run_20d2d0000004`: whether each meaningful arc is intelligible
+  without raw evidence, a disputed statement steps down to exact retained
+  events, and the stopping reason is clear. No further paid replay is needed
+  for this packet unless that readout identifies a specific defect.
 
 ## Done
 

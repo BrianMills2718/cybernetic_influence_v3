@@ -82,6 +82,27 @@ Terra `$0.025` ceiling replay on 2026-07-28:
   summaries to the narrator while retaining the full simulator-owned evidence
   context and prior-record chain. Do not continue raising costs blindly.
 
+Compact-continuity proof on 2026-07-28:
+
+- build `749d4022a8a9beea35f727db87a1d8a989f4c7a6` supplies only each prior
+  concise narrative summary to the narrator while retaining the complete
+  simulator-owned evidence context and prior-record chain outside the prompt;
+- `run_20d2d0000004` used Terra `medium` for people and Terra `low` for
+  narration, paused after one causal step, resumed the retained checkpoint, and
+  completed `closed_confirmed` through `confirmed_closure` at causal time 11
+  (logical time 87);
+- the retained proof has 90 unique events, 35 unique provider calls,
+  `$0.1360228125` provider-observed cost, no provider errors, and all 25 of 25
+  V3 causal-moment narratives. Its 25 retained narration contexts are version
+  2 and use `causal_moment_narrator/v4`;
+- after restart, the live host reopened that completed run and also reopened
+  older authored run `run_6ff09016a6e0` without a provider call or cost change.
+  The old run intentionally retains its legacy narration context;
+- this completes the technical portion of packet 20D2. Operator readout is
+  still required before packet acceptance: the account must be intelligible
+  without raw evidence, disputed claims must step down to retained events, and
+  the stopping reason must be clear.
+
 Earlier exact-revision execution verified 2026-07-27:
 
 - simulator behavior revision:
