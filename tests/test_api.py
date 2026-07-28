@@ -149,6 +149,11 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert graph_styles.status_code == 200
     assert app_script.status_code == 200
     assert app_styles.status_code == 200
+    retained_render = app_script.text.split("function render(run) {", 1)[1].split(
+        "$('#event-slider')", 1
+    )[0]
+    assert "$('#map-section').hidden = false" in retained_render
+    assert "renderGraph()" in retained_render
     assert graph_script.headers["cache-control"] == "no-cache"
     assert graph_styles.headers["cache-control"] == "no-cache"
     assert app_script.headers["cache-control"] == "no-cache"

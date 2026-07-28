@@ -1752,8 +1752,10 @@ function render(run) {
     ? 'Simulation complete'
     : String(current.status || 'Simulation').replaceAll('_', ' ')
   $('#narrative-section').hidden = false
+  $('#map-section').hidden = false
   renderLifecycleControls(current)
   renderProjectionControls()
+  renderGraph()
   $('#result-status').textContent = `${current.status} · ${String(current.scenario || '').replaceAll('_',' ')} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
   $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator) · $${Number(current.cost).toFixed(6)} · ${current.run_id}`
   const llm = current.llm_configuration
