@@ -8,6 +8,10 @@ updated: 2026-07-27
 
 # Cybernetic Influence V3 Roadmap
 
+The durable autonomous execution contract for the remaining research MVP is
+[Research MVP Continuous-Execution Goal](GOAL.md). This roadmap remains the
+authority for direction, packet order, and product status.
+
 ## North Star
 
 For an analyst studying multiscale agency, turn a concrete scenario containing
