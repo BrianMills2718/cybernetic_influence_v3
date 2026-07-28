@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from cybernetic_influence.api import create_app
+from cybernetic_influence import narration as narration_module
 from cybernetic_influence.narration import (
     CausalMomentNarration,
     NarrativeParagraph,
@@ -93,6 +94,8 @@ def test_live_moment_narration_groups_participants_and_retains_simulator_owned_c
     assert moments[0]["detailed_paragraphs"]
     assert "source_event_ids" not in moments[0]
     first_context = moments[0]["evidence_context"]
+    assert first_context["context_version"] == 2
+    assert first_context["prompt_version"] == "causal_moment_narrator/v4"
     expected_first_event_ids = [
         event["event_id"]
         for event in document["timeline"]
@@ -115,18 +118,63 @@ def test_live_moment_narration_groups_participants_and_retains_simulator_owned_c
         f"c{index}" for index in range(1, len(moments) + 1)
     ]
     assert any(len(moment["participants"]) > 1 for moment in moments)
-    assert "Earlier causal-moment narratives, in order:\n[]" in prompts[0]
+    assert "Earlier causal-moment summaries, in order:\n[]" in prompts[0]
     assert "Never describe scenario_start as an internal" in prompts[0]
     assert "concise_narrative must be exactly one sentence of at most 240 characters" in prompts[0]
     assert "detailed_paragraphs must contain one to three connected prose paragraphs" in prompts[0]
     assert "never write an event id" in " ".join(system_prompts[0].split()).lower()
     assert "Narrated causal moment 1." in prompts[1]
+    assert "The retained trace records the decision" not in prompts[1]
     assert all(item["max_tokens"] == 640 for item in call_options)
     assert all(item["reasoning_effort"] == "high" for item in call_options)
     calls = narration["calls"]
     assert isinstance(calls, list)
     assert all(item["reasoning_effort"] == "high" for item in calls)
     assert "source_event_ids" not in prompts[0]
+
+
+def test_compacted_v4_validator_preserves_reopen_of_legacy_v3_contexts(
+    tmp_path: Path,
+) -> None:
+    document = TestClient(create_app(ROOT / "web", tmp_path)).post(
+        "/api/runs",
+        json={"execution": "scripted"},
+    ).json()
+
+    def fake_call(
+        _model: str,
+        _messages: list[dict[str, str]],
+        response_model: type[CausalMomentNarration],
+        **_kwargs: Any,
+    ) -> tuple[CausalMomentNarration, object]:
+        return (
+            narrated_response(
+                response_model,
+                concise="A legacy-compatible causal account was retained.",
+            ),
+            SimpleNamespace(cost=0.01, cost_source="provider_reported"),
+        )
+
+    narration = narrate_live_moments(
+        document,
+        model="test-model",
+        trace_id_prefix="run_legacy_v3",
+        structured_call=fake_call,
+    )
+    records = cast(list[dict[str, object]], narration["moments"])
+    moments = narration_module._moment_inputs(document)
+    prior: list[dict[str, object]] = []
+    for index, (record, moment) in enumerate(zip(records, moments, strict=True), start=1):
+        record["evidence_context"] = narration_module._legacy_v3_evidence_context(
+            run_id=str(document["run_id"]),
+            moment=moment,
+            moment_number=index,
+            prior=prior,
+        )
+        prior.append(record)
+    document["narration"] = narration
+
+    validate_retained_narration(document)
 
 
 def test_narrator_rejects_a_model_selected_provenance_field(

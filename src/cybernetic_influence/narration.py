@@ -21,7 +21,8 @@ NARRATOR_MAX_BUDGET = 0.025
 # evidence-bound passage.  The hard observed-cost ceiling remains unchanged.
 NARRATOR_MAX_TOKENS = 640
 NARRATOR_REASONING_EFFORT = "low"
-NARRATOR_PROMPT_VERSION = "causal_moment_narrator/v3"
+NARRATOR_PROMPT_VERSION = "causal_moment_narrator/v4"
+_LEGACY_V3_PROMPT_VERSION = "causal_moment_narrator/v3"
 NARRATIVE_VERSION = 3
 
 StructuredCall = Callable[..., tuple[Any, Any]]
@@ -126,7 +127,10 @@ def narrate_live_moments(
             moment_number=index,
             prior=prior,
         )
-        system, user = _render_prompt(moment=moment, prior=prior)
+        system, user = _render_prompt(
+            moment=moment,
+            prior_summaries=_prior_summaries(prior),
+        )
         trace_id = (
             f"{trace_id_prefix}/narrator/moment/{moment['activation']}"
         )
@@ -423,7 +427,7 @@ def _evidence_context(
     material = _context_material(run_id=run_id, moment=moment, prior=prior)
     events = cast(list[dict[str, object]], moment["events"])
     return {
-        "context_version": 1,
+        "context_version": 2,
         "context_id": _context_id(run_id, moment_number),
         "run_id": run_id,
         "narrative_record_id": record_id,
@@ -463,11 +467,20 @@ def _validate_v3_record(
     context = record.get("evidence_context")
     if not isinstance(context, Mapping):
         raise ValueError("retained v3 narration lacks an evidence context")
-    expected = _evidence_context(
-        run_id=run_id,
-        moment=moment,
-        moment_number=moment_number,
-        prior=prior,
+    expected = (
+        _legacy_v3_evidence_context(
+            run_id=run_id,
+            moment=moment,
+            moment_number=moment_number,
+            prior=prior,
+        )
+        if context.get("context_version") == 1
+        else _evidence_context(
+            run_id=run_id,
+            moment=moment,
+            moment_number=moment_number,
+            prior=prior,
+        )
     )
     if dict(context) != expected:
         raise ValueError("retained v3 narration evidence context is corrupt")
@@ -491,8 +504,50 @@ def _context_material(
         "run_id": run_id,
         "prompt_version": NARRATOR_PROMPT_VERSION,
         "current_moment": dict(moment),
+        "prior_narrative_summaries": _prior_summaries(prior),
+    }
+
+
+def _legacy_v3_evidence_context(
+    *,
+    run_id: str,
+    moment: Mapping[str, object],
+    moment_number: int,
+    prior: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    """Reconstruct pre-compaction V3 evidence without changing its meaning."""
+    material = {
+        "run_id": run_id,
+        "prompt_version": _LEGACY_V3_PROMPT_VERSION,
+        "current_moment": dict(moment),
         "prior_narratives": [dict(record) for record in prior],
     }
+    events = cast(list[dict[str, object]], moment["events"])
+    return {
+        "context_version": 1,
+        "context_id": _context_id(run_id, moment_number),
+        "run_id": run_id,
+        "narrative_record_id": _narrative_record_id(run_id, moment_number),
+        "current_event_ids": [str(event["event_id"]) for event in events],
+        "prior_narrative_record_ids": [
+            _required_narrative_record_id(record) for record in prior
+        ],
+        "prompt_version": _LEGACY_V3_PROMPT_VERSION,
+        "context_digest": _context_digest(material),
+    }
+
+
+def _prior_summaries(
+    prior: Sequence[Mapping[str, object]],
+) -> list[dict[str, str]]:
+    """Keep continuity bounded while retaining full records outside the prompt."""
+    return [
+        {
+            "narrative_record_id": _required_narrative_record_id(record),
+            "concise_narrative": _required_concise_narrative(record),
+        }
+        for record in prior
+    ]
 
 
 def _context_digest(material: Mapping[str, object]) -> str:
@@ -520,8 +575,15 @@ def _required_narrative_record_id(record: Mapping[str, object]) -> str:
     return value
 
 
+def _required_concise_narrative(record: Mapping[str, object]) -> str:
+    value = record.get("concise_narrative")
+    if not isinstance(value, str) or not value:
+        raise ValueError("prior narration record lacks a concise account")
+    return value
+
+
 def _render_prompt(
-    *, moment: Mapping[str, object], prior: Sequence[Mapping[str, object]],
+    *, moment: Mapping[str, object], prior_summaries: Sequence[Mapping[str, str]],
 ) -> tuple[str, str]:
     raw = resources.files("cybernetic_influence.active_runtime").joinpath(
         "prompts/causal_moment_narrator.yaml"
@@ -537,7 +599,7 @@ def _render_prompt(
         environment.from_string(str(template["system"])).render(),
         environment.from_string(str(template["user"])).render(
             moment=moment,
-            prior=list(prior),
+            prior_summaries=list(prior_summaries),
         ),
     )
 
