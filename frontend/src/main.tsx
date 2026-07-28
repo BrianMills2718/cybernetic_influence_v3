@@ -509,6 +509,7 @@ function buildWorldGraph(options: CanvasOptions): {
   const world = options.world
   if (!world) return { nodes: [], edges: [] }
   const eventFocus = new Set(options.event?.spatial_focus_ids ?? [])
+  const activeParticipants = new Set(options.activity?.participantIds ?? [])
   const placeById = new Map(world.places.map((place) => [place.id, place]))
   const roots = world.places.filter((place) => place.parentPlaceId === null)
   const nodes: Node<CanvasNodeData>[] = []
@@ -556,7 +557,10 @@ function buildWorldGraph(options: CanvasOptions): {
         if (!raw) return
         const node = toCanvasNode(
           raw,
-          eventFocus.has(raw.id),
+          eventFocus.has(raw.id)
+            || activeParticipants.has(raw.id)
+            || options.activity?.cue?.source_id === raw.id
+            || options.activity?.cue?.target_id === raw.id,
           options.selectedNodeId === raw.id,
         )
         nodes.push({
