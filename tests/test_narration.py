@@ -7,7 +7,7 @@ import json
 import re
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 from fastapi.testclient import TestClient
 import pytest
@@ -195,7 +195,8 @@ def test_narrator_rejects_missing_detailed_paragraphs(tmp_path: Path) -> None:
     )
     assert narration["status"] == "unavailable"
     assert narration["moments"] == []
-    assert narration["calls"][0]["error_type"] == "ValidationError"
+    calls = cast(list[dict[str, object]], narration["calls"])
+    assert calls[0]["error_type"] == "ValidationError"
 
 
 def test_narrator_retains_partial_provider_failure_as_unavailable(tmp_path: Path) -> None:
@@ -230,9 +231,11 @@ def test_narrator_retains_partial_provider_failure_as_unavailable(tmp_path: Path
         structured_call=partial_call,
     )
     assert narration["status"] == "unavailable"
-    assert len(narration["moments"]) == 1
-    assert narration["calls"][1]["status"] == "failed"
-    assert "provider stopped" in narration["calls"][1]["error_message"]
+    moments = cast(list[dict[str, object]], narration["moments"])
+    calls = cast(list[dict[str, object]], narration["calls"])
+    assert len(moments) == 1
+    assert calls[1]["status"] == "failed"
+    assert "provider stopped" in str(calls[1]["error_message"])
 
 
 def test_narrator_reserves_the_full_account_before_any_provider_call(
@@ -541,7 +544,9 @@ def test_legacy_v1_and_v2_narration_remain_readable_without_provider_call(
     api = TestClient(create_app(ROOT / "web", tmp_path))
     reopened = api.get("/api/runs/run_0123456789ab")
     assert reopened.status_code == 200
-    assert reopened.json()["narration"]["moments"] == legacy["narration"]["moments"]
+    reopened_narration = cast(dict[str, object], reopened.json()["narration"])
+    legacy_narration = cast(dict[str, object], legacy["narration"])
+    assert reopened_narration["moments"] == legacy_narration["moments"]
 
 
 def test_api_refuses_to_reopen_a_corrupted_v3_evidence_context(tmp_path: Path) -> None:
@@ -572,7 +577,10 @@ def test_api_refuses_to_reopen_a_corrupted_v3_evidence_context(tmp_path: Path) -
     assert api.get(f"/api/runs/{document['run_id']}").status_code == 200
 
     stored = RunStore(tmp_path).get(str(document["run_id"]))
-    stored["narration"]["moments"][0]["evidence_context"]["context_digest"] = "0" * 64
+    narration = cast(dict[str, object], stored["narration"])
+    moments = cast(list[dict[str, object]], narration["moments"])
+    context = cast(dict[str, object], moments[0]["evidence_context"])
+    context["context_digest"] = "0" * 64
     RunStore(tmp_path).save(stored)
     response = api.get(f"/api/runs/{document['run_id']}")
     assert response.status_code == 409
