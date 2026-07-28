@@ -21,7 +21,27 @@ service `cybernetic-influence-v3-openrouter`, then an owner-only raw secret file
 when the Keychain is locked to noninteractive services. The credential is not
 stored in the repository or LaunchAgent plist.
 
-Last verified 2026-07-25:
+Last exact-revision execution verified 2026-07-27:
+
+- simulator behavior revision:
+  `08614b4e9f4c7d6bd84c34922c16e83314faa814`;
+- pause/resume canary `run_ca0e512a5763` completed `closed_confirmed` from its
+  retained checkpoint with 110 unique events, 11 participant calls, two denied
+  premature closure attempts, a delivered terminal receipt, and
+  `$0.002085029` provider-observed cost;
+- adequately authorized narration run `run_6c4975979cec` produced five valid
+  detailed accounts before failing strict out-of-context citation validation;
+- repaired-prompt run `run_e589d6e3a769` produced seven valid accounts before
+  reproducing the same citation failure family; it retained 19 calls and
+  `$0.00424612` provider-observed cost;
+- participant execution, DeepSeek transport, native structured output,
+  pause/resume, and cost visibility are observed; full sequential narration is
+  not yet accepted because model-selected arbitrary event IDs proved unreliable;
+- the existing narrator route observations certify the deployed v2 schema
+  boundary only. Packet 20D1 intentionally changes that schema, so a fresh
+  narrator observation is required before the v3 route may be advertised.
+
+Previously verified 2026-07-25 route and compatibility evidence:
 
 - simulator behavior revision:
   `6ec752fc5842673a4934fc159905089092abf3d5`;

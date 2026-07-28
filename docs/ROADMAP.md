@@ -37,10 +37,20 @@ exposed interfaces; exact mechanisms alone deliver information and commit
 world effects.
 
 [Mac development operations](operations/mac-mini.md) owns the separately dated
-last-observed deployed revision and route evidence. The current exact-revision
-Service Desk canary completed with DeepSeek V4 Flash; technical deployment is
-therefore observed. The operator has also inspected the authored flow; the
-remaining limitation is the active extended-run outcome below.
+last-observed deployed revision and route evidence. The latest deployed revision
+observed on 2026-07-27 is
+`08614b4e9f4c7d6bd84c34922c16e83314faa814`. Service Desk run
+`run_ca0e512a5763` paused after one participant call, resumed the same
+checkpoint, and completed `closed_confirmed` with 110 unique events, 11
+participant calls, two denied premature closure attempts, and provider-observed
+cost `$0.002085029`.
+
+Two separately authorized narration runs produced valid sequential prose
+through five and seven moments before DeepSeek returned event IDs outside the
+supplied current-moment context. The strict validator correctly made narration
+unavailable. This proves the remaining Slice-20 blocker is the model-owned
+citation-ID contract—not participant execution, pause/resume, transport, cost
+visibility, or the causal runtime.
 
 Technical execution is observed for both authored templates and for the
 configured Service Desk live/pause/resume path. Resume now rechecks explicit
@@ -276,6 +286,33 @@ Do not broaden to evasion, generalized swarm infrastructure, or the separately
 gated composite-agency perturbation assay before this active outcome probe is
 observed.
 
+### Ordered MVP completion packets
+
+This table and the linked plan sections are the handoff authority. Assign one
+packet at a time; a commit/report does not authorize the next packet.
+
+| Order | Packet | Observable outcome | Mandatory stop |
+|---:|---|---|---|
+| 1 | [20D1](plans/020-inspectable-extended-runs.md#packet-20d1--simulator-owned-narrative-evidence-context) | Narrator prose uses immutable simulator-owned evidence context | Commit after zero-cost tests; no provider/deploy |
+| 2 | [20D2](plans/020-inspectable-extended-runs.md#packet-20d2--certified-integrated-operator-proof) | One certified, paused/resumed, fully narrated Service Desk proof | Explicit certification/deploy/spend authorization and human readout |
+| 3 | [21A0](plans/021-coordination-environment-assay.md#packet-21a0--contract-and-fixture-seam) | Strict three-arm scenario fixtures | Commit contract only |
+| 4 | [21A1](plans/021-coordination-environment-assay.md#packet-21a1--scripted-recurring-runtime) | Zero-cost recurring four-meeting trajectories | Commit runtime only |
+| 5 | [21A2](plans/021-coordination-environment-assay.md#packet-21a2--existing-simulator-integration) | Scripted scenario is inspectable in the existing UI | Human scripted-arc readout |
+| 6 | [21A3](plans/021-coordination-environment-assay.md#packet-21a3--native-participant-seam-and-canary-gate) | Five bounded native-LLM people pass fake-call tests | Report topology; no provider/deploy |
+| 7 | [21A4](plans/021-coordination-environment-assay.md#packet-21a4--authorized-baseline-canary-and-human-readout) | One valid live 12–28-moment baseline | Explicit certification/deploy/spend authorization and human readout |
+| 8 | [21B0](plans/021-coordination-environment-assay.md#packet-21b0--frozen-measurement-contract-and-controls) | Versioned measures and both-sign controls are frozen | Commit schema/fixtures only |
+| 9 | [21B1](plans/021-coordination-environment-assay.md#packet-21b1--exact-calculator-and-evidence-coder-seam) | Exact calculators and retained fake-coded artifact work | Commit; no provider/deploy |
+| 10 | [21B2](plans/021-coordination-environment-assay.md#packet-21b2--measurement-readout-and-authorized-canaries) | Provenance-labeled readout plus live pressure/stabilization canaries | Explicit deploy/spend authorization and human readout |
+| 11 | [21C0](plans/021-coordination-environment-assay.md#packet-21c0--comparison-contract-and-zero-cost-matrix) | Six-run scripted comparison passes controls | Freeze batch contract; no provider/deploy |
+| 12 | [21C1](plans/021-coordination-environment-assay.md#packet-21c1--authorized-repeated-live-matrix) | Two valid live trajectories per condition are frozen | Explicit deploy/spend authorization; no automatic replacement runs |
+| 13 | [21C2](plans/021-coordination-environment-assay.md#packet-21c2--comparison-readout-sign-off-and-mvp-closeout) | Comparison, independent sign-off, and operator MVP readout | Stop and close the research MVP |
+
+After 21C2, do not automatically continue. Slice 21D and Slice 22 are post-MVP
+research choices. Slice 22A0–A2 are already bounded, but 22B intentionally
+remains a skeleton until the 22A human readout determines whether live repeated
+execution would answer a material question. Pretending to fully specify that
+future packet now would bypass its evidence gate.
+
 ## Approved Outcome Extension
 
 The approved direction beyond the current demo preserves the same analyst and
@@ -479,6 +516,11 @@ Implement [Slice 20](plans/020-inspectable-extended-runs.md):
 - compatibility is proved on the current Service Desk and authored examples
   before the first longer research scenario consumes the contracts.
 
+Packets 20A–20C are complete. Packet 20D1 is the active direct blocker: move
+narrative provenance from model-selected event IDs to the immutable exact
+context supplied by the simulator. Packet 20D2 then owns the separately
+authorized integrated proof and operator readout.
+
 Current runs stop when their concrete work becomes quiescent. No general game
 master currently judges completion or outcome. Exact world-state terminal
 conditions are the default; a retained semantic judge is optional only for a
@@ -542,17 +584,17 @@ requires them to answer an analyst question that current contracts cannot.
 
 ## Cadence and Observation State
 
-- **Last representative observation:** 2026-07-25, authored
-  information-campaign flow; the operator judged the interaction good so far.
-- **Observed limitation:** the available scenarios are one short transaction,
-  their moment narration is too terse for a larger causal DAG, and terminal
-  status does not explain why the run ended.
-- **Non-vertical packets since that observation:** zero.
-- **Next integrated replay:** Slice 20C on the current Service Desk and authored
-  examples, followed by Slice 21A's scripted decision with at least twelve
-  meaningful causal moments.
-- **Current limiting cause:** scenario depth and inspectability, not scheduler
-  throughput, model availability, or graph rendering.
+- **Last representative execution:** 2026-07-27, exact-revision Service Desk
+  pause/resume and completed participant trajectory on `08614b4`.
+- **Last representative narration probe:** `run_e589d6e3a769`; seven valid
+  accounts followed by a strict out-of-context citation failure.
+- **Observed limitation:** model-selected arbitrary event IDs do not remain
+  reliable across a full sequential narration, although the prose and causal
+  execution are valid.
+- **Next implementation packet:** 20D1; **next integrated replay:** 20D2.
+- **Current limiting cause:** truthful narration provenance, followed by the
+  still-unobserved naturally multi-episode Slice-21 scenario—not scheduler
+  throughput, provider transport, or graph rendering.
 
 ## Explicit MVP Deferrals
 

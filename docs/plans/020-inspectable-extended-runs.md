@@ -50,9 +50,31 @@ obtain explicit authorization.
   while the approved information-campaign test proves the authored compiler
   path. Runtime/presentation tests cover pending activation, retained failure,
   exact denial cues, redaction, stale cursor behavior, and worker lock release.
-- **20D remains:** run and inspect the integrated Service Desk and retained
-  authored examples, including full LLM traces and the three human-readout
-  questions below. It may use only separately authorized live calls.
+- **20D live execution observed through `08614b4`:** deployed Service Desk
+  `run_ca0e512a5763` paused after one DeepSeek participant call, resumed from
+  the retained checkpoint, and completed `closed_confirmed` with 110 unique
+  events, 11 participant calls, two exact denials of premature closure, a
+  delivered confirmed-closure receipt, and `$0.002085029` provider-observed
+  cost. The live proof exposed and led to repairs for invalid-ID lock leakage,
+  terminal completion with already-emitted effects, and stale failure evidence
+  after resume.
+- **20D narration blocker reproduced:** the `$0.10` proof correctly refused to
+  start 29 narrator calls because it could not reserve their ceilings. With
+  adequate authorization, `run_6c4975979cec` retained five valid detailed
+  accounts before DeepSeek returned an out-of-context detailed citation;
+  after explicitly enumerating allowed IDs, `run_e589d6e3a769` retained seven
+  before the same failure family recurred. Both runs failed narration visibly
+  while retaining completed world trajectories and exact observed spend. This
+  is not a transport or empty-structured-output failure.
+- **20D1 is the active direct blocker:** replace model-selected citation IDs
+  with a simulator-owned evidence-context envelope that truthfully records all
+  exact evidence supplied to each narrator call. Do not weaken prose
+  generation, silently discard invalid IDs, or claim that context provenance
+  proves semantic entailment.
+- **20D2 remains:** certify the changed narrator schema, run one separately
+  authorized integrated DeepSeek proof, inspect every participant/narrator
+  trace, rerender the retained authored example, and obtain the three human
+  readouts below. Slice 21 remains blocked until 20D2 is recorded complete.
 
 ## Outcome
 
@@ -516,6 +538,136 @@ Inspect every full LLM trace. A human reviewer then answers only:
 1. Can each run's meaningful arc be understood without opening raw evidence?
 2. Can a disputed statement be traced to the exact retained events?
 3. Is it clear why the simulation stopped?
+
+### Packet 20D1 — Simulator-owned narrative evidence context
+
+**Classification:** direct blocker repair.
+
+The live counterexample shows that asking the narrator to reproduce arbitrary
+event IDs is not a reliable structured-generation task. An ID is provenance
+metadata, not narrative judgment. The simulator already knows the exact prompt
+context and must own that record.
+
+Change the producer contract to a new version in which the model returns only:
+
+- one concise narrative sentence; and
+- one to three connected detailed prose paragraphs.
+
+After the structured response validates, the simulator creates one immutable
+evidence-context record containing:
+
+- every current-moment event ID supplied to the call;
+- the prior narrated-moment record IDs supplied to the call;
+- the narrator schema/prompt version; and
+- a canonical digest of that analyst-visible context.
+
+The concise passage and every detailed paragraph reference that context record.
+They do not contain model-selected event IDs. The UI label is **Evidence
+supplied to the narrator**, not “evidence proving this statement.” Selecting it
+opens the current exact events and prior narrative chain that the model could
+use. This is truthful provenance and dispute support; it is not automated
+semantic entailment.
+
+**Owned paths:** `src/cybernetic_influence/narration.py`, the causal-moment
+narrator prompt, the smallest presentation/API consumer changes, narrative UI
+source, and focused narration/presentation/API tests. Do not change the active
+runtime, scenario mechanics, person prompts, run-control semantics, models or
+reasoning defaults, or `llm_client`.
+
+**Compatibility and failure behavior:**
+
+- legacy v1 concise-only and v2 model-cited records remain readable;
+- new v3 records require a valid context digest and locally resolvable exact
+  current events and prior narration references;
+- a corrupt, missing, cross-run, future-moment, or mismatched context reference
+  fails reopening visibly;
+- missing prose or provider/schema failure still makes narration unavailable;
+- no code may repair narrative text, invent a citation, synthesize fallback
+  prose, or turn partial narration into `completed`.
+
+**Both-sign acceptance:**
+
+1. A zero-cost fake call produces a complete v3 concise/detailed sequence whose
+   context records exactly equal the evidence supplied to each call.
+2. The second call's context names the first retained narrative record and may
+   not name a future one.
+3. Unknown/cross-run event IDs, a changed context digest, future narrative
+   references, missing paragraphs, and a partial provider failure are rejected
+   or retained visibly unavailable as appropriate.
+4. Legacy v1/v2 runs reopen without a provider call.
+5. The rendered evidence control steps down to exact context and explicitly
+   avoids an entailment claim.
+
+**Verification:**
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_narration.py tests/test_api.py -k narration
+.venv/bin/python -m mypy src/cybernetic_influence/narration.py src/cybernetic_influence/api.py
+npm --prefix frontend run build
+git diff --check
+```
+
+Audit the complete owned diff, commit the packet, and stop. The changed output
+schema invalidates the old narrator route observation by design. Do not copy or
+edit certification IDs, deploy, call a provider, or begin 20D2.
+
+#### Assignment prompt for the implementation agent
+
+> Implement Packet 20D1 only from
+> `docs/plans/020-inspectable-extended-runs.md` in a clean linked worktree based
+> on the current clean descendant of canonical `main`. First confirm that
+> `main` contains `08614b4e9f4c7d6bd84c34922c16e83314faa814` and that no other
+> writer claims the owned paths. If either check fails, stop and report it.
+>
+> Replace model-selected narrator citation IDs with the v3 simulator-owned
+> evidence-context contract specified in 20D1. The LLM-facing response contains
+> only the concise sentence and one-to-three detailed prose paragraphs. After a
+> valid response, simulator code must retain the exact current event IDs, prior
+> narrative-record IDs, prompt/schema version, and canonical context digest
+> that were supplied to that call. Every new passage references this immutable
+> context record. Label the UI step-down “Evidence supplied to the narrator”
+> and state that supplied context is provenance, not proof of entailment.
+>
+> Preserve readable v1 concise-only and v2 model-cited records. Add every
+> positive and negative test named in 20D1. Fail visibly on corrupt, missing,
+> cross-run, future-moment, or digest-mismatched context. Do not silently filter
+> an invalid model citation, synthesize fallback prose, change runtime or
+> scenario mechanics, alter people, switch models/reasoning, modify
+> `llm_client`, edit certification IDs, deploy, spend money, or begin 20D2.
+>
+> Run the focused pytest, mypy, frontend build, and `git diff --check` commands
+> in 20D1. Inspect the owned diff for hidden fallbacks, semantic-proof
+> overclaims, stale compatibility assumptions, unrelated changes, or weakened
+> fail-loud behavior. Fix owned defects, rerun the checks, commit the coherent
+> packet, report the commit and exact evidence, and stop.
+
+### Packet 20D2 — Certified integrated operator proof
+
+**Classification:** representative live vertical; separate authorization
+required.
+
+Preconditions: committed 20D1, clean canonical descendant, full focused checks,
+and an explicit spend authorization after reporting the exact topology. The
+participant schema/certification is unchanged; the v3 narrator schema requires
+one fresh successful route observation. Do not advertise the route until the
+shared client replays the exact model, schema digest, revision, transport
+evidence, and freshness.
+
+Then deploy the exact canonical revision to the private Mac, require the config
+endpoint to report that revision and DeepSeek V4 Flash `none`, and run one
+Service Desk baseline with the existing maximum of 48 participant and 32
+narrator calls under the operator-approved hard cap (currently at most `$0.74`).
+Pause after a validated causal boundary, resume the same checkpoint, and require
+terminal completion. Reopen the run after restart and rerender retained authored
+`run_6ff09016a6e0` without execution or spend.
+
+Acceptance requires complete—not partial—v3 narration; unique events and calls;
+provider-observed cost; exact completion reason and outcome; delivered terminal
+effects; all three graph meanings; full participant/narrator trace inspection;
+and affirmative human answers to the three 20D questions. If DeepSeek still
+fails prose/schema generation, retain the exact failure and stop for a model or
+call-topology decision. Do not silently switch to Terra or relax the v3
+contract.
 
 ## Verification
 

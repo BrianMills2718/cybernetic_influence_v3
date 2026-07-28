@@ -10,18 +10,50 @@ updated: 2026-07-27
 
 ## Assignment boundary
 
-Begin only after Slice 20's completion record and dual-level narration are
+Begin only after Packet 20D2's completion record and dual-level narration are
 implemented and observed. Implement 21A and obtain its human readout before
 21B. Implement 21B and inspect its full measurement traces before 21C. Do not
 begin the evasion variants or Levin-style composite-agency assay until the
 baseline/pressure/stabilization vertical passes.
 
 Work in a clean linked worktree based on the current clean descendant of
-`main`. For each of 21A, 21B, and 21C: implement only that packet, run its
+`main`. For each packet below: implement only that packet, run its
 focused positive and negative checks, audit the owned diff, commit, and report
 before starting the next packet. Do not spend on live calls or comparison
 batches without explicit authorization after reporting their maximum call and
 cost bounds.
+
+### Lower-agent execution contract
+
+The packet headings below are the complete execution order. A delegated agent
+must receive exactly one packet at a time and must stop after its commit and
+evidence report. For every packet it must:
+
+1. start from a clean linked worktree on the current canonical descendant;
+2. verify the named precondition and path ownership before editing;
+3. implement only the named contract and both-sign tests;
+4. run the packet's focused checks plus `git diff --check`;
+5. audit the complete owned diff for silent fallback, weakened validation,
+   hidden aggregate execution, and unrelated edits;
+6. commit the coherent packet and report the commit, checks, and open risks;
+7. stop at any human-readout, certification, deployment, or spend gate.
+
+An agent may not infer that “continue” authorizes a later packet, paid call,
+deployment, model switch, relaxed schema, generalized game master, generated
+mechanism code, or change to `llm_client`. If a required runtime generalization
+is not already named, it must retain the smallest failing test and stop for a
+design decision.
+
+Use this message for every later delegation, replacing only `<PACKET>`:
+
+> Implement Packet `<PACKET>` only from
+> `docs/plans/021-coordination-environment-assay.md`. Follow its preconditions,
+> owned paths, acceptance criteria, negative controls, verification commands,
+> and the lower-agent execution contract. Work in a clean linked worktree on
+> the current canonical descendant. Do not begin the next packet. Stop and
+> report before any certification, deployment, provider spend, human-readout,
+> or independent-sign-off gate, and stop on any unnamed runtime redesign.
+> Commit only the coherent verified packet and report the commit and evidence.
 
 This plan is grounded in the complete
 [source note](../research/001-from-minds-to-coordination.md) and
@@ -148,7 +180,10 @@ Every scheduled meeting must expose a real opportunity to inspect or change
 issues, source reliance, thresholds, commitments, scope, or final decision.
 The scripted 21A acceptance trajectory must contain at least four meeting
 cycles and twelve meaningful causal moments. Its expected working range is
-twelve to forty moments. Do not create silence-only wakes to meet the minimum.
+twelve to twenty-eight narrated moments, leaving headroom under the current
+thirty-two-call narrator ceiling. Compilation or preview must fail visibly if
+the projected narrated-moment maximum exceeds that ceiling. Do not create
+silence-only wakes to meet the minimum.
 
 At each meeting, all due people orient from the same frozen pre-moment state.
 An exact recorder commits their typed attempts after the due set completes.
@@ -669,6 +704,34 @@ run a paid canary in this packet. Report the maximum participant and narrator
 call topology, model/reasoning options, and hard cost cap, then stop for explicit
 authorization.
 
+**Acceptance:** all five native people use the existing strict action schema;
+fake calls prove bounded observations and owned interfaces for each position;
+no condition flag, aggregate measure, other person's private memory, or hidden
+canonical fact reaches a person prompt; exact sources and mechanisms make no
+model call; preview reports a worst-case participant/narrator topology no
+greater than 48/32; and the packet performs no deployment or provider call.
+
+### Packet 21A4 — Authorized baseline canary and human readout
+
+**Classification:** representative live vertical; separate authorization
+required.
+
+After 21A3 is committed, report the exact revision, model/reasoning, participant
+and narrator maxima, route-certification state, and hard spend cap. With explicit
+authorization, certify only changed schemas, deploy that exact revision to the
+private Mac, verify the config endpoint, and run one live baseline canary. Use
+DeepSeek V4 Flash `none` unless the operator approves another reviewed option.
+Inspect every participant and narrator trace, reopen the retained run after a
+restart, and compare its structure with the zero-cost scripted baseline.
+
+**Acceptance:** one valid live trajectory contains four meeting cycles and 12–28
+meaningful narrated moments; completes through an exact terminal condition;
+reports unique calls/events and provider-observed cost; exposes all three graph
+meanings, evidence context, participant traces, and completion reason; and a
+human can explain the arc without raw JSON and dispute one passage through exact
+evidence. On provider/schema failure, retain the trace and stop—do not rerun,
+switch models, or change the scenario without new authorization.
+
 ### Slice 21A terminal acceptance
 
 **Done when:**
@@ -691,9 +754,55 @@ not add measurements to compensate for an incoherent trajectory.
 
 **Classification:** direct outcome extension.
 
-Implement the versioned measurement specification, exact calculators,
-evidence-coder schema, retained measurement artifact, UI readout, positive,
-negative, environmental, and corruption controls.
+### Packet 21B0 — Frozen measurement contract and controls
+
+Create strict scenario-local measurement models and frozen both-sign fixtures;
+make no provider call and add no UI. The specification must enumerate every
+measure in this plan with stable ID, construct, provenance class, unit,
+limitations, and required source event kinds. Exact and evidence-coded fields
+must be structurally distinct. Freeze positive, negative, environmental-event,
+corruption, incomplete-run, and scenario/spec-fingerprint mismatch fixtures.
+
+**Acceptance:** producers forbid extras; consumers tolerate future extras;
+system-assigned IDs are absent from the LLM schema; exact values cannot be
+accepted from coder output; `unclear` is valid; invalid/cross-run event IDs,
+wrong spec revision, incomplete run, and mismatched scenario fingerprint fail
+visibly. Run focused model/fixture tests and mypy, audit, commit, and stop.
+
+### Packet 21B1 — Exact calculator and evidence-coder seam
+
+Implement pure exact calculators, the strict shared-client coder call, and one
+retained `RunMeasurement` artifact in the existing run store. Use fake coder
+responses and frozen traces only; do not deploy or spend. Exact calculators
+derive values from typed events/state. The coder receives only analyst-visible
+evidence and returns prose/direction; the simulator attaches the supplied-
+evidence context using the Slice-20 provenance pattern. Rerendering a retained
+measurement makes no model call.
+
+**Acceptance:** all controls in 21B0 produce their expected result; a concerning
+message with no consequence does not become a directional system effect; the
+environmental control remains unattributed/unclear; corrupt evidence invalidates
+only the analysis, never the world run; task, trace, schema revision, model,
+budget, and observed cost fields are retained; no value feeds back into world
+state or people. Run focused analysis/run-store tests and mypy, audit, commit,
+and stop.
+
+### Packet 21B2 — Measurement readout and authorized canaries
+
+Integrate the retained artifact into the existing run API, Simulation result,
+and Run history. Show exact and evidence-coded sections with provenance labels,
+limitations, invalid/unclear states, and step-down to source evidence. Do not
+create a separate analysis application or store. First pass all UI/API tests
+with retained fixtures and build the frontend. Then report the maximum coder
+calls and hard cap and stop for authorization.
+
+After authorization, deploy the exact revision and run one live pressure and
+one live stabilization canary. The valid 21A4 baseline may be reused only when
+its scenario, model, reasoning, measurement spec, and executable revision match;
+otherwise request authorization for a new baseline. Inspect all participant,
+narrator, and coder traces. A human must confirm that exact and coded measures
+cannot be mistaken for each other and that one coded claim can be disputed from
+its supplied evidence.
 
 **Owned paths:** create a narrow
 `src/cybernetic_influence/analysis/coordination.py` module and typed
@@ -705,7 +814,7 @@ provenance-labeled readout and exact-evidence step-down in `frontend/src/`; and
 create
 `tests/test_coordination_measurement.py`.
 
-**Done when:**
+**Slice 21B is done when:**
 
 - every metric declares construct, provenance class, unit, and limitations;
 - exact and coded values cannot be confused;
@@ -718,16 +827,49 @@ create
 
 **Classification:** representative comparison.
 
-Run the pre-registered matrix after reporting call topology and cost. Add an
-operator-facing comparison that shows outcomes and measure trajectories by
-condition, with step-down to each run and exact evidence.
+### Packet 21C0 — Comparison contract and zero-cost matrix
+
+Freeze the comparison schema, validity rules, batch fingerprint, and replicate
+count before paid execution. For the MVP use two valid trajectories per
+condition (six total); this is an exploratory paired PoC, not statistical
+inference. Run a six-run scripted matrix at zero cost. Calculation must preserve
+per-run values, invalid runs, missing indicators, subgroup disagreement,
+between-run range, and native units. It may label only
+`candidate_directional_pattern`.
+
+**Acceptance:** mismatched model/reasoning/scenario/spec fingerprints cannot
+enter one comparison; invalid runs remain visible but excluded; changing one
+fixture changes only its expected arm/readout; stabilization is not assumed to
+succeed; no scalar trust/risk/readiness or agency score exists. Run focused
+comparison tests, audit, commit, and stop before UI or paid execution.
+
+### Packet 21C1 — Authorized repeated live matrix
+
+Report the exact six-run topology, existing valid canaries eligible for reuse,
+additional calls, route state, revision, and hard spend cap. Obtain explicit
+authorization. Deploy the exact revision and collect two valid live trajectories
+per condition with the same model, reasoning, scenario revision, and measurement
+spec. Do not automatically replace an invalid run: retain it, report its cost
+and cause, and request authorization for any replacement. Inspect full traces
+and freeze the resulting batch.
+
+### Packet 21C2 — Comparison readout, sign-off, and MVP closeout
+
+Add the comparison to existing Run history with condition summaries,
+trajectory/range views, invalid-run counts, subgroup disagreement, limitations,
+and step-down to each retained run and exact evidence. Use independent
+evaluation sign-off before the comparison changes a continue/stop decision.
+Then obtain the human MVP readout: the operator can explain the synthetic result
+from narrative/maps, dispute a measurement, identify why each run stopped, and
+finds no demo-blocking comprehension or control defect. Record that evidence,
+mark Slices 20–21 complete, update the roadmap and plan index, commit, and stop.
 
 **Owned paths:** keep comparison calculation in the new analysis package,
 expose it through the existing API and run-history surface, and add
 `tests/test_coordination_comparison.py`. Do not create a separate comparison
 application or a hidden batch-run store.
 
-**Done when:**
+**Slice 21C is done when:**
 
 - configuration fingerprints and valid-run rules are enforced;
 - per-run results and uncertainty are visible;
@@ -767,9 +909,26 @@ or silently broaden them.
 
 ## Verification
 
-Focused checks should cover scenario compilation, run control, exact
-measurement calculators, evidence coding, comparison validity, UI/API parity,
-replay, and corruption. Terminal acceptance requires:
+The packet-level minimum commands are fixed below. A packet may add a narrower
+regression command when its failing test requires it, but may not substitute a
+smaller command for these checks.
+
+| Packet | Required commands before audit/commit |
+|---|---|
+| 21A0 | `PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_coordination_decision.py -k contract`; `.venv/bin/python -m mypy src/cybernetic_influence/scenarios/coordination_decision.py`; `git diff --check` |
+| 21A1 | `PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_coordination_decision.py tests/test_causal_runtime.py`; focused checkpoint/replay test file if separate; `.venv/bin/python -m mypy src/cybernetic_influence/scenarios/coordination_decision.py`; `git diff --check` |
+| 21A2 | `PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_coordination_decision.py tests/test_api.py tests/test_presentation.py`; `npm --prefix frontend run build`; `git diff --check` |
+| 21A3 | `PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_coordination_decision.py -k native`; `.venv/bin/python -m mypy src/cybernetic_influence/scenarios/coordination_decision.py`; `git diff --check` |
+| 21A4 | Re-run 21A2/21A3 checks; then retain route-certification, config-revision, run, restart/reopen, full-trace, cost, and human-readout evidence |
+| 21B0–B1 | `PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_coordination_measurement.py`; `.venv/bin/python -m mypy src/cybernetic_influence/analysis`; `git diff --check` |
+| 21B2 | Prior row plus `PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_api.py tests/test_presentation.py`; `npm --prefix frontend run build`; then authorized full-trace/readout evidence |
+| 21C0 | `PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_coordination_comparison.py tests/test_coordination_measurement.py`; `.venv/bin/python -m mypy src/cybernetic_influence/analysis`; `git diff --check` |
+| 21C1 | Re-run 21C0 checks; then retain authorization, batch fingerprint, every run/trace/cost, invalid-run disposition, and frozen batch |
+| 21C2 | Prior UI/API checks plus `npm --prefix frontend run build`, independent sign-off, human readout, `make check`, and `git diff --check` |
+
+Focused checks cover scenario compilation, run control, exact measurement
+calculators, evidence coding, comparison validity, UI/API parity, replay, and
+corruption. Terminal acceptance requires:
 
 ```bash
 make check

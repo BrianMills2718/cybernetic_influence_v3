@@ -18,8 +18,10 @@ instructions to continue their former “next slice” sections.
 includes generic polling-backed live progress: strict runtime checkpoints keep
 the existing Simulation graph visible, animate only retained causal evidence,
 and defer narration until causal execution completes. Its zero-cost 20C
-cross-scenario proof is complete; 20D's integrated compatibility and human
-readout remain. Do not manufacture empty turns or add a general game-master
+cross-scenario proof is complete. Packet 20D1 is active: replace unreliable
+model-selected citation IDs with immutable simulator-owned evidence context.
+Packet 20D2 then owns the separately authorized integrated compatibility proof
+and human readout. Do not manufacture empty turns or add a general game-master
 actor.
 
 [Slice 21: Coordination-environment assay](021-coordination-environment-assay.md)
@@ -31,6 +33,13 @@ assay](022-composite-agency-perturbation-assay.md) is a separate gate after
 Slice 21C; it reuses the same scenario to test goal preservation, correction,
 recovery, and rerouting under concrete perturbations without creating an
 organization executor or an agency score.
+
+The roadmap's [ordered MVP completion
+packets](../ROADMAP.md#ordered-mvp-completion-packets) are the sole continuation
+sequence. Assign one packet at a time and require its commit/evidence report.
+Certification, deployment, provider spend, human readout, and independent
+comparison sign-off remain explicit stops. The research MVP ends at 21C2;
+21D and Slice 22 are later gated choices, not unfinished MVP work.
 
 The source interpretation is retained in
 [From Minds to Coordination](../research/001-from-minds-to-coordination.md);
