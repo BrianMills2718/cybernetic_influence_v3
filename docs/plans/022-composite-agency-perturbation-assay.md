@@ -1,0 +1,371 @@
+---
+doc_role: implementation_plan
+authority: bounded_design
+status: gated_by_slice_21c
+created: 2026-07-27
+updated: 2026-07-27
+---
+
+# Slice 22: Composite-agency perturbation assay
+
+## Assignment boundary
+
+Do not implement this plan until Slice 21C has produced a valid, human-readable
+baseline/pressure/stabilization comparison and its consequential interpretation
+has passed the required evaluation sign-off. Slice 22 reuses that exact scenario,
+measurement specification, run store, graph, narrative, and comparison surface.
+It does not create another scenario, organization executor, agency score,
+general causal-attribution framework, or generalized perturbation DSL.
+
+Work in a clean linked worktree based on the canonical clean descendant of
+`main` containing accepted Slice 21C. Implement 22A, audit and obtain its
+readout, then re-plan the exploratory thresholds before 22B. Do not spend on
+live or repeated runs without separately reporting the exact call topology and
+hard cost cap and obtaining explicit authorization.
+
+## Analyst outcome
+
+An analyst can select the multinational partnership's execution-inert
+analytical boundary and ask:
+
+> Does this concrete collection of people, records, policies, routes,
+> schedules, incentives, and feedback mechanisms preserve a valid collective
+> decision capability after specific perturbations, and which substrate changes
+> most alter that capability?
+
+The result is an intervention-specific composite-control profile with exact
+step-down to components and events. It is not evidence that the partnership is
+conscious, has a hidden mind, or caused an outcome independently of its
+components.
+
+## Theoretical bridge
+
+This assay combines three already accepted perspectives without merging their
+ontologies:
+
+- BDM-informed person assumptions describe selected local dispositions and
+  possible response pathways; they are not calibrated susceptibility scores.
+- Waltzman's coordination constructs describe derived changes in trust-related,
+  risk-related, and coordination-related evidence; they are not world state.
+- Levin's TAME framing motivates perturbation tests of goal preservation,
+  correction, recovery, rerouting, and robustness under member replacement; it
+  does not supply an organization-agency scalar.
+
+The concrete causal runtime remains authoritative. Aggregate interpretations
+are reversible measurements over retained runs under
+[ADR 006](../adr/006-boundaries-are-derived-coarse-grainings.md) and
+[ADR 012](../adr/012-decision-environment-measures-are-derived.md).
+
+## Frozen target artifact
+
+The first assay uses the Slice-21 partnership boundary and one reviewed
+collective capability:
+
+> Reach a terminal deployment decision by the modeled deadline while obeying
+> the retained validation, blocking-issue, active-partner, scope, and commitment
+> rules.
+
+This target deliberately does not equate agency with deployment or speed. A
+safe reduced-scope decision may satisfy the capability. A fast decision that
+bypasses a blocking issue does not. A justified delay may be adaptive if it
+occurs through the reviewed decision rules; the exact day-10 no-decision state
+remains a failed deadline outcome for this particular bounded capability.
+
+The human-reviewable output is one matched-condition table plus trace step-down:
+
+| Perturbation | Goal/constraints | Correction | Recovery | Rerouting | Members | Outcome |
+|---|---|---|---|---|---|---|
+| control | exact result | exact evidence | modeled duration | used routes | retained/replaced | terminal state |
+
+Each row retains its runs, validity, exact measurements, coded interpretations,
+limitations, and the concrete components changed by the intervention.
+
+## Non-goals and non-claims
+
+- No aggregate node acts, observes, remembers, decides, or owns an interface.
+- No scalar ranks organizations from less to more agentic.
+- No additive percentage attributes causation to “the organization” versus
+  people.
+- No perturbation changes hidden global trust, risk, coordination, or agency.
+- No result establishes consciousness, moral status, real-world prediction, or
+  empirical validation of Levin's biological findings in organizations.
+- No delay, disagreement, verification request, or cautious decision is
+  automatically classified as degradation.
+- No arbitrary user-authored predicate or executable perturbation code.
+
+## Domain contracts
+
+### Reviewed capability specification
+
+```python
+class CompositeCapabilitySpec(_ProducedModel):
+    schema_version: Literal[1]
+    capability_id: Literal["valid_collective_decision_by_deadline_v1"]
+    boundary_id: Literal["deployment_partnership"]
+    member_refs: list[str]
+    substrate_refs: list[str]
+    exact_success_measure_ids: list[str]
+    exact_constraint_measure_ids: list[str]
+    limitations: list[str]
+```
+
+The compiler supplies `member_refs` and `substrate_refs`; the analysis layer
+validates them against the retained scenario fingerprint. The LLM never chooses
+members, success rules, constraints, or system-assigned IDs.
+
+### Reviewed perturbation specification
+
+```python
+class PerturbationSpec(_ProducedModel):
+    schema_version: Literal[1]
+    perturbation_id: str
+    family: Literal["component", "structure", "feedback", "shock"]
+    variant: Literal[
+        "position_matched_member_replacement",
+        "decision_route_interruption",
+        "verification_feedback_interruption",
+        "relevant_external_risk",
+    ]
+    application: Literal["initial_condition", "scheduled_day_4"]
+    changed_refs: list[str]
+    matched_control_id: str
+    description: str
+```
+
+These four variants are the entire first PoC language. Each variant is compiled
+by reviewed code into an existing typed scenario configuration. Unknown
+variants, arbitrary patches, and changes outside `changed_refs` fail before a
+run. A replacement preserves the reviewed position, owned interfaces, and
+institutional responsibilities, but changes the person identity, selected
+BDM-informed profile assumptions, and scripted choice pattern. It is not
+behaviorally equivalent; preserving behavior would make the component test
+vacuous. The readout must show all declared person-level differences.
+
+`position_matched_member_replacement` is the only initial-condition variant.
+The route, feedback, and shock variants are applied by exact scheduled events
+at modeled day 4, after the first two decision meetings and before the day-6
+meeting. Variant/application mismatches fail compilation. The scheduled event,
+changed concrete state, and downstream consequences must be retained in the
+causal DAG. The initial replacement instead appears in the matched
+configuration diff and configured/spatial graph; its person's realized actions
+appear in the causal DAG.
+
+### Run and readout records
+
+```python
+class CompositeAssayRunRef(_ProducedModel):
+    run_id: str
+    perturbation_id: str
+    scenario_fingerprint: str
+    measurement_spec_version: int
+    valid: bool
+    invalid_reason: str | None
+
+class CompositeControlReadout(_ProducedModel):
+    schema_version: Literal[1]
+    capability_id: str
+    boundary_id: str
+    perturbation_id: str
+    exact_values: dict[str, JsonValue]
+    coordination_measurement_ref: str
+    coded_patterns: list[IndicatorEvidence]
+    source_run_ids: list[str]
+    limitations: list[str]
+```
+
+`_ProducedModel` uses strict validation and `extra="forbid"`. Reopening uses a
+separate consumer projection with `extra="ignore"` while retaining all required
+identity, version, validity, and evidence-reference checks; it must not weaken
+the producer schema. All IDs and references are locally validated before
+retention.
+
+## Owned business rules
+
+1. **Matched-world rule — assay compiler:** control and perturbation must share
+   the same scenario revision, initial state, model policy, run-control plan,
+   and measurement version except for declared `changed_refs`.
+2. **Concrete-change rule — assay compiler:** every perturbation compiles to a
+   real person, route, mechanism, record, or exogenous-event change. Analysis
+   labels cannot drive execution.
+3. **Goal-integrity rule — exact calculator:** capability success requires the
+   terminal decision and every reviewed constraint; speed alone cannot pass.
+4. **Correction rule — exact calculator:** a correction exists only when a
+   retained error/issue state is followed through explicit causal parents to a
+   valid goal-relevant state change.
+5. **Recovery rule — exact calculator:** for a scheduled perturbation, recovery
+   time is measured from its retained application event to restored capability-
+   relevant state. No observed restoration is `not_observed`, not zero. The
+   control and initial member-replacement rows report `not_applicable` rather
+   than inventing an application time.
+6. **Rerouting rule — exact calculator:** an alternate route counts only when
+   concrete retained delivery traverses a configured path different from the
+   perturbed path.
+7. **Validity rule — analysis service:** infrastructure/schema failure,
+   fingerprint drift, missing perturbation application, missing scheduled work,
+   or incomplete Slice-21 measurement invalidates the run and cannot be scored
+   as low agency.
+8. **No scalar rule — presentation:** exact vectors and coded patterns remain
+   separate. The UI cannot average them into an agency or systemic-influence
+   score.
+9. **No causal overclaim rule — evidence coder:** the coder may classify an
+   observed pattern as consistent with competence loss, goal drift/capture,
+   fragmentation, defensive adaptation, rational caution, or unclear. It must
+   cite retained evidence and cannot establish a causal mechanism from one run.
+
+## Measurement vector
+
+### Exact values
+
+- reviewed capability satisfied: boolean;
+- all decision constraints satisfied: boolean plus failed constraint IDs;
+- terminal outcome and modeled decision time;
+- goal-relevant issue/error corrections: count and event pairs;
+- recovery time after a scheduled perturbation, `not_observed`, or
+  `not_applicable` for control/initial-condition rows;
+- alternate configured routes used after route interruption;
+- active partners retained;
+- member identities and replacements;
+- repeated terminal-proposal denials;
+- Slice-21 verification, reopening, commitment-divergence, and source-reliance
+  measures by reference rather than duplication.
+
+### Evidence-coded patterns
+
+- `competence_loss`;
+- `effective_goal_drift_or_capture`;
+- `fragmentation`;
+- `defensive_adaptation`;
+- `rational_caution`;
+- `unclear`.
+
+The coder sees only analyst-visible retained evidence and the reviewed
+capability definition. Every result cites existing event and trace IDs, uses
+the shared `llm_client` with `task=`, `trace_id=`, `max_budget=`, and native
+`json_schema`, and remains post-run analysis. The first scripted packet may use
+typed reference-coded fixtures and makes no provider call.
+
+## Initial perturbation matrix
+
+1. **Matched control:** unmodified Slice-21 baseline.
+2. **Component:** replace the technical lead with a position-matched person
+   who has different reviewed dispositions and scripted choices while
+   preserving position, interfaces, institutional responsibilities, records,
+   and routes. This is a matched initial condition.
+3. **Structure:** interrupt the direct decision-coordination route while
+   preserving people and the alternate configured route, through an exact
+   modeled-day-4 event.
+4. **Feedback:** interrupt verification-result feedback while retaining the
+   original request and response records, through an exact modeled-day-4 event.
+5. **Shock:** introduce one legitimate, decision-relevant external risk through
+   its own source and route at modeled day 4.
+
+The matrix is not expected to produce a particular ordering. Its exploratory
+readout is whether the instrument distinguishes structurally different failure
+and recovery paths while preserving step-down to exact evidence. If all rows
+are behaviorally identical, inspect fixture adequacy before interpreting the
+candidate composite as robust.
+
+## Slice 22A — Scripted perturbation instrument
+
+**Classification:** exploratory measurement vertical.
+
+### Packet 22A0 — schema and both-sign fixtures
+
+Create `src/cybernetic_influence/analysis/composite_agency.py` and focused
+`tests/test_composite_agency.py`; extend the shared analysis models only when
+the Slice-21 types cannot truthfully express the contract. Implement the strict
+capability, perturbation, run-reference, and readout schemas plus compiler
+validation against a frozen Slice-21 fixture.
+
+Positive fixtures cover all five matrix rows. Negative fixtures cover unknown
+variant, changed ref outside the allowlist, mismatched scenario fingerprint,
+aggregate boundary as executor, missing control, missing Slice-21 measurement,
+duplicate run ID, invalid evidence ID, and an apparent fast decision that
+violates a blocking constraint.
+
+Do not edit runtime, API, UI, scenario, prompt, or `llm_client` paths in 22A0.
+Audit and commit before 22A1.
+
+### Packet 22A1 — zero-cost matched runs and exact calculator
+
+Compile each reviewed perturbation into the existing scripted Slice-21
+scenario, run one matched trajectory per row, calculate the exact vector, and
+retain the readout through the existing run/analysis store. Add no model call.
+
+Acceptance:
+
+- a changed-ref diff proves every row differs from control only where declared;
+- every initial-condition change is visible in the configuration diff and
+  configured/spatial graph, and every scheduled perturbation is visible in the
+  causal DAG and narrative;
+- correction, recovery, and rerouting calculations cite exact event IDs;
+- position-matched member replacement preserves the structure but changes the
+  component identity, reviewed person assumptions, and exercised behavior
+  visibly;
+- the relevant-risk shock can produce rational caution without being labeled
+  hostile influence by construction;
+- invalid runs remain visible and unscored; and
+- rerendering retained results makes no execution or provider call.
+
+### Packet 22A2 — analyst comparison and readout
+
+Add the matched-condition table to the existing comparison/run-history UI,
+with step-down to the selected run, analytical boundary, graph moment,
+narrative, exact measures, and coded reference pattern. Do not build a separate
+application or generic perturbation editor.
+
+The human readout asks:
+
+1. Can the analyst distinguish component failure, structural interruption,
+   feedback loss, legitimate shock, and recovery without raw JSON?
+2. Does every aggregate claim step down to changed components and retained
+   events?
+3. Does the presentation avoid equating speed, deployment, or disagreement
+   with agency?
+
+### 22A stopping rule
+
+After the human readout, stop and update this plan. Do not define numeric
+agency thresholds or begin live repetitions. Continue only if the scripted
+instrument differentiates at least two concrete perturbation pathways and all
+aggregate claims remain reversible.
+
+## Slice 22B — Repeated live composite-control profile
+
+**Status:** skeleton pending 22A readout.
+
+After 22A resolves instrument adequacy, freeze one or two informative
+perturbations, the exact scenario and measurement revisions, valid-run rules,
+model/reasoning policy, and call/cost bounds. Run one authorized canary per
+retained condition, inspect all participant, narrator, Slice-21 measurement,
+and composite evidence-coder traces, then request separate authorization for a
+small repeated batch.
+
+Report per-run vectors, outcome distributions, between-run variation, invalid
+runs, and interaction-specific limitations. Do not collapse the result to an
+agency score. Before a result changes the roadmap or supports a systemic-
+influence claim, use independent evaluation sign-off on the frozen batch.
+
+## Later questions, not current implementation
+
+- compare declared intervention effort or detailed knowledge requirements as a
+  tentative axis-of-persuadability profile;
+- test member replacement across several positions rather than one;
+- test whether pressure changes the candidate effective goal while preserving
+  coordination competence;
+- test nested or overlapping candidate boundaries only after composition rules
+  supersede ADR 006; and
+- calibrate any capability or recovery measure against external observations.
+
+## Verification and closeout
+
+At each packet run the focused composite, coordination-analysis, scenario,
+replay, API/presentation, and affected UI checks; run mypy, the frontend build,
+and `git diff --check`. Terminal 22A acceptance requires `make check`, retained
+reopening, browser console/network inspection, and an isolated code-diff audit.
+
+Commit and report each packet separately. A later agent may proceed from 22A0
+to 22A1 only when the prior packet is clean, committed, and its acceptance
+evidence is recorded in this plan. Any required aggregate executor, global
+agency state, arbitrary perturbation code, or non-reversible claim is an exact
+stop condition.

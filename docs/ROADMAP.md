@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-07-25
+updated: 2026-07-27
 ---
 
 # Cybernetic Influence V3 Roadmap
@@ -73,6 +73,10 @@ typed completion/horizon contract without manufacturing empty turns.
 [Slice 21: coordination-environment assay](plans/021-coordination-environment-assay.md)
 then supplies the first naturally multi-episode research scenario, grounded in
 [Waltzman's coordination framework](research/001-from-minds-to-coordination.md).
+[Slice 22: composite-agency perturbation
+assay](plans/022-composite-agency-perturbation-assay.md) is separately gated by
+Slice 21C and operationalizes the later Levin-style question on that same
+concrete scenario.
 This evidence does not establish empirical psychological validity, predictive
 accuracy, or that any one profile field caused an action.
 
@@ -268,8 +272,9 @@ The current research MVP is complete when:
    dispute any measured claim through exact evidence, and finds no
    demo-blocking comprehension or control defect.
 
-Do not broaden to evasion, generalized swarm infrastructure, or
-composite-agency scoring before this active outcome probe is observed.
+Do not broaden to evasion, generalized swarm infrastructure, or the separately
+gated composite-agency perturbation assay before this active outcome probe is
+observed.
 
 ## Approved Outcome Extension
 
@@ -505,17 +510,27 @@ breadth.
 
 ### 13. Run one Levin-style composite-agency assay — gated by Slice 21C
 
-Use the observed coordination scenario and its execution-inert analytical
-boundaries to ask a specific multiscale question: does the candidate composite
-preserve or restore a declared outcome under shocks and member replacement,
-and which concrete policies, information routes, memories, incentives, and
-feedback mechanisms make that behavior possible?
+Follow [Slice 22](plans/022-composite-agency-perturbation-assay.md) on the
+observed coordination scenario and its execution-inert analytical boundary.
+Ask a specific multiscale question: does the candidate composite preserve or
+restore a reviewed, constraint-bearing collective capability under component,
+route, feedback, and shock perturbations, and which concrete people, policies,
+information routes, records, incentives, and feedback mechanisms make that
+behavior possible?
 
-The assay compares component-level, structural, and feedback-disruption
-interventions across repeated trajectories. Its output is an
-intervention-specific influence profile with uncertainty and exact trace/graph
-step-down—not a claim that the aggregate is another executor, a mind, or a
-single additive percentage of causation.
+The conceptual chain is explicit: BDM-informed assumptions describe selected
+person-local dispositions; Waltzman-inspired measures describe derived changes
+in coordination; Levin-style perturbations test candidate goal preservation,
+correction, recovery, and rerouting at the composite boundary. These layers do
+not merge into hidden world state.
+
+The first scripted assay compares a matched control with component replacement,
+structural interruption, feedback interruption, and a legitimate external
+shock. Its output is an intervention-specific composite-control profile with
+uncertainty and exact trace/graph step-down—not a claim that the aggregate is
+another executor, a mind, or a single additive percentage of causation. A
+valid cautious or reduced-scope decision may preserve the reviewed capability;
+speed or deployment alone cannot establish agency.
 [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) owns that
 interpretation.
 

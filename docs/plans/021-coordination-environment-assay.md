@@ -3,7 +3,7 @@ doc_role: implementation_plan
 authority: bounded_design
 status: planned_after_slice_20
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-07-27
 ---
 
 # Slice 21: Coordination-environment assay
@@ -29,6 +29,15 @@ This plan is grounded in the complete
 supplies constructs and candidate indicators, not validated scales or causal
 truth.
 
+### Start precondition
+
+Do not start implementation merely because this plan exists. The start commit
+must be a clean descendant of canonical `main` that contains completed Slice
+20A–20D behavior. Verify that the retained Service Desk proof exposes dual-level
+narration, completion reason, live progress, pause/resume continuity, all three
+graph meanings, and exact evidence step-down. If Slice 20 is still an unmerged
+branch or its plan remains `in_progress`, stop and report that precondition.
+
 ## Analyst outcome
 
 An analyst can simulate a multi-episode collective decision under heterogeneous
@@ -40,6 +49,20 @@ perceived risk, and coordination readiness.
 The result is a traceable experimental model of possible dynamics. It is not a
 prediction of a real institution, attribution of hostile intent, or empirical
 validation of the paper.
+
+### Micro-to-macro interpretation
+
+The reviewed person profiles use the existing BDM-informed fields only where
+they matter to this scenario. These descriptions may support heterogeneous
+local reactions, but they do not create numeric susceptibility, trust, risk, or
+coordination state. Concrete messages and world conditions produce person
+actions; post-run analysis derives collective patterns from those actions.
+
+The partnership's analytical boundary is a reversible view over the people,
+records, routes, and mechanisms below it. Slice 21 asks how its decision process
+changes. It does not yet ask whether that boundary is a useful composite-agent
+model. The latter question is owned by
+[Slice 22](022-composite-agency-perturbation-assay.md) after 21C.
 
 ## Canonical scenario
 
@@ -55,7 +78,7 @@ synthetic scenario:
 
 ### Concrete people
 
-The first vertical uses five LLM-modeled people:
+The scenario defines five human person records:
 
 1. **Mission coordinator** — maintains the decision schedule and commitments.
 2. **Technical validation lead** — assesses calibration and independent
@@ -70,6 +93,9 @@ The first vertical uses five LLM-modeled people:
 Their positions, dispositions, memories, values, goals, beliefs, decision
 tendencies, perceived social conditions, current states, capabilities, and
 limitations are reviewed person assumptions. They are not procedural commands.
+Packet 21A1 exercises the contracts with fixed scripted implementations at zero
+cost; Packet 21A3 later binds the same reviewed people to the existing native
+LLM implementation behind an explicit canary gate.
 
 ### Concrete world state
 
@@ -426,24 +452,224 @@ to drive people or if exact world effects require an unconstrained LLM judge.
 
 **Classification:** representative vertical.
 
-Build one reviewed typed template named `coordination_decision_v1`, its
+Build one reviewed typed scenario family named `coordination_decision_v1`, its
 recurring scheduler, exact mechanisms, three conditions, run-control plan,
 existing maps, dual narratives, participant traces, and final decision record.
-Use fixed scripted participant policies first. Do not extend conversational
-authoring to this template until the typed fixture and mechanisms pass; after
-they do, exposing the reviewed fields through the existing authoring/compiler
-boundary is allowed but is not required for 21A acceptance.
+Use fixed scripted participant policies before native LLM bindings. Do not
+extend conversational authoring in 21A.
 
-**Owned paths:** create
-`src/cybernetic_influence/scenarios/coordination_decision.py`; extend
-`src/cybernetic_influence/causal_core/` only for a demonstrated reusable
-runtime need; register the scenario in `src/cybernetic_influence/api.py` and
-`src/cybernetic_influence/presentation.py`; add its existing-map and narrative
-surface in `frontend/src/main.tsx` and `frontend/src/styles.css`; and create
-focused
-`tests/test_coordination_decision.py` plus API/presentation checks. Do not
-modify `authoring/` during the initial typed-fixture packet or hand-edit the
-generated `web/` files.
+### Required domain vocabulary
+
+Keep scenario-specific vocabulary in
+`src/cybernetic_influence/scenarios/coordination_decision.py`; do not generalize
+the causal core unless a focused negative fixture proves the existing contract
+cannot express a required transition.
+
+- condition: `baseline | heterogeneous_pressure | stabilization`;
+- issue lifecycle: `open | resolved | reopened`;
+- source disposition: `unreviewed | relied_on | rejected | validation_pending`;
+- commitment: `support_full | support_reduced | defer | withdraw`;
+- scope: `full | reduced | none`;
+- final decision: `deploy_on_time | delayed | scope_reduced |
+  partner_disengaged | no_decision_by_horizon`;
+- recurring schedule: meeting indices 0–3 at modeled days 0, 3, 6, and 9,
+  followed by the exact day-10 deadline transition.
+
+The entire reviewed condition surface is one strict configuration record:
+
+```python
+class CoordinationConditionConfig(_StrictModel):
+    schema_version: Literal[1]
+    condition: Literal["baseline", "heterogeneous_pressure", "stabilization"]
+    pressure_sources_enabled: bool
+    adaptive_follow_up_enabled: bool
+    authoritative_validation_enabled: bool
+    evidence_based_risk_admission_enabled: bool
+    uncertainty_bounds_enabled: bool
+    commitment_feedback_enabled: bool
+```
+
+Baseline sets every flag false. Heterogeneous pressure enables only pressure
+sources and adaptive follow-up. Stabilization enables all six. The concrete
+people, source records, routes, mechanisms, schedule, initial dossier, goal,
+and safety bounds remain present and identical; these flags control whether
+the corresponding source or mechanism schedules work and accepts its reviewed
+operation. Compile the record into one mechanism-readable configuration entity
+in initial canonical state so checkpoints and scenario fingerprints bind the
+selected arm. It has the same ID in every arm and is never delivered to a
+person or copied into a person's memory or prompt as an instruction or hidden
+social variable. Keep the same `scenario_id` across arms. A fixture comparison
+that removes this one entity from each canonical scenario dump must be byte-
+identical across the three arms, while the complete fingerprints must differ.
+
+The exact decision operation owns the final-status transition. It accepts only
+typed proposals whose retained commitments, blocking issues, active partners,
+scope, and evidence threshold satisfy the reviewed condition. A syntactically
+valid but ineligible proposal is denied and traced; it is not repaired by an
+LLM. The deadline operation owns only `no_decision_by_horizon` and must lose a
+collision to any already committed terminal decision.
+
+### Packet 21A0 — Contract and fixture seam
+
+**Classification:** boundary probe; it does not advance product status alone.
+
+**Allowed edits:** create the scenario module and
+`tests/test_coordination_decision.py`. Reuse existing active-runtime, causal,
+timing, analytical-boundary, and run-control models. Do not edit API, UI,
+presentation, authoring, `llm_client`, or generated `web/` assets.
+
+**Implement:**
+
+1. Strict scenario-local Pydantic records for condition configuration, issues,
+   verification items, source dispositions, commitments, meeting schedule, and
+   decision proposals.
+2. One pure fixture builder per condition with identical people, initial
+   dossier, schedule, spatial topology, decision goal, and safety bounds.
+3. Three concrete pressure-source records and one execution-inert source-
+   ensemble boundary. Baseline disables their activity through configuration;
+   it does not delete unrelated world components or alter people's minds.
+4. One execution-inert partnership boundary containing the five people,
+   decision records, routes, and exact mechanisms.
+5. A canonical-dump comparison proving that only the reviewed condition record
+   differs across arms, plus a stable scenario fingerprint for each arm.
+
+**Positive fixture:** all three conditions validate, expose positive-duration
+routes, four scheduled meetings, a day-10 deadline, five people, and no
+aggregate active-system ID.
+
+**Negative fixtures:** duplicate meeting time, zero-duration delivery,
+undeclared source/recipient, aggregate boundary used as port owner, final status
+present initially, arbitrary decision predicate, an invalid condition/flag
+combination, and condition drift outside the reviewed record all fail before
+execution.
+
+**Verification:**
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_coordination_decision.py -k contract
+.venv/bin/python -m mypy src/cybernetic_influence/scenarios/coordination_decision.py
+git diff --check
+```
+
+**Done when:** both-sign fixtures pass, no existing file was changed except a
+necessary package export, an isolated code-diff audit finds no blocker, and the
+packet is committed before 21A1. Stop rather than adding a generic mechanism or
+predicate language.
+
+#### Assignment prompt for the implementation agent
+
+> Implement Packet 21A0 only, exactly as specified in
+> `docs/plans/021-coordination-environment-assay.md`. First verify that the
+> starting commit is a clean descendant of canonical `main`, that Slice 20A–20D
+> is complete there, and that no other writer has claimed the paths you need.
+> If any precondition fails, stop and report the exact failing precondition.
+>
+> Create the strict scenario-local contracts and pure baseline,
+> heterogeneous-pressure, and stabilization fixture builders in
+> `src/cybernetic_influence/scenarios/coordination_decision.py`, plus focused
+> both-sign contract tests in `tests/test_coordination_decision.py`. Add a
+> package export only if importability requires it. Preserve identical people,
+> initial dossier, schedule, spatial topology, decision goal, and safety bounds
+> across conditions; expose differences only through the reviewed condition
+> surfaces. Include the five people, four positive-duration meeting times, the
+> day-10 deadline, three concrete pressure-source records, one execution-inert
+> source-ensemble boundary, and one execution-inert partnership boundary. No
+> analytical boundary may own a port or active-system ID.
+>
+> Implement the positive and every named negative fixture in 21A0. The
+> fingerprint and canonical-dump tests must fail for condition drift outside
+> the strict condition record or for an invalid condition/flag combination. Do
+> not implement scheduling, runtime bindings, agent policies, LLM calls, API, UI,
+> presentation, authoring, measurement, comparison, generic predicates,
+> generic mechanisms, or changes to `llm_client`. Do not weaken an existing
+> contract to make a fixture pass. Do not spend money or deploy.
+>
+> Run exactly the focused pytest, mypy, and `git diff --check` commands listed
+> in 21A0, then inspect the complete owned diff for silent fallback, hidden
+> aggregate execution, invented global trust/risk/coordination state,
+> zero-duration causal paths, unrelated edits, and missing negative controls.
+> Fix owned defects, rerun the checks, commit the coherent packet, report the
+> commit plus exact evidence, and stop. Do not begin 21A1.
+
+### Packet 21A1 — Scripted recurring runtime
+
+**Classification:** agent-drivable runtime vertical.
+
+**Precondition:** committed 21A0 fixtures. Reopen and validate those exact
+fixtures rather than recreating them in runner code.
+
+**Allowed edits:** scenario module, its package export, and focused scenario
+tests. A minimal reusable runtime change is allowed only after a failing test
+demonstrates the requirement and the change remains scenario-neutral.
+
+**Implement:**
+
+1. A deterministic scheduler process that wakes at days 0, 3, 6, and 9 and
+   exposes the due people from one frozen pre-moment state.
+2. Exact bindings for message delivery, verification request/response,
+   issue-state transition, source disposition, commitment, scope/threshold
+   proposal, informal alignment, partner withdrawal, terminal decision, and
+   day-10 no-decision transition.
+3. Fixed scripted people and pressure sources that exercise every required
+   mechanism without calling a model.
+4. A typed Slice-20 run-control plan with terminal fact, day-10 horizon,
+   safety bounds, and quiescence fallback.
+
+**Worked path:** in the pressure fixture, a concern reaches its intended person;
+that person requests verification; the request and later response travel
+through exact routes; an issue is opened and later resolved or reopened; at
+least one commitment changes; the exact decision or deadline mechanism commits
+the terminal state. Every transition has positive modeled duration and exact
+parents.
+
+**Acceptance:**
+
+- each arm completes at zero cost with four meeting cycles and at least twelve
+  meaningful causal moments;
+- baseline includes ordinary review friction rather than automatic success;
+- no person observes same-moment proposals from another person;
+- disabling one pressure route prevents its delivery and downstream access;
+- denied terminal proposals do not mutate final state;
+- replay reconstructs the final state and checkpoint/resume duplicates no
+  event, attempt, or meeting;
+- no trust, risk, readiness, BDM-driver, or organization-agent value appears in
+  canonical world state.
+
+**Verification:** focused scenario, causal-runtime, replay, and checkpoint tests
+plus mypy and `git diff --check`. Audit and commit before API/UI work.
+
+### Packet 21A2 — Existing simulator integration
+
+**Classification:** first analyst-facing Slice-21 vertical.
+
+Register the scripted scenario through the existing config, preview, run,
+progress, retained-history, presentation, and Simulation UI paths. Reuse the
+three existing graph meanings and Slice-20 narration/completion surfaces. Do
+not create a separate workbench, endpoint family, graph renderer, or batch
+store.
+
+**Allowed edits:** API, presentation, frontend source, generated graph assets
+only through `npm --prefix frontend run build`, and focused API/presentation/UI
+tests. Do not edit conversational authoring.
+
+**Acceptance:** an analyst selects any arm, sees spatial and configured maps
+before execution, starts one zero-cost run, watches retained progress, reads the
+multi-episode concise and detailed narratives, sees the explicit completion
+reason separately from the decision outcome, selects either analytical
+boundary, and steps every material claim down to exact evidence. Browser
+refresh and server restart reopen the same run without execution.
+
+### Packet 21A3 — Native participant seam and canary gate
+
+Bind the five reviewed people to the existing `NativeLlmActiveSystem`; keep
+the scheduler, sources, and exact mechanisms model-free. Structural fake-call
+tests must prove each person receives only private memory, delivered
+observations, reviewed BDM-informed descriptions, and owned interfaces. Do not
+run a paid canary in this packet. Report the maximum participant and narrator
+call topology, model/reasoning options, and hard cost cap, then stop for explicit
+authorization.
+
+### Slice 21A terminal acceptance
 
 **Done when:**
 
@@ -456,6 +682,10 @@ generated `web/` files.
   reversible and execution-inert; and
 - an analyst can explain one scripted trajectory from detailed narrative and
   exact evidence.
+
+The 21A human readout must occur before 21B. If the scripted arc is not
+understandable without raw evidence, repair the scenario or presentation; do
+not add measurements to compensate for an incoherent trajectory.
 
 ## Slice 21B — Evidence-bound measurement vertical
 
@@ -525,20 +755,15 @@ Each extension requires a baseline-matched control and a named detector failure
 it tests. Do not implement all five as feature breadth before one changes the
 analysis in an inspectable way.
 
-### 21E — Composite-agency assay
+### Slice 22 — Composite-agency perturbation assay
 
-Apply [ADR 006](../adr/006-boundaries-are-derived-coarse-grainings.md) to the
-partnership or pressure-source ensemble:
-
-- replace individual members while preserving structure;
-- change shared objective, policy, or incentive while retaining members;
-- interrupt feedback or memory paths;
-- apply a shock and measure recovery;
-- compare outcome distributions and intervention effort.
-
-The output is an intervention-specific influence/control profile. It is not an
-organization executor, consciousness claim, or additive “system versus humans”
-percentage.
+After Slice 21C passes, follow the separate
+[Slice 22 plan](022-composite-agency-perturbation-assay.md). It applies
+[ADR 006](../adr/006-boundaries-are-derived-coarse-grainings.md) to the exact
+same scenario and analytical boundary through matched component, structure,
+feedback, and shock perturbations. Slice 22 owns its capability definition,
+contracts, stopping rule, and lower-agent packets; this plan does not duplicate
+or silently broaden them.
 
 ## Verification
 
@@ -564,4 +789,5 @@ sign-off against the frozen batch and readout.
 - automated policy recommendations;
 - generalized swarm infrastructure;
 - public deployment or multi-user operation; and
-- all evasion and composite-agency extensions until 21C passes.
+- all evasion and [Slice 22](022-composite-agency-perturbation-assay.md)
+  composite-agency work until 21C passes.

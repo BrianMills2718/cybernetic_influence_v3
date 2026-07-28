@@ -10,10 +10,11 @@ updated: 2026-07-27
 
 ## Assignment
 
-Implement Slice 20 in order: 20A, audit and commit; then 20B, audit and
-commit; then 20C, run the integrated canary and update evidence. Do not begin
-Slice 21, add a general game-master actor, generate mechanism code, or broaden
-the authored workflow language while this slice is active.
+Implement Slice 20 in order: 20A, audit and commit; then 20B, audit and commit;
+then 20C's generic live-playback implementation and zero-cost proof; then 20D's
+integrated, separately authorized operator proof. Do not begin Slice 21, add a
+general game-master actor, generate mechanism code, or broaden the authored
+workflow language while this slice is active.
 
 Use a clean linked worktree based on the current clean descendant of
 `278f5d17bf11dc6cc126ac4537211f56d091d462`. Preserve the existing causal core,
@@ -34,7 +35,7 @@ obtain explicit authorization.
   a separate completion record, preserves the plan across resume, and exposes
   pause/irreversible stop at causal boundaries. A horizon or stop retains
   pending exact work as explicit non-execution rather than silently dropping
-  it. The remaining Slice 20 task is 20C’s explicitly authorized live canary.
+  it.
 - **20C implementation checkpoint:** the runtime now publishes strict,
   ordered checkpoint updates for every scenario using the active-runtime
   adapter. Live catalog and approved-authored runs start in a background
@@ -49,8 +50,9 @@ obtain explicit authorization.
   while the approved information-campaign test proves the authored compiler
   path. Runtime/presentation tests cover pending activation, retained failure,
   exact denial cues, redaction, stale cursor behavior, and worker lock release.
-  The remaining 20D operator review may use only separately authorized live
-  calls.
+- **20D remains:** run and inspect the integrated Service Desk and retained
+  authored examples, including full LLM traces and the three human-readout
+  questions below. It may use only separately authorized live calls.
 
 ## Outcome
 
@@ -550,8 +552,10 @@ correctness.
 
 ## Done when
 
-20A and 20B pass their positive and negative contracts, 20C is observed on the
-deployed private host, full traces are inspected, documentation names the
-actual completion semantics, no code path equates a terminal condition,
-quiescence, or a safety bound with a favorable scenario outcome, and Slice 21
-can consume the contracts without another runtime redesign.
+20A and 20B pass their positive and negative contracts, 20C's shared playback
+contract passes its cross-scenario proof, and 20D's integrated examples are
+observed on the deployed private host. Full traces are inspected,
+documentation names the actual completion semantics, no code path equates a
+terminal condition, quiescence, or a safety bound with a favorable scenario
+outcome, and Slice 21 can consume the contracts without another runtime
+redesign.

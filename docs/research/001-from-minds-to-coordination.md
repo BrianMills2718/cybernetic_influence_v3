@@ -3,7 +3,7 @@ doc_role: source_evidence
 authority: evidence
 status: active
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-07-27
 ---
 
 # Source Note: *From Minds to Coordination*
@@ -147,6 +147,66 @@ The paper describes five ways influence could obscure its effects:
 These are later challenge conditions. They should not be implemented before a
 basic baseline/pressure/stabilization assay produces an inspectable trajectory.
 
+## Connection to behavioral drivers
+
+The paper and UNICEF's *Behavioural Drivers Model* address different scales of
+the same possible process. The BDM is an individual-centered checklist of
+psychological, social, and environmental factors that may help explain why a
+specific person attends, trusts, hesitates, intends, or acts. Waltzman's
+framework asks whether many heterogeneous local interactions produce a
+directional change in a collective decision process.
+
+For this project the connection is a traceable micro-to-macro hypothesis:
+
+```text
+concrete source, message, channel, and social context
+  -> person-local interpretation, memory, and action
+  -> requests, verification, issues, commitments, delays, or withdrawal
+  -> derived trust-, risk-, and coordination-related patterns
+  -> collective decision outcome
+```
+
+[Slice 18](../plans/018-bdm-informed-person-review.md) already exposes a small,
+reviewable person vocabulary informed by the BDM. It must remain selective:
+the BDM itself warns that its drivers are entangled, context dependent, and not
+a universal weighted causal model. A future coordination assay may use those
+person descriptions and may retain scenario-specific driver hypotheses as
+analysis metadata. It must not create a universal susceptibility score, insert
+all BDM drivers into every person, or treat a person's explanation as proof
+that a named driver caused an action.
+
+## Connection to composite agency
+
+The paper's decision environment can also be interpreted as part of the
+control substrate through which an organization exhibits candidate composite
+agency. The organization is not an additional executor. Its apparent
+competence is the result of concrete people, records, policies, information
+routes, incentives, schedules, and feedback mechanisms jointly preserving a
+goal, detecting error, and coordinating correction.
+
+Under this interpretation:
+
+- trust structure affects which error and evidence signals propagate;
+- perceived risk affects action thresholds and the set of states treated as
+  requiring correction; and
+- coordination readiness affects whether distributed commitments can become
+  coherent action in modeled time.
+
+Heterogeneous influence can therefore degrade higher-scale competence while
+each component person remains locally intelligent and reasonable. That is a
+testable Levin-style perturbation hypothesis, not evidence that the aggregate
+has consciousness or a hidden mind. The relevant assay asks whether the same
+concrete boundary preserves a reviewed collective goal after shocks, member
+replacement, structural changes, or feedback interruption. It must distinguish
+at least four possible patterns: loss of competence, effective-goal drift or
+capture, fragmentation into incompatible subgroups, and successful defensive
+adaptation. Rational caution is not automatically degradation.
+
+The coordination assay must be observed before this composite-agency assay.
+The former establishes the concrete multi-episode substrate and derived
+measurements; the latter reuses it for matched perturbations under
+[ADR 006](../adr/006-boundaries-are-derived-coarse-grainings.md).
+
 ## What the paper does not establish
 
 **Review basis:** the complete supplied document, including the conclusion on
@@ -175,7 +235,7 @@ The project will:
   step-down under [ADR 012](../adr/012-decision-environment-measures-are-derived.md);
 - compare baseline, heterogeneous pressure, and stabilization conditions;
 - separate direct trace measures from LLM-coded analytical judgments;
-- report indicator vectors and uncertainty before considering a composite
-  score; and
+- report indicator vectors and uncertainty without collapsing them into a
+  universal trust, coordination, or agency score; and
 - defer evasion and composite-agency assays until the basic coordination
   vertical is observed.

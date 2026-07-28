@@ -122,6 +122,32 @@ individual-by-individual changes. That supports a useful higher-scale control
 model; it does not add a hidden executor to the runtime or establish
 consciousness.
 
+### Coordination degradation as a composite-control perturbation
+
+Waltzman's trust structure, perceived risk, and coordination readiness supply
+candidate observations about the internal conditions under which a composite
+control loop operates. They do not themselves establish agency. In a concrete
+multi-person decision scenario, however, they can help explain why a candidate
+boundary did or did not preserve its reviewed goal:
+
+- fragmented trust can prevent error or evidence signals from being accepted;
+- expanding perceived risk can change action thresholds or the set of states
+  treated as errors; and
+- degraded coordination can prevent distributed commitments from becoming a
+  timely collective action.
+
+The corresponding composite-agency claim requires a second experimental layer
+after the coordination assay. It compares matched component, structural,
+feedback, and shock interventions and measures goal preservation, correction,
+recovery, rerouting, and member-replacement robustness. A slow or cautious
+decision is not by itself loss of agency: the goal specification must include
+the relevant validity and safety constraints, not only speed or deployment.
+
+This connection is specified in
+[Slice 22](../plans/022-composite-agency-perturbation-assay.md). It does not
+change this ADR's prohibition on aggregate executors or authorize a scalar
+agency score.
+
 This ADR records the question but does not authorize organization-level
 executors, agency scores, causal-attribution machinery, or a new MVP scenario.
 Those require a concrete analyst question and a bounded measurement contract.

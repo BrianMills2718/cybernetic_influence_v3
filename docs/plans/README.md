@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-07-25
+updated: 2026-07-27
 ---
 
 # Implementation Plans
@@ -17,20 +17,27 @@ instructions to continue their former “next slice” sections.
 [Slice 20: Inspectable extended runs](020-inspectable-extended-runs.md) now
 includes generic polling-backed live progress: strict runtime checkpoints keep
 the existing Simulation graph visible, animate only retained causal evidence,
-and defer narration until causal execution completes. Complete its 20C
-cross-scenario proof and then 20D's integrated compatibility proof; do not
-manufacture empty turns or add a general game-master actor.
+and defer narration until causal execution completes. Its zero-cost 20C
+cross-scenario proof is complete; 20D's integrated compatibility and human
+readout remain. Do not manufacture empty turns or add a general game-master
+actor.
 
 [Slice 21: Coordination-environment assay](021-coordination-environment-assay.md)
 is planned after Slice 20. It builds one synthetic, recurring multinational
 decision first; only then does it add paper-inspired evidence measures and a
-baseline/pressure/stabilization comparison. Its evasion and composite-agency
-extensions remain gated.
+baseline/pressure/stabilization comparison. Its evasion extensions remain
+gated. [Slice 22: Composite-agency perturbation
+assay](022-composite-agency-perturbation-assay.md) is a separate gate after
+Slice 21C; it reuses the same scenario to test goal preservation, correction,
+recovery, and rerouting under concrete perturbations without creating an
+organization executor or an agency score.
 
 The source interpretation is retained in
 [From Minds to Coordination](../research/001-from-minds-to-coordination.md);
 [ADR 012](../adr/012-decision-environment-measures-are-derived.md) prevents its
-analytical constructs from becoming hidden causal state.
+analytical constructs from becoming hidden causal state. [ADR
+006](../adr/006-boundaries-are-derived-coarse-grainings.md) governs the later
+composite-control interpretation.
 
 ## Most recent completed evidence
 
