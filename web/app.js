@@ -1762,8 +1762,25 @@ $('#resume').onclick = async () => {
   $('#run-status').textContent = 'Resuming…'
   try {
     const body = await request(`/api/runs/${current.run_id}/resume`, {method:'POST'})
-    render(body)
-    $('#run-status').textContent = 'Completed'
+    if (body.status === 'running' && current.execution === 'live') {
+      activeRunId = body.run_id
+      liveProgressSequence = Number.isInteger(body.progress_sequence) ? body.progress_sequence : 0
+      liveProjection = null
+      liveActivity = null
+      current = {...current, ...body}
+      $('#result').hidden = false
+      $('#narrative-section').hidden = true
+      $('#live-evidence').hidden = false
+      $('#live-evidence-title').textContent = 'Live run resumed'
+      $('#live-evidence-body').textContent = 'Waiting for the next retained causal update.'
+      $('#result-status').textContent = `running · ${String(body.scenario || '').replaceAll('_', ' ')}`
+      $('#result-cost').textContent = 'Waiting for the next retained causal update…'
+      renderLifecycleControls(body)
+      void pollLiveRun(body.run_id)
+    } else {
+      render(body)
+      $('#run-status').textContent = 'Completed'
+    }
     $('#resume').hidden = true
     await loadHistory()
   } catch (error) {

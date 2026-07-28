@@ -948,6 +948,8 @@ def test_scripted_service_desk_pauses_at_a_boundary_and_resumes(
 def test_live_service_desk_resume_reuses_retained_llm_configuration(
     tmp_path: Path,
 ) -> None:
+    resumed_worker_entered = Event()
+    release_resumed_worker = Event()
     fixture = service_desk_fixture(
         service_desk_arm_configurations()[0],
         cognition_profile="position_context",
@@ -1064,6 +1066,11 @@ def test_live_service_desk_resume_reuses_retained_llm_configuration(
             "calls": [],
         }
 
+    def hold_resumed_runtime(*args: Any, **kwargs: Any) -> Any:
+        resumed_worker_entered.set()
+        assert release_resumed_worker.wait(timeout=5)
+        return original_run_service_desk(*args, **kwargs)
+
     with (
         patch.dict(
             "os.environ",
@@ -1081,15 +1088,29 @@ def test_live_service_desk_resume_reuses_retained_llm_configuration(
             side_effect=capture_native,
         ),
         patch(
+            "cybernetic_influence.api.run_event_driven_service_desk",
+            side_effect=hold_resumed_runtime,
+        ),
+        patch(
             "cybernetic_influence.api.narrate_live_moments",
             side_effect=narrate_while_locked,
         ),
     ):
         response = api.post("/api/runs/run_feed00000000/resume")
-    assert response.status_code == 200, response.text
+        assert response.status_code == 202, response.text
+        assert resumed_worker_entered.wait(timeout=5)
+        assert api.get("/api/runs/run_feed00000000").json()["status"] == "running"
+        release_resumed_worker.set()
+        for _ in range(200):
+            retained = api.get("/api/runs/run_feed00000000").json()
+            if retained["status"] == "completed":
+                break
+            time.sleep(0.01)
+        else:
+            pytest.fail("resumed live run did not complete")
     assert captured == [("openrouter/deepseek/deepseek-v4-flash", "none")]
     assert lock_checked is True
-    assert response.json()["status"] == "completed"
+    assert retained["status"] == "completed"
 
 
 def test_optional_tailscale_identity_allowlist_guards_run_evidence(

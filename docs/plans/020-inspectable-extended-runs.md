@@ -38,11 +38,12 @@ obtain explicit authorization.
 - **20C implementation checkpoint:** the runtime now publishes strict,
   ordered checkpoint updates for every scenario using the active-runtime
   adapter. Live catalog and approved-authored runs start in a background
-  worker, retain analyst-safe progress, and expose it through a cursor-based
-  polling endpoint. The shared canvas highlights a pending frozen participant
-  set and animates only event-derived configured edges after commitment. This
-  preserves the distinction between configured pathways, world topology, and
-  realized causal trajectory. No paid canary has been run.
+  worker; a resumed live Service Desk run uses the same worker path. Both
+  retain analyst-safe progress and expose it through a cursor-based polling
+  endpoint. The shared canvas highlights a pending frozen participant set and
+  animates only event-derived configured edges after commitment. This preserves
+  the distinction between configured pathways, world topology, and realized
+  causal trajectory. No paid canary has been run.
 - **20C zero-cost proof:** focused API tests now retain the same ordered public
   progress schema for Service Desk and Physical Access authorization denial,
   while the approved information-campaign test proves the authored compiler

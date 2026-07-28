@@ -246,6 +246,7 @@ def create_app(
     live_lock = Lock()
     live_worker_context = local()
     authored_live_worker_context = local()
+    resume_live_worker_context = local()
     pause_requests: dict[str, Event] = {}
     stop_requests: dict[str, Event] = {}
     pause_lock = Lock()
@@ -888,16 +889,23 @@ def create_app(
             runs.save(current)
         return {"run_id": run_id, "status": "stop_requested"}
 
-    @app.post("/api/runs/{run_id}/resume")
-    def resume_run(run_id: str, request: Request) -> dict[str, object]:
+    @app.post("/api/runs/{run_id}/resume", response_model=None)
+    def resume_run(run_id: str, request: Request) -> dict[str, object] | Response:
         _require_access(request)
+        worker_execution = bool(
+            getattr(resume_live_worker_context, "active", False)
+        )
         try:
             paused = runs.get(run_id)
         except InvalidRunIdError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         except RunNotFoundError as error:
             raise HTTPException(status_code=404, detail="run not found") from error
-        if paused.get("status") != "paused" or paused.get("scenario") != "service_desk" or paused.get("execution") not in {"scripted", "live"}:
+        if (
+            (not worker_execution and paused.get("status") != "paused")
+            or paused.get("scenario") != "service_desk"
+            or paused.get("execution") not in {"scripted", "live"}
+        ):
             raise HTTPException(status_code=409, detail="this run cannot be resumed")
         continuation = paused.get("continuation")
         if not isinstance(continuation, dict):
@@ -950,8 +958,86 @@ def create_app(
                     status_code=409,
                     detail="paused live run requires its original model policy",
                 )
-            if not live_lock.acquire(blocking=False):
+            if not worker_execution and not live_lock.acquire(blocking=False):
                 raise HTTPException(status_code=409, detail="another live run is already active")
+        if live and not worker_execution:
+            resume_document = {
+                **paused,
+                "status": "running",
+                "pause_message": None,
+            }
+            runs.save(resume_document)
+            pause = Event()
+            stop = Event()
+            with pause_lock:
+                pause_requests[run_id] = pause
+                stop_requests[run_id] = stop
+
+            def execute_resume_worker() -> None:
+                resume_live_worker_context.active = True
+                try:
+                    resume_run(run_id, request)
+                except Exception as error:
+                    try:
+                        runs.save(
+                            {
+                                **resume_document,
+                                "status": "failed",
+                                "error": f"{type(error).__name__}: {error}",
+                            }
+                        )
+                    finally:
+                        with pause_lock:
+                            pause_requests.pop(run_id, None)
+                            stop_requests.pop(run_id, None)
+                        if live_lock.locked():
+                            live_lock.release()
+                finally:
+                    del resume_live_worker_context.active
+
+            Thread(
+                target=execute_resume_worker,
+                name=f"cybernetic-live-resume-{run_id}",
+                daemon=True,
+            ).start()
+            return JSONResponse(status_code=202, content=resume_document)
+
+        if live:
+            with pause_lock:
+                resumed_pause = pause_requests.get(run_id)
+                resumed_stop = stop_requests.get(run_id)
+            if resumed_pause is None or resumed_stop is None:
+                raise RuntimeError("resumed live worker lost its control handles")
+            pause = resumed_pause
+            stop = resumed_stop
+        else:
+            pause = Event()
+            stop = Event()
+
+        def retain_checkpoint(checkpoint: ActiveRuntimeCheckpoint) -> None:
+            with progress_lock:
+                prior = runs.get(run_id)
+                progress = prior.get("live_progress", [])
+                if not isinstance(progress, list):
+                    raise RuntimeError("retained live progress is malformed")
+                runs.save(
+                    {
+                        **paused,
+                        **_checkpoint_progress_projection(checkpoint),
+                        "status": (
+                            "stop_requested"
+                            if stop.is_set()
+                            else "pause_requested" if pause.is_set() else "running"
+                        ),
+                        "continuation": _checkpoint_continuation(
+                            checkpoint,
+                            lifecycle="paused" if pause.is_set() else "running",
+                        ),
+                        "live_progress": progress,
+                        "progress_sequence": len(progress),
+                    }
+                )
+
         try:
             run_control = (
                 ResolvedRunControlPlan.model_validate(paused["run_control"])
@@ -974,9 +1060,12 @@ def create_app(
                 run_id=run_id,
                 checkpoint=checkpoint,
                 run_control=run_control,
+                checkpoint_observer=retain_checkpoint,
                 progress_observer=lambda update, item: retain_progress(
                     run_id, update, item
                 ),
+                pause_requested=pause.is_set,
+                stop_requested=stop.is_set,
             )
             readout = event_driven_service_desk_outcome(resumed)
             document = build_service_desk_analyst_document(fixture=fixture, result=resumed, readout=readout, profile=profile, arm_id=arm.arm_id, execution="live" if live else "scripted", created_at=str(paused["created_at"]))
@@ -999,8 +1088,33 @@ def create_app(
                     run_id,
                 )
             )
+        except RuntimePaused as paused_error:
+            paused_document = {
+                **paused,
+                "status": "paused",
+                "pause_message": "Paused after a completed causal step.",
+                **_checkpoint_progress_projection(paused_error.checkpoint),
+                "continuation": _checkpoint_continuation(
+                    paused_error.checkpoint, lifecycle="paused"
+                ),
+            }
+            return runs.save(retain_progress_history(paused_document, run_id))
+        except Exception as error:
+            failed = {
+                **paused,
+                "status": "failed",
+                "error": f"{type(error).__name__}: {error}",
+            }
+            retained = runs.save(retain_progress_history(failed, run_id))
+            if worker_execution:
+                return retained
+            raise
         finally:
             if live:
+                with pause_lock:
+                    pause_requests.pop(run_id, None)
+                    stop_requests.pop(run_id, None)
+            if live and worker_execution:
                 live_lock.release()
 
     @app.post("/api/runs", response_model=None)
