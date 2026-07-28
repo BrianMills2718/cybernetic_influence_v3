@@ -290,6 +290,16 @@ class ActiveRuntimeSession:
 
             earliest = participant_earliest
             logical_time = max(earliest, core_state.logical_time)
+            # A positive-duration trace can advance canonical world time past a
+            # participant's nominal wake while older exact siblings remain
+            # queued.  Settle every transition now due at the normalized
+            # activation time before freezing participant inputs.  Otherwise
+            # the first participant action can commit those transitions and
+            # make later siblings in the same frozen set appear to regress.
+            if exact_due is not None and exact_due <= logical_time:
+                if not self._settle_exact_due(exact_due, through=through):
+                    return None
+                continue
             causes: dict[str, tuple[ActivationCause, ...]] = {}
             for active_system_id in sorted(due_candidates):
                 state = self._states[active_system_id]

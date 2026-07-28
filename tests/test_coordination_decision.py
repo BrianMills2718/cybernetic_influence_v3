@@ -4,14 +4,20 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from copy import deepcopy
+from dataclasses import replace
 from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
+from cybernetic_influence.active_runtime import ActiveRuntimeCheckpoint
+from cybernetic_influence.causal_core.models import state_digest
+from cybernetic_influence.causal_core.replay import replay_committed_trajectory
+
 from cybernetic_influence.scenarios.coordination_decision import (
     CONDITION_ENTITY_ID,
     DECISION_DEADLINE_DAY,
+    DECISION_DEADLINE_TIME,
     EXTERNAL_RECEIVER_ID,
     MAX_CAUSAL_MOMENTS,
     MAX_PARTICIPANT_CALLS,
@@ -26,6 +32,7 @@ from cybernetic_influence.scenarios.coordination_decision import (
     CommitmentRecord,
     CoordinationConditionConfig,
     CoordinationDecisionFixture,
+    CoordinationRuntimePaused,
     DecisionProposal,
     IssueItem,
     MeetingSchedule,
@@ -35,7 +42,9 @@ from cybernetic_influence.scenarios.coordination_decision import (
     baseline_coordination_fixture,
     condition_independent_scenario_dump,
     coordination_decision_fixtures,
+    coordination_runtime_fixture,
     heterogeneous_pressure_coordination_fixture,
+    run_scripted_coordination,
     scenario_fingerprint,
     stabilization_coordination_fixture,
     validate_coordination_fixture_family,
@@ -119,13 +128,13 @@ def test_contract_people_schedule_topology_and_safety_bounds_are_reviewed() -> N
     assert tuple(slot.modeled_day for slot in fixture.schedule.slots) == MEETING_DAYS
     assert all(tuple(slot.due_person_ids) == PERSON_IDS for slot in fixture.schedule.slots)
     assert fixture.schedule.deadline_day == DECISION_DEADLINE_DAY
-    assert fixture.scenario.time_unit == "scenario_day"
+    assert fixture.scenario.time_unit == "scenario_minute"
     assert fixture.scenario.timing_contract == "positive_duration"
     assert all(connection.delay > 0 for connection in state.connections.values())
     assert state.representations["technical_validation_dossier_copy"].carrier_id == (
         "dossier_carrier"
     )
-    assert fixture.run_control_options.default_horizon == DECISION_DEADLINE_DAY
+    assert fixture.run_control_options.default_horizon == DECISION_DEADLINE_TIME
     assert fixture.run_control_options.max_causal_moments_cap == MAX_CAUSAL_MOMENTS
     assert fixture.run_control_options.max_participant_calls_cap == (
         MAX_PARTICIPANT_CALLS
@@ -371,6 +380,319 @@ def test_contract_fingerprint_is_stable_for_rebuilt_fixture() -> None:
     first = scenario_fingerprint(baseline_coordination_fixture().scenario)
     second = scenario_fingerprint(baseline_coordination_fixture().scenario)
     assert first == second
+
+
+@pytest.mark.parametrize(
+    ("builder", "expected_status", "expected_scope"),
+    [
+        (baseline_coordination_fixture, "deploy_on_time", "full"),
+        (
+            heterogeneous_pressure_coordination_fixture,
+            "no_decision_by_horizon",
+            "none",
+        ),
+        (stabilization_coordination_fixture, "scope_reduced", "reduced"),
+    ],
+)
+def test_scripted_vertical_completes_four_meetings_with_distinct_zero_cost_outcomes(
+    builder: Callable[[], CoordinationDecisionFixture],
+    expected_status: str,
+    expected_scope: str,
+) -> None:
+    runtime = coordination_runtime_fixture(builder())
+    result = run_scripted_coordination(
+        runtime,
+        run_id=f"coordination_{runtime.contract.condition.condition}",
+    )
+    final_state = result.core_result.final_state
+    meetings = [
+        attempt
+        for attempt in result.attempts
+        if "meeting_clock" in attempt.declared_active_system_ids
+        and len(attempt.declared_active_system_ids) > 1
+    ]
+
+    assert result.completion is not None
+    assert result.completion.reason == "terminal_condition_met"
+    assert result.model_calls == 0
+    assert result.total_observed_cost == 0.0
+    assert result.cost_fully_observable is True
+    assert [attempt.logical_time for attempt in meetings] == [
+        day * 24 * 60 for day in MEETING_DAYS
+    ]
+    assert all(
+        set(PERSON_IDS) <= set(attempt.declared_active_system_ids)
+        for attempt in meetings
+    )
+    assert len(result.attempts) + len(result.exact_work) >= 12
+    assert final_state.fact("external_decision_registry.received_status").value == (
+        expected_status
+    )
+    assert final_state.fact("external_decision_registry.received_scope").value == (
+        expected_scope
+    )
+    events_by_id = {event.event_id: event for event in result.core_result.events}
+    assert all(
+        event.logical_time
+        > max(
+            events_by_id[parent_id].logical_time
+            for parent_id in event.causal_parent_event_ids
+        )
+        for event in result.core_result.events
+        if event.event_kind not in {"run_started", "run_completed"}
+    )
+
+
+def test_baseline_trace_contains_ordinary_review_friction_before_full_deployment() -> None:
+    result = run_scripted_coordination(
+        coordination_runtime_fixture(baseline_coordination_fixture()),
+        run_id="baseline_friction",
+    )
+    outcomes = [
+        event.details.get("outcome_code")
+        for event in result.core_result.events
+        if event.event_kind == "mechanism_executed"
+    ]
+
+    assert "issue_open" in outcomes
+    assert "verification_answered" in outcomes
+    assert "issue_resolved" in outcomes
+    assert outcomes.index("issue_open") < outcomes.index("issue_resolved")
+    assert outcomes[-2:] == [
+        "terminal_decision_accepted",
+        "external_decision_received",
+    ]
+    terminal_attempt = next(
+        event
+        for event in result.core_result.events
+        if event.event_kind == "action_attempted"
+        and event.source_port_id == "terminal_proposal_out"
+    )
+    terminal_gate = next(
+        event
+        for event in result.core_result.events
+        if event.mechanism_id == "terminal_decision_gate"
+        and event.details.get("outcome_code") == "terminal_decision_accepted"
+    )
+    outgoing = next(
+        event
+        for event in result.core_result.events
+        if event.event_kind == "effect_routed"
+        and event.connection_id == "terminal_decision_output_route"
+    )
+    external_receipt = next(
+        event
+        for event in result.core_result.events
+        if event.mechanism_id == "external_decision_receiver"
+        and event.details.get("outcome_code") == "external_decision_received"
+    )
+    final_commit = next(
+        event
+        for event in result.core_result.events
+        if event.event_kind == "state_committed"
+        and external_receipt.event_id in event.causal_parent_event_ids
+    )
+    assert len(
+        {
+            terminal_attempt.event_id,
+            terminal_gate.event_id,
+            outgoing.event_id,
+            external_receipt.event_id,
+            final_commit.event_id,
+        }
+    ) == 5
+
+
+def test_pressure_trace_retains_worked_path_and_denial_before_deadline() -> None:
+    result = run_scripted_coordination(
+        coordination_runtime_fixture(
+            heterogeneous_pressure_coordination_fixture()
+        ),
+        run_id="pressure_worked_path",
+    )
+    events = result.core_result.events
+    outcomes = [
+        event.details.get("outcome_code")
+        for event in events
+        if event.event_kind == "mechanism_executed"
+    ]
+
+    assert "source_message_delivered" in outcomes
+    assert "verification_answered" in outcomes
+    assert "issue_open" in outcomes
+    assert "issue_reopened" in outcomes
+    assert "commitment_recorded" in outcomes
+    assert "partner_withdrawal_recorded" in outcomes
+    assert "terminal_decision_denied_ineligible" in outcomes
+    assert outcomes.index("terminal_decision_denied_ineligible") < outcomes.index(
+        "terminal_decision_accepted"
+    )
+    technical_delivery = next(
+        event
+        for event in events
+        if event.mechanism_id == "technical_source_delivery"
+        and event.details.get("outcome_code") == "source_message_delivered"
+    )
+    verification_request = next(
+        event
+        for event in events
+        if event.event_kind == "action_attempted"
+        and event.source_port_id == "verification_request_out"
+    )
+    verification_answer = next(
+        event
+        for event in events
+        if event.mechanism_id == "verification_recorder"
+        and event.details.get("outcome_code") == "verification_answered"
+    )
+    assert technical_delivery.logical_time < verification_request.logical_time
+    assert verification_request.logical_time < verification_answer.logical_time
+    assert outcomes.index("issue_open") < outcomes.index("issue_reopened")
+    denied = next(
+        event
+        for event in events
+        if event.details.get("outcome_code")
+        == "terminal_decision_denied_ineligible"
+    )
+    denied_commit = next(
+        event
+        for event in events
+        if event.event_kind == "state_committed"
+        and denied.event_id in event.causal_parent_event_ids
+    )
+    assert denied_commit.patch is not None
+    assert denied_commit.patch.fact_changes == []
+    assert denied_commit.patch.placement_changes == []
+    assert denied_commit.patch.carrier_changes == []
+    assert denied_commit.patch.representations_added == []
+    assert denied_commit.patch.observations_added == []
+
+
+def test_meeting_due_sets_are_frozen_before_same_moment_proposals() -> None:
+    result = run_scripted_coordination(
+        coordination_runtime_fixture(stabilization_coordination_fixture()),
+        run_id="frozen_meetings",
+    )
+    meetings = [
+        attempt
+        for attempt in result.attempts
+        if "meeting_clock" in attempt.declared_active_system_ids
+        and len(attempt.declared_active_system_ids) > 1
+    ]
+
+    for meeting in meetings:
+        assert all(
+            observation.logical_time < meeting.logical_time
+            for participant in meeting.participants
+            for observation in participant.input.observations
+        )
+
+
+def test_disabled_source_route_prevents_technical_message_delivery() -> None:
+    payload = heterogeneous_pressure_coordination_fixture().model_dump(mode="json")
+    payload["scenario"]["initial_state"]["connections"][
+        "technical_source_route"
+    ]["enabled"] = False
+    contract = CoordinationDecisionFixture.model_validate(payload)
+    result = run_scripted_coordination(
+        coordination_runtime_fixture(contract),
+        run_id="disabled_technical_route",
+    )
+
+    assert not any(
+        observation.representation_id == "technical_pressure_message"
+        for observation in result.core_result.final_state.observations.values()
+    )
+    assert not any(
+        event.event_kind == "effect_routed"
+        and event.connection_id == "technical_source_route"
+        for event in result.core_result.events
+    )
+
+
+def test_scripted_result_replays_and_pause_resume_preserves_trajectory() -> None:
+    runtime = coordination_runtime_fixture(stabilization_coordination_fixture())
+    uninterrupted = run_scripted_coordination(
+        runtime,
+        run_id="coordination_resume",
+    )
+    checkpoints: list[ActiveRuntimeCheckpoint] = []
+
+    with pytest.raises(CoordinationRuntimePaused) as paused:
+        run_scripted_coordination(
+            runtime,
+            run_id="coordination_resume",
+            checkpoint_observer=checkpoints.append,
+            pause_requested=lambda: len(checkpoints) == 4,
+        )
+    resumed = run_scripted_coordination(
+        runtime,
+        run_id="coordination_resume",
+        checkpoint=paused.value.checkpoint,
+    )
+    replayed = replay_committed_trajectory(runtime.scenario, resumed.core_result)
+
+    assert state_digest(replayed) == resumed.core_result.final_state_digest
+    assert resumed.core_result.final_state == uninterrupted.core_result.final_state
+    assert [event.event_id for event in resumed.core_result.events] == [
+        event.event_id for event in uninterrupted.core_result.events
+    ]
+    assert [attempt.activation_id for attempt in resumed.attempts] == [
+        attempt.activation_id for attempt in uninterrupted.attempts
+    ]
+
+
+def test_normalized_wake_settles_older_exact_work_before_frozen_actions() -> None:
+    runtime = coordination_runtime_fixture(
+        heterogeneous_pressure_coordination_fixture()
+    )
+    # The initial meeting fan-out advances world time beyond these nominal
+    # wakes. The scheduler must settle older exact work before freezing inputs.
+    accelerated_specs = tuple(
+        spec.model_copy(update={"initial_next_update_at": 24})
+        if spec.active_system_id in PRESSURE_SOURCE_IDS
+        else spec
+        for spec in runtime.active_specs
+    )
+    accelerated = replace(runtime, active_specs=accelerated_specs)
+
+    result = run_scripted_coordination(
+        accelerated,
+        run_id="normalized_wake_regression",
+    )
+
+    assert result.completion is not None
+    assert result.completion.reason == "terminal_condition_met"
+    assert all(attempt.status == "committed" for attempt in result.attempts)
+
+
+def test_runtime_keeps_latent_scores_and_organization_executors_out_of_state() -> None:
+    result = run_scripted_coordination(
+        coordination_runtime_fixture(stabilization_coordination_fixture()),
+        run_id="no_latent_scores",
+    )
+    prohibited_keys = {
+        "trust_score",
+        "risk_score",
+        "readiness_score",
+        "bdm_profile",
+        "organization_agent",
+    }
+
+    def keys(value: object) -> set[str]:
+        if isinstance(value, dict):
+            return set(value) | {
+                nested_key
+                for nested in value.values()
+                for nested_key in keys(nested)
+            }
+        if isinstance(value, list):
+            return {
+                nested_key for nested in value for nested_key in keys(nested)
+            }
+        return set()
+
+    assert not prohibited_keys & keys(result.model_dump(mode="json"))
 
 
 def _fixture_payload() -> dict[str, Any]:

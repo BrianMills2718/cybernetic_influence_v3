@@ -7,15 +7,40 @@ later packets.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 import hashlib
 import json
-from typing import Literal, TypeAlias
+from typing import Literal, TypeAlias, cast
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from cybernetic_influence.active_runtime.run_control import (
+    CompletionRecord,
     ExactFactTerminalCondition,
+    ResolvedRunControlPlan,
     RunControlOptions,
+    resolve_run_control,
+    terminal_condition_ids,
+)
+from cybernetic_influence.active_runtime import (
+    ActionIntent,
+    ActiveProposal,
+    ActiveRuntimeCheckpoint,
+    ActiveRuntimeConfig,
+    ActiveRuntimeResult,
+    ActiveRuntimeSession,
+    ActiveStepResult,
+    ActiveSystemBinding,
+    ActiveSystemInput,
+    ActiveSystemSpec,
+    RuntimeProgressObserver,
+    ScriptedActiveSystem,
+    UpdateScheduleDirective,
+)
+from cybernetic_influence.causal_core.engine import (
+    ExactMechanismBinding,
+    MechanismContext,
 )
 from cybernetic_influence.causal_core.models import (
     AnalyticalBoundary,
@@ -24,12 +49,17 @@ from cybernetic_influence.causal_core.models import (
     CausalState,
     ConnectionState,
     EntityState,
+    EffectDraft,
     FactState,
+    FactUpdate,
     FidelityNote,
+    MechanismOutcome,
     MechanismSpec,
+    ObservationDraft,
     PlacementState,
     PlaceState,
     PortState,
+    RepresentationDraft,
     RepresentationToken,
     SpatialLinkState,
     representation_digest,
@@ -82,6 +112,9 @@ DECISION_ENTITY_ID = "decision_record"
 EXTERNAL_RECEIVER_ID = "external_decision_registry"
 MEETING_DAYS: tuple[int, ...] = (0, 3, 6, 9)
 DECISION_DEADLINE_DAY = 10
+MINUTES_PER_DAY = 24 * 60
+MEETING_TIMES: tuple[int, ...] = tuple(day * MINUTES_PER_DAY for day in MEETING_DAYS)
+DECISION_DEADLINE_TIME = DECISION_DEADLINE_DAY * MINUTES_PER_DAY
 MAX_CAUSAL_MOMENTS = 28
 MAX_PARTICIPANT_CALLS = 20
 
@@ -343,7 +376,7 @@ class CoordinationDecisionFixture(_StrictModel):
             raise ValueError("terminal-decision route does not originate inside")
         if target_owner in partnership.member_refs:
             raise ValueError("terminal-decision route does not leave the boundary")
-        if self.run_control_options.default_horizon != DECISION_DEADLINE_DAY:
+        if self.run_control_options.default_horizon != DECISION_DEADLINE_TIME:
             raise ValueError("run-control deadline drifted")
         return self
 
@@ -468,7 +501,7 @@ def _build_fixture(
             "A synthetic multinational partnership reviews whether and how to "
             "deploy an upgraded bio-surveillance system by a modeled deadline."
         ),
-        time_unit="scenario_day",
+        time_unit="scenario_minute",
         timing_contract="positive_duration",
         minimum_world_duration=1,
         initial_state=state,
@@ -604,7 +637,10 @@ def _entities(
             entity_id="meeting_schedule",
             entity_kind="schedule_record",
             description="Four authored decision meetings and the day-10 deadline.",
-            attributes={"schedule": _fact(schedule.model_dump(mode="json"))},
+            attributes={
+                "schedule": _fact(schedule.model_dump(mode="json")),
+                "last_wake_day": _fact(None),
+            },
         ),
         "decision_goal": EntityState(
             entity_id="decision_goal",
@@ -810,12 +846,18 @@ def _ports() -> dict[str, PortState]:
     add("local_delivery_in", "local_source_delivery", "input", "local_concern", "Local concern delivery input.")
     add("scheduler_wake_in", "meeting_scheduler", "input", "scheduled_wake", "Retained scheduler wake input.")
     add("scheduler_wake_out", "meeting_clock", "output", "scheduled_wake", "Retained scheduler wake output.")
-    add("meeting_notice_out", "meeting_scheduler", "output", "meeting_notice", "Due-person meeting notice output.")
-    add("meeting_delivery_in", "meeting_notice_delivery", "input", "meeting_notice", "Meeting notice delivery input.")
+    add("deadline_transition_out", "meeting_clock", "output", "deadline_transition", "Exact day-10 deadline trigger.")
     add("verification_request_out", "technical_validation_lead", "output", "verification_request", "Verification request action.")
     add("verification_request_in", "verification_recorder", "input", "verification_request", "Verification recorder input.")
     add("verification_response_out", "verification_recorder", "output", "verification_response", "Exact verification response output.")
-    add("verification_response_in", "verification_response_delivery", "input", "verification_response", "Verification response delivery input.")
+    for person_id in PERSON_IDS:
+        add(
+            f"verification_response_{person_id}_in",
+            f"verification_response_delivery_{person_id}",
+            "input",
+            "verification_response",
+            f"Verification response delivery input for {person_id}.",
+        )
     add("issue_update_out", "sovereignty_policy_representative", "output", "issue_update", "Issue lifecycle action.")
     add("issue_update_in", "issue_recorder", "input", "issue_update", "Issue recorder input.")
     add("source_disposition_out", "local_public_health_liaison", "output", "source_disposition", "Source disposition action.")
@@ -832,11 +874,19 @@ def _ports() -> dict[str, PortState]:
     add("scope_threshold_out", "mission_coordinator", "output", "scope_threshold_proposal", "Scope and threshold proposal.")
     add("scope_threshold_in", "proposal_recorder", "input", "scope_threshold_proposal", "Proposal recorder input.")
     add("alignment_message_out", "mission_coordinator", "output", "alignment_message", "Informal alignment message.")
-    add("alignment_message_in", "alignment_delivery", "input", "alignment_message", "Alignment delivery input.")
+    for person_id in PERSON_IDS[1:]:
+        add(
+            f"alignment_message_{person_id}_in",
+            f"alignment_delivery_{person_id}",
+            "input",
+            "alignment_message",
+            f"Alignment delivery input for {person_id}.",
+        )
     add("withdrawal_out", "partner_representative", "output", "partner_withdrawal", "Partner withdrawal action.")
     add("withdrawal_in", "withdrawal_recorder", "input", "partner_withdrawal", "Withdrawal recorder input.")
     add("terminal_proposal_out", "mission_coordinator", "output", "terminal_proposal", "Terminal decision proposal action.")
     add("terminal_proposal_in", "terminal_decision_gate", "input", "terminal_proposal", "Exact terminal gate input.")
+    add("deadline_transition_in", "terminal_decision_gate", "input", "deadline_transition", "Exact deadline transition input.")
     add("terminal_decision_out", "terminal_decision_gate", "output", "terminal_decision", "Reviewed terminal-decision output.")
     add("external_decision_in", "external_decision_receiver", "input", "terminal_decision", "External decision receipt input.")
     return ports
@@ -847,14 +897,12 @@ def _connections() -> dict[str, ConnectionState]:
         "technical_source_route": _connection("technical_source_route", "technical_source_out", "technical_delivery_in"),
         "policy_source_route": _connection("policy_source_route", "policy_source_out", "policy_delivery_in"),
         "local_source_route": _connection("local_source_route", "local_source_out", "local_delivery_in"),
-        "meeting_notice_route": _connection("meeting_notice_route", "meeting_notice_out", "meeting_delivery_in"),
         "scheduler_wake_route": _connection("scheduler_wake_route", "scheduler_wake_out", "scheduler_wake_in"),
+        "deadline_transition_route": _connection("deadline_transition_route", "deadline_transition_out", "deadline_transition_in"),
         "verification_request_route": _connection("verification_request_route", "verification_request_out", "verification_request_in"),
-        "verification_response_route": _connection("verification_response_route", "verification_response_out", "verification_response_in"),
         "issue_update_route": _connection("issue_update_route", "issue_update_out", "issue_update_in"),
         "source_disposition_route": _connection("source_disposition_route", "source_disposition_out", "source_disposition_in"),
         "scope_threshold_route": _connection("scope_threshold_route", "scope_threshold_out", "scope_threshold_in"),
-        "alignment_message_route": _connection("alignment_message_route", "alignment_message_out", "alignment_message_in"),
         "withdrawal_route": _connection("withdrawal_route", "withdrawal_out", "withdrawal_in"),
         "terminal_proposal_route": _connection("terminal_proposal_route", "terminal_proposal_out", "terminal_proposal_in"),
         "terminal_decision_output_route": _connection("terminal_decision_output_route", "terminal_decision_out", "external_decision_in"),
@@ -866,6 +914,19 @@ def _connections() -> dict[str, ConnectionState]:
             f"{person_id}_commitment_out",
             "commitment_update_in",
         )
+        verification_route_id = f"verification_response_{person_id}_route"
+        connections[verification_route_id] = _connection(
+            verification_route_id,
+            "verification_response_out",
+            f"verification_response_{person_id}_in",
+        )
+        if person_id != "mission_coordinator":
+            alignment_route_id = f"alignment_message_{person_id}_route"
+            connections[alignment_route_id] = _connection(
+                alignment_route_id,
+                "alignment_message_out",
+                f"alignment_message_{person_id}_in",
+            )
     return connections
 
 
@@ -884,19 +945,16 @@ def _mechanisms() -> dict[str, MechanismSpec]:
         "technical_source_delivery": _mechanism("technical_source_delivery", ["technical_delivery_in"], read_representations=["technical_pressure_message"], observation_targets=["technical_validation_lead"]),
         "policy_source_delivery": _mechanism("policy_source_delivery", ["policy_delivery_in"], read_representations=["policy_pressure_message"], observation_targets=["sovereignty_policy_representative"]),
         "local_source_delivery": _mechanism("local_source_delivery", ["local_delivery_in"], read_representations=["local_pressure_message"], observation_targets=["local_public_health_liaison"]),
-        "meeting_scheduler": _mechanism("meeting_scheduler", ["scheduler_wake_in"], output_ports=["meeting_notice_out"], read_facts=["meeting_schedule.schedule", "external_decision_registry.received_status"]),
-        "meeting_notice_delivery": _mechanism("meeting_notice_delivery", ["meeting_delivery_in"], observation_targets=list(PERSON_IDS)),
-        "verification_recorder": _mechanism("verification_recorder", ["verification_request_in"], output_ports=["verification_response_out"], write_facts=["verification_register.items"]),
-        "verification_response_delivery": _mechanism("verification_response_delivery", ["verification_response_in"], observation_targets=["technical_validation_lead"]),
-        "issue_recorder": _mechanism("issue_recorder", ["issue_update_in"], write_facts=["issue_register.items"]),
-        "source_disposition_recorder": _mechanism("source_disposition_recorder", ["source_disposition_in"], write_facts=["source_disposition_register.items"]),
-        "commitment_recorder": _mechanism("commitment_recorder", ["commitment_update_in"], write_facts=["commitment_register.items"]),
-        "proposal_recorder": _mechanism("proposal_recorder", ["scope_threshold_in"], write_facts=["deployment_proposal.scope", "deployment_proposal.decision_threshold"]),
-        "alignment_delivery": _mechanism("alignment_delivery", ["alignment_message_in"], observation_targets=list(PERSON_IDS)),
-        "withdrawal_recorder": _mechanism("withdrawal_recorder", ["withdrawal_in"], write_facts=["decision_record.active_partner_count"]),
+        "meeting_scheduler": _mechanism("meeting_scheduler", ["scheduler_wake_in"], read_facts=["meeting_schedule.schedule", "external_decision_registry.received_status"], write_facts=["meeting_schedule.last_wake_day"]),
+        "verification_recorder": _mechanism("verification_recorder", ["verification_request_in"], output_ports=["verification_response_out"], read_facts=["coordination_condition.condition", "verification_register.items"], write_facts=["verification_register.items"], write_carriers=["verification_response_carrier"]),
+        "issue_recorder": _mechanism("issue_recorder", ["issue_update_in"], read_facts=["issue_register.items"], write_facts=["issue_register.items"]),
+        "source_disposition_recorder": _mechanism("source_disposition_recorder", ["source_disposition_in"], read_facts=["source_disposition_register.items"], write_facts=["source_disposition_register.items"]),
+        "commitment_recorder": _mechanism("commitment_recorder", ["commitment_update_in"], read_facts=["commitment_register.items"], write_facts=["commitment_register.items"]),
+        "proposal_recorder": _mechanism("proposal_recorder", ["scope_threshold_in"], read_facts=["deployment_proposal.scope", "deployment_proposal.decision_threshold"], write_facts=["deployment_proposal.scope", "deployment_proposal.decision_threshold"]),
+        "withdrawal_recorder": _mechanism("withdrawal_recorder", ["withdrawal_in"], read_facts=["decision_record.active_partner_count"], write_facts=["decision_record.active_partner_count"]),
         "terminal_decision_gate": _mechanism(
             "terminal_decision_gate",
-            ["terminal_proposal_in"],
+            ["terminal_proposal_in", "deadline_transition_in"],
             output_ports=["terminal_decision_out"],
             read_facts=[
                 "coordination_condition.condition",
@@ -905,14 +963,36 @@ def _mechanisms() -> dict[str, MechanismSpec]:
                 "issue_register.items",
                 "commitment_register.items",
                 "decision_record.active_partner_count",
+                "external_decision_registry.received_status",
             ],
+            write_facts=[
+                "decision_record.gate_status",
+                "decision_record.proposed_status",
+                "decision_record.proposed_scope",
+            ],
+            write_carriers=["terminal_decision_carrier"],
         ),
         "external_decision_receiver": _mechanism(
             "external_decision_receiver",
             ["external_decision_in"],
+            read_facts=["external_decision_registry.received_status"],
             write_facts=["external_decision_registry.received_status", "external_decision_registry.received_scope"],
             substrate="external_registry_system",
         ),
+    } | {
+        f"verification_response_delivery_{person_id}": _mechanism(
+            f"verification_response_delivery_{person_id}",
+            [f"verification_response_{person_id}_in"],
+            observation_targets=[person_id],
+        )
+        for person_id in PERSON_IDS
+    } | {
+        f"alignment_delivery_{person_id}": _mechanism(
+            f"alignment_delivery_{person_id}",
+            [f"alignment_message_{person_id}_in"],
+            observation_targets=[person_id],
+        )
+        for person_id in PERSON_IDS[1:]
     }
 
 
@@ -924,6 +1004,7 @@ def _mechanism(
     read_facts: list[str] | None = None,
     read_representations: list[str] | None = None,
     write_facts: list[str] | None = None,
+    write_carriers: list[str] | None = None,
     observation_targets: list[str] | None = None,
     substrate: str = "coordination_platform",
 ) -> MechanismSpec:
@@ -937,6 +1018,7 @@ def _mechanism(
         read_fact_ids=read_facts or [],
         read_representation_ids=read_representations or [],
         write_fact_ids=write_facts or [],
+        write_carrier_ids=write_carriers or [],
         observation_target_ids=observation_targets or [],
         substrate_refs=[substrate],
         invariant_ids=[f"{mechanism_id}_contract"],
@@ -983,6 +1065,18 @@ def _information_state() -> tuple[
             owner_ref="local_pressure_source",
             medium="source_message_record",
             locator="local source workspace",
+        ),
+        "verification_response_carrier": CarrierState(
+            carrier_id="verification_response_carrier",
+            owner_ref="verification_recorder",
+            medium="verification_response_record",
+            locator="partnership verification register",
+        ),
+        "terminal_decision_carrier": CarrierState(
+            carrier_id="terminal_decision_carrier",
+            owner_ref="terminal_decision_gate",
+            medium="terminal_decision_record",
+            locator="partnership decision gateway",
         ),
     }
     proposal_content = _canonical_json(
@@ -1115,9 +1209,9 @@ def _run_control_options() -> RunControlOptions:
         ],
         default_terminal_condition_ids=[f"decision_{status}" for status in statuses],
         allowed_terminal_modes=["any"],
-        minimum_horizon=DECISION_DEADLINE_DAY,
-        default_horizon=DECISION_DEADLINE_DAY,
-        maximum_horizon=DECISION_DEADLINE_DAY,
+        minimum_horizon=DECISION_DEADLINE_TIME,
+        default_horizon=DECISION_DEADLINE_TIME,
+        maximum_horizon=DECISION_DEADLINE_TIME,
         max_causal_moments_cap=MAX_CAUSAL_MOMENTS,
         max_participant_calls_cap=MAX_PARTICIPANT_CALLS,
     )
@@ -1138,3 +1232,1330 @@ def _canonical_json(value: object) -> bytes:
         separators=(",", ":"),
         ensure_ascii=True,
     ).encode()
+
+
+# Packet 21A1: scripted recurring execution over the contracts above.
+
+
+class VerificationRequestAction(_StrictModel):
+    verification_id: Literal["independent_calibration"] = "independent_calibration"
+    topic: Literal["independent_calibration"] = "independent_calibration"
+    requested_by: Literal["technical_validation_lead"] = (
+        "technical_validation_lead"
+    )
+
+
+class VerificationResponseRecord(_StrictModel):
+    document_kind: Literal["verification_response"] = "verification_response"
+    verification_id: Literal["independent_calibration"] = "independent_calibration"
+    result: Literal["supportive", "insufficient", "bounded_support"]
+    explanation: str = Field(min_length=1)
+
+
+class IssueUpdateAction(_StrictModel):
+    issue_id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
+    topic: str = Field(min_length=1)
+    lifecycle: IssueLifecycle
+    blocking: bool
+    opened_by: PersonId
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
+class SourceDispositionAction(_StrictModel):
+    person_id: PersonId
+    source_id: PressureSourceId
+    disposition: SourceDisposition
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
+class CommitmentAction(_StrictModel):
+    person_id: PersonId
+    commitment: Commitment
+
+
+class ScopeThresholdAction(_StrictModel):
+    proposed_by: Literal["mission_coordinator"] = "mission_coordinator"
+    scope: DecisionScope
+    decision_threshold: Literal[
+        "reviewed_evidence_and_partner_support",
+        "bounded_evidence_and_partner_support",
+    ]
+
+
+class AlignmentMessageAction(_StrictModel):
+    sender_id: PersonId
+    content: str = Field(min_length=1)
+
+
+class PartnerWithdrawalAction(_StrictModel):
+    person_id: Literal["partner_representative"] = "partner_representative"
+
+
+class SchedulerWakeAction(_StrictModel):
+    meeting_index: int = Field(ge=0, le=3)
+    modeled_day: int = Field(ge=0, le=9)
+
+
+class DeadlineTransitionAction(_StrictModel):
+    modeled_day: Literal[10] = 10
+
+
+class TerminalDecisionRecord(_StrictModel):
+    document_kind: Literal["terminal_decision"] = "terminal_decision"
+    status: FinalDecision
+    scope: DecisionScope
+    source: Literal["reviewed_proposal", "deadline"]
+
+
+@dataclass(frozen=True)
+class CoordinationRuntimeFixture:
+    """Validated 21A0 contract plus scenario-local runtime registries."""
+
+    contract: CoordinationDecisionFixture
+    exact_bindings: Mapping[str, ExactMechanismBinding]
+    active_specs: tuple[ActiveSystemSpec, ...]
+
+    @property
+    def scenario(self) -> CausalScenario:
+        return self.contract.scenario
+
+
+class CoordinationRuntimePaused(RuntimeError):
+    """Expose one validated causal-boundary checkpoint for later continuation."""
+
+    def __init__(self, checkpoint: ActiveRuntimeCheckpoint) -> None:
+        super().__init__("coordination run paused at a causal boundary")
+        self.checkpoint = checkpoint
+
+
+def coordination_runtime_fixture(
+    contract: CoordinationDecisionFixture,
+) -> CoordinationRuntimeFixture:
+    """Reopen the committed fixture before adding replaceable implementations."""
+
+    reopened = CoordinationDecisionFixture.model_validate(
+        contract.model_dump(mode="json")
+    )
+    return CoordinationRuntimeFixture(
+        contract=reopened,
+        exact_bindings=_coordination_exact_bindings(),
+        active_specs=_coordination_active_specs(reopened),
+    )
+
+
+def coordination_runtime_config() -> ActiveRuntimeConfig:
+    """Return a zero-provider-call envelope for the scripted vertical."""
+
+    return ActiveRuntimeConfig(
+        per_call_budget=0.01,
+        per_run_budget=0.01,
+        max_actions_per_system=4,
+        max_observations_per_system=32,
+        max_private_state_bytes=32_768,
+    )
+
+
+def coordination_run_control_plan(
+    fixture: CoordinationRuntimeFixture,
+) -> ResolvedRunControlPlan:
+    """Resolve only the fixture's reviewed terminal facts and safety bounds."""
+
+    return resolve_run_control(fixture.contract.run_control_options, None)
+
+
+def coordination_scripted_bindings(
+    fixture: CoordinationRuntimeFixture,
+) -> dict[str, ActiveSystemBinding]:
+    """Bind every concrete person/process to one zero-call scripted controller."""
+
+    controllers: dict[str, Callable[[ActiveSystemInput], ActiveStepResult]] = {
+        "mission_coordinator": _scripted_mission_coordinator,
+        "technical_validation_lead": _scripted_technical_lead,
+        "sovereignty_policy_representative": _scripted_policy_representative,
+        "local_public_health_liaison": _scripted_local_liaison,
+        "partner_representative": _scripted_partner_representative,
+        "technical_pressure_source": _scripted_pressure_source,
+        "policy_pressure_source": _scripted_pressure_source,
+        "local_pressure_source": _scripted_pressure_source,
+        "meeting_clock": _scripted_meeting_clock,
+    }
+    return {
+        spec.active_system_id: ActiveSystemBinding(
+            spec.implementation_id,
+            ScriptedActiveSystem(
+                implementation_id=spec.implementation_id,
+                controller=controllers[spec.active_system_id],
+            ),
+        )
+        for spec in fixture.active_specs
+    }
+
+
+def run_scripted_coordination(
+    fixture: CoordinationRuntimeFixture,
+    *,
+    run_id: str,
+    checkpoint: ActiveRuntimeCheckpoint | None = None,
+    checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
+    pause_requested: Callable[[], bool] | None = None,
+    progress_observer: RuntimeProgressObserver | None = None,
+) -> ActiveRuntimeResult:
+    """Run the recurring scripted vertical through its exact terminal fact."""
+
+    bindings = coordination_scripted_bindings(fixture)
+    session = (
+        ActiveRuntimeSession.restore(
+            fixture.scenario,
+            fixture.exact_bindings,
+            bindings,
+            checkpoint,
+            progress_observer=progress_observer,
+        )
+        if checkpoint is not None
+        else ActiveRuntimeSession(
+            fixture.scenario,
+            fixture.exact_bindings,
+            fixture.active_specs,
+            bindings,
+            run_id=run_id,
+            config=coordination_runtime_config(),
+            progress_observer=progress_observer,
+        )
+    )
+    run_control = coordination_run_control_plan(fixture)
+
+    def completion(reason: Literal[
+        "terminal_condition_met",
+        "modeled_time_horizon",
+        "quiescent_before_terminal",
+        "operator_stopped",
+        "safety_limit",
+    ], condition_ids: list[str] | None = None) -> CompletionRecord:
+        matched = condition_ids or []
+        evidence = _terminal_evidence_event_ids(session, run_control, matched)
+        summaries = {
+            "terminal_condition_met": (
+                "The external decision registry retained a reviewed terminal status."
+            ),
+            "modeled_time_horizon": (
+                "The modeled deadline passed without its required exact transition."
+            ),
+            "quiescent_before_terminal": (
+                "No modeled work remained before a terminal decision was retained."
+            ),
+            "operator_stopped": "The operator stopped at a causal boundary.",
+            "safety_limit": "A configured safety bound ended the scripted run.",
+        }
+        return CompletionRecord(
+            reason=reason,
+            condition_ids=matched,
+            causal_time=len(session.attempts),
+            logical_time=session.core_state.logical_time,
+            public_summary=summaries[reason],
+            evidence_event_ids=evidence,
+        )
+
+    while True:
+        matched = terminal_condition_ids(run_control, session.core_state)
+        if matched:
+            session.drain_pending_exact_work()
+            return session.complete(
+                completion=completion("terminal_condition_met", matched)
+            )
+        if len(session.attempts) >= run_control.max_causal_moments:
+            return session.complete(
+                completion=completion("safety_limit"),
+                discard_pending_effects=True,
+            )
+        due = session.next_due_activation()
+        matched = terminal_condition_ids(run_control, session.core_state)
+        if matched:
+            session.drain_pending_exact_work()
+            return session.complete(
+                completion=completion("terminal_condition_met", matched)
+            )
+        if due is None:
+            return session.complete(
+                completion=completion("quiescent_before_terminal")
+            )
+        if due.logical_time > DECISION_DEADLINE_TIME:
+            return session.complete(
+                completion=completion("modeled_time_horizon"),
+                discard_pending_effects=True,
+            )
+        session.activate(
+            due.active_system_ids,
+            logical_time=due.logical_time,
+            activation_causes=due.causes,
+        )
+        current = session.checkpoint()
+        if checkpoint_observer is not None:
+            checkpoint_observer(current)
+        if pause_requested is not None and pause_requested():
+            raise CoordinationRuntimePaused(current)
+
+
+def _coordination_active_specs(
+    fixture: CoordinationDecisionFixture,
+) -> tuple[ActiveSystemSpec, ...]:
+    condition = fixture.condition
+    assumptions = {
+        person_id: fixture.scenario.initial_state.entities[person_id].attributes[
+            "assumptions"
+        ].value
+        for person_id in PERSON_IDS
+    }
+
+    def person_spec(
+        person_id: PersonId,
+        *,
+        observation_ports: list[str],
+        output_ports: list[str],
+        initial_representations: list[str] | None = None,
+    ) -> ActiveSystemSpec:
+        return ActiveSystemSpec(
+            active_system_id=person_id,
+            entity_id=person_id,
+            implementation_id=f"scripted_coordination_{person_id}_v1",
+            description=f"Zero-call reference behavior for {person_id}.",
+            observation_port_ids=observation_ports,
+            output_port_ids=output_ports,
+            initial_representation_ids=initial_representations or [],
+            initial_private_state={
+                "assumptions": assumptions[person_id],
+                "meetings_completed": 0,
+                "verification_result": "unknown",
+                "commitment": "support_full",
+                "opened_issue_ids": [],
+            },
+            initial_next_update_at=MEETING_TIMES[0],
+        )
+
+    def shared_observation_ports(person_id: PersonId) -> list[str]:
+        ports = [f"verification_response_{person_id}_in"]
+        if person_id != "mission_coordinator":
+            ports.append(f"alignment_message_{person_id}_in")
+        return ports
+
+    people = (
+        person_spec(
+            "mission_coordinator",
+            observation_ports=shared_observation_ports("mission_coordinator"),
+            output_ports=[
+                "mission_coordinator_commitment_out",
+                "scope_threshold_out",
+                "alignment_message_out",
+                "terminal_proposal_out",
+            ],
+            initial_representations=["deployment_proposal_copy"],
+        ),
+        person_spec(
+            "technical_validation_lead",
+            observation_ports=[
+                "technical_delivery_in",
+                *shared_observation_ports("technical_validation_lead"),
+            ],
+            output_ports=[
+                "technical_validation_lead_commitment_out",
+                "verification_request_out",
+            ],
+            initial_representations=["technical_validation_dossier_copy"],
+        ),
+        person_spec(
+            "sovereignty_policy_representative",
+            observation_ports=[
+                "policy_delivery_in",
+                *shared_observation_ports("sovereignty_policy_representative"),
+            ],
+            output_ports=[
+                "sovereignty_policy_representative_commitment_out",
+                "issue_update_out",
+            ],
+        ),
+        person_spec(
+            "local_public_health_liaison",
+            observation_ports=[
+                "local_delivery_in",
+                *shared_observation_ports("local_public_health_liaison"),
+            ],
+            output_ports=[
+                "local_public_health_liaison_commitment_out",
+                "source_disposition_out",
+            ],
+        ),
+        person_spec(
+            "partner_representative",
+            observation_ports=shared_observation_ports("partner_representative"),
+            output_ports=[
+                "partner_representative_commitment_out",
+                "withdrawal_out",
+            ],
+        ),
+    )
+    source_representations = dict(
+        zip(PRESSURE_SOURCE_IDS, PRESSURE_SOURCE_REPRESENTATION_IDS, strict=True)
+    )
+    source_ports = {
+        "technical_pressure_source": "technical_source_out",
+        "policy_pressure_source": "policy_source_out",
+        "local_pressure_source": "local_source_out",
+    }
+    sources = tuple(
+        ActiveSystemSpec(
+            active_system_id=source_id,
+            entity_id=source_id,
+            implementation_id=f"scripted_coordination_{source_id}_v1",
+            description=f"Zero-call concrete source process {source_id}.",
+            output_port_ids=[source_ports[source_id]],
+            output_port_initial_representation_ids={
+                source_ports[source_id]: [source_representations[source_id]]
+            },
+            initial_representation_ids=[source_representations[source_id]],
+            initial_private_state={"emissions": 0},
+            initial_next_update_at=(
+                MINUTES_PER_DAY if condition.pressure_sources_enabled else None
+            ),
+        )
+        for source_id in PRESSURE_SOURCE_IDS
+    )
+    clock = ActiveSystemSpec(
+        active_system_id="meeting_clock",
+        entity_id="meeting_clock",
+        implementation_id="scripted_coordination_meeting_clock_v1",
+        description="Zero-call recurring meeting and deadline clock.",
+        output_port_ids=["scheduler_wake_out", "deadline_transition_out"],
+        initial_private_state={"wake_index": 0},
+        initial_next_update_at=MEETING_TIMES[0],
+    )
+    return (*people, *sources, clock)
+
+
+def _coordination_exact_bindings() -> dict[str, ExactMechanismBinding]:
+    handlers: dict[str, Callable[[MechanismContext], MechanismOutcome]] = {
+        "technical_source_delivery": _exact_source_delivery,
+        "policy_source_delivery": _exact_source_delivery,
+        "local_source_delivery": _exact_source_delivery,
+        "meeting_scheduler": _exact_meeting_scheduler,
+        "verification_recorder": _exact_verification,
+        "issue_recorder": _exact_issue_update,
+        "source_disposition_recorder": _exact_source_disposition,
+        "commitment_recorder": _exact_commitment,
+        "proposal_recorder": _exact_scope_threshold,
+        "withdrawal_recorder": _exact_withdrawal,
+        "terminal_decision_gate": _exact_terminal_decision,
+        "external_decision_receiver": _exact_external_decision_receipt,
+    }
+    for person_id in PERSON_IDS[1:]:
+        handlers[f"alignment_delivery_{person_id}"] = _exact_alignment_delivery
+    for person_id in PERSON_IDS:
+        handlers[f"verification_response_delivery_{person_id}"] = (
+            _exact_verification_delivery
+        )
+    bindings: dict[str, ExactMechanismBinding] = {}
+    for mechanism_id, handler in handlers.items():
+        invariant_id = f"{mechanism_id}_contract"
+
+        def checker(
+            context: MechanismContext,
+            outcome: MechanismOutcome,
+            *,
+            expected_handler: Callable[[MechanismContext], MechanismOutcome] = handler,
+        ) -> bool:
+            expected = expected_handler(context)
+            return expected.model_dump(mode="json") == outcome.model_dump(mode="json")
+
+        bindings[mechanism_id] = ExactMechanismBinding(
+            implementation_id=f"{mechanism_id}_v1",
+            handler=handler,
+            invariant_checkers={invariant_id: checker},
+        )
+    return bindings
+
+
+def _exact_source_delivery(context: MechanismContext) -> MechanismOutcome:
+    targets = {
+        "technical_source_delivery": (
+            "technical_validation_lead",
+            "technical_pressure_source",
+        ),
+        "policy_source_delivery": (
+            "sovereignty_policy_representative",
+            "policy_pressure_source",
+        ),
+        "local_source_delivery": (
+            "local_public_health_liaison",
+            "local_pressure_source",
+        ),
+    }
+    target, source = targets[context.mechanism.mechanism_id]
+    representation = _required_effect_representation(context)
+    return MechanismOutcome(
+        outcome_code="source_message_delivered",
+        observations=[
+            ObservationDraft(
+                target_entity_id=target,
+                via_port_id=context.target_port.port_id,
+                apparent_content=representation.content,
+                apparent_source_ref=source,
+                representation_id=representation.representation_id,
+            )
+        ],
+    )
+
+
+def _exact_meeting_scheduler(context: MechanismContext) -> MechanismOutcome:
+    wake = SchedulerWakeAction.model_validate(context.effect.payload)
+    schedule = context.read("meeting_schedule.schedule")
+    if not isinstance(schedule, dict):
+        raise TypeError("compiled meeting schedule must be an object")
+    slots = schedule.get("slots")
+    if not isinstance(slots, list) or wake.meeting_index >= len(slots):
+        raise ValueError("scheduler wake is outside the compiled schedule")
+    slot = slots[wake.meeting_index]
+    if not isinstance(slot, dict) or slot.get("modeled_day") != wake.modeled_day:
+        raise ValueError("scheduler wake disagrees with the compiled schedule")
+    if context.read("external_decision_registry.received_status") is not None:
+        return MechanismOutcome(outcome_code="meeting_wake_denied_after_terminal")
+    return MechanismOutcome(
+        outcome_code="meeting_wake_recorded",
+        updates=[
+            FactUpdate(
+                fact_id="meeting_schedule.last_wake_day",
+                value=wake.modeled_day,
+            )
+        ],
+    )
+
+
+def _exact_verification(context: MechanismContext) -> MechanismOutcome:
+    request = VerificationRequestAction.model_validate(context.effect.payload)
+    existing = _record_list(context.read("verification_register.items"))
+    if any(item.get("verification_id") == request.verification_id for item in existing):
+        return MechanismOutcome(outcome_code="verification_request_denied_duplicate")
+    condition = context.read("coordination_condition.condition")
+    if not isinstance(condition, str):
+        raise TypeError("compiled coordination condition must be a string")
+    responses: dict[str, VerificationResponseRecord] = {
+        "baseline": VerificationResponseRecord(
+            result="supportive",
+            explanation="Ordinary independent review remained supportive.",
+        ),
+        "heterogeneous_pressure": VerificationResponseRecord(
+            result="insufficient",
+            explanation="Available review did not resolve the introduced uncertainty.",
+        ),
+        "stabilization": VerificationResponseRecord(
+            result="bounded_support",
+            explanation="Authoritative review supported a reduced, bounded deployment.",
+        ),
+    }
+    response = responses.get(condition)
+    if response is None:
+        raise ValueError("unknown compiled coordination condition")
+    response_content = _render_model(response)
+    response_id = "independent_calibration_response"
+    item = VerificationItem(
+        verification_id=request.verification_id,
+        topic=request.topic,
+        requested_by=request.requested_by,
+        status="answered",
+        response_representation_id=response_id,
+    )
+    return MechanismOutcome(
+        outcome_code="verification_answered",
+        updates=[
+            FactUpdate(
+                fact_id="verification_register.items",
+                value=[*existing, item.model_dump(mode="json")],
+            )
+        ],
+        representations=[
+            RepresentationDraft(
+                representation_id=response_id,
+                carrier_id="verification_response_carrier",
+                encoding="application/vnd.cybernetic.verification-response+json",
+                content=response_content,
+                actual_source_ref="verification_recorder",
+                parent_representation_ids=(
+                    [context.representation.representation_id]
+                    if context.representation is not None
+                    else []
+                ),
+            )
+        ],
+        effects=[
+            EffectDraft(
+                output_port_id="verification_response_out",
+                effect_type="verification_response",
+                representation_id=response_id,
+                payload={},
+            )
+        ],
+    )
+
+
+def _exact_verification_delivery(context: MechanismContext) -> MechanismOutcome:
+    representation = _required_effect_representation(context)
+    VerificationResponseRecord.model_validate_json(representation.content)
+    target = context.mechanism.mechanism_id.removeprefix(
+        "verification_response_delivery_"
+    )
+    if target not in PERSON_IDS:
+        raise ValueError("verification delivery has an unknown person")
+    return MechanismOutcome(
+        outcome_code="verification_response_delivered",
+        observations=[
+            ObservationDraft(
+                target_entity_id=target,
+                via_port_id=context.target_port.port_id,
+                apparent_content=representation.content,
+                apparent_source_ref="verification_recorder",
+                representation_id=representation.representation_id,
+            )
+        ],
+    )
+
+
+def _exact_issue_update(context: MechanismContext) -> MechanismOutcome:
+    action = IssueUpdateAction.model_validate(context.effect.payload)
+    existing = _record_list(context.read("issue_register.items"))
+    index = next(
+        (i for i, item in enumerate(existing) if item.get("issue_id") == action.issue_id),
+        None,
+    )
+    if index is None and action.lifecycle != "open":
+        return MechanismOutcome(outcome_code="issue_update_denied_missing_issue")
+    updated = list(existing)
+    item = IssueItem(**action.model_dump(mode="json")).model_dump(mode="json")
+    if index is None:
+        updated.append(item)
+    elif existing[index] == item:
+        return MechanismOutcome(outcome_code="issue_update_denied_no_change")
+    else:
+        updated[index] = item
+    return MechanismOutcome(
+        outcome_code=f"issue_{action.lifecycle}",
+        updates=[
+            FactUpdate(
+                fact_id="issue_register.items",
+                value=cast(JsonValue, updated),
+            )
+        ],
+    )
+
+
+def _exact_source_disposition(context: MechanismContext) -> MechanismOutcome:
+    action = SourceDispositionAction.model_validate(context.effect.payload)
+    existing = _record_list(context.read("source_disposition_register.items"))
+    item = SourceDispositionRecord(**action.model_dump(mode="json")).model_dump(
+        mode="json"
+    )
+    key = (action.person_id, action.source_id)
+    updated = [
+        record
+        for record in existing
+        if (record.get("person_id"), record.get("source_id")) != key
+    ]
+    if len(updated) != len(existing) and any(record == item for record in existing):
+        return MechanismOutcome(outcome_code="source_disposition_denied_no_change")
+    updated.append(item)
+    return MechanismOutcome(
+        outcome_code="source_disposition_recorded",
+        updates=[
+            FactUpdate(
+                fact_id="source_disposition_register.items",
+                value=cast(JsonValue, updated),
+            )
+        ],
+    )
+
+
+def _exact_commitment(context: MechanismContext) -> MechanismOutcome:
+    action = CommitmentAction.model_validate(context.effect.payload)
+    existing = _record_list(context.read("commitment_register.items"))
+    updated: list[dict[str, JsonValue]] = []
+    changed = False
+    for record in existing:
+        if record.get("person_id") != action.person_id:
+            updated.append(record)
+            continue
+        if record.get("commitment") == action.commitment:
+            return MechanismOutcome(outcome_code="commitment_denied_no_change")
+        updated.append(
+            CommitmentRecord(
+                person_id=action.person_id,
+                commitment=action.commitment,
+                updated_at_day=context.effect.logical_time // MINUTES_PER_DAY,
+            ).model_dump(mode="json")
+        )
+        changed = True
+    if not changed:
+        raise ValueError("commitment action names an absent person")
+    return MechanismOutcome(
+        outcome_code="commitment_recorded",
+        updates=[
+            FactUpdate(
+                fact_id="commitment_register.items",
+                value=cast(JsonValue, updated),
+            )
+        ],
+    )
+
+
+def _exact_scope_threshold(context: MechanismContext) -> MechanismOutcome:
+    action = ScopeThresholdAction.model_validate(context.effect.payload)
+    updates: list[FactUpdate] = []
+    if context.read("deployment_proposal.scope") != action.scope:
+        updates.append(FactUpdate(fact_id="deployment_proposal.scope", value=action.scope))
+    if context.read("deployment_proposal.decision_threshold") != action.decision_threshold:
+        updates.append(
+            FactUpdate(
+                fact_id="deployment_proposal.decision_threshold",
+                value=action.decision_threshold,
+            )
+        )
+    if not updates:
+        return MechanismOutcome(outcome_code="scope_threshold_denied_no_change")
+    return MechanismOutcome(outcome_code="scope_threshold_recorded", updates=updates)
+
+
+def _exact_alignment_delivery(context: MechanismContext) -> MechanismOutcome:
+    action = AlignmentMessageAction.model_validate(context.effect.payload)
+    target = context.mechanism.mechanism_id.removeprefix("alignment_delivery_")
+    if target not in PERSON_IDS:
+        raise ValueError("alignment delivery has an unknown person")
+    if target == action.sender_id:
+        return MechanismOutcome(outcome_code="alignment_sender_delivery_skipped")
+    content = _render_json(
+        {
+            "document_kind": "alignment_message",
+            "sender_id": action.sender_id,
+            "content": action.content,
+        }
+    )
+    return MechanismOutcome(
+        outcome_code="alignment_message_delivered",
+        observations=[
+            ObservationDraft(
+                target_entity_id=target,
+                via_port_id=context.target_port.port_id,
+                apparent_content=content,
+                apparent_source_ref=action.sender_id,
+            )
+        ],
+    )
+
+
+def _exact_withdrawal(context: MechanismContext) -> MechanismOutcome:
+    PartnerWithdrawalAction.model_validate(context.effect.payload)
+    count = context.read("decision_record.active_partner_count")
+    if not isinstance(count, int) or isinstance(count, bool):
+        raise TypeError("active partner count must be an integer")
+    if count <= 4:
+        return MechanismOutcome(outcome_code="withdrawal_denied_already_recorded")
+    return MechanismOutcome(
+        outcome_code="partner_withdrawal_recorded",
+        updates=[
+            FactUpdate(fact_id="decision_record.active_partner_count", value=count - 1)
+        ],
+    )
+
+
+def _exact_terminal_decision(context: MechanismContext) -> MechanismOutcome:
+    if context.read("external_decision_registry.received_status") is not None:
+        return MechanismOutcome(outcome_code="terminal_decision_denied_already_final")
+    if context.target_port.port_id == "deadline_transition_in":
+        DeadlineTransitionAction.model_validate(context.effect.payload)
+        return _accepted_terminal_outcome(
+            status="no_decision_by_horizon",
+            scope="none",
+            source="deadline",
+        )
+    proposal = DecisionProposal.model_validate(context.effect.payload)
+    issues = _record_list(context.read("issue_register.items"))
+    commitments = _record_list(context.read("commitment_register.items"))
+    active_partners = context.read("decision_record.active_partner_count")
+    proposal_scope = context.read("deployment_proposal.scope")
+    open_blocking = any(
+        item.get("blocking") is True
+        and item.get("lifecycle") in {"open", "reopened"}
+        for item in issues
+    )
+    commitment_values = {item.get("commitment") for item in commitments}
+    eligible = False
+    if proposal.requested_status == "deploy_on_time":
+        eligible = (
+            proposal.requested_scope == "full"
+            and proposal_scope == "full"
+            and commitment_values == {"support_full"}
+            and active_partners == 5
+            and not open_blocking
+        )
+    elif proposal.requested_status == "scope_reduced":
+        eligible = (
+            proposal.requested_scope == "reduced"
+            and proposal_scope == "reduced"
+            and commitment_values <= {"support_full", "support_reduced"}
+            and active_partners == 5
+            and not open_blocking
+        )
+    if not eligible:
+        return MechanismOutcome(outcome_code="terminal_decision_denied_ineligible")
+    return _accepted_terminal_outcome(
+        status=proposal.requested_status,
+        scope=proposal.requested_scope,
+        source="reviewed_proposal",
+    )
+
+
+def _accepted_terminal_outcome(
+    *,
+    status: FinalDecision,
+    scope: DecisionScope,
+    source: Literal["reviewed_proposal", "deadline"],
+) -> MechanismOutcome:
+    record = TerminalDecisionRecord(status=status, scope=scope, source=source)
+    content = _render_model(record)
+    representation_id = f"terminal_decision_{status}"
+    return MechanismOutcome(
+        outcome_code="terminal_decision_accepted",
+        updates=[
+            FactUpdate(fact_id="decision_record.gate_status", value="approved"),
+            FactUpdate(fact_id="decision_record.proposed_status", value=status),
+            FactUpdate(fact_id="decision_record.proposed_scope", value=scope),
+        ],
+        representations=[
+            RepresentationDraft(
+                representation_id=representation_id,
+                carrier_id="terminal_decision_carrier",
+                encoding="application/vnd.cybernetic.terminal-decision+json",
+                content=content,
+                actual_source_ref="terminal_decision_gate",
+            )
+        ],
+        effects=[
+            EffectDraft(
+                output_port_id="terminal_decision_out",
+                effect_type="terminal_decision",
+                representation_id=representation_id,
+                payload={},
+            )
+        ],
+    )
+
+
+def _exact_external_decision_receipt(context: MechanismContext) -> MechanismOutcome:
+    if context.read("external_decision_registry.received_status") is not None:
+        return MechanismOutcome(outcome_code="external_receipt_denied_already_final")
+    representation = _required_effect_representation(context)
+    record = TerminalDecisionRecord.model_validate_json(representation.content)
+    return MechanismOutcome(
+        outcome_code="external_decision_received",
+        updates=[
+            FactUpdate(
+                fact_id="external_decision_registry.received_status",
+                value=record.status,
+            ),
+            FactUpdate(
+                fact_id="external_decision_registry.received_scope",
+                value=record.scope,
+            ),
+        ],
+    )
+
+
+def _scripted_meeting_clock(item: ActiveSystemInput) -> ActiveStepResult:
+    wake_index = _private_int(item, "wake_index")
+    if wake_index < 4:
+        action = ActionIntent(
+            output_port_id="scheduler_wake_out",
+            payload=SchedulerWakeAction(
+                meeting_index=wake_index,
+                modeled_day=MEETING_DAYS[wake_index],
+            ).model_dump(mode="json"),
+            public_summary=(
+                f"The retained scheduler opened meeting {wake_index + 1} "
+                f"for modeled day {MEETING_DAYS[wake_index]}."
+            ),
+        )
+        next_time = (
+            MEETING_TIMES[wake_index + 1]
+            if wake_index + 1 < 4
+            else DECISION_DEADLINE_TIME
+        )
+        directive = UpdateScheduleDirective(mode="schedule", next_update_at=next_time)
+    elif wake_index == 4:
+        action = ActionIntent(
+            output_port_id="deadline_transition_out",
+            payload=DeadlineTransitionAction().model_dump(mode="json"),
+            public_summary="The retained day-10 decision deadline became due.",
+        )
+        directive = UpdateScheduleDirective(mode="dormant")
+    else:
+        raise ValueError("meeting clock wake index exceeded the reviewed schedule")
+    return _scripted_result(
+        item,
+        private_state={"wake_index": wake_index + 1},
+        actions=[action],
+        directive=directive,
+    )
+
+
+def _scripted_pressure_source(item: ActiveSystemInput) -> ActiveStepResult:
+    emissions = _private_int(item, "emissions")
+    if emissions not in {0, 1}:
+        raise ValueError("pressure source exceeded its reviewed emission schedule")
+    output_ports = {
+        "technical_pressure_source": (
+            "technical_source_out",
+            "technical_pressure_message",
+        ),
+        "policy_pressure_source": ("policy_source_out", "policy_pressure_message"),
+        "local_pressure_source": ("local_source_out", "local_pressure_message"),
+    }
+    output_port, representation_id = output_ports[item.active_system_id]
+    directive = (
+        UpdateScheduleDirective(mode="schedule", next_update_at=4 * MINUTES_PER_DAY)
+        if emissions == 0
+        else UpdateScheduleDirective(mode="dormant")
+    )
+    return _scripted_result(
+        item,
+        private_state={"emissions": emissions + 1},
+        actions=[
+            ActionIntent(
+                output_port_id=output_port,
+                representation_id=representation_id,
+                payload={},
+                public_summary=f"{item.active_system_id} emitted its retained message.",
+            )
+        ],
+        directive=directive,
+    )
+
+
+def _scripted_mission_coordinator(item: ActiveSystemInput) -> ActiveStepResult:
+    state = _person_state(item)
+    _retain_verification_result(state, item)
+    actions: list[ActionIntent] = []
+    meeting_index = _due_meeting_index(item, state)
+    if meeting_index == 0:
+        actions.append(
+            ActionIntent(
+                output_port_id="alignment_message_out",
+                payload=AlignmentMessageAction(
+                    sender_id="mission_coordinator",
+                    content="Surface material concerns and retain reasons for changes.",
+                ).model_dump(mode="json"),
+                public_summary="The coordinator requested explicit, reasoned review.",
+            )
+        )
+    elif meeting_index == 1:
+        actions.append(_scope_action("full"))
+    elif meeting_index == 3:
+        bounded = state["verification_result"] == "bounded_support"
+        requested_scope: DecisionScope = "reduced" if bounded else "full"
+        requested_status: FinalDecision = "scope_reduced" if bounded else "deploy_on_time"
+        if bounded:
+            actions.append(_scope_action("reduced"))
+        actions.append(
+            ActionIntent(
+                output_port_id="terminal_proposal_out",
+                payload=DecisionProposal(
+                    proposal_id="meeting_four_terminal_proposal",
+                    proposed_by="mission_coordinator",
+                    requested_status=requested_status,
+                    requested_scope=requested_scope,
+                    evidence_refs=["independent_calibration_response"],
+                    acknowledged_issue_ids=list(
+                        cast(list[str], state["opened_issue_ids"])
+                    ),
+                    active_partner_ids=list(PERSON_IDS),
+                ).model_dump(mode="json"),
+                public_summary=(
+                    f"The coordinator proposed {requested_status} at "
+                    f"{requested_scope} scope."
+                ),
+            )
+        )
+    return _person_result(item, state, actions, meeting_index)
+
+
+def _scripted_technical_lead(item: ActiveSystemInput) -> ActiveStepResult:
+    state = _person_state(item)
+    _retain_verification_result(state, item)
+    actions: list[ActionIntent] = []
+    meeting_index = _due_meeting_index(item, state)
+    if meeting_index == 0 and state["commitment"] != "defer":
+        actions.append(_commitment_intent("technical_validation_lead", "defer"))
+        state["commitment"] = "defer"
+    received_technical_pressure = any(
+        document.get("topic") == "calibration_uncertainty"
+        for document in _observation_documents(item)
+    )
+    if not _private_bool(state, "verification_requested") and (
+        received_technical_pressure or meeting_index == 1
+    ):
+        actions.append(
+            ActionIntent(
+                output_port_id="verification_request_out",
+                representation_id="technical_validation_dossier_copy",
+                payload=VerificationRequestAction().model_dump(mode="json"),
+                public_summary="The validation lead requested independent calibration review.",
+            )
+        )
+        state["verification_requested"] = True
+    result = cast(str, state["verification_result"])
+    desired: Commitment | None = None
+    if result == "supportive":
+        desired = "support_full"
+    elif result == "bounded_support":
+        desired = "support_reduced"
+    if desired is not None and state["commitment"] != desired:
+        actions.append(_commitment_intent("technical_validation_lead", desired))
+        state["commitment"] = desired
+    return _person_result(item, state, actions, meeting_index)
+
+
+def _scripted_policy_representative(item: ActiveSystemInput) -> ActiveStepResult:
+    state = _person_state(item)
+    _retain_verification_result(state, item)
+    actions: list[ActionIntent] = []
+    meeting_index = _due_meeting_index(item, state)
+    opened = cast(list[str], state["opened_issue_ids"])
+    if meeting_index == 0 and "oversight_review" not in opened:
+        actions.append(
+            _issue_intent(
+                issue_id="oversight_review",
+                topic="Ordinary oversight review",
+                lifecycle="open",
+                blocking=True,
+                evidence_refs=["deployment_proposal_copy"],
+            )
+        )
+        opened.append("oversight_review")
+    documents = _observation_documents(item)
+    received_policy_pressure = any(
+        document.get("topic") == "sovereignty_and_transparency"
+        for document in documents
+    )
+    verification_result = cast(str, state["verification_result"])
+    if (
+        received_policy_pressure
+        and verification_result != "bounded_support"
+        and "sovereignty_concern" not in opened
+    ):
+        actions.append(
+            _issue_intent(
+                issue_id="sovereignty_concern",
+                topic="Sovereignty and transparency concern",
+                lifecycle="open",
+                blocking=True,
+                evidence_refs=["policy_pressure_message"],
+            )
+        )
+        opened.append("sovereignty_concern")
+    reopened = cast(list[str], state.setdefault("reopened_issue_ids", []))
+    if (
+        verification_result == "insufficient"
+        and "sovereignty_concern" in opened
+        and "sovereignty_concern" not in reopened
+    ):
+        actions.append(
+            _issue_intent(
+                issue_id="sovereignty_concern",
+                topic="Sovereignty and transparency concern",
+                lifecycle="reopened",
+                blocking=True,
+                evidence_refs=["independent_calibration_response"],
+            )
+        )
+        reopened.append("sovereignty_concern")
+    if verification_result in {"supportive", "bounded_support"}:
+        for issue_id in list(opened):
+            resolved = cast(list[str], state.setdefault("resolved_issue_ids", []))
+            if issue_id in resolved:
+                continue
+            actions.append(
+                _issue_intent(
+                    issue_id=issue_id,
+                    topic=(
+                        "Ordinary oversight review"
+                        if issue_id == "oversight_review"
+                        else "Sovereignty and transparency concern"
+                    ),
+                    lifecycle="resolved",
+                    blocking=True,
+                    evidence_refs=["independent_calibration_response"],
+                )
+            )
+            resolved.append(issue_id)
+    return _person_result(item, state, actions, meeting_index)
+
+
+def _scripted_local_liaison(item: ActiveSystemInput) -> ActiveStepResult:
+    state = _person_state(item)
+    _retain_verification_result(state, item)
+    actions: list[ActionIntent] = []
+    meeting_index = _due_meeting_index(item, state)
+    received_local_pressure = any(
+        document.get("topic") == "local_safety_and_legitimacy"
+        for document in _observation_documents(item)
+    )
+    if received_local_pressure and not _private_bool(state, "source_recorded"):
+        bounded = state["verification_result"] == "bounded_support"
+        disposition: SourceDisposition = "relied_on" if bounded else "validation_pending"
+        actions.append(
+            ActionIntent(
+                output_port_id="source_disposition_out",
+                payload=SourceDispositionAction(
+                    person_id="local_public_health_liaison",
+                    source_id="local_pressure_source",
+                    disposition=disposition,
+                    evidence_refs=["local_pressure_message"],
+                ).model_dump(mode="json"),
+                public_summary=f"The local liaison recorded {disposition} for the local source.",
+            )
+        )
+        desired: Commitment = "support_reduced" if bounded else "defer"
+        if state["commitment"] != desired:
+            actions.append(_commitment_intent("local_public_health_liaison", desired))
+            state["commitment"] = desired
+        state["source_recorded"] = True
+    if (
+        state["verification_result"] == "bounded_support"
+        and state["commitment"] != "support_reduced"
+    ):
+        actions.append(
+            _commitment_intent("local_public_health_liaison", "support_reduced")
+        )
+        state["commitment"] = "support_reduced"
+    return _person_result(item, state, actions, meeting_index)
+
+
+def _scripted_partner_representative(item: ActiveSystemInput) -> ActiveStepResult:
+    state = _person_state(item)
+    _retain_verification_result(state, item)
+    meeting_index = _due_meeting_index(item, state)
+    actions: list[ActionIntent] = []
+    verification_result = state["verification_result"]
+    if verification_result == "insufficient" and state["commitment"] != "withdraw":
+        actions.extend(
+            [
+                _commitment_intent("partner_representative", "withdraw"),
+                ActionIntent(
+                    output_port_id="withdrawal_out",
+                    payload=PartnerWithdrawalAction().model_dump(mode="json"),
+                    public_summary=(
+                        "The partner representative withdrew after the "
+                        "independent review remained insufficient."
+                    ),
+                ),
+            ]
+        )
+        state["commitment"] = "withdraw"
+    elif (
+        verification_result == "bounded_support"
+        and state["commitment"] != "support_reduced"
+    ):
+        actions.append(_commitment_intent("partner_representative", "support_reduced"))
+        state["commitment"] = "support_reduced"
+    return _person_result(item, state, actions, meeting_index)
+
+
+def _person_result(
+    item: ActiveSystemInput,
+    state: dict[str, JsonValue],
+    actions: list[ActionIntent],
+    meeting_index: int | None,
+) -> ActiveStepResult:
+    if meeting_index is None:
+        directive = UpdateScheduleDirective(mode="preserve")
+    elif meeting_index + 1 < len(MEETING_TIMES):
+        directive = UpdateScheduleDirective(
+            mode="schedule",
+            next_update_at=MEETING_TIMES[meeting_index + 1],
+        )
+    else:
+        directive = UpdateScheduleDirective(mode="dormant")
+    return _scripted_result(
+        item,
+        private_state=state,
+        actions=actions,
+        directive=directive,
+    )
+
+
+def _scripted_result(
+    item: ActiveSystemInput,
+    *,
+    private_state: dict[str, JsonValue],
+    actions: list[ActionIntent],
+    directive: UpdateScheduleDirective,
+) -> ActiveStepResult:
+    return ActiveStepResult(
+        proposal=ActiveProposal(
+            active_system_id=item.active_system_id,
+            implementation_id=f"scripted_coordination_{item.active_system_id}_v1",
+            private_state=private_state,
+            actions=actions,
+            update_schedule=directive,
+        )
+    )
+
+
+def _person_state(item: ActiveSystemInput) -> dict[str, JsonValue]:
+    state = dict(item.private_state)
+    state.setdefault("verification_requested", False)
+    state.setdefault("source_recorded", False)
+    state.setdefault("resolved_issue_ids", [])
+    state.setdefault("reopened_issue_ids", [])
+    return state
+
+
+def _due_meeting_index(
+    item: ActiveSystemInput,
+    state: dict[str, JsonValue],
+) -> int | None:
+    if not any(cause.kind == "internal_wake" for cause in item.activation_causes):
+        return None
+    completed = _private_int_value(state, "meetings_completed")
+    if completed >= len(MEETING_TIMES):
+        raise ValueError("person exceeded the four reviewed meetings")
+    state["meetings_completed"] = completed + 1
+    return completed
+
+
+def _retain_verification_result(
+    state: dict[str, JsonValue],
+    item: ActiveSystemInput,
+) -> None:
+    for document in _observation_documents(item):
+        if document.get("document_kind") == "verification_response":
+            result = document.get("result")
+            if result not in {"supportive", "insufficient", "bounded_support"}:
+                raise ValueError("verification response has unknown result")
+            state["verification_result"] = result
+
+
+def _scope_action(scope: DecisionScope) -> ActionIntent:
+    threshold: Literal[
+        "reviewed_evidence_and_partner_support",
+        "bounded_evidence_and_partner_support",
+    ] = (
+        "bounded_evidence_and_partner_support"
+        if scope == "reduced"
+        else "reviewed_evidence_and_partner_support"
+    )
+    return ActionIntent(
+        output_port_id="scope_threshold_out",
+        payload=ScopeThresholdAction(
+            scope=scope,
+            decision_threshold=threshold,
+        ).model_dump(mode="json"),
+        public_summary=f"The coordinator proposed {scope} deployment scope.",
+    )
+
+
+def _commitment_intent(person_id: PersonId, commitment: Commitment) -> ActionIntent:
+    return ActionIntent(
+        output_port_id=f"{person_id}_commitment_out",
+        payload=CommitmentAction(
+            person_id=person_id,
+            commitment=commitment,
+        ).model_dump(mode="json"),
+        public_summary=f"{person_id} changed commitment to {commitment}.",
+    )
+
+
+def _issue_intent(
+    *,
+    issue_id: str,
+    topic: str,
+    lifecycle: IssueLifecycle,
+    blocking: bool,
+    evidence_refs: list[str],
+) -> ActionIntent:
+    return ActionIntent(
+        output_port_id="issue_update_out",
+        payload=IssueUpdateAction(
+            issue_id=issue_id,
+            topic=topic,
+            lifecycle=lifecycle,
+            blocking=blocking,
+            opened_by="sovereignty_policy_representative",
+            evidence_refs=evidence_refs,
+        ).model_dump(mode="json"),
+        public_summary=f"The policy representative marked {issue_id} {lifecycle}.",
+    )
+
+
+def _observation_documents(item: ActiveSystemInput) -> list[dict[str, JsonValue]]:
+    documents: list[dict[str, JsonValue]] = []
+    for observation in item.observations:
+        try:
+            value = json.loads(observation.apparent_content)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            documents.append(cast(dict[str, JsonValue], value))
+    return documents
+
+
+def _required_effect_representation(context: MechanismContext) -> RepresentationToken:
+    if context.representation is None:
+        raise ValueError("mechanism requires a routed representation")
+    return context.representation
+
+
+def _record_list(value: JsonValue) -> list[dict[str, JsonValue]]:
+    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
+        raise TypeError("record fact must be a list of objects")
+    return [cast(dict[str, JsonValue], item) for item in value]
+
+
+def _private_int(item: ActiveSystemInput, key: str) -> int:
+    return _private_int_value(item.private_state, key)
+
+
+def _private_int_value(state: Mapping[str, JsonValue], key: str) -> int:
+    value = state.get(key)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise TypeError(f"private state {key} must be an integer")
+    return value
+
+
+def _private_bool(state: Mapping[str, JsonValue], key: str) -> bool:
+    value = state.get(key)
+    if not isinstance(value, bool):
+        raise TypeError(f"private state {key} must be a boolean")
+    return value
+
+
+def _render_model(model: BaseModel) -> str:
+    return _render_json(model.model_dump(mode="json"))
+
+
+def _render_json(value: object) -> str:
+    return _canonical_json(value).decode()
+
+
+def _terminal_evidence_event_ids(
+    session: ActiveRuntimeSession,
+    run_control: ResolvedRunControlPlan,
+    condition_ids: list[str],
+) -> list[str]:
+    if not condition_ids:
+        return []
+    conditions = {item.condition_id: item for item in run_control.terminal_conditions}
+    return [
+        event.event_id
+        for event in session.checkpoint().core_checkpoint.events
+        if event.patch is not None
+        and any(
+            change.fact_id == conditions[condition_id].fact_id
+            and change.after == conditions[condition_id].expected_value
+            for change in event.patch.fact_changes
+            for condition_id in condition_ids
+        )
+    ][-1:]
