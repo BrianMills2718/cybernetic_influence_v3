@@ -14,11 +14,12 @@ instructions to continue their former “next slice” sections.
 
 ## Current sequence
 
-[Slice 20: Inspectable extended runs](020-inspectable-extended-runs.md) is ready
-for implementation. Complete 20A's dual-level evidence-bound narration, audit
-and commit it, then complete 20B's typed completion/horizon contract, audit and
-commit it, and finally observe 20C's compatibility proof on current runs. Do
-not manufacture empty turns or add a general game-master actor.
+[Slice 20: Inspectable extended runs](020-inspectable-extended-runs.md) now
+includes generic polling-backed live progress: strict runtime checkpoints keep
+the existing Simulation graph visible, animate only retained causal evidence,
+and defer narration until causal execution completes. Complete its 20C
+cross-scenario proof and then 20D's integrated compatibility proof; do not
+manufacture empty turns or add a general game-master actor.
 
 [Slice 21: Coordination-environment assay](021-coordination-environment-assay.md)
 is planned after Slice 20. It builds one synthetic, recurring multinational

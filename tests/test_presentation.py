@@ -9,7 +9,11 @@ from fastapi.testclient import TestClient
 
 from cybernetic_influence.api import create_app
 from cybernetic_influence.causal_core.models import CausalEvent, FactChange, StatePatch
-from cybernetic_influence.presentation import analyst_event, service_desk_summary
+from cybernetic_influence.presentation import (
+    _analyst_animation_cues,
+    analyst_event,
+    service_desk_summary,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -73,6 +77,36 @@ def test_physical_badge_never_crosses_analyst_boundary(tmp_path: Path) -> None:
         and "access_policy_copy" in event["focus_ids"]
     )
     assert policy_event["state_revision"] >= 1
+
+
+def test_exact_mechanism_playback_cue_distinguishes_retained_denial() -> None:
+    from cybernetic_influence.scenarios.physical_access import (
+        physical_access_arm_configurations,
+        physical_access_fixture,
+        physical_access_scripted_bindings,
+        run_physical_access,
+    )
+
+    arm = next(
+        item
+        for item in physical_access_arm_configurations()
+        if item.arm_id == "authorization_absent"
+    )
+    fixture = physical_access_fixture(arm)
+    result = run_physical_access(
+        fixture,
+        physical_access_scripted_bindings(fixture),
+        run_id="presentation_denied_cue",
+    )
+    denied = next(
+        event
+        for event in result.core_result.events
+        if event.event_kind == "mechanism_executed"
+        and "denied" in str(event.details.get("outcome_code"))
+    )
+    cues = _analyst_animation_cues(denied, result.core_result.final_state)
+    assert cues[0]["kind"] == "mechanism_denied"
+    assert cues[0]["event_id"] == denied.event_id
 
 
 def test_analytical_boundary_is_temporal_reversible_and_evidence_linked(

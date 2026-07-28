@@ -901,6 +901,9 @@ class CausalSession:
             ),
             read_spatial_link_ids=list(mechanism.read_spatial_link_ids),
             invariants=invariants,
+            # Public exact outcome classification for analyst playback. It
+            # neither changes the transition nor exposes mechanism inputs.
+            details={"outcome_code": outcome.outcome_code},
         )
         commit_time = self._next_positive_time(
             requested=effect.logical_time,

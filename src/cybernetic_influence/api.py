@@ -729,6 +729,11 @@ def create_app(
                 else []
             )
             call_summaries.extend(_error_call_summaries(error))
+            # A retained terminal worker failure must not advertise failure
+            # while retaining the process-wide live slot.
+            if worker_execution and lock_acquired:
+                live_lock.release()
+                lock_acquired = False
             failed = {
                 **initial,
                 "status": "failed",
@@ -1401,6 +1406,12 @@ def create_app(
             paused_document = {**initial, "status": "paused", "pause_message": "Paused after a completed causal step.", **_checkpoint_progress_projection(paused_error.checkpoint), "continuation": _checkpoint_continuation(paused_error.checkpoint, lifecycle="paused")}
             return runs.save(retain_progress_history(paused_document, run_id))
         except Exception as error:
+            # Keep terminal status and lock availability coherent for a
+            # polling operator: once failure is visible, another worker may
+            # start. The finally block observes the cleared ownership.
+            if worker_execution and lock_acquired:
+                live_lock.release()
+                lock_acquired = False
             failed = {
                 **initial,
                 "status": "failed",

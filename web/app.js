@@ -1187,6 +1187,17 @@ function applyLiveProgress(record) {
     participantIds:record.kind === 'activation_started' ? (record.participant_ids || []) : [],
     cue,
   }
+  $('#live-evidence').hidden = false
+  if (record.kind === 'activation_started') {
+    $('#live-evidence-title').textContent = `Pending activation · ${(record.participant_ids || []).join(', ').replaceAll('_', ' ')}`
+    $('#live-evidence-body').textContent = 'These participants share one frozen pre-moment state. No same-moment action is yet committed.'
+  } else if (cue) {
+    $('#live-evidence-title').textContent = cue.kind.replaceAll('_', ' ')
+    $('#live-evidence-body').textContent = cue.label
+  } else {
+    $('#live-evidence-title').textContent = record.kind.replaceAll('_', ' ')
+    $('#live-evidence-body').textContent = 'The runtime retained this causal checkpoint; inspect the final timeline for its complete evidence.'
+  }
   renderGraph()
   if (record.kind === 'activation_started') {
     $('#run-status').textContent = `Thinking: ${(record.participant_ids || []).join(', ').replaceAll('_', ' ') || 'participant'}…`
@@ -1202,6 +1213,9 @@ async function pollLiveRun(runId) {
     while (activeRunId === runId) {
       const update = await request(`/api/runs/${encodeURIComponent(runId)}/progress?after_sequence=${liveProgressSequence}`)
       for (const record of update.records || []) {
+        // A retry, delayed poll, or duplicate response cannot replay an older
+        // visual state over a later retained checkpoint.
+        if (!Number.isInteger(record.sequence) || record.sequence <= liveProgressSequence) continue
         liveProgressSequence = record.sequence
         applyLiveProgress(record)
       }
@@ -1209,6 +1223,7 @@ async function pollLiveRun(runId) {
         const finalRun = await request(`/api/runs/${encodeURIComponent(runId)}`)
         liveActivity = null
         liveProjection = null
+        $('#live-evidence').hidden = true
         render(finalRun)
         await loadHistory()
         return
@@ -1663,6 +1678,9 @@ $('#run').onclick = async () => {
   liveProgressSequence = 0
   liveProjection = null
   liveActivity = null
+  $('#live-evidence').hidden = false
+  $('#live-evidence-title').textContent = 'Live run started'
+  $('#live-evidence-body').textContent = 'Waiting for the first retained causal update.'
   const pausable = $('#scenario').value === 'service_desk'
   $('#pause').hidden = !pausable
   $('#stop').hidden = !pausable
@@ -1860,6 +1878,9 @@ $('#authoring-live-run').onclick = async () => {
     $('#result').hidden = false
     $('#result-status').textContent = 'running · approved authored scenario'
     $('#result-cost').textContent = 'Waiting for the first retained causal update…'
+    $('#live-evidence').hidden = false
+    $('#live-evidence-title').textContent = 'Live run started'
+    $('#live-evidence-body').textContent = 'Waiting for the first retained causal update.'
     renderProjectionControls()
     renderGraph()
     void pollLiveRun(run.run_id)

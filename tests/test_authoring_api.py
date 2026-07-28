@@ -221,6 +221,19 @@ def test_failed_authored_live_run_is_retained_with_provider_evidence(
             "error_message": "forced provider failure",
         }
     ]
+    # A worker-side provider failure cannot strand the process-wide live lock.
+    retry = api.post(
+        f"/api/authoring/drafts/{draft_id}/runs",
+        json={
+            "execution": "live",
+            "llm_options": {
+                "model": effective.model,
+                "agent_reasoning_effort": "none",
+                "max_total_cost": 0.20,
+            },
+        },
+    )
+    assert retry.status_code == 202, retry.text
 
 
 def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: Path) -> None:
@@ -625,6 +638,14 @@ def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) ->
     assert run.status_code == 200
     assert run.json()["outcome"]["status"] == "assessed_contested"
     assert run.json()["authoring"]["template_id"] == "information_campaign_v1"
+    progress = api.get(f"/api/runs/{run.json()['run_id']}/progress")
+    assert progress.status_code == 200
+    records = progress.json()["records"]
+    assert records[0]["kind"] == "activation_started"
+    assert any(
+        item["kind"] == "causal_moment_committed" for item in records
+    )
+    assert all("scenario" not in item for item in records)
 
 
 def test_authoring_repairs_a_compiler_error_before_returning_the_draft(tmp_path: Path) -> None:

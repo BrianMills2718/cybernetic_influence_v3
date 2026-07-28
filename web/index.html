@@ -174,6 +174,11 @@
           <div id="graph" class="graph" aria-label="Connected causal graph"></div>
           <aside id="inspector"><p class="muted">Select a node.</p></aside>
         </div>
+        <section id="live-evidence" class="live-evidence" hidden aria-live="polite">
+          <span class="eyebrow">Live evidence</span>
+          <strong id="live-evidence-title">Waiting for a retained causal update</strong>
+          <p id="live-evidence-body" class="muted">The graph will change only when the runtime retains public evidence.</p>
+        </section>
       </section>
 
       <section id="result" hidden>

@@ -88,6 +88,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert page.headers["x-content-type-options"] == "nosniff"
     assert "Scenario condition" in page.text
     assert "Simulation map" in page.text
+    assert "Live evidence" in page.text
     assert "Spatial topology" in page.text
     assert "Configured interaction pathways" in page.text
     assert "Realized causal graph" in page.text
@@ -164,6 +165,14 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"showTraceInPlace(button.dataset.person)" in app_script.content
     assert b"trace.style.minHeight" in app_script.content
     assert b"kind:edge.kind || 'connection'" in app_script.content
+    assert b"function pollLiveRun" in app_script.content
+    assert b"after_sequence=${liveProgressSequence}" in app_script.content
+    assert b"function applyLiveProgress" in app_script.content
+    # The shared canvas owns playback; the shell supplies retained updates and
+    # contains no catalog-scenario branch for their visual interpretation.
+    assert b"liveCue" in graph_script.content
+    assert b"animateMotion" in graph_script.content
+    assert b"prefers-reduced-motion" in graph_styles.content
 
 
 def test_scenario_preview_exposes_the_initial_map_without_creating_a_run(tmp_path: Path) -> None:
@@ -536,6 +545,33 @@ def test_retained_progress_is_ordered_analyst_safe_and_replayable(
         params={"after_sequence": progress["latest_sequence"]},
     ).json()
     assert after["records"] == []
+
+
+def test_physical_access_uses_the_same_retained_progress_schema(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+    run = api.post(
+        "/api/runs",
+        json={
+            "scenario": "physical_access",
+            "arm_id": "authorization_absent",
+            "execution": "scripted",
+        },
+    ).json()
+    progress = api.get(f"/api/runs/{run['run_id']}/progress").json()
+    records = progress["records"]
+    assert progress["status"] == "completed"
+    assert records[0]["kind"] == "activation_started"
+    assert any(
+        item["kind"] == "causal_moment_committed" for item in records
+    )
+    # The public playback schema does not branch on an arm or scenario name.
+    assert all("scenario" not in item for item in records)
+    committed = next(
+        item for item in records if item["kind"] == "causal_moment_committed"
+    )
+    assert "private_state" not in str(committed["projection"])
 
 
 def test_live_worker_retains_pending_activation_before_commit(tmp_path: Path) -> None:

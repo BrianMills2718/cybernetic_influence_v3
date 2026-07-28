@@ -19,7 +19,8 @@ from cybernetic_influence.active_runtime import (
 AnalystAnimationKind = Literal[
     "action_attempt",
     "information_transfer",
-    "mechanism_executed",
+    "mechanism_accepted",
+    "mechanism_denied",
     "state_changed",
     "observation_delivered",
     "effect_dissipated",
@@ -95,10 +96,14 @@ def _analyst_animation_cues(
         if event.connection_id is not None:
             edge_ids = [event.connection_id]
     elif event.event_kind == "mechanism_executed":
-        # A mechanism event proves execution, but not an unrecorded semantic
-        # judgement such as "accepted" or "denied".  Keep the visual claim
-        # exactly at the retained event's evidence level.
-        cue_kind = "mechanism_executed"
+        outcome_code = event.details.get("outcome_code")
+        if not isinstance(outcome_code, str):
+            raise ValueError("mechanism event lacks its public outcome code")
+        cue_kind = (
+            "mechanism_denied"
+            if "denied" in outcome_code or "rejected" in outcome_code
+            else "mechanism_accepted"
+        )
         target_id = event.mechanism_id
         if event.target_port_id is not None:
             edge_ids = [f"binding_{event.target_port_id}"]

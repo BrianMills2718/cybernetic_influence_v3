@@ -155,6 +155,8 @@ summary { cursor:pointer; font-weight:700; }
 .flow-controls { padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
 .canvas-replaced { display:none !important; }
 .workspace { display:grid; grid-template-columns:minmax(0,2fr) minmax(300px,.7fr); gap:16px; min-height:520px; }
+.live-evidence { display:grid; gap:5px; margin-top:12px; padding:12px 15px; border:1px solid #536f8b; border-radius:10px; background:rgba(36, 69, 99, .18); }
+.live-evidence strong { color:#e8eef7; }
 .routes { display:flex; gap:8px; overflow-x:auto; margin:12px 0; padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
 .route { flex:0 0 auto; padding:7px 10px; border-radius:999px; background:var(--surface2); color:var(--muted); font-size:11px; }
 .route strong { color:#dbe8f6; }

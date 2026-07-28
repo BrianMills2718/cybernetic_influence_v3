@@ -1,13 +1,17 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import dagre from '@dagrejs/dagre'
 import ReactFlow, {
   Background,
   BackgroundVariant,
+  BaseEdge,
   Controls,
+  EdgeLabelRenderer,
+  getBezierPath,
   MiniMap,
   ReactFlowProvider,
   type Edge,
+  type EdgeProps,
   type Node,
   useEdgesState,
   useNodesInitialized,
@@ -119,11 +123,7 @@ interface CanvasOptions {
   selectedEdgeId: string | null
   activity?: {
     participantIds: string[]
-    cue: {
-      source_id: string | null
-      target_id: string | null
-      edge_ids: string[]
-    } | null
+    cue: CanvasAnimationCue | null
   } | null
   onSelectNode: (nodeId: string) => void
   onSelectEdge: (edge: AnalystEdge) => void
@@ -140,6 +140,15 @@ interface CanvasNodeData {
 
 interface CanvasEdgeData {
   raw: AnalystEdge
+  cue?: CanvasAnimationCue | null
+}
+
+interface CanvasAnimationCue {
+  kind: 'action_attempt' | 'information_transfer' | 'mechanism_accepted' | 'mechanism_denied' | 'state_changed' | 'observation_delivered' | 'effect_dissipated'
+  label: string
+  source_id: string | null
+  target_id: string | null
+  edge_ids: string[]
 }
 
 const NODE_WIDTH = 194
@@ -225,11 +234,10 @@ function toCanvasEdge(
       && event.spatial_focus_ids.includes(item.target)
     ),
   )
-  const liveCue = Boolean(
-    activity?.cue?.edge_ids.includes(item.id)
-    || (activity?.cue?.source_id === item.source
-      && activity.cue.target_id === item.target),
-  )
+  // An endpoint match is not enough: token travel must name this retained,
+  // resolved graph edge explicitly rather than infer a path from two nodes.
+  const liveCue = Boolean(activity?.cue?.edge_ids.includes(item.id))
+  const cue = liveCue ? activity?.cue ?? null : null
   const active = focusedRoute || focusedSpatialLink || focusedEndpoints || liveCue
   return {
     id: item.id,
@@ -238,9 +246,13 @@ function toCanvasEdge(
     label: item.kind === 'spatial_link' && item.substrateEntityIds?.length
       ? `${relationLabel(item.kind)} ${item.substrateEntityIds.join(', ')}`
       : relationLabel(item.kind),
-    type: 'smoothstep',
+    // A moving token is reserved for a retained delivery/effect that names a
+    // resolved visible edge. Other event kinds get a truthful pulse only.
+    type: cue && ['information_transfer', 'observation_delivered'].includes(cue.kind)
+      ? 'liveCue'
+      : 'smoothstep',
     animated: active,
-    data: { raw: item },
+    data: { raw: item, cue },
     className: [
       `cy-flow-edge--${item.kind}`,
       active ? 'cy-flow-edge--active' : '',
@@ -265,6 +277,61 @@ function toCanvasEdge(
     labelBgPadding: [4, 3],
     labelBgBorderRadius: 4,
   }
+}
+
+function LiveCueEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style,
+  markerEnd,
+  data,
+}: EdgeProps<CanvasEdgeData>) {
+  const [reducedMotion, setReducedMotion] = useState(
+    () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+  )
+  useEffect(() => {
+    const query = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    if (!query) return undefined
+    const change = () => setReducedMotion(query.matches)
+    query.addEventListener('change', change)
+    return () => query.removeEventListener('change', change)
+  }, [])
+  const [path, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  })
+  const cue = data?.cue
+  if (!cue) return <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} />
+  return (
+    <>
+      <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} />
+      {reducedMotion ? (
+        <circle className="cy-live-token" r="6" cx={labelX} cy={labelY} />
+      ) : (
+        <circle className="cy-live-token" r="6">
+          <animateMotion dur="760ms" repeatCount="1" fill="freeze" path={path} />
+        </circle>
+      )}
+      <EdgeLabelRenderer>
+        <div
+          className="nodrag nopan cy-live-token-label"
+          style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}
+          title={cue.label}
+        >
+          {cue.label}
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  )
 }
 
 function dagreLayout(
@@ -725,6 +792,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
           maxZoom={2.2}
           nodesDraggable
           nodesConnectable={false}
+          edgeTypes={{ liveCue: LiveCueEdge }}
           proOptions={{ hideAttribution: true }}
         >
           <Background

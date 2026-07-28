@@ -177,6 +177,35 @@
   filter: drop-shadow(0 0 5px #54a8ff);
 }
 
+.cy-live-token {
+  fill: #f9d86b;
+  stroke: #ffffff;
+  stroke-width: 2px;
+  filter: drop-shadow(0 0 5px rgba(249, 216, 107, .9));
+}
+
+.cy-live-token-label {
+  position: absolute;
+  max-width: 230px;
+  overflow: hidden;
+  padding: 3px 6px;
+  border: 1px solid #f9d86b;
+  border-radius: 5px;
+  background: rgba(15, 23, 33, .96);
+  color: #fff3b0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cy-live-token-label { transition: none; }
+  .react-flow__edge.animated path { animation: none !important; }
+}
+
 .react-flow__edge-textbg {
   stroke: #2a394b;
   stroke-width: 1px;

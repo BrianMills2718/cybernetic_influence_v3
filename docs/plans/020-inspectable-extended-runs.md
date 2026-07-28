@@ -43,6 +43,13 @@ obtain explicit authorization.
   set and animates only event-derived configured edges after commitment. This
   preserves the distinction between configured pathways, world topology, and
   realized causal trajectory. No paid canary has been run.
+- **20C zero-cost proof:** focused API tests now retain the same ordered public
+  progress schema for Service Desk and Physical Access authorization denial,
+  while the approved information-campaign test proves the authored compiler
+  path. Runtime/presentation tests cover pending activation, retained failure,
+  exact denial cues, redaction, stale cursor behavior, and worker lock release.
+  The remaining 20D operator review may use only separately authorized live
+  calls.
 
 ## Outcome
 
@@ -442,7 +449,46 @@ facts into the generic engine.
 compatible, stop and write a migration decision before changing retained-run
 schema.
 
-## Slice 20C — Integrated compatibility proof
+## Slice 20C — Scenario-generic live causal playback
+
+**Classification:** shared runtime/UI vertical.
+
+Live execution retains a public, ordered stream of checkpoint updates while the
+causal runtime is still executing. Every current catalog scenario and approved
+authored scenario uses the same optional `ActiveRuntimeSession` observer and
+presentation adapter; no scenario or entity identifier selects playback
+behavior. `POST /api/runs` returns a retained `running` record with HTTP 202,
+then a bounded worker executes the run. The browser polls the retained stream;
+it does not infer activity from prompts, hidden state, or a scenario name.
+
+The observer emits a strict `activation_started` record from a frozen causal
+activation set before participant implementations run, then a committed
+causal-moment or exact-work record only after exact causal evidence exists.
+Failed activations remain forensic records and never become committed world
+outcomes. Progress projections redact protected material and contain only
+analyst-safe graph state, timeline events, and typed visual cues.
+
+The Simulation screen keeps the configured graph visible during a live run.
+Pending same-moment participants receive simultaneous halos. After commitment,
+the canvas pulses evidence-backed nodes and edges. A moving labeled token is
+permitted only for a retained routed effect or delivery that names a resolved
+visible edge; all other event kinds use non-travel pulses. Animation is
+presentation time only, respects reduced-motion preferences, and does not
+alter causal state or logical time. Narration starts after causal execution so
+its spend cannot influence a participant trajectory.
+
+**Acceptance:**
+
+- cursor polling returns only records after the supplied sequence and never
+  moves a stale browser view backward;
+- pause, stop, resume, retained reopening, observed cost, failure cleanup, and
+  redaction remain correct with a worker in flight;
+- unknown edges/events have no token path; uncommitted/failed work has no
+  committed projection; and same-moment participants are not serialized;
+- zero-cost Service Desk, Physical Access authorization-denied, and approved
+  authored information-campaign runs prove the shared schema and adapter.
+
+## Slice 20D — Integrated compatibility proof
 
 **Classification:** representative vertical.
 
