@@ -3,16 +3,38 @@
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+import pytest
 
 from cybernetic_influence.api import create_app
-from cybernetic_influence.causal_core.models import CausalEvent, FactChange, StatePatch
+from cybernetic_influence.active_runtime import ActiveRuntimeResult
+from cybernetic_influence.causal_core.models import (
+    AnalyticalBoundary,
+    CausalEvent,
+    CausalState,
+    FactChange,
+    StatePatch,
+)
 from cybernetic_influence.presentation import (
+    BoundaryProjectionError,
+    _temporal_states,
     _analyst_animation_cues,
     analyst_event,
+    boundary_activity_event_index,
+    clip_boundary_activity_projection,
+    project_boundary_activity,
     service_desk_summary,
+)
+from cybernetic_influence.scenarios.coordination_decision import (
+    PARTNERSHIP_BOUNDARY_ID,
+    CoordinationRuntimeFixture,
+    baseline_coordination_fixture,
+    coordination_runtime_fixture,
+    run_scripted_coordination,
+    stabilization_coordination_fixture,
 )
 
 
@@ -20,6 +42,259 @@ ROOT = Path(__file__).resolve().parents[1]
 TRIAGER_CANARY = "triager_route_key_17"
 SUPERVISOR_CANARY = "supervisor_close_key_17"
 BADGE_CANARY = "equipment_badge_key_41"
+
+
+@lru_cache(maxsize=2)
+def _coordination_run(
+    *, stabilization: bool = True
+) -> tuple[
+    CoordinationRuntimeFixture,
+    ActiveRuntimeResult,
+    AnalyticalBoundary,
+]:
+    contract = (
+        stabilization_coordination_fixture()
+        if stabilization
+        else baseline_coordination_fixture()
+    )
+    fixture = coordination_runtime_fixture(contract)
+    result = run_scripted_coordination(fixture, run_id="boundary_projection_gate")
+    boundary = next(
+        item
+        for item in fixture.scenario.analytical_boundaries
+        if item.boundary_id == PARTNERSHIP_BOUNDARY_ID
+    )
+    return fixture, result, boundary
+
+
+def _coordination_activity(
+    *, stabilization: bool = True
+) -> tuple[
+    CoordinationRuntimeFixture,
+    ActiveRuntimeResult,
+    dict[str, CausalState],
+    AnalyticalBoundary,
+]:
+    fixture, result, boundary = _coordination_run(stabilization=stabilization)
+    return (
+        fixture,
+        result,
+        _temporal_states(fixture.scenario.initial_state, result.core_result.events),
+        boundary,
+    )
+
+
+def test_boundary_activity_retains_input_internal_output_and_external_result() -> None:
+    _, result, states, boundary = _coordination_activity()
+    activity = project_boundary_activity(
+        boundary,
+        states,
+        result.core_result.events,
+    )
+    completed = next(item for item in activity.episodes if item.status == "completed")
+    crossing_by_id = {item.crossing_id: item for item in activity.crossings}
+
+    assert completed.input_crossing_ids
+    assert crossing_by_id[completed.input_crossing_ids[0]].direction == "incoming"
+    assert completed.output_crossing_id is not None
+    assert crossing_by_id[completed.output_crossing_id].direction == "outgoing"
+    assert len(completed.contributing_member_ids) >= 4
+    assert "mission_coordinator" in completed.contributing_member_ids
+    assert "terminal_decision_gate" in completed.contributing_member_ids
+    external = {
+        event.event_id: event
+        for event in result.core_result.events
+        if event.event_id in completed.external_result_event_ids
+    }
+    assert {event.event_kind for event in external.values()} == {
+        "mechanism_executed",
+        "state_committed",
+    }
+    assert {event.mechanism_id for event in external.values()} == {
+        "external_decision_receiver"
+    }
+
+
+def test_boundary_activity_prefix_exposes_no_future_output_or_result() -> None:
+    _, result, states, boundary = _coordination_activity()
+    full = project_boundary_activity(boundary, states, result.core_result.events)
+    output = next(item for item in full.crossings if item.direction == "outgoing")
+    prefix = project_boundary_activity(
+        boundary,
+        states,
+        result.core_result.events,
+        through_sequence=output.sequence - 1,
+    )
+    by_id = {event.event_id: event for event in result.core_result.events}
+
+    assert all(item.direction == "incoming" for item in prefix.crossings)
+    assert all(item.status == "in_progress" for item in prefix.episodes)
+    assert all(item.output_crossing_id is None for item in prefix.episodes)
+    assert all(item.external_result_event_ids == [] for item in prefix.episodes)
+    assert all(
+        by_id[event_id].sequence < output.sequence
+        for item in prefix.episodes
+        for event_id in item.internal_event_ids
+    )
+
+
+def test_retained_boundary_activity_clips_exactly_at_selected_event() -> None:
+    _, result, states, boundary = _coordination_activity()
+    full = project_boundary_activity(boundary, states, result.core_result.events)
+    event_index = boundary_activity_event_index(
+        boundary, states, result.core_result.events
+    )
+    events = [
+        analyst_event(event)
+        for event in result.core_result.events
+    ]
+    output = next(item for item in full.crossings if item.direction == "outgoing")
+
+    before = clip_boundary_activity_projection(
+        full,
+        events,
+        event_index,
+        through_sequence=output.sequence - 1,
+    )
+    at_output = clip_boundary_activity_projection(
+        full,
+        events,
+        event_index,
+        through_sequence=output.sequence,
+    )
+    final = clip_boundary_activity_projection(
+        full,
+        events,
+        event_index,
+        through_sequence=result.core_result.events[-1].sequence,
+    )
+
+    assert not any(item.direction == "outgoing" for item in before.crossings)
+    assert all(item.status == "in_progress" for item in before.episodes)
+    direct_before = project_boundary_activity(
+        boundary,
+        states,
+        result.core_result.events,
+        through_sequence=output.sequence - 1,
+    )
+    assert {
+        item.episode_id: item.contributing_member_ids for item in before.episodes
+    } == {
+        item.episode_id: item.contributing_member_ids
+        for item in direct_before.episodes
+    }
+    completed_at_output = next(
+        item for item in at_output.episodes if item.status == "completed"
+    )
+    assert completed_at_output.output_crossing_id == output.crossing_id
+    assert completed_at_output.external_result_event_ids == []
+    assert next(
+        item for item in final.episodes if item.status == "completed"
+    ).external_result_event_ids
+
+
+def test_configured_or_internal_routes_do_not_invent_crossings() -> None:
+    fixture, result, states, boundary = _coordination_activity(stabilization=False)
+    activity = project_boundary_activity(boundary, states, result.core_result.events)
+    crossing_events = {item.event_id for item in activity.crossings}
+    internal_route_events = {
+        event.event_id
+        for event in result.core_result.events
+        if event.event_kind == "effect_routed"
+        and event.connection_id == "verification_request_route"
+    }
+
+    assert not any(item.direction == "incoming" for item in activity.crossings)
+    autonomous = next(item for item in activity.episodes if item.status == "completed")
+    assert autonomous.input_crossing_ids == []
+    assert autonomous.output_crossing_id is not None
+    assert not internal_route_events & crossing_events
+    assert "technical_source_route" in result.core_result.final_state.connections
+
+    focus_only_events = [
+        event.model_copy(update={"focus_ids": [boundary.member_refs[0]]})
+        for event in result.core_result.events
+    ]
+    focus_only = project_boundary_activity(
+        boundary,
+        states,
+        focus_only_events,
+    )
+    assert focus_only.crossings == activity.crossings
+
+    source_boundary = next(
+        item
+        for item in fixture.scenario.analytical_boundaries
+        if item.boundary_id != PARTNERSHIP_BOUNDARY_ID
+    )
+    source_activity = project_boundary_activity(
+        source_boundary,
+        states,
+        result.core_result.events,
+    )
+    crossing_event_ids = {item.event_id for item in source_activity.crossings}
+    terminal_route_event_ids = {
+        event.event_id
+        for event in result.core_result.events
+        if event.connection_id == "terminal_decision_output_route"
+    }
+    assert not crossing_event_ids & terminal_route_event_ids
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["duplicate", "unknown_parent", "unknown_port", "unknown_route", "cross_run"],
+)
+def test_boundary_activity_rejects_corrupt_retained_evidence(mutation: str) -> None:
+    _, result, states, boundary = _coordination_activity()
+    events = list(result.core_result.events)
+    routed_index = next(
+        index for index, event in enumerate(events) if event.event_kind == "effect_routed"
+    )
+    if mutation == "duplicate":
+        events.insert(routed_index + 1, events[routed_index])
+    elif mutation == "unknown_parent":
+        events[routed_index] = events[routed_index].model_copy(
+            update={"causal_parent_event_ids": ["event_999999"]}
+        )
+    elif mutation == "unknown_port":
+        events[routed_index] = events[routed_index].model_copy(
+            update={"target_port_id": "unknown_port"}
+        )
+    elif mutation == "unknown_route":
+        events[routed_index] = events[routed_index].model_copy(
+            update={"connection_id": "unknown_route"}
+        )
+    else:
+        events[routed_index] = events[routed_index].model_copy(
+            update={"run_id": "another_run"}
+        )
+
+    with pytest.raises(BoundaryProjectionError):
+        project_boundary_activity(boundary, states, events)
+
+
+def test_boundary_activity_rejects_unknown_member() -> None:
+    _, result, states, boundary = _coordination_activity()
+    corrupt = boundary.model_copy(
+        update={"member_refs": [*boundary.member_refs, "unknown_member"]}
+    )
+    with pytest.raises(BoundaryProjectionError, match="unknown members"):
+        project_boundary_activity(corrupt, states, result.core_result.events)
+
+
+def test_boundary_activity_rejects_direct_outside_mutation_even_with_output() -> None:
+    _, result, states, boundary = _coordination_activity()
+    changed_members = [
+        item for item in boundary.member_refs if item != "decision_record"
+    ]
+    corrupt = boundary.model_copy(update={"member_refs": changed_members})
+
+    with pytest.raises(
+        BoundaryProjectionError,
+        match="directly mutates nonmember-owned state",
+    ):
+        project_boundary_activity(corrupt, states, result.core_result.events)
 
 
 def test_mechanism_credentials_never_cross_analyst_boundary(tmp_path: Path) -> None:

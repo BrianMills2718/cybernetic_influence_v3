@@ -203,6 +203,15 @@ pre { max-height:520px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywh
 .trace-summary p { max-width:85ch; margin:7px 0 0; line-height:1.5; }
 .composite-account h3 { margin:7px 0; }
 .composite-account > p { max-width:85ch; line-height:1.5; }
+.boundary-activity { display:grid; gap:10px; margin:14px 0; }
+.boundary-episode { padding:14px; border:1px solid #4a6785; border-radius:10px; background:#101923; }
+.boundary-episode.in_progress { border-style:dashed; }
+.boundary-flow { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 16px; margin:10px 0 12px; }
+.boundary-flow div { padding:9px; border-left:2px solid #4f83b5; background:#15202c; }
+.boundary-flow dt { color:var(--muted); font-size:11px; font-weight:800; text-transform:uppercase; }
+.boundary-flow dd { margin:4px 0 0; line-height:1.4; }
+.boundary-evidence { margin-top:10px; }
+.boundary-evidence .focus-list { margin-top:8px; }
 .trace-step > small { display:block; color:var(--muted); margin:2px 0 8px; }
 .trace-step p { color:var(--muted); }
 .trace-step.event-match { border-color:#fff; background:#203b56; }

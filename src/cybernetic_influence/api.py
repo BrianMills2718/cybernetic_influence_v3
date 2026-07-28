@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
+from copy import deepcopy
 from pathlib import Path
 from threading import Event, Lock, Thread, local
 from typing import Literal, cast
@@ -37,6 +38,7 @@ from cybernetic_influence.authoring.store import (
 from cybernetic_influence import __version__
 from cybernetic_influence.active_runtime import (
     ActiveRuntimeCheckpoint,
+    ActiveRuntimeResult,
     RuntimeProgressUpdate,
 )
 from cybernetic_influence.active_runtime.run_control import (
@@ -44,7 +46,9 @@ from cybernetic_influence.active_runtime.run_control import (
     RunControlSelection,
     resolve_run_control,
 )
+from cybernetic_influence.causal_core.models import AnalyticalBoundary, CausalState
 from cybernetic_influence.presentation import (
+    BoundaryActivityProjection,
     analyst_boundaries,
     analyst_edges,
     analyst_progress_projection,
@@ -52,7 +56,9 @@ from cybernetic_influence.presentation import (
     analyst_world,
     build_analyst_document,
     build_service_desk_analyst_document,
+    clip_boundary_activity_projection,
     event_driven_service_desk_outcome,
+    validate_retained_boundary_activities,
 )
 from cybernetic_influence.narration import (
     narrate_live_moments,
@@ -110,6 +116,17 @@ from cybernetic_influence.scenarios.purchase_payment import (
     run_purchase_payment,
     purchase_payment_runtime_config,
 )
+from cybernetic_influence.scenarios.coordination_decision import (
+    MINUTES_PER_DAY,
+    CoordinationDecisionFixture,
+    CoordinationRuntimeFixture,
+    baseline_coordination_fixture,
+    coordination_run_control_plan,
+    coordination_runtime_fixture,
+    heterogeneous_pressure_coordination_fixture,
+    run_scripted_coordination,
+    stabilization_coordination_fixture,
+)
 
 
 class RunRequest(BaseModel):
@@ -121,6 +138,7 @@ class RunRequest(BaseModel):
         "service_desk",
         "physical_access",
         "purchase_payment",
+        "coordination_decision",
     ] = "service_desk"
     cognition_profile: ServiceDeskCognitionProfile = "position_context"
     arm_id: str = "baseline"
@@ -161,6 +179,169 @@ class AuthoredRunRequest(BaseModel):
     llm_options: RunLlmOptions | None = None
 
 
+def _coordination_contract(condition: str) -> CoordinationDecisionFixture:
+    builders = {
+        "baseline": baseline_coordination_fixture,
+        "heterogeneous_pressure": heterogeneous_pressure_coordination_fixture,
+        "stabilization": stabilization_coordination_fixture,
+    }
+    builder = builders.get(condition)
+    if builder is None:
+        raise ValueError("unknown coordination-decision condition")
+    return builder()
+
+
+def _coordination_outcome(
+    result: ActiveRuntimeResult,
+) -> tuple[dict[str, object], str, str]:
+    state = result.core_result.final_state
+    status = str(
+        state.fact("external_decision_registry.received_status").value
+    )
+    scope = str(state.fact("external_decision_registry.received_scope").value)
+    labels = {
+        "deploy_on_time": "Full Deployment Approved",
+        "scope_reduced": "Reduced Deployment Approved",
+        "no_decision_by_horizon": "No Decision By Day 10",
+    }
+    summaries = {
+        "deploy_on_time": (
+            "The partnership completed ordinary review, retained full support, "
+            "and sent an approved full-deployment decision to the external registry."
+        ),
+        "scope_reduced": (
+            "Outside concerns entered the partnership, bounded verification "
+            "changed commitments, and a reduced-scope decision was accepted externally."
+        ),
+        "no_decision_by_horizon": (
+            "Outside concerns remained unresolved, a partner withdrew, and the "
+            "day-10 deadline committed no decision after an earlier proposal was denied."
+        ),
+    }
+    outcome = {
+        "final_status": status,
+        "final_scope": scope,
+        "meeting_cycles": 4,
+        "causal_moment_count": len(result.attempts) + len(result.exact_work),
+        "participant_activation_count": sum(
+            len(attempt.participants) for attempt in result.attempts
+        ),
+        "model_calls": result.model_calls,
+        "known_cost": result.total_observed_cost,
+        "cost_fully_observable": result.cost_fully_observable,
+    }
+    return outcome, labels.get(status, status.replace("_", " ").title()), summaries.get(
+        status,
+        "The exact decision registry retained the terminal coordination outcome.",
+    )
+
+
+def _coordination_reference_narration(
+    document: dict[str, object],
+) -> dict[str, object]:
+    """Render the scripted proof without claiming a narrator model call."""
+    raw_timeline = document.get("timeline", [])
+    raw_moments = document.get("moments", [])
+    if not isinstance(raw_timeline, list) or not isinstance(raw_moments, list):
+        raise ValueError("coordination narration evidence is malformed")
+    timeline = {
+        str(item["event_id"]): item
+        for item in raw_timeline
+        if isinstance(item, dict) and isinstance(item.get("event_id"), str)
+    }
+    moments: list[dict[str, object]] = []
+    for number, raw_moment in enumerate(raw_moments, start=1):
+        if not isinstance(raw_moment, dict):
+            raise ValueError("coordination causal moment is malformed")
+        event_ids = raw_moment.get("event_ids", [])
+        participants = raw_moment.get("participants", [])
+        if (
+            not isinstance(event_ids, list)
+            or not all(isinstance(item, str) for item in event_ids)
+            or not isinstance(participants, list)
+            or not all(isinstance(item, str) for item in participants)
+        ):
+            raise ValueError("coordination causal moment evidence is malformed")
+        if raw_moment.get("silent") is True and not event_ids:
+            # Participant traces retain these no-action opportunities. The
+            # human narrative stays focused on material causal development.
+            continue
+        events = [timeline[item] for item in event_ids if item in timeline]
+        if len(events) != len(event_ids):
+            raise ValueError("coordination narrative references an unknown event")
+        summaries = [
+            str(item.get("summary"))
+            for item in events
+            if isinstance(item.get("summary"), str)
+        ]
+        participant_labels = [item.replace("_", " ") for item in participants]
+        participant_text = (
+            " and ".join(participant_labels)
+            if len(participant_labels) <= 3
+            else f"{len(participant_labels)} scheduled participants"
+        ) or "the exact runtime"
+        logical_time = raw_moment.get("logical_time")
+        if not isinstance(logical_time, int) or isinstance(logical_time, bool):
+            raise ValueError("coordination causal moment time is malformed")
+        day, minute = divmod(logical_time, MINUTES_PER_DAY)
+        modeled_time = f"modeled day {day}, minute {minute}"
+        if summaries:
+            selected_summaries = [summaries[0]]
+            if len(summaries) > 1 and summaries[-1] != summaries[0]:
+                selected_summaries.append(summaries[-1])
+            concise = (
+                f"At {modeled_time}, {participant_text} advanced the "
+                f"decision process. {' '.join(selected_summaries)}"
+            )
+            detailed = " ".join(summaries)
+        else:
+            concise = (
+                f"At {modeled_time}, {participant_text} completed its "
+                "scheduled opportunity without a retained external action or world change."
+            )
+            detailed = concise
+        if len(concise) > 360:
+            concise = f"{concise[:357].rstrip()}…"
+        moments.append(
+            {
+                "narrative_version": 2,
+                "activation": raw_moment.get("activation"),
+                "participants": participants,
+                "causal_time": raw_moment.get("causal_time"),
+                "causal_timestamp": raw_moment.get("causal_timestamp"),
+                "logical_time": logical_time,
+                "narrative": concise,
+                "concise_narrative": concise,
+                "source_event_ids": event_ids,
+                "detailed_paragraphs": [
+                    {
+                        "text": detailed,
+                        "source_event_ids": event_ids,
+                    },
+                    {
+                        "text": (
+                            "This account reports retained attempts, routed effects, "
+                            "exact mechanism decisions, and commits at this causal "
+                            "moment; it does not add an organization-level mind."
+                        ),
+                        "source_event_ids": event_ids,
+                    },
+                ],
+            }
+        )
+    return {
+        "status": "completed",
+        "reason": (
+            "Deterministic reference narration derived from retained exact events; "
+            "no narrator model was called."
+        ),
+        "model_calls": 0,
+        "cost": 0.0,
+        "moments": moments,
+        "calls": [],
+    }
+
+
 def _scenario_preview(
     scenario: str,
     arm_id: str,
@@ -196,6 +377,8 @@ def _scenario_preview(
         if purchase_arm is None:
             raise ValueError("unknown Purchase to Payment condition")
         compiled_scenario = purchase_payment_fixture(purchase_arm).scenario
+    elif scenario == "coordination_decision":
+        compiled_scenario = _coordination_contract(arm_id).scenario
     else:
         raise ValueError("unknown scenario")
 
@@ -219,6 +402,7 @@ def _scenario_preview(
             temporal_states,
             edges,
             [],
+            events=([] if scenario == "coordination_decision" else None),
         ),
         "timeline": [],
         "trajectory": {"nodes": [], "edges": []},
@@ -257,6 +441,9 @@ def create_app(
         run_id: str,
         update: RuntimeProgressUpdate,
         checkpoint: ActiveRuntimeCheckpoint,
+        *,
+        initial_state: CausalState | None = None,
+        analytical_boundaries: Sequence[AnalyticalBoundary] = (),
     ) -> None:
         """Append one analyst-safe live update before future runtime work.
 
@@ -273,7 +460,12 @@ def create_app(
                 "sequence": sequence,
                 "observed_at": now_iso(),
                 **update.model_dump(mode="json"),
-                "projection": analyst_progress_projection(checkpoint, update),
+                "projection": analyst_progress_projection(
+                    checkpoint,
+                    update,
+                    initial_state=initial_state,
+                    analytical_boundaries=analytical_boundaries,
+                ),
             }
             lifecycle = document.get("status")
             document.update(_checkpoint_progress_projection(checkpoint))
@@ -395,6 +587,42 @@ def create_app(
                             }[arm.arm_id],
                         }
                         for arm in purchase_payment_arm_configurations()
+                    ],
+                },
+                "coordination_decision": {
+                    "label": "Coordination decision",
+                    **_scenario_explanation("coordination_decision"),
+                    "profiles": ["position_context"],
+                    "supports_live": False,
+                    "run_control_options": (
+                        stabilization_coordination_fixture()
+                        .run_control_options.model_dump(mode="json")
+                    ),
+                    "arms": [
+                        {
+                            "id": "baseline",
+                            "label": "Baseline",
+                            "description": (
+                                "Ordinary review friction occurs without the "
+                                "three outside pressure sources becoming active."
+                            ),
+                        },
+                        {
+                            "id": "heterogeneous_pressure",
+                            "label": "Heterogeneous pressure",
+                            "description": (
+                                "Technical, policy, and local concerns enter "
+                                "without enough stabilizing evidence."
+                            ),
+                        },
+                        {
+                            "id": "stabilization",
+                            "label": "Stabilization",
+                            "description": (
+                                "The same concerns enter, while bounded "
+                                "verification and feedback support reduced scope."
+                            ),
+                        },
                     ],
                 },
             },
@@ -762,7 +990,12 @@ def create_app(
 
     @app.get("/api/scenarios/{scenario}/preview")
     def scenario_preview(
-        scenario: Literal["service_desk", "physical_access", "purchase_payment"],
+        scenario: Literal[
+            "service_desk",
+            "physical_access",
+            "purchase_payment",
+            "coordination_decision",
+        ],
         arm_id: str,
         cognition_profile: str = "position_context",
     ) -> dict[str, object]:
@@ -773,11 +1006,82 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(error)) from error
 
     @app.get("/api/runs/{run_id}")
-    def retained_run(run_id: str, request: Request) -> dict[str, object]:
+    def retained_run(
+        run_id: str,
+        request: Request,
+        through_event_id: str | None = None,
+    ) -> dict[str, object]:
         _require_access(request)
         try:
             document = runs.get(run_id)
             validate_retained_narration(document)
+            try:
+                validate_retained_boundary_activities(document)
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=409,
+                    detail="retained boundary evidence is corrupt",
+                ) from error
+            if through_event_id is not None:
+                raw_events = document.get("events", [])
+                if not isinstance(raw_events, list):
+                    raise ValueError("retained events are malformed")
+                selected_event = next(
+                    (
+                        item
+                        for item in raw_events
+                        if isinstance(item, dict)
+                        and item.get("event_id") == through_event_id
+                    ),
+                    None,
+                )
+                if not isinstance(selected_event, dict):
+                    raise ValueError("selected event is not retained by this run")
+                through_sequence = selected_event.get("sequence")
+                if not isinstance(through_sequence, int) or isinstance(
+                    through_sequence, bool
+                ):
+                    raise ValueError("selected event sequence is malformed")
+                document = deepcopy(document)
+                raw_boundaries = document.get("boundaries", [])
+                if not isinstance(raw_boundaries, list):
+                    raise ValueError("retained boundaries are malformed")
+                for raw_boundary in raw_boundaries:
+                    if not isinstance(raw_boundary, dict):
+                        raise ValueError("retained boundary is malformed")
+                    raw_activity = raw_boundary.get("activity")
+                    if raw_activity is None:
+                        continue
+                    raw_event_index = raw_boundary.get("activity_event_index")
+                    if not isinstance(raw_event_index, list):
+                        raise ValueError("retained boundary event index is malformed")
+                    raw_boundary["activity"] = clip_boundary_activity_projection(
+                        BoundaryActivityProjection.model_validate(raw_activity),
+                        [
+                            cast(dict[str, object], item)
+                            for item in raw_events
+                            if isinstance(item, dict)
+                        ],
+                        [
+                            cast(dict[str, object], item)
+                            for item in raw_event_index
+                            if isinstance(item, dict)
+                        ],
+                        through_sequence=through_sequence,
+                    ).model_dump(mode="json")
+                    raw_boundary["activity_event_index"] = [
+                        item
+                        for item in raw_event_index
+                        if isinstance(item, dict)
+                        and isinstance(item.get("sequence"), int)
+                        and not isinstance(item.get("sequence"), bool)
+                        and cast(int, item["sequence"]) <= through_sequence
+                    ]
+                return {
+                    "run_id": run_id,
+                    "through_event_id": through_event_id,
+                    "boundaries": raw_boundaries,
+                }
             return document
         except InvalidRunIdError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
@@ -788,7 +1092,11 @@ def create_app(
         except ValueError as error:
             raise HTTPException(
                 status_code=409,
-                detail="retained narration evidence context is corrupt",
+                detail=(
+                    "retained boundary evidence is corrupt"
+                    if through_event_id is not None
+                    else "retained narration evidence context is corrupt"
+                ),
             ) from error
 
     @app.get("/api/runs/{run_id}/progress")
@@ -1134,6 +1442,8 @@ def create_app(
         service_arm = None
         physical_arm = None
         purchase_arm = None
+        coordination_contract = None
+        coordination_fixture: CoordinationRuntimeFixture | None = None
         resolved_run_control: ResolvedRunControlPlan | None = None
         selected_profile: str = request_body.cognition_profile
         if request_body.scenario == "service_desk":
@@ -1171,7 +1481,7 @@ def create_app(
                     detail="unknown physical-access intervention arm",
                 )
             selected_profile = "position_context"
-        else:
+        elif request_body.scenario == "purchase_payment":
             purchase_arm = next(
                 (
                     item
@@ -1186,10 +1496,25 @@ def create_app(
                     detail="unknown purchase-payment intervention arm",
                 )
             selected_profile = "position_context"
+        else:
+            try:
+                coordination_contract = _coordination_contract(request_body.arm_id)
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+            coordination_fixture = coordination_runtime_fixture(coordination_contract)
+            resolved_run_control = coordination_run_control_plan(
+                coordination_fixture
+            )
+            selected_profile = "position_context"
         if request_body.scenario != "service_desk" and request_body.run_control is not None:
             raise HTTPException(
                 status_code=422,
                 detail="run_control is not available for this scenario",
+            )
+        if request_body.scenario == "coordination_decision" and request_body.execution == "live":
+            raise HTTPException(
+                status_code=422,
+                detail="coordination decision currently supports zero-cost reference execution only",
             )
         live = request_body.execution == "live"
         if not live and request_body.llm_options is not None:
@@ -1516,6 +1841,48 @@ def create_app(
                     headline=headline,
                     summary=summary,
                 )
+            elif coordination_fixture is not None:
+                result = run_scripted_coordination(
+                    coordination_fixture,
+                    run_id=run_id,
+                    checkpoint_observer=retain_checkpoint,
+                    progress_observer=lambda update, checkpoint: retain_progress(
+                        run_id,
+                        update,
+                        checkpoint,
+                        initial_state=coordination_fixture.scenario.initial_state,
+                        analytical_boundaries=(
+                            coordination_fixture.scenario.analytical_boundaries
+                        ),
+                    ),
+                )
+                coordination_outcome, headline, summary = _coordination_outcome(
+                    result
+                )
+                document = build_analyst_document(
+                    initial_state=coordination_fixture.scenario.initial_state,
+                    analytical_boundaries=(
+                        coordination_fixture.scenario.analytical_boundaries
+                    ),
+                    result=result,
+                    scenario="coordination_decision",
+                    profile=selected_profile,
+                    arm_id=coordination_fixture.contract.condition.condition,
+                    execution="scripted",
+                    created_at=created_at,
+                    outcome=coordination_outcome,
+                    headline=headline,
+                    summary=summary,
+                    include_boundary_activity=True,
+                )
+                document["run_control"] = coordination_run_control_plan(
+                    coordination_fixture
+                ).model_dump(mode="json")
+                document["completion"] = (
+                    result.completion.model_dump(mode="json")
+                    if result.completion is not None
+                    else None
+                )
             else:
                 raise RuntimeError("validated request has no scenario arm")
             narrated = _attach_narration(
@@ -1524,6 +1891,10 @@ def create_app(
                 run_id=run_id,
                 effective_llm=effective_llm,
             )
+            if coordination_fixture is not None:
+                narrated["narration"] = _coordination_reference_narration(
+                    narrated
+                )
             narrated = retain_progress_history(narrated, run_id)
             narrated["llm_configuration"] = initial["llm_configuration"]
             narrated["model_call_summaries"] = _result_call_summaries(result)
@@ -1823,6 +2194,31 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
             "fidelity_questions": [
                 "Did policy evidence remain distinct from the exact control?",
                 "Did the coarse processor avoid invented internal explanations?",
+            ],
+        },
+        "coordination_decision": {
+            "help": (
+                "Inspect what enters and leaves a partnership boundary and how "
+                "several people and exact mechanisms produce one decision path."
+            ),
+            "representation_summary": (
+                "Five people review a proposed deployment over four meetings. "
+                "Outside technical, policy, and local concerns may change their "
+                "commitments before an exact gate sends a decision to an external registry."
+            ),
+            "assumptions": [
+                "People act from retained dispositions, memories, delivered observations, and owned interfaces.",
+                "Meetings occur on modeled days 0, 3, 6, and 9; unresolved decisions reach a day-10 deadline.",
+                "The partnership and pressure-source ensemble are analytical views, not additional actors.",
+            ],
+            "known_omissions": [
+                "The reference people use fixed zero-cost behavior rather than live LLM reasoning in this slice.",
+                "The scenario represents one bounded decision and does not model broader institutions or geopolitics.",
+            ],
+            "fidelity_questions": [
+                "Which outside information crossed into the partnership?",
+                "Which people and exact mechanisms contributed before an output crossed back out?",
+                "Was external acceptance retained separately from the partnership's attempted output?",
             ],
         },
     }

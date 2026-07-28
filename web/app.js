@@ -30,6 +30,8 @@ let authoringDraft = null
 let authoringPreview = null
 let selectedAuthoringGraphView = 'causal'
 let selectedNarrativeDetail = 'concise'
+let selectedBoundaryActivities = null
+let boundaryActivityRequestSerial = 0
 
 const buttonTooltips = {
   'simulation-tab': 'Choose and run a configured simulation.',
@@ -68,6 +70,7 @@ function explainButton(button) {
   if (!explanation && button.classList.contains('turn-narrative')) explanation = 'Select this causal step and inspect its grounded evidence.'
   if (!explanation && button.classList.contains('timeline-marker')) explanation = 'Select this causal step.'
   if (!explanation && button.classList.contains('story-event')) explanation = 'Inspect the exact event behind this outcome step.'
+  if (!explanation && button.classList.contains('inspect-boundary-path')) explanation = 'Expand the exact retained events supporting this boundary episode and select its first event.'
   if (!explanation && button.classList.contains('save-person')) explanation = 'Validate and save these person assumptions as a new draft revision without calling an LLM.'
   if (!explanation && button.dataset.eventId) explanation = 'Inspect this exact event in the selected causal step.'
   if (!explanation && button.dataset.person) explanation = 'Show this participant or analytical composite account.'
@@ -523,13 +526,25 @@ function configureScenario(scenarioId) {
   fillList('#scenario-omissions', selected.known_omissions)
   fillList('#scenario-questions', selected.fidelity_questions)
   const controls = selected.run_control_options
-  $('#run-control-field').hidden = !controls
+  $('#run-control-field').hidden = !controls || scenarioId !== 'service_desk'
   if (controls) {
     $('#modeled-horizon').min = controls.minimum_horizon
     $('#modeled-horizon').max = controls.maximum_horizon
     $('#modeled-horizon').value = controls.default_horizon
     $('#modeled-horizon-help').textContent = 'The simulation stops before activating a later causal step once this modeled time is reached, unless its compiled terminal condition is met first.'
   }
+  const liveAvailable = Boolean(
+    runtimeConfig.live_authorized
+    && (runtimeConfig.live_options?.models || []).length
+  )
+  const scenarioSupportsLive = selected.supports_live !== false
+  $('#live').disabled = !liveAvailable || !scenarioSupportsLive
+  if (!scenarioSupportsLive) {
+    $('#live').checked = false
+    $('#live-help').textContent = 'This scenario currently has a zero-cost scripted implementation only.'
+  }
+  $('#run').textContent = $('#live').checked ? 'Play live simulation' : 'Play reference simulation'
+  configureLiveControls()
   updateAuthorizationPreview()
   describeCondition()
 }
@@ -560,6 +575,8 @@ async function loadScenarioPreview() {
   }
   selectedEventIndex = 0
   selectedMomentIndex = 0
+  selectedBoundaryActivities = null
+  boundaryActivityRequestSerial += 1
   selectedScale = 'exact'
   selectedGraphView = current.world ? 'world' : 'causal'
   selectedNodeId = null
@@ -985,6 +1002,88 @@ function showEdge(edge) {
     <pre>${html(JSON.stringify({id:edge.id, exact_route_ids:edge.routeIds}, null, 2))}</pre>`
 }
 
+function refLabel(ref) {
+  const node = (current?.nodes || []).find((item) => item.id === ref)
+  return node?.label || String(ref || '').replaceAll('_', ' ')
+}
+
+function exactEvent(eventId) {
+  return (current?.timeline || []).find((item) => item.event_id === eventId)
+    || (current?.events || []).find((item) => item.event_id === eventId)
+}
+
+function episodeEvidenceIds(episode, crossingById) {
+  const crossingEvents = [
+    ...(episode.input_crossing_ids || []),
+    ...(episode.prior_output_crossing_ids || []),
+    ...(episode.output_crossing_id ? [episode.output_crossing_id] : []),
+  ].map((crossingId) => crossingById.get(crossingId)?.event_id).filter(Boolean)
+  return [...new Set([
+    ...crossingEvents,
+    ...(episode.trigger_event_ids || []),
+    ...(episode.internal_event_ids || []),
+    ...(episode.external_result_event_ids || []),
+  ])].sort((left, right) => Number(exactEvent(left)?.sequence || 0) - Number(exactEvent(right)?.sequence || 0))
+}
+
+function renderCrossing(crossing) {
+  if (!crossing) return 'none retained'
+  return `${html(refLabel(crossing.source_ref))} → ${html(refLabel(crossing.target_ref))}`
+}
+
+function renderBoundaryActivity(activity, snapshot) {
+  if (activity === undefined) {
+    return '<p class="muted">Boundary activity is unavailable for this older retained run. The simulator will not invent crossings from labels, configured routes, or timing.</p>'
+  }
+  if (activity === null) {
+    return '<p class="muted">Loading the server-projected activity at this selected event…</p>'
+  }
+  const crossingById = new Map((activity.crossings || []).map((item) => [item.crossing_id, item]))
+  if (!(activity.crossings || []).length) {
+    return `<p><strong>No realized boundary crossing has occurred yet.</strong> The configured scope contains ${html(snapshot?.member_ids?.length || 0)} exact members, ${html(snapshot?.inbound_route_ids?.length || 0)} inbound route${snapshot?.inbound_route_ids?.length === 1 ? '' : 's'}, and ${html(snapshot?.outbound_route_ids?.length || 0)} outbound route${snapshot?.outbound_route_ids?.length === 1 ? '' : 's'}.</p>`
+  }
+  return (activity.episodes || []).map((episode, episodeIndex) => {
+    const inputs = (episode.input_crossing_ids || []).map((id) => renderCrossing(crossingById.get(id)))
+    const output = episode.output_crossing_id ? renderCrossing(crossingById.get(episode.output_crossing_id)) : null
+    const contributors = (episode.contributing_member_ids || []).map(refLabel)
+    const external = (episode.external_result_event_ids || []).map((eventId) =>
+      exactEvent(eventId)?.summary || String(exactEvent(eventId)?.event_kind || eventId).replaceAll('_', ' ')
+    )
+    const evidenceIds = episodeEvidenceIds(episode, crossingById)
+    return `<section class="boundary-episode ${episode.status}">
+      <span class="eyebrow">Coordination episode ${html(episodeIndex + 1)} · ${html(episode.status.replaceAll('_', ' '))}</span>
+      <dl class="boundary-flow">
+        <div><dt>Boundary input</dt><dd>${inputs.length ? inputs.join('<br>') : 'Autonomous internal trigger; no incoming crossing retained.'}</dd></div>
+        <div><dt>Internal coordination</dt><dd>${contributors.length ? html(contributors.join(', ')) : 'No contributing member is retained yet.'} · ${html((episode.internal_event_ids || []).length)} exact internal step${(episode.internal_event_ids || []).length === 1 ? '' : 's'}</dd></div>
+        <div><dt>Boundary output</dt><dd>${output || 'Internal coordination in progress; no boundary output yet.'}</dd></div>
+        <div><dt>External result</dt><dd>${external.length ? html(external.join(' ')) : output ? 'No downstream acceptance or world change is retained at this selected event.' : 'Not applicable until an output crosses the boundary.'}</dd></div>
+      </dl>
+      <button type="button" class="inspect-boundary-path" data-episode-index="${episodeIndex}" ${evidenceIds.length ? '' : 'disabled'}>Inspect exact causal path</button>
+      <details class="boundary-evidence" data-episode-index="${episodeIndex}"><summary>${html(evidenceIds.length)} retained exact event${evidenceIds.length === 1 ? '' : 's'}</summary><div class="focus-list">${evidenceIds.map((eventId) => `<button type="button" data-event-id="${html(eventId)}">${html(exactEvent(eventId)?.kind?.replaceAll('_', ' ') || eventId)}</button>`).join('')}</div></details>
+    </section>`
+  }).join('')
+}
+
+async function refreshBoundaryActivitiesAtSelection() {
+  const boundarySelected = (current?.boundaries || []).some((item) => item.id === selectedPerson)
+  if (!boundarySelected || !current?.run_id || !current?.timeline?.length) return
+  const eventId = current.timeline[selectedEventIndex]?.event_id
+  if (!eventId) return
+  const requestSerial = ++boundaryActivityRequestSerial
+  selectedBoundaryActivities = null
+  try {
+    const clipped = await request(`/api/runs/${encodeURIComponent(current.run_id)}?through_event_id=${encodeURIComponent(eventId)}`)
+    if (requestSerial !== boundaryActivityRequestSerial || current.timeline[selectedEventIndex]?.event_id !== eventId) return
+    selectedBoundaryActivities = Object.fromEntries(
+      (clipped.boundaries || []).map((boundary) => [boundary.id, boundary.activity]),
+    )
+    showTrace(selectedPerson)
+  } catch (error) {
+    if (requestSerial !== boundaryActivityRequestSerial) return
+    $('#trace').innerHTML = `<p class="error">${html(error.message)}</p>`
+  }
+}
+
 function showTrace(person) {
   const boundary = (current?.boundaries || []).find((item) => item.id === person)
   if (boundary) {
@@ -996,11 +1095,18 @@ function showTrace(person) {
     ).filter(Boolean)
     const people = members.filter((member) => member.kind === 'person').map((member) => member.label)
     const processes = members.filter((member) => member.kind === 'mechanism').map((member) => member.label)
+    const hasTypedActivity = Object.prototype.hasOwnProperty.call(boundary, 'activity')
+    const activity = selectedBoundaryActivities
+      ? selectedBoundaryActivities[boundary.id]
+      : current?.timeline?.length
+        ? null
+        : (hasTypedActivity ? boundary.activity : undefined)
     $('#trace').innerHTML = `
       <article class="trace-step composite-account">
         <span class="eyebrow">Analytical composite · does not act</span>
         <h3>${html(boundary.label)}</h3>
-        <p>${html(boundary.description)} At this selected moment it summarizes ${html(people.length)} people${people.length ? ` (${html(people.join(', '))})` : ''}${processes.length ? ` and ${html(processes.length)} exact mechanism${processes.length === 1 ? '' : 's'}` : ''}. Its members produce the actions and effects; the composite is only a way to inspect them together.</p>
+        <p>${html(boundary.description)} It summarizes ${html(people.length)} people${people.length ? ` (${html(people.join(', '))})` : ''}${processes.length ? ` and ${html(processes.length)} exact mechanism${processes.length === 1 ? '' : 's'}` : ''}; those members act, while this boundary only groups their retained activity.</p>
+        <div class="boundary-activity">${renderBoundaryActivity(activity, snapshot)}</div>
         <dl class="aggregate-facts">
           <div><dt>Visible exact members</dt><dd>${html(snapshot?.member_ids?.length || 0)}</dd></div>
           <div><dt>Internal routes</dt><dd>${html(snapshot?.internal_route_ids?.length || 0)}</dd></div>
@@ -1009,6 +1115,25 @@ function showTrace(person) {
         <button id="inspect-composite">Inspect this composite on the map</button>
       </article>`
     $('#inspect-composite').onclick = () => showBoundary(boundary.id)
+    document.querySelectorAll('.inspect-boundary-path').forEach((button) => {
+      button.onclick = () => {
+        const details = document.querySelector(`.boundary-evidence[data-episode-index="${button.dataset.episodeIndex}"]`)
+        if (details) details.open = true
+        const first = details?.querySelector('button[data-event-id]')
+        const index = first ? current.timeline.findIndex((item) => item.event_id === first.dataset.eventId) : -1
+        if (index >= 0) selectEvent(index)
+      }
+    })
+    document.querySelectorAll('.boundary-evidence button[data-event-id]').forEach((button) => {
+      button.onclick = () => {
+        const index = current.timeline.findIndex((item) => item.event_id === button.dataset.eventId)
+        if (index >= 0) selectEvent(index)
+      }
+    })
+    if (current?.timeline?.length && !selectedBoundaryActivities) {
+      void refreshBoundaryActivitiesAtSelection()
+    }
+    applyButtonTooltips($('#trace'))
     return
   }
   selectedPerson = person
@@ -1186,6 +1311,14 @@ function renderGraph() {
 function applyLiveProgress(record) {
   const projection = record.projection || {}
   if (projection.nodes && projection.edges) liveProjection = projection
+  if (projection.boundaries) {
+    selectedBoundaryActivities = Object.fromEntries(
+      projection.boundaries.map((boundary) => [boundary.id, boundary.activity]),
+    )
+    if ((current?.boundaries || []).some((boundary) => boundary.id === selectedPerson)) {
+      showTrace(selectedPerson)
+    }
+  }
   const cue = projection.animation_cues?.[0] || null
   liveActivity = {
     participantIds:record.kind === 'activation_started' ? (record.participant_ids || []) : [],
@@ -1297,7 +1430,12 @@ function selectMoment(index) {
 
 function selectEvent(index, momentActivation = null) {
   if (!current?.timeline?.length) return
+  const priorSelectedEventIndex = selectedEventIndex
   selectedEventIndex = Math.max(0, Math.min(index, current.timeline.length - 1))
+  if (selectedEventIndex !== priorSelectedEventIndex) {
+    selectedBoundaryActivities = null
+    boundaryActivityRequestSerial += 1
+  }
   const event = current.timeline[selectedEventIndex]
   const moments = causalMoments()
   const activation = momentActivation || event.activation
@@ -1364,7 +1502,9 @@ function selectEvent(index, momentActivation = null) {
     button.onclick = () => showNode(button.dataset.nodeId)
   })
 
-  if (event.person) showTraceInPlace(event.person)
+  const selectedIsBoundary = (current?.boundaries || []).some((boundary) => boundary.id === selectedPerson)
+  if (selectedIsBoundary) showTraceInPlace(selectedPerson)
+  else if (event.person) showTraceInPlace(event.person)
   else if (selectedPerson) showTraceInPlace(selectedPerson)
   if (selectedGraphView === 'trajectory') renderTrajectoryInspector(event)
 }
@@ -1562,6 +1702,8 @@ function render(run) {
   selectedEventIndex = 0
   selectedMomentIndex = 0
   selectedPerson = null
+  selectedBoundaryActivities = null
+  boundaryActivityRequestSerial += 1
   selectedScale = 'exact'
   selectedGraphView = current.world && current.scenario !== 'purchase_payment'
     ? 'world'

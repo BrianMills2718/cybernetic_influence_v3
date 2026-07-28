@@ -1,5 +1,6 @@
 """End-to-end gates for the clean walking simulator."""
 
+from copy import deepcopy
 from pathlib import Path
 from threading import Event, Thread
 import time
@@ -61,6 +62,14 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "service_desk",
         "physical_access",
         "purchase_payment",
+        "coordination_decision",
+    }
+    coordination = config.json()["scenarios"]["coordination_decision"]
+    assert coordination["supports_live"] is False
+    assert {item["id"] for item in coordination["arms"]} == {
+        "baseline",
+        "heterogeneous_pressure",
+        "stabilization",
     }
     assert config.json()["scenarios"]["physical_access"]["arms"][0]["description"]
     controls = config.json()["scenarios"]["service_desk"]["run_control_options"]
@@ -175,6 +184,11 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function pollLiveRun" in app_script.content
     assert b"after_sequence=${liveProgressSequence}" in app_script.content
     assert b"function applyLiveProgress" in app_script.content
+    assert b"function renderBoundaryActivity" in app_script.content
+    assert b"Inspect exact causal path" in app_script.content
+    assert b"through_event_id=" in app_script.content
+    assert b"Internal coordination in progress; no boundary output yet." in app_script.content
+    assert b"The simulator will not invent crossings" in app_script.content
     # The shared canvas owns playback; the shell supplies retained updates and
     # contains no catalog-scenario branch for their visual interpretation.
     assert b"liveCue" in graph_script.content
@@ -1318,3 +1332,139 @@ def test_invalid_live_run_id_does_not_leave_the_live_lock_held(tmp_path: Path) -
                 break
             time.sleep(0.01)
         assert api.get(f"/api/runs/{run_id}").json()["status"] == "completed"
+
+
+def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+    preview = api.get(
+        "/api/scenarios/coordination_decision/preview",
+        params={"arm_id": "stabilization"},
+    )
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["nodes"]
+    assert preview.json()["edges"]
+    assert preview.json()["world"]["places"]
+    assert len(preview.json()["boundaries"]) == 2
+
+    response = api.post(
+        "/api/runs",
+        json={
+            "scenario": "coordination_decision",
+            "arm_id": "stabilization",
+            "execution": "scripted",
+        },
+    )
+    assert response.status_code == 200, response.text
+    document = response.json()
+    assert document["status"] == "completed"
+    assert document["cost"] == 0.0
+    assert document["model_calls"] == 0
+    assert document["completion"]
+    assert document["outcome"]["final_status"]
+    assert document["live_progress"]
+    assert 12 <= len(document["narration"]["moments"]) <= 28
+    assert all(
+        item["concise_narrative"] and item["detailed_paragraphs"]
+        for item in document["narration"]["moments"]
+    )
+    partnership = next(
+        item for item in document["boundaries"] if item["id"] == "deployment_partnership"
+    )
+    activity = partnership["activity"]
+    assert any(item["direction"] == "incoming" for item in activity["crossings"])
+    output = next(
+        item for item in activity["crossings"] if item["direction"] == "outgoing"
+    )
+    completed = next(
+        item for item in activity["episodes"] if item["status"] == "completed"
+    )
+    assert len(completed["contributing_member_ids"]) >= 4
+    assert completed["external_result_event_ids"]
+
+    run_id = document["run_id"]
+    reopened = api.get(f"/api/runs/{run_id}")
+    assert reopened.status_code == 200
+    assert next(
+        item
+        for item in reopened.json()["boundaries"]
+        if item["id"] == "deployment_partnership"
+    )["activity"] == activity
+
+    event_before_output = next(
+        item for item in document["events"] if item["sequence"] == output["sequence"] - 1
+    )
+    clipped_before = api.get(
+        f"/api/runs/{run_id}",
+        params={"through_event_id": event_before_output["event_id"]},
+    )
+    assert clipped_before.status_code == 200, clipped_before.text
+    before_activity = next(
+        item
+        for item in clipped_before.json()["boundaries"]
+        if item["id"] == "deployment_partnership"
+    )["activity"]
+    assert not any(
+        item["direction"] == "outgoing" for item in before_activity["crossings"]
+    )
+    assert all(item["status"] == "in_progress" for item in before_activity["episodes"])
+    before_boundary = next(
+        item
+        for item in clipped_before.json()["boundaries"]
+        if item["id"] == "deployment_partnership"
+    )
+    assert max(
+        item["sequence"] for item in before_boundary["activity_event_index"]
+    ) <= event_before_output["sequence"]
+
+    at_output = api.get(
+        f"/api/runs/{run_id}",
+        params={"through_event_id": output["event_id"]},
+    )
+    assert at_output.status_code == 200, at_output.text
+    at_output_activity = next(
+        item
+        for item in at_output.json()["boundaries"]
+        if item["id"] == "deployment_partnership"
+    )["activity"]
+    output_episode = next(
+        item for item in at_output_activity["episodes"] if item["status"] == "completed"
+    )
+    assert output_episode["external_result_event_ids"] == []
+
+    progress = api.get(f"/api/runs/{run_id}/progress", params={"after_sequence": 0})
+    assert progress.status_code == 200
+    latest_sequence = progress.json()["latest_sequence"]
+    assert progress.json()["projection"]["boundaries"]
+    unchanged = api.get(
+        f"/api/runs/{run_id}/progress",
+        params={"after_sequence": latest_sequence},
+    )
+    assert unchanged.status_code == 200
+    assert unchanged.json()["records"] == []
+    assert unchanged.json()["projection"] == progress.json()["projection"]
+
+    corrupted = deepcopy(document)
+    corrupted_partnership = next(
+        item
+        for item in corrupted["boundaries"]
+        if item["id"] == "deployment_partnership"
+    )
+    corrupted_partnership["activity"]["crossings"][0]["event_id"] = "event_999999"
+    RunStore(tmp_path).save(corrupted)
+    rejected = api.get(f"/api/runs/{run_id}")
+    assert rejected.status_code == 409
+
+
+def test_coordination_scenario_rejects_live_execution(tmp_path: Path) -> None:
+    response = client(tmp_path).post(
+        "/api/runs",
+        json={
+            "scenario": "coordination_decision",
+            "arm_id": "baseline",
+            "execution": "live",
+        },
+    )
+    assert response.status_code == 422
+    assert "zero-cost reference execution only" in response.json()["detail"]

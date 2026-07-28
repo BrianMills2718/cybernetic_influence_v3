@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
-from typing import Literal
+from typing import Literal, cast
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from cybernetic_influence.active_runtime import (
     ActivationAttemptRecord,
@@ -42,9 +42,413 @@ class AnalystAnimationCue(BaseModel):
     causal_parent_event_ids: list[str] = Field(default_factory=list)
 
 
+class BoundaryProjectionError(ValueError):
+    """Retained evidence cannot support a safe analytical-boundary account."""
+
+
+class BoundaryCrossing(BaseModel):
+    """One realized exact route crossing an execution-inert boundary."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    schema_version: Literal[1] = 1
+    crossing_id: str = Field(min_length=1)
+    boundary_id: str = Field(min_length=1)
+    event_id: str = Field(min_length=1)
+    sequence: int
+    causal_time: int | None = None
+    direction: Literal["incoming", "outgoing"]
+    source_ref: str = Field(min_length=1)
+    target_ref: str = Field(min_length=1)
+    route_kind: Literal["connection", "container"]
+    route_ref: str = Field(min_length=1)
+    effect_id: str = Field(min_length=1)
+    representation_id: str | None = None
+
+    @model_validator(mode="after")
+    def validate_identity(self) -> "BoundaryCrossing":
+        if self.crossing_id != (
+            f"boundary_crossing_{self.boundary_id}_{self.event_id}"
+        ):
+            raise ValueError("boundary crossing ID does not match its evidence")
+        return self
+
+
+class BoundaryCoordinationEpisode(BaseModel):
+    """One exact causal episode anchored by output or an unmatched input."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    schema_version: Literal[1] = 1
+    episode_id: str = Field(min_length=1)
+    boundary_id: str = Field(min_length=1)
+    status: Literal["completed", "in_progress"]
+    input_crossing_ids: list[str]
+    prior_output_crossing_ids: list[str]
+    trigger_event_ids: list[str]
+    internal_event_ids: list[str]
+    output_crossing_id: str | None
+    external_result_event_ids: list[str]
+    contributing_member_ids: list[str]
+    start_sequence: int
+    end_sequence: int | None = None
+
+    @model_validator(mode="after")
+    def validate_episode(self) -> "BoundaryCoordinationEpisode":
+        lists = (
+            self.input_crossing_ids,
+            self.prior_output_crossing_ids,
+            self.trigger_event_ids,
+            self.internal_event_ids,
+            self.external_result_event_ids,
+            self.contributing_member_ids,
+        )
+        if any(len(items) != len(set(items)) for items in lists):
+            raise ValueError("boundary episode lists must contain unique IDs")
+        if self.status == "completed":
+            if self.output_crossing_id is None or self.end_sequence is None:
+                raise ValueError("completed boundary episode requires an output")
+            expected = (
+                f"boundary_episode_{self.boundary_id}_"
+                f"{self.output_crossing_id.removeprefix(f'boundary_crossing_{self.boundary_id}_')}"
+            )
+        else:
+            if self.output_crossing_id is not None or self.end_sequence is not None:
+                raise ValueError("in-progress boundary episode cannot claim an output")
+            if len(self.input_crossing_ids) != 1:
+                raise ValueError("in-progress boundary episode requires one input")
+            input_event_id = self.input_crossing_ids[0].removeprefix(
+                f"boundary_crossing_{self.boundary_id}_"
+            )
+            expected = f"boundary_episode_{self.boundary_id}_{input_event_id}"
+        if self.episode_id != expected:
+            raise ValueError("boundary episode ID does not match its anchor")
+        return self
+
+
+class BoundaryActivityProjection(BaseModel):
+    """Strict server-owned boundary activity over one retained event prefix."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    schema_version: Literal[1] = 1
+    boundary_id: str = Field(min_length=1)
+    crossings: list[BoundaryCrossing]
+    episodes: list[BoundaryCoordinationEpisode]
+
+    @model_validator(mode="after")
+    def validate_projection(self) -> "BoundaryActivityProjection":
+        crossing_ids = [item.crossing_id for item in self.crossings]
+        episode_ids = [item.episode_id for item in self.episodes]
+        if len(crossing_ids) != len(set(crossing_ids)):
+            raise ValueError("boundary projection has duplicate crossings")
+        if len(episode_ids) != len(set(episode_ids)):
+            raise ValueError("boundary projection has duplicate episodes")
+        if any(item.boundary_id != self.boundary_id for item in self.crossings):
+            raise ValueError("boundary crossing belongs to another boundary")
+        if any(item.boundary_id != self.boundary_id for item in self.episodes):
+            raise ValueError("boundary episode belongs to another boundary")
+        if [item.sequence for item in self.crossings] != sorted(
+            item.sequence for item in self.crossings
+        ):
+            raise ValueError("boundary crossings must follow canonical sequence")
+        return self
+
+
+def validate_retained_boundary_activities(
+    document: Mapping[str, object],
+) -> None:
+    """Fail reopening when retained typed activity has dangling evidence."""
+    raw_boundaries = document.get("boundaries", [])
+    raw_events = document.get("events", [])
+    if not isinstance(raw_boundaries, list) or not isinstance(raw_events, list):
+        raise ValueError("retained boundary activity envelope is malformed")
+    events = {
+        str(item["event_id"]): item
+        for item in raw_events
+        if isinstance(item, dict) and isinstance(item.get("event_id"), str)
+    }
+    if len(events) != len(raw_events):
+        raise ValueError("retained boundary activity has malformed events")
+    for raw_boundary in raw_boundaries:
+        if not isinstance(raw_boundary, dict):
+            raise ValueError("retained boundary is malformed")
+        raw_activity = raw_boundary.get("activity")
+        if raw_activity is None:
+            continue
+        activity = BoundaryActivityProjection.model_validate(raw_activity)
+        if activity.boundary_id != raw_boundary.get("id"):
+            raise ValueError("retained activity belongs to another boundary")
+        raw_index = raw_boundary.get("activity_event_index")
+        if not isinstance(raw_index, list) or len(raw_index) != len(events):
+            raise ValueError("retained boundary event index is incomplete")
+        raw_snapshots = raw_boundary.get("snapshots")
+        if not isinstance(raw_snapshots, dict):
+            raise ValueError("retained boundary snapshots are malformed")
+        known_members: set[str] = set()
+        for snapshot in raw_snapshots.values():
+            if not isinstance(snapshot, dict):
+                raise ValueError("retained boundary snapshot is malformed")
+            raw_members = snapshot.get("member_ids")
+            if not isinstance(raw_members, list) or not all(
+                isinstance(member_id, str) for member_id in raw_members
+            ):
+                raise ValueError("retained boundary members are malformed")
+            known_members.update(cast(list[str], raw_members))
+        indexed_ids: set[str] = set()
+        for item in raw_index:
+            if not isinstance(item, dict):
+                raise ValueError("retained boundary event index is malformed")
+            event_id = item.get("event_id")
+            contributors = item.get("contributing_member_ids")
+            if (
+                not isinstance(event_id, str)
+                or event_id in indexed_ids
+                or event_id not in events
+                or item.get("sequence") != events[event_id].get("sequence")
+                or not isinstance(item.get("boundary_relevant"), bool)
+                or not isinstance(contributors, list)
+                or not all(isinstance(value, str) for value in contributors)
+                or len(contributors) != len(set(contributors))
+                or not set(cast(list[str], contributors)).issubset(known_members)
+            ):
+                raise ValueError("retained boundary event index is malformed")
+            indexed_ids.add(event_id)
+        crossing_ids = {item.crossing_id: item for item in activity.crossings}
+        for crossing in activity.crossings:
+            event = events.get(crossing.event_id)
+            if event is None:
+                raise ValueError("retained crossing references an unknown event")
+            if event.get("event_kind") != "effect_routed":
+                raise ValueError("retained crossing does not reference a routed effect")
+            if event.get("sequence") != crossing.sequence:
+                raise ValueError("retained crossing sequence disagrees with evidence")
+            route_field = (
+                "connection_id"
+                if crossing.route_kind == "connection"
+                else "container_id"
+            )
+            other_route_field = (
+                "container_id"
+                if crossing.route_kind == "connection"
+                else "connection_id"
+            )
+            if (
+                event.get("route_kind") != crossing.route_kind
+                or event.get(route_field) != crossing.route_ref
+                or event.get(other_route_field) is not None
+                or event.get("effect_id") != crossing.effect_id
+                or event.get("representation_id") != crossing.representation_id
+            ):
+                raise ValueError("retained crossing disagrees with exact route evidence")
+        for episode in activity.episodes:
+            for crossing_id in [
+                *episode.input_crossing_ids,
+                *episode.prior_output_crossing_ids,
+                *([episode.output_crossing_id] if episode.output_crossing_id else []),
+            ]:
+                if crossing_id not in crossing_ids:
+                    raise ValueError("retained episode references an unknown crossing")
+            for event_id in [
+                *episode.trigger_event_ids,
+                *episode.internal_event_ids,
+                *episode.external_result_event_ids,
+            ]:
+                if event_id not in events:
+                    raise ValueError("retained episode references an unknown event")
+            for event_ids in (
+                episode.trigger_event_ids,
+                episode.internal_event_ids,
+                episode.external_result_event_ids,
+            ):
+                if [events[item]["sequence"] for item in event_ids] != sorted(
+                    events[item]["sequence"] for item in event_ids
+                ):
+                    raise ValueError("retained episode events are not canonically ordered")
+
+
+def clip_boundary_activity_projection(
+    activity: BoundaryActivityProjection,
+    events: Sequence[Mapping[str, object]],
+    event_index: Sequence[Mapping[str, object]],
+    *,
+    through_sequence: int,
+) -> BoundaryActivityProjection:
+    """Reconstruct one exact selected prefix from server-retained event facts."""
+    event_by_id: dict[str, Mapping[str, object]] = {}
+    for event in events:
+        event_id = event.get("event_id")
+        sequence = event.get("sequence")
+        if (
+            not isinstance(event_id, str)
+            or not isinstance(sequence, int)
+            or isinstance(sequence, bool)
+            or event_id in event_by_id
+        ):
+            raise ValueError("retained activity evidence is malformed")
+        if sequence <= through_sequence:
+            unknown_parents = set(cast(list[str], event.get("causal_parent_event_ids", []))) - set(event_by_id)
+            if unknown_parents:
+                raise ValueError("retained activity has unknown or future parents")
+            event_by_id[event_id] = event
+
+    indexed: dict[str, Mapping[str, object]] = {}
+    for item in event_index:
+        event_id = item.get("event_id")
+        sequence = item.get("sequence")
+        relevant = item.get("boundary_relevant")
+        contributors = item.get("contributing_member_ids")
+        if (
+            not isinstance(event_id, str)
+            or event_id in indexed
+            or not isinstance(sequence, int)
+            or isinstance(sequence, bool)
+            or not isinstance(relevant, bool)
+            or not isinstance(contributors, list)
+            or not all(isinstance(value, str) for value in contributors)
+            or len(contributors) != len(set(contributors))
+        ):
+            raise ValueError("retained boundary event index is malformed")
+        if event_id in event_by_id:
+            if event_by_id[event_id].get("sequence") != sequence:
+                raise ValueError("boundary event index sequence disagrees with evidence")
+            indexed[event_id] = item
+    if set(indexed) != set(event_by_id):
+        raise ValueError("boundary event index does not cover the selected prefix")
+
+    crossings = [
+        item for item in activity.crossings if item.sequence <= through_sequence
+    ]
+    crossing_by_event = {item.event_id: item for item in crossings}
+    children: dict[str, list[str]] = {event_id: [] for event_id in event_by_id}
+    for event_id, event in event_by_id.items():
+        for parent_id in cast(list[str], event.get("causal_parent_event_ids", [])):
+            children[parent_id].append(event_id)
+
+    def order(event_id: str) -> int:
+        return cast(int, event_by_id[event_id]["sequence"])
+
+    def contributing(internal_ids: Sequence[str]) -> list[str]:
+        contributors: list[str] = []
+        for event_id in internal_ids:
+            for member_id in cast(list[str], indexed[event_id]["contributing_member_ids"]):
+                if member_id not in contributors:
+                    contributors.append(member_id)
+        return contributors
+
+    def ancestry(output_event_id: str) -> tuple[list[BoundaryCrossing], list[BoundaryCrossing], list[str], list[str]]:
+        inputs: dict[str, BoundaryCrossing] = {}
+        prior_outputs: dict[str, BoundaryCrossing] = {}
+        triggers: set[str] = set()
+        internal: set[str] = set()
+        seen: set[str] = set()
+        stack = list(cast(list[str], event_by_id[output_event_id].get("causal_parent_event_ids", [])))
+        while stack:
+            event_id = stack.pop()
+            if event_id in seen:
+                continue
+            seen.add(event_id)
+            crossing = crossing_by_event.get(event_id)
+            if crossing is not None:
+                (inputs if crossing.direction == "incoming" else prior_outputs)[event_id] = crossing
+                continue
+            if indexed[event_id]["boundary_relevant"] is True:
+                internal.add(event_id)
+                stack.extend(cast(list[str], event_by_id[event_id].get("causal_parent_event_ids", [])))
+            else:
+                triggers.add(event_id)
+        return (
+            sorted(inputs.values(), key=lambda item: item.sequence),
+            sorted(prior_outputs.values(), key=lambda item: item.sequence),
+            sorted(triggers, key=order),
+            sorted(internal, key=order),
+        )
+
+    def external_results(output_event_id: str) -> list[str]:
+        retained: set[str] = set()
+        seen: set[str] = set()
+        stack = list(children.get(output_event_id, []))
+        while stack:
+            event_id = stack.pop()
+            if event_id in seen:
+                continue
+            seen.add(event_id)
+            crossing = crossing_by_event.get(event_id)
+            if crossing is not None and crossing.direction == "incoming":
+                continue
+            if indexed[event_id]["boundary_relevant"] is True:
+                continue
+            if event_by_id[event_id].get("event_kind") in {
+                "mechanism_executed", "state_committed", "observation_delivered", "effect_dissipated",
+            }:
+                retained.add(event_id)
+            stack.extend(children.get(event_id, []))
+        return sorted(retained, key=order)
+
+    def unmatched_descendants(input_event_id: str) -> list[str]:
+        internal: set[str] = set()
+        seen: set[str] = set()
+        stack = list(children.get(input_event_id, []))
+        while stack:
+            event_id = stack.pop()
+            if event_id in seen:
+                continue
+            seen.add(event_id)
+            if event_id in crossing_by_event:
+                continue
+            if indexed[event_id]["boundary_relevant"] is True:
+                internal.add(event_id)
+                stack.extend(children.get(event_id, []))
+        return sorted(internal, key=order)
+
+    episodes: list[BoundaryCoordinationEpisode] = []
+    used_inputs: set[str] = set()
+    for output in (item for item in crossings if item.direction == "outgoing"):
+        inputs, prior_outputs, triggers, internal = ancestry(output.event_id)
+        used_inputs.update(item.event_id for item in inputs)
+        starts = [
+            *(item.sequence for item in inputs), *(item.sequence for item in prior_outputs),
+            *(order(item) for item in triggers), *(order(item) for item in internal), output.sequence,
+        ]
+        episodes.append(BoundaryCoordinationEpisode(
+            episode_id=f"boundary_episode_{activity.boundary_id}_{output.event_id}",
+            boundary_id=activity.boundary_id,
+            status="completed",
+            input_crossing_ids=[item.crossing_id for item in inputs],
+            prior_output_crossing_ids=[item.crossing_id for item in prior_outputs],
+            trigger_event_ids=triggers,
+            internal_event_ids=internal,
+            output_crossing_id=output.crossing_id,
+            external_result_event_ids=external_results(output.event_id),
+            contributing_member_ids=contributing(internal),
+            start_sequence=min(starts), end_sequence=output.sequence,
+        ))
+    for incoming in (item for item in crossings if item.direction == "incoming" and item.event_id not in used_inputs):
+        internal = unmatched_descendants(incoming.event_id)
+        episodes.append(BoundaryCoordinationEpisode(
+            episode_id=f"boundary_episode_{activity.boundary_id}_{incoming.event_id}",
+            boundary_id=activity.boundary_id,
+            status="in_progress",
+            input_crossing_ids=[incoming.crossing_id], prior_output_crossing_ids=[],
+            trigger_event_ids=[], internal_event_ids=internal,
+            output_crossing_id=None, external_result_event_ids=[],
+            contributing_member_ids=contributing(internal),
+            start_sequence=incoming.sequence, end_sequence=None,
+        ))
+    episodes.sort(key=lambda item: (item.start_sequence, item.episode_id))
+    return BoundaryActivityProjection(
+        boundary_id=activity.boundary_id,
+        crossings=crossings,
+        episodes=episodes,
+    )
+
+
 def analyst_progress_projection(
     checkpoint: ActiveRuntimeCheckpoint,
     update: RuntimeProgressUpdate,
+    *,
+    initial_state: CausalState | None = None,
+    analytical_boundaries: Sequence[AnalyticalBoundary] = (),
 ) -> dict[str, object]:
     """Project one retained runtime prefix without exposing protected cognition.
 
@@ -63,7 +467,7 @@ def analyst_progress_projection(
         events.append(analyst_event(event))
         cues.extend(_analyst_animation_cues(event, state))
     world = analyst_world({str(state.revision): state})
-    return {
+    projection: dict[str, object] = {
         "state_revision": state.revision,
         "nodes": analyst_nodes(state),
         "edges": analyst_edges(state),
@@ -71,6 +475,29 @@ def analyst_progress_projection(
         "events": events,
         "animation_cues": cues,
     }
+    if analytical_boundaries:
+        if initial_state is None:
+            raise ValueError("boundary progress requires the initial causal state")
+        temporal_states = _temporal_states(
+            initial_state,
+            checkpoint.core_checkpoint.events,
+        )
+        progress_boundaries = analyst_boundaries(
+            analytical_boundaries,
+            temporal_states,
+            analyst_edges(state),
+            [],
+            events=checkpoint.core_checkpoint.events,
+        )
+        projection["boundaries"] = [
+            {
+                "id": item["id"],
+                "activity": item["activity"],
+                "activity_event_index": item["activity_event_index"],
+            }
+            for item in progress_boundaries
+        ]
+    return projection
 
 
 def _analyst_animation_cues(
@@ -137,7 +564,7 @@ from cybernetic_influence.causal_core.models import (
     CausalState,
     RepresentationToken,
 )
-from cybernetic_influence.causal_core.replay import replay_event_prefix
+from cybernetic_influence.causal_core.replay import apply_state_patch
 from cybernetic_influence.scenarios.service_desk import (
     ServiceDeskArmId,
     ServiceDeskCognitionProfile,
@@ -279,6 +706,7 @@ def build_analyst_document(
     outcome: Mapping[str, object],
     headline: str,
     summary: str,
+    include_boundary_activity: bool = False,
 ) -> dict[str, object]:
     """Build the common retained analyst surface proven across scenarios."""
     final_state = result.core_result.final_state
@@ -297,6 +725,7 @@ def build_analyst_document(
         temporal_states,
         edges,
         timeline,
+        events=(result.core_result.events if include_boundary_activity else None),
     )
     traces = analyst_traces(result)
     world = analyst_world(temporal_states)
@@ -537,16 +966,571 @@ def _temporal_states(
     events: Sequence[CausalEvent],
 ) -> dict[str, CausalState]:
     """Reconstruct one canonical state for every observed revision."""
-    states: dict[str, CausalState] = {
-        str(initial_state.revision): initial_state.model_copy(deep=True)
-    }
-    prefix: list[CausalEvent] = []
+    state = initial_state.model_copy(deep=True)
+    states: dict[str, CausalState] = {str(state.revision): state.model_copy(deep=True)}
+    known_event_ids: set[str] = set()
     for event in events:
-        prefix.append(event)
-        revision = str(event.state_revision)
+        unknown_parents = set(event.causal_parent_event_ids) - known_event_ids
+        if unknown_parents:
+            raise BoundaryProjectionError(
+                f"event {event.event_id!r} has unknown or future parents"
+            )
+        if event.event_kind == "state_committed":
+            if event.patch is None:
+                raise BoundaryProjectionError("commit event is missing its patch")
+            state = apply_state_patch(
+                state,
+                event.patch,
+                known_event_ids=known_event_ids,
+            )
+        if event.state_revision != state.revision:
+            raise BoundaryProjectionError(
+                f"event {event.event_id!r} disagrees with replay state revision"
+            )
+        known_event_ids.add(event.event_id)
+        revision = str(state.revision)
         if revision not in states:
-            states[revision] = replay_event_prefix(initial_state, prefix)
+            states[revision] = state.model_copy(deep=True)
     return states
+
+
+def project_boundary_activity(
+    boundary: AnalyticalBoundary,
+    temporal_states: Mapping[str, CausalState],
+    events: Sequence[CausalEvent],
+    *,
+    causal_times: Mapping[str, int] | None = None,
+    through_sequence: int | None = None,
+) -> BoundaryActivityProjection:
+    """Derive exact crossings and episodes from one retained event prefix."""
+    retained = [
+        event
+        for event in events
+        if through_sequence is None or event.sequence <= through_sequence
+    ]
+    event_by_id: dict[str, CausalEvent] = {}
+    seen_sequences: set[int] = set()
+    run_ids = {event.run_id for event in retained}
+    if len(run_ids) > 1:
+        raise BoundaryProjectionError("retained boundary evidence crosses runs")
+    for event in retained:
+        if event.event_id in event_by_id or event.sequence in seen_sequences:
+            raise BoundaryProjectionError("retained boundary evidence has duplicate IDs")
+        unknown_parents = set(event.causal_parent_event_ids) - set(event_by_id)
+        if unknown_parents:
+            raise BoundaryProjectionError(
+                f"event {event.event_id!r} has unknown or future parents"
+            )
+        event_by_id[event.event_id] = event
+        seen_sequences.add(event.sequence)
+    if retained and [event.sequence for event in retained] != sorted(
+        event.sequence for event in retained
+    ):
+        raise BoundaryProjectionError("retained events are not canonically ordered")
+
+    state_by_event = {
+        event.event_id: _boundary_event_state(event, temporal_states)
+        for event in retained
+    }
+    for state in {
+        state.revision: state for state in state_by_event.values()
+    }.values():
+        _validate_boundary_members(boundary, state)
+    members_by_revision = {
+        revision: _boundary_member_refs(boundary, state)
+        for revision, state in {
+            state.revision: state for state in state_by_event.values()
+        }.items()
+    }
+    members_by_event = {
+        event.event_id: members_by_revision[state_by_event[event.event_id].revision]
+        for event in retained
+    }
+    for event in retained:
+        _validate_boundary_event_references(event, state_by_event[event.event_id])
+        _reject_direct_cross_boundary_patch(
+            event,
+            state_by_event[event.event_id],
+            members_by_event[event.event_id],
+        )
+
+    crossings: list[BoundaryCrossing] = []
+    for event in retained:
+        if event.event_kind != "effect_routed":
+            continue
+        state = state_by_event[event.event_id]
+        members = members_by_event[event.event_id]
+        assert event.source_port_id is not None
+        assert event.target_port_id is not None
+        source_ref = state.ports[event.source_port_id].owner_ref
+        target_ref = state.ports[event.target_port_id].owner_ref
+        source_inside = source_ref in members
+        target_inside = target_ref in members
+        if source_inside == target_inside:
+            continue
+        if event.route_kind == "connection":
+            if event.connection_id is None or event.connection_id not in state.connections:
+                raise BoundaryProjectionError("crossing names an unknown connection")
+            route_ref = event.connection_id
+        elif event.route_kind == "container":
+            if event.container_id is None or event.container_id not in state.containers:
+                raise BoundaryProjectionError("crossing names an unknown container")
+            route_ref = event.container_id
+        else:  # pragma: no cover - CausalEvent already guards this
+            raise BoundaryProjectionError("crossing lacks one exact route")
+        if event.effect_id is None:
+            raise BoundaryProjectionError("crossing lacks an exact effect")
+        crossings.append(
+            BoundaryCrossing(
+                crossing_id=(
+                    f"boundary_crossing_{boundary.boundary_id}_{event.event_id}"
+                ),
+                boundary_id=boundary.boundary_id,
+                event_id=event.event_id,
+                sequence=event.sequence,
+                causal_time=(causal_times or {}).get(event.event_id),
+                direction="outgoing" if source_inside else "incoming",
+                source_ref=source_ref,
+                target_ref=target_ref,
+                route_kind=event.route_kind,
+                route_ref=route_ref,
+                effect_id=event.effect_id,
+                representation_id=event.representation_id,
+            )
+        )
+
+    crossing_by_event = {item.event_id: item for item in crossings}
+    children: dict[str, list[str]] = {event_id: [] for event_id in event_by_id}
+    for event in retained:
+        for parent_id in event.causal_parent_event_ids:
+            children[parent_id].append(event.event_id)
+
+    episodes: list[BoundaryCoordinationEpisode] = []
+    used_inputs: set[str] = set()
+    for output in (item for item in crossings if item.direction == "outgoing"):
+        inputs, prior_outputs, triggers, internal = _walk_boundary_ancestry(
+            boundary,
+            output.event_id,
+            event_by_id,
+            state_by_event,
+            members_by_event,
+            crossing_by_event,
+        )
+        used_inputs.update(item.event_id for item in inputs)
+        external = _walk_external_results(
+            boundary,
+            output.event_id,
+            event_by_id,
+            state_by_event,
+            members_by_event,
+            crossing_by_event,
+            children,
+        )
+        contributing = _contributing_members(
+            boundary,
+            internal,
+            event_by_id,
+            state_by_event,
+            members_by_event,
+        )
+        start_candidates = [
+            *(item.sequence for item in inputs),
+            *(item.sequence for item in prior_outputs),
+            *(event_by_id[item].sequence for item in triggers),
+            *(event_by_id[item].sequence for item in internal),
+            output.sequence,
+        ]
+        episodes.append(
+            BoundaryCoordinationEpisode(
+                episode_id=(
+                    f"boundary_episode_{boundary.boundary_id}_{output.event_id}"
+                ),
+                boundary_id=boundary.boundary_id,
+                status="completed",
+                input_crossing_ids=[item.crossing_id for item in inputs],
+                prior_output_crossing_ids=[
+                    item.crossing_id for item in prior_outputs
+                ],
+                trigger_event_ids=triggers,
+                internal_event_ids=internal,
+                output_crossing_id=output.crossing_id,
+                external_result_event_ids=external,
+                contributing_member_ids=contributing,
+                start_sequence=min(start_candidates),
+                end_sequence=output.sequence,
+            )
+        )
+
+    for incoming in (
+        item
+        for item in crossings
+        if item.direction == "incoming" and item.event_id not in used_inputs
+    ):
+        internal = _walk_unmatched_input_descendants(
+            boundary,
+            incoming.event_id,
+            event_by_id,
+            state_by_event,
+            members_by_event,
+            crossing_by_event,
+            children,
+        )
+        contributing = _contributing_members(
+            boundary,
+            internal,
+            event_by_id,
+            state_by_event,
+            members_by_event,
+        )
+        episodes.append(
+            BoundaryCoordinationEpisode(
+                episode_id=(
+                    f"boundary_episode_{boundary.boundary_id}_{incoming.event_id}"
+                ),
+                boundary_id=boundary.boundary_id,
+                status="in_progress",
+                input_crossing_ids=[incoming.crossing_id],
+                prior_output_crossing_ids=[],
+                trigger_event_ids=[],
+                internal_event_ids=internal,
+                output_crossing_id=None,
+                external_result_event_ids=[],
+                contributing_member_ids=contributing,
+                start_sequence=incoming.sequence,
+                end_sequence=None,
+            )
+        )
+    episodes.sort(key=lambda item: (item.start_sequence, item.episode_id))
+    return BoundaryActivityProjection(
+        boundary_id=boundary.boundary_id,
+        crossings=crossings,
+        episodes=episodes,
+    )
+
+
+def boundary_activity_event_index(
+    boundary: AnalyticalBoundary,
+    temporal_states: Mapping[str, CausalState],
+    events: Sequence[CausalEvent],
+) -> list[dict[str, object]]:
+    """Retain the minimal server-owned facts needed for exact prefix views."""
+    indexed: list[dict[str, object]] = []
+    for event in events:
+        state = _boundary_event_state(event, temporal_states)
+        members = _boundary_member_refs(boundary, state)
+        refs = [event.actor_entity_id, event.mechanism_id]
+        refs.extend(
+            state.ports[port_id].owner_ref
+            for port_id in (event.source_port_id, event.target_port_id)
+            if port_id is not None
+        )
+        contributors: list[str] = []
+        for ref in refs:
+            if ref is not None and ref in members and ref not in contributors:
+                contributors.append(ref)
+        relevant_refs = set(item for item in refs if item is not None)
+        relevant_refs.update(_patch_owner_refs(event, state))
+        indexed.append(
+            {
+                "event_id": event.event_id,
+                "sequence": event.sequence,
+                "boundary_relevant": bool(members.intersection(relevant_refs)),
+                "contributing_member_ids": contributors,
+            }
+        )
+    return indexed
+
+
+def _boundary_event_state(
+    event: CausalEvent,
+    temporal_states: Mapping[str, CausalState],
+) -> CausalState:
+    state = temporal_states.get(str(event.state_revision))
+    if state is None:
+        raise BoundaryProjectionError(
+            f"event {event.event_id!r} references an unknown state revision"
+        )
+    return state
+
+
+def _validate_boundary_members(
+    boundary: AnalyticalBoundary,
+    state: CausalState,
+) -> None:
+    known = (
+        set(state.entities)
+        | set(state.mechanisms)
+        | set(state.ports)
+        | set(state.carriers)
+        | set(state.representations)
+        | set(state.connections)
+        | set(state.containers)
+        | set(state.places)
+        | set(state.spatial_links)
+    )
+    unknown = set(boundary.member_refs) - known
+    if unknown:
+        raise BoundaryProjectionError(
+            f"boundary {boundary.boundary_id!r} has unknown members"
+        )
+
+
+def _validate_boundary_event_references(
+    event: CausalEvent,
+    state: CausalState,
+) -> None:
+    if event.actor_entity_id is not None and event.actor_entity_id not in state.entities:
+        raise BoundaryProjectionError("event references an unknown actor")
+    if event.mechanism_id is not None and event.mechanism_id not in state.mechanisms:
+        raise BoundaryProjectionError("event references an unknown mechanism")
+    for port_id in (event.source_port_id, event.target_port_id):
+        if port_id is not None and port_id not in state.ports:
+            raise BoundaryProjectionError("event references an unknown port")
+    if (
+        event.representation_id is not None
+        and event.representation_id not in state.representations
+    ):
+        raise BoundaryProjectionError("event references an unknown representation")
+    if event.event_kind == "effect_routed":
+        if event.route_kind == "connection" and (
+            event.connection_id is None
+            or event.connection_id not in state.connections
+        ):
+            raise BoundaryProjectionError("event references an unknown connection")
+        if event.route_kind == "container" and (
+            event.container_id is None or event.container_id not in state.containers
+        ):
+            raise BoundaryProjectionError("event references an unknown container")
+
+
+def _reject_direct_cross_boundary_patch(
+    event: CausalEvent,
+    state: CausalState,
+    members: set[str],
+) -> None:
+    if event.patch is None or event.mechanism_id is None:
+        return
+    if event.mechanism_id not in members:
+        return
+    outside: list[str] = []
+    for fact_change in event.patch.fact_changes:
+        owner = fact_change.fact_id.split(".", 1)[0]
+        if owner not in state.entities:
+            raise BoundaryProjectionError("fact change has an unknown owner")
+        if owner not in members:
+            outside.append(owner)
+    for placement_change in event.patch.placement_changes:
+        if placement_change.entity_id not in state.entities:
+            raise BoundaryProjectionError("placement change has an unknown owner")
+        if placement_change.entity_id not in members:
+            outside.append(placement_change.entity_id)
+    for carrier_change in event.patch.carrier_changes:
+        carrier = state.carriers.get(carrier_change.carrier_id)
+        if carrier is None:
+            raise BoundaryProjectionError("carrier change has an unknown owner")
+        if (
+            carrier_change.carrier_id not in members
+            and carrier.owner_ref not in members
+        ):
+            outside.append(carrier_change.carrier_id)
+    for representation in event.patch.representations_added:
+        carrier = state.carriers.get(representation.carrier_id)
+        if carrier is None:
+            raise BoundaryProjectionError("representation has an unknown carrier")
+        if (
+            representation.carrier_id not in members
+            and carrier.owner_ref not in members
+        ):
+            outside.append(representation.carrier_id)
+    for observation in event.patch.observations_added:
+        if observation.target_entity_id not in state.entities:
+            raise BoundaryProjectionError("observation has an unknown owner")
+        if observation.target_entity_id not in members:
+            outside.append(observation.target_entity_id)
+    if outside:
+        raise BoundaryProjectionError(
+            f"member mechanism {event.mechanism_id!r} directly mutates "
+            f"nonmember-owned state {sorted(set(outside))!r} at "
+            f"{event.event_id!r}"
+        )
+
+
+def _event_boundary_relevant(
+    event: CausalEvent,
+    state: CausalState,
+    members: set[str],
+) -> bool:
+    refs = {event.actor_entity_id, event.mechanism_id}
+    for port_id in (event.source_port_id, event.target_port_id):
+        if port_id is not None:
+            refs.add(state.ports[port_id].owner_ref)
+    refs.update(_patch_owner_refs(event, state))
+    return bool(members.intersection(item for item in refs if item is not None))
+
+
+def _patch_owner_refs(event: CausalEvent, state: CausalState) -> set[str]:
+    """Resolve typed patch ownership without consulting prose or focus IDs."""
+    if event.patch is None:
+        return set()
+    owners: set[str] = set()
+    for fact_change in event.patch.fact_changes:
+        owner = fact_change.fact_id.split(".", 1)[0]
+        if owner not in state.entities:
+            raise BoundaryProjectionError("fact change has an unknown owner")
+        owners.add(owner)
+    for placement_change in event.patch.placement_changes:
+        if placement_change.entity_id not in state.entities:
+            raise BoundaryProjectionError("placement change has an unknown owner")
+        owners.add(placement_change.entity_id)
+    for carrier_change in event.patch.carrier_changes:
+        carrier = state.carriers.get(carrier_change.carrier_id)
+        if carrier is None:
+            raise BoundaryProjectionError("carrier change has an unknown owner")
+        owners.update({carrier_change.carrier_id, carrier.owner_ref})
+    for representation in event.patch.representations_added:
+        carrier = state.carriers.get(representation.carrier_id)
+        if carrier is None:
+            raise BoundaryProjectionError("representation has an unknown carrier")
+        owners.update({representation.carrier_id, carrier.owner_ref})
+    for observation in event.patch.observations_added:
+        if observation.target_entity_id not in state.entities:
+            raise BoundaryProjectionError("observation has an unknown owner")
+        owners.add(observation.target_entity_id)
+    return owners
+
+
+def _walk_boundary_ancestry(
+    boundary: AnalyticalBoundary,
+    output_event_id: str,
+    event_by_id: Mapping[str, CausalEvent],
+    state_by_event: Mapping[str, CausalState],
+    members_by_event: Mapping[str, set[str]],
+    crossing_by_event: Mapping[str, BoundaryCrossing],
+) -> tuple[
+    list[BoundaryCrossing],
+    list[BoundaryCrossing],
+    list[str],
+    list[str],
+]:
+    inputs: dict[str, BoundaryCrossing] = {}
+    prior_outputs: dict[str, BoundaryCrossing] = {}
+    triggers: set[str] = set()
+    internal: set[str] = set()
+    seen: set[str] = set()
+    stack = list(event_by_id[output_event_id].causal_parent_event_ids)
+    while stack:
+        event_id = stack.pop()
+        if event_id in seen:
+            continue
+        seen.add(event_id)
+        event = event_by_id[event_id]
+        crossing = crossing_by_event.get(event_id)
+        if crossing is not None:
+            target = inputs if crossing.direction == "incoming" else prior_outputs
+            target[event_id] = crossing
+            continue
+        if _event_boundary_relevant(
+            event, state_by_event[event_id], members_by_event[event_id]
+        ):
+            internal.add(event_id)
+            stack.extend(event.causal_parent_event_ids)
+        else:
+            triggers.add(event_id)
+    order = lambda event_id: event_by_id[event_id].sequence
+    return (
+        sorted(inputs.values(), key=lambda item: item.sequence),
+        sorted(prior_outputs.values(), key=lambda item: item.sequence),
+        sorted(triggers, key=order),
+        sorted(internal, key=order),
+    )
+
+
+def _walk_external_results(
+    boundary: AnalyticalBoundary,
+    output_event_id: str,
+    event_by_id: Mapping[str, CausalEvent],
+    state_by_event: Mapping[str, CausalState],
+    members_by_event: Mapping[str, set[str]],
+    crossing_by_event: Mapping[str, BoundaryCrossing],
+    children: Mapping[str, Sequence[str]],
+) -> list[str]:
+    retained: set[str] = set()
+    seen: set[str] = set()
+    stack = list(children.get(output_event_id, []))
+    while stack:
+        event_id = stack.pop()
+        if event_id in seen:
+            continue
+        seen.add(event_id)
+        crossing = crossing_by_event.get(event_id)
+        if crossing is not None and crossing.direction == "incoming":
+            continue
+        event = event_by_id[event_id]
+        if _event_boundary_relevant(
+            event, state_by_event[event_id], members_by_event[event_id]
+        ):
+            continue
+        if event.event_kind in {
+            "mechanism_executed",
+            "state_committed",
+            "observation_delivered",
+            "effect_dissipated",
+        }:
+            retained.add(event_id)
+        stack.extend(children.get(event_id, []))
+    return sorted(retained, key=lambda item: event_by_id[item].sequence)
+
+
+def _walk_unmatched_input_descendants(
+    boundary: AnalyticalBoundary,
+    input_event_id: str,
+    event_by_id: Mapping[str, CausalEvent],
+    state_by_event: Mapping[str, CausalState],
+    members_by_event: Mapping[str, set[str]],
+    crossing_by_event: Mapping[str, BoundaryCrossing],
+    children: Mapping[str, Sequence[str]],
+) -> list[str]:
+    internal: set[str] = set()
+    seen: set[str] = set()
+    stack = list(children.get(input_event_id, []))
+    while stack:
+        event_id = stack.pop()
+        if event_id in seen:
+            continue
+        seen.add(event_id)
+        if event_id in crossing_by_event:
+            continue
+        event = event_by_id[event_id]
+        if _event_boundary_relevant(
+            event, state_by_event[event_id], members_by_event[event_id]
+        ):
+            internal.add(event_id)
+            stack.extend(children.get(event_id, []))
+    return sorted(internal, key=lambda item: event_by_id[item].sequence)
+
+
+def _contributing_members(
+    boundary: AnalyticalBoundary,
+    internal_event_ids: Sequence[str],
+    event_by_id: Mapping[str, CausalEvent],
+    state_by_event: Mapping[str, CausalState],
+    members_by_event: Mapping[str, set[str]],
+) -> list[str]:
+    contributors: list[str] = []
+    for event_id in internal_event_ids:
+        event = event_by_id[event_id]
+        state = state_by_event[event_id]
+        members = members_by_event[event_id]
+        refs = [event.actor_entity_id, event.mechanism_id]
+        refs.extend(
+            state.ports[port_id].owner_ref
+            for port_id in (event.source_port_id, event.target_port_id)
+            if port_id is not None
+        )
+        for ref in refs:
+            if ref is not None and ref in members and ref not in contributors:
+                contributors.append(ref)
+    return contributors
 
 
 def analyst_boundaries(
@@ -554,12 +1538,31 @@ def analyst_boundaries(
     temporal_states: Mapping[str, CausalState],
     edges: Sequence[Mapping[str, object]],
     timeline: list[dict[str, object]],
+    *,
+    events: Sequence[CausalEvent] | None = None,
 ) -> list[dict[str, object]]:
     """Derive reversible aggregate evidence without creating runtime state."""
     projected: list[dict[str, object]] = []
     members_by_boundary_revision: dict[tuple[str, str], set[str]] = {}
 
     for boundary in boundaries:
+        causal_times = {
+            str(item["event_id"]): cast(int, item["causal_time"])
+            for item in timeline
+            if isinstance(item.get("event_id"), str)
+            and isinstance(item.get("causal_time"), int)
+            and not isinstance(item.get("causal_time"), bool)
+        }
+        activity = (
+            project_boundary_activity(
+                boundary,
+                temporal_states,
+                events,
+                causal_times=causal_times,
+            )
+            if events is not None
+            else None
+        )
         snapshots: dict[str, dict[str, object]] = {}
         for revision, state in temporal_states.items():
             member_refs = _boundary_member_refs(boundary, state)
@@ -626,6 +1629,18 @@ def analyst_boundaries(
                 "authored_member_ids": list(boundary.member_refs),
                 "snapshots": snapshots,
                 "trace_event_ids": [],
+                **(
+                    {
+                        "activity": activity.model_dump(mode="json"),
+                        "activity_event_index": boundary_activity_event_index(
+                            boundary,
+                            temporal_states,
+                            cast(Sequence[CausalEvent], events),
+                        ),
+                    }
+                    if activity is not None
+                    else {}
+                ),
             }
         )
 
