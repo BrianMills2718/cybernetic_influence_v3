@@ -284,7 +284,7 @@ def test_narrator_reserves_the_full_account_before_any_provider_call(
     assert boundary["kind"] == "budget_preflight"
     assert boundary["required_calls"] == len(document["moments"])
     assert boundary["remaining_authorization"] == pytest.approx(0.025)
-    assert boundary["per_call_ceiling"] == 0.02
+    assert boundary["per_call_ceiling"] == 0.025
 
 
 def test_narrator_checks_its_configured_call_limit_before_provider_calls(
@@ -337,7 +337,7 @@ def test_narrator_retains_observed_over_ceiling_cost_as_failure(
                 concise="An unexpectedly expensive account.",
                 current_event_id=source_ids[-1],
             ),
-            SimpleNamespace(cost=0.021, cost_source="provider_reported"),
+            SimpleNamespace(cost=0.026, cost_source="provider_reported"),
         )
 
     narration = narrate_live_moments(
@@ -349,11 +349,11 @@ def test_narrator_retains_observed_over_ceiling_cost_as_failure(
     )
 
     assert narration["status"] == "unavailable"
-    assert narration["cost"] == 0.021
+    assert narration["cost"] == 0.026
     calls = narration["calls"]
     assert isinstance(calls, list)
     assert calls[0]["status"] == "failed"
-    assert calls[0]["cost"] == 0.021
+    assert calls[0]["cost"] == 0.026
     assert "exceeds per-call ceiling" in calls[0]["error_message"]
 
 

@@ -142,7 +142,7 @@ or `high` participant reasoning and `low` narrator reasoning. Explicit provider
 prefixes are required because bare model identifiers may select direct-provider
 routes in `llm_client`.
 
-Runtime contracts cap each participant call at $0.05 and narration at $0.02 per
+Runtime contracts cap each participant call at $0.05 and narration at $0.025 per
 bounded moment. The UI advertises the conservative combined $0.74 envelope.
 Typical Service Desk runs quiesce well before that bound. Only one live run may
 execute at a time.

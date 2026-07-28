@@ -14,7 +14,7 @@ import yaml
 
 
 NARRATOR_TASK = "cybernetic_causal_moment_narration"
-NARRATOR_MAX_BUDGET = 0.02
+NARRATOR_MAX_BUDGET = 0.025
 # The analyst card needs one compact account; a bounded completion prevents a
 # provider-accepted but locally overlong response from breaking the sequence.
 # One response now contains a compact timeline account and the readable

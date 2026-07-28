@@ -11,13 +11,15 @@ from typing import Literal, NotRequired, TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from cybernetic_influence.narration import NARRATOR_MAX_BUDGET
+
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh"]
 DEFAULT_MODEL = "openrouter/deepseek/deepseek-v4-flash"
 DEFAULT_REASONING_EFFORT: ReasoningEffort = "none"
 NARRATOR_REASONING_EFFORT: Literal["low"] = "low"
 PARTICIPANT_PER_CALL_CEILING = 0.05
-NARRATOR_PER_CALL_CEILING = 0.02
+NARRATOR_PER_CALL_CEILING = NARRATOR_MAX_BUDGET
 SERVER_MAX_TOTAL_COST = 0.74
 DEFAULT_MAX_TOTAL_COST = 0.74
 MAXIMUM_PARTICIPANT_CALLS = 48

@@ -427,7 +427,7 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
         "narrator_reasoning_effort": "none",
         "max_total_cost": 0.31,
         "participant_per_call_ceiling": 0.05,
-        "narrator_per_call_ceiling": 0.02,
+        "narrator_per_call_ceiling": 0.025,
         "maximum_participant_calls": 48,
         "maximum_narrator_calls": 32,
         "selection_basis": "operator_selected",
