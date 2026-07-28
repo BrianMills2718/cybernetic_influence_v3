@@ -609,6 +609,8 @@ def create_app(
                 "draft_id": draft_id,
                 "proposal_digest": compiled.proposal_digest,
                 "template_id": compiled.proposal.workflow.template_id,
+                "title": compiled.proposal.title,
+                "description": compiled.proposal.description,
             },
             "live_progress": [],
             "progress_sequence": 0,

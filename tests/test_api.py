@@ -95,8 +95,11 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Realized causal graph" in page.text
     assert "Narrative for the selected causal step" in page.text
     assert "Causal-step narrative" in page.text
-    assert "Concise timeline" in page.text
-    assert "Detailed narrative" in page.text
+    assert 'id="initial-situation"' in page.text
+    assert 'id="narrative-concise"' in page.text
+    assert 'id="narrative-detailed"' in page.text
+    assert "Narrative detail" in page.text
+    assert ">Detailed</button>" in page.text
     assert 'id="detailed-narrative"' in page.text
     assert "Play simulation" in page.text
     assert 'id="lifecycle-help"' in page.text

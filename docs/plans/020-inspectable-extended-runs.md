@@ -340,9 +340,11 @@ canonical Service Desk and coordination assay use exact terminal records.
 
 ### 5. UI contract
 
-On desktop, the narrative section becomes:
+The narrative section begins with a clearly labeled, human-readable configured
+initial situation and condition. It is pre-run framing, not a simulated event,
+inferred outcome, or extra model call. The reader then selects one mode:
 
-- a compact causal-step timeline that always displays concise accounts; and
+- a compact causal-step timeline of concise accounts; or
 - a synchronized continuous reading pane that concatenates every moment's one
   to three detailed prose paragraphs into one run narrative, visibly marks the
   selected moment, and provides a small evidence link for each passage.

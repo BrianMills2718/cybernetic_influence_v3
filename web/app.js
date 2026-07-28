@@ -29,6 +29,7 @@ let previewRequestSerial = 0
 let authoringDraft = null
 let authoringPreview = null
 let selectedAuthoringGraphView = 'causal'
+let selectedNarrativeDetail = 'concise'
 
 const buttonTooltips = {
   'simulation-tab': 'Choose and run a configured simulation.',
@@ -52,6 +53,8 @@ const buttonTooltips = {
   'trajectory-layout': 'Show only the causal events that occurred in the selected run.',
   'previous-event': 'Select the previous causal step.',
   'next-event': 'Select the next causal step.',
+  'narrative-concise': 'Read the one-sentence account for each causal step.',
+  'narrative-detailed': 'Read the longer account for each causal step, including evidence-provenance links.',
 }
 
 function explainButton(button) {
@@ -1498,6 +1501,31 @@ function renderTurnNarratives() {
   detailed.innerHTML = ''
 }
 
+function renderInitialSituation(run) {
+  const scenario = scenarioCatalog[run.scenario]
+  const arm = scenario?.arms?.find((item) => item.id === run.arm)
+  const summary = scenario?.representation_summary || run.authoring?.description || run.authoring?.title
+    || 'The retained run did not include a readable initial-situation summary.'
+  const condition = arm?.description
+    ? ` This run starts under the ${arm.label || run.arm} condition: ${arm.description}`
+    : ''
+  $('#initial-situation').innerHTML = `
+    <span class="eyebrow">Initial situation</span>
+    <h3>Before any causal step</h3>
+    <p>${html(summary)}${html(condition)}</p>
+    <small>Configured pre-run framing and condition; this is not a simulated event or an inferred outcome.</small>
+  `
+}
+
+function setNarrativeDetail(detail) {
+  selectedNarrativeDetail = detail
+  const concise = detail === 'concise'
+  $('#narrative-concise').setAttribute('aria-pressed', String(concise))
+  $('#narrative-detailed').setAttribute('aria-pressed', String(!concise))
+  $('#turn-narratives').hidden = !concise
+  $('#detailed-narrative').hidden = concise
+}
+
 function renderTimeline(run) {
   const timeline = run.timeline || []
   const moments = causalMoments()
@@ -1589,7 +1617,9 @@ function render(run) {
     $('#story-steps').append(item)
   })
   renderScaleControls()
+  renderInitialSituation(current)
   renderTurnNarratives()
+  setNarrativeDetail(selectedNarrativeDetail)
   const people = [...new Set(current.traces.map((entry) => entry.person))]
   const participantTabs = people.map((person) => {
     const kind = current.traces.find((entry) => entry.person === person)?.participant_kind
@@ -1623,6 +1653,8 @@ $('#simulation-tab').onclick = async () => {
   }
 }
 $('#authoring-tab').onclick = () => setWorkspaceView('authoring')
+$('#narrative-concise').onclick = () => setNarrativeDetail('concise')
+$('#narrative-detailed').onclick = () => setNarrativeDetail('detailed')
 $('#history-tab').onclick = () => setWorkspaceView('history')
 $('#readme-tab').onclick = () => setWorkspaceView('readme')
 $('#authoring-spatial-layout').onclick = () => {

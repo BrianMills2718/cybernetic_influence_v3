@@ -188,10 +188,15 @@
       <section id="narrative-section" class="turn-narratives">
         <span class="eyebrow">Causal-step narrative</span>
         <h2>How the run unfolded</h2>
-        <p class="muted">The concise timeline makes the causal sequence scannable. The detailed account beside it stays narrative while explaining the decisions, exact effects, and unresolved questions that make up the realized causal graph.</p>
-        <div class="narrative-layout">
-          <div><h3>Concise timeline</h3><div id="turn-narratives"></div></div>
-          <div><h3>Detailed narrative</h3><div id="detailed-narrative" aria-label="Detailed causal-step narrative"></div></div>
+        <p class="muted">Start with the configured situation, then read one account of the causal sequence. Switch detail when you want the longer explanation and its evidence-provenance links.</p>
+        <article id="initial-situation" class="initial-situation" aria-label="Initial situation"></article>
+        <div class="narrative-mode" role="group" aria-label="Narrative detail">
+          <button id="narrative-concise" type="button" aria-pressed="true">Concise</button>
+          <button id="narrative-detailed" type="button" aria-pressed="false">Detailed</button>
+        </div>
+        <div class="narrative-reading">
+          <div id="turn-narratives" aria-label="Concise causal-step narrative"></div>
+          <div id="detailed-narrative" aria-label="Detailed causal-step narrative" hidden></div>
         </div>
         <footer class="story" aria-label="Run outcome">
           <span class="eyebrow">Outcome</span>
@@ -270,6 +275,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=readable-run-v2"></script>
-  <script src="/assets/app.js?v=history-run-id-v1"></script>
+  <script src="/assets/app.js?v=narrative-reading-v1"></script>
 </body>
 </html>

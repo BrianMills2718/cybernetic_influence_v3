@@ -82,6 +82,7 @@ def test_draft_is_idempotent_revisioned_previewable_approved_and_runnable(tmp_pa
     assert run.json()["execution"] == "scripted"
     assert run.json()["cost"] == 0.0
     assert run.json()["authoring"]["draft_id"] == draft_id
+    assert run.json()["authoring"]["description"]
 
 
 def test_authored_live_run_requires_authorization_and_live_options(
