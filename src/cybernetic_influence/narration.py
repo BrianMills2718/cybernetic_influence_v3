@@ -410,11 +410,16 @@ def _render_prompt(
     environment.filters["tojson"] = lambda value: json.dumps(
         value, ensure_ascii=False, sort_keys=True
     )
+    events = cast(list[dict[str, object]], moment["events"])
+    current_event_ids = [str(event["event_id"]) for event in events]
+    prior_event_ids = sorted(_prior_source_event_ids(prior))
     return (
         environment.from_string(str(template["system"])).render(),
         environment.from_string(str(template["user"])).render(
             moment=moment,
             prior=list(prior),
+            current_event_ids=current_event_ids,
+            prior_event_ids=prior_event_ids,
         ),
     )
 

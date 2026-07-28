@@ -37,6 +37,14 @@ user: |
   Earlier causal-moment narratives, in order:
   {{ prior | tojson }}
 
+  Allowed provenance IDs for this response:
+  - Current-moment IDs (the concise account must use only these):
+    {{ current_event_ids | tojson }}
+  - Earlier-account IDs (detailed paragraphs may additionally use these):
+    {{ prior_event_ids | tojson }}
+  Every source_event_ids value must be copied exactly from one of these
+  lists. Do not cite an event merely mentioned in prose or infer an ID.
+
   Current causal moment:
   {{ moment | tojson }}
 

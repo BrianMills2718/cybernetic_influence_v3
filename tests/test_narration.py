@@ -98,6 +98,8 @@ def test_live_moment_narration_groups_participants_and_cites_current_events(
     ]
     assert any(len(moment["participants"]) > 1 for moment in moments)
     assert "Earlier causal-moment narratives, in order:\n[]" in prompts[0]
+    assert "Allowed provenance IDs for this response" in prompts[0]
+    assert "Current-moment IDs" in prompts[0]
     assert "Never describe scenario_start as an internal" in prompts[0]
     assert "concise_narrative must be exactly one sentence of at most 240 characters" in prompts[0]
     assert "detailed_paragraphs must contain one to three connected prose paragraphs" in prompts[0]
