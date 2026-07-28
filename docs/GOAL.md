@@ -134,10 +134,15 @@ restarting completed work.
   model selected `representation_id: null` for an interface that required one.
   It retained eight calls and `$0.001218052` provider-observed cost; no V3
   narration or terminal outcome exists.
-- **Resume event:** an operator decision whether to repair the participant
-  action contract/prompt and authorize a replacement bounded DeepSeek run, or
-  to choose a different explicitly authorized model/call topology. Do not
-  silently retry, switch models, or relax the contract.
+- **Observed Terra replacement:** `run_20d2b0000002` completed safely with
+  Terra `medium` people and Terra `low` narration, but narration stopped at
+  16/25 moments when a valid narrator call cost `$0.0203225`, above the fixed
+  `$0.02` per-call ceiling. It retained 27 calls and `$0.2113171875` observed
+  cost, so it is not the required complete V3 proof.
+- **Resume event:** an operator decision on Terra's narrator per-call/cap
+  topology and authorization for one replacement bounded Terra run, or a
+  different explicitly authorized model/call topology. Do not silently retry,
+  switch models, mix routes, or relax the evidence contract.
 
 ## Done
 

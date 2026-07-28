@@ -44,6 +44,26 @@ Current V3 deployment observed 2026-07-28:
   with its completed narration and unchanged retained `$0.00101175` cost; this
   readback made no provider call.
 
+Terra replacement observation on 2026-07-28:
+
+- Terra's V3 narrator route is now certified by participant observation
+  `routeobs1_7cc1c51f065c181a33ff422d` and narrator observation
+  `routeobs1_982bdef5232df0ada7f8e2fe`; the latter reused a successful
+  `$0.00097625` call after OpenRouter's delayed generation metadata became
+  available, rather than paying for a second certification call;
+- `run_20d2b0000002` used Terra `medium` for people and Terra `low` for
+  narration. It paused after one causal step, resumed that exact checkpoint,
+  and reached `closed_confirmed` through terminal condition
+  `confirmed_closure` with 27 retained calls and `$0.2113171875` observed
+  cost;
+- it is **not accepted** as the complete 20D2 proof: 16 of 25 V3 narrator
+  moments were retained, then a valid Terra narrator call cost `$0.0203225`,
+  exceeding the fixed `$0.02` per-call narrator ceiling. The run failed closed
+  with no fallback or hidden cost overrun;
+- a replacement requires an operator decision on the Terra narrator
+  per-call/cap topology and fresh authorization. Keep the participant and
+  narrator contracts intact; do not silently raise the ceiling or mix models.
+
 Earlier exact-revision execution verified 2026-07-27:
 
 - simulator behavior revision:
