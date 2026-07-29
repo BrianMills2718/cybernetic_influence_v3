@@ -902,10 +902,18 @@ function renderScaleControls() {
   const selected = boundaries.find((item) => item.id === selectedBoundaryId)
   const collapsed = selectedScale !== 'exact'
   const toggle = $('#analytical-scale-toggle')
+  const available = selectedGraphView === 'causal'
   toggle.textContent = `${collapsed ? 'Expand' : 'Collapse'} ${selected?.label || 'analytical composite'}`
-  toggle.title = collapsed
-    ? 'Show the exact people, information, objects, and mechanisms inside this analytical composite.'
-    : 'Group this analytical composite into one derived node. This changes only the view, not what acts in the simulation.'
+  toggle.disabled = !available
+  selector.disabled = !available
+  $('#analytical-scale-help').textContent = available
+    ? 'Group a composite system into one node, or expand its components. This changes analytical granularity without changing the selected map view.'
+    : 'Analytical-scale grouping is currently available in Configured interaction pathways. Choose that view explicitly to collapse or expand a composite.'
+  toggle.title = !available
+    ? 'Choose Configured interaction pathways to change analytical scale; this control will not switch map views for you.'
+    : collapsed
+      ? 'Show the exact people, information, objects, and mechanisms inside this analytical composite without changing map view.'
+      : 'Group this analytical composite into one derived node without changing map view. This changes only the view, not what acts in the simulation.'
   toggle.setAttribute('aria-label', `Analytical scale: ${toggle.textContent}`)
 }
 
@@ -1869,6 +1877,7 @@ $('#spatial-layout').onclick = () => {
   selectedGraphView = 'world'
   selectedNodeId = null
   selectedEdgeId = null
+  renderScaleControls()
   renderProjectionControls()
   renderGraph()
 }
@@ -1877,6 +1886,7 @@ $('#causal-layout').onclick = () => {
   selectedGraphView = 'causal'
   selectedNodeId = null
   selectedEdgeId = null
+  renderScaleControls()
   renderProjectionControls()
   renderGraph()
 }
@@ -1885,6 +1895,7 @@ $('#trajectory-layout').onclick = () => {
   selectedGraphView = 'trajectory'
   selectedNodeId = current?.timeline?.[selectedEventIndex]?.event_id || null
   selectedEdgeId = null
+  renderScaleControls()
   renderProjectionControls()
   renderGraph()
 }
@@ -1894,9 +1905,9 @@ $('#analytical-boundary').onchange = () => {
   if (selectedGraphView === 'causal') renderGraph()
 }
 $('#analytical-scale-toggle').onclick = () => {
+  if (selectedGraphView !== 'causal') return
   const boundaryId = $('#analytical-boundary').value
   selectedScale = selectedScale === 'exact' ? boundaryId : 'exact'
-  selectedGraphView = 'causal'
   selectedNodeId = null
   selectedEdgeId = null
   renderScaleControls()

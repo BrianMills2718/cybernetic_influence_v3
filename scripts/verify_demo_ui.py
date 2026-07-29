@@ -68,6 +68,14 @@ def main() -> None:
         assert page.locator("#analytical-scale-toggle").inner_text().startswith(
             "Collapse "
         )
+        assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
+        assert page.locator("#analytical-scale-toggle").is_disabled()
+        assert page.locator("#analytical-boundary").is_disabled()
+
+        page.locator("#causal-layout").click()
+        assert page.locator("#causal-layout").get_attribute("aria-pressed") == "true"
+        assert page.locator("#analytical-scale-toggle").is_enabled()
+        assert page.locator("#analytical-boundary").is_enabled()
 
         page.locator("#analytical-scale-toggle").click()
         page.locator(".cy-graph-bar strong", has_text="Collapsed composite").wait_for()
@@ -79,6 +87,14 @@ def main() -> None:
             "Expand "
         )
 
+        page.locator("#spatial-layout").click()
+        assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
+        assert page.locator("#analytical-scale-toggle").is_disabled()
+        assert page.locator("#analytical-boundary").is_disabled()
+        page.locator("#causal-layout").click()
+        assert page.locator("#causal-layout").get_attribute("aria-pressed") == "true"
+        page.locator(".cy-graph-bar strong", has_text="Collapsed composite").wait_for()
+
         page.locator("#analytical-scale-toggle").click()
         page.locator(".cy-graph-bar strong", has_text="Expanded exact network").wait_for()
         page.locator("#analytical-boundary").select_option("pressure_source_ensemble")
@@ -89,13 +105,24 @@ def main() -> None:
             "#analytical-scale-toggle"
         ).inner_text()
 
+        page.locator("#trajectory-layout").click()
+        assert page.locator("#trajectory-layout").get_attribute("aria-pressed") == "true"
+        assert page.locator("#analytical-scale-toggle").is_disabled()
+        assert page.locator("#analytical-boundary").is_disabled()
+        page.locator("#causal-layout").click()
+        assert page.locator("#causal-layout").get_attribute("aria-pressed") == "true"
+        page.locator(".cy-graph-bar strong", has_text="Collapsed composite").wait_for()
+
         if args.screenshot:
             args.screenshot.parent.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(args.screenshot), full_page=True)
         browser.close()
     assert not console_errors, console_errors
     assert not failed_requests, failed_requests
-    print(f"PASS {run_id}: deep link, map, both composites, collapse, and expand")
+    print(
+        f"PASS {run_id}: deep link, all projections, projection-preserving "
+        "collapse/expand, and both composites"
+    )
 
 
 if __name__ == "__main__":
