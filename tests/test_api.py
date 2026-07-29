@@ -114,6 +114,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Narrative detail" in page.text
     assert ">Detailed story</button>" in page.text
     assert 'id="detailed-narrative"' in page.text
+    assert "People and groups" in page.text
+    assert "Follow a participant or view the team as a whole" in page.text
+    assert "analytical composites did" not in page.text
     assert "Play simulation" in page.text
     assert 'id="lifecycle-help"' in page.text
     assert "Run history" in page.text
@@ -195,10 +198,12 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"after_sequence=${liveProgressSequence}" in app_script.content
     assert b"function applyLiveProgress" in app_script.content
     assert b"function renderBoundaryActivity" in app_script.content
-    assert b"Inspect exact causal path" in app_script.content
+    assert b"Show supporting events" in app_script.content
+    assert b"What reached the group" in app_script.content
+    assert b"Technical details" in app_script.content
     assert b"through_event_id=" in app_script.content
-    assert b"Internal coordination in progress; no boundary output yet." in app_script.content
-    assert b"The simulator will not invent crossings" in app_script.content
+    assert b"Nothing has left the group yet." in app_script.content
+    assert b"This saved run predates group-flow summaries" in app_script.content
     # The shared canvas owns playback; the shell supplies retained updates and
     # contains no catalog-scenario branch for their visual interpretation.
     assert b"liveCue" in graph_script.content

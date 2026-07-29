@@ -98,6 +98,59 @@ def main() -> None:
             "card => card.querySelector('p').compareDocumentPosition(card.querySelector('.narrative-meta')) & Node.DOCUMENT_POSITION_FOLLOWING"
         )
         assert not detailed_story.locator(".narrative-evidence small").first.is_visible()
+
+        group_tab = page.locator(
+            '#trace-tabs button[data-person="deployment_partnership"]'
+        )
+        assert group_tab.inner_text() == "Deployment partnership · group view"
+        assert page.locator(
+            '#trace-tabs button[data-person="mission_coordinator"]'
+        ).inner_text() == "Mission Coordinator"
+        group_tab.click()
+        group_account = page.locator("#trace .composite-account")
+        group_account.wait_for(state="visible")
+        page.wait_for_function(
+            """() => !document.querySelector('#trace .boundary-activity')?.textContent.includes('Loading')"""
+        )
+        assert group_account.locator(".eyebrow").first.inner_text() == "GROUP VIEW"
+        assert "This view follows 5 people as one group." in group_account.inner_text()
+        for internal_phrase in (
+            "Execution-inert",
+            "Analytical composite",
+            "Visible exact members",
+            "World executor",
+            "No realized boundary crossing",
+        ):
+            assert internal_phrase not in group_account.inner_text()
+        technical_details = group_account.locator(".participant-technical")
+        assert not technical_details.locator("dd").first.is_visible()
+        assert group_account.locator("#inspect-composite").inner_text() == (
+            "Highlight this group on the map"
+        )
+        page.locator(".timeline-marker").last.evaluate("element => element.click()")
+        page.wait_for_function(
+            """() => !document.querySelector('#trace .boundary-activity')?.textContent.includes('Loading')"""
+        )
+        assert "What the group did by this point" in group_account.inner_text()
+        assert "produced 1 outward action" in group_account.inner_text()
+        assert not group_account.locator(".boundary-episode").first.is_visible()
+        assert not group_account.locator(".group-activity-details").get_attribute("open")
+        page.locator(
+            '#trace-tabs button[data-person="mission_coordinator"]'
+        ).click()
+        assert "took part in" in page.locator("#trace .trace-summary p").inner_text()
+        assert "was activated" not in page.locator("#trace .trace-summary p").inner_text()
+        first_participant_moment = page.locator("#trace .trace-step").first
+        assert first_participant_moment.locator("strong").inner_text() == "Day 0"
+        assert (
+            "requested explicit, reasoned review"
+            in first_participant_moment.locator("p").first.inner_text()
+        )
+        assert "activation_" not in first_participant_moment.inner_text()
+        assert not first_participant_moment.locator("pre").is_visible()
+        assert "scope_reduced" not in " ".join(
+            page.locator("#trace .trace-step > p").all_inner_texts()
+        )
         if args.screenshot:
             args.screenshot.parent.mkdir(parents=True, exist_ok=True)
             page.locator("#narrative-section").screenshot(path=str(args.screenshot))

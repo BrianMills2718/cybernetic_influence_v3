@@ -3,7 +3,7 @@ const $ = (selector) => document.querySelector(selector)
 function showTraceInPlace(person) {
   const trace = $('#trace')
   const retainedHeight = Math.ceil(trace.getBoundingClientRect().height)
-  if (retainedHeight > 0) trace.style.minHeight = `${retainedHeight}px`
+  if (retainedHeight > 0) trace.style.minHeight = `${Math.min(retainedHeight, 520)}px`
   showTrace(person)
 }
 const html = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
@@ -71,13 +71,13 @@ function explainButton(button) {
   if (!explanation && button.classList.contains('turn-narrative')) explanation = 'Select this causal step and inspect its grounded evidence.'
   if (!explanation && button.classList.contains('timeline-marker')) explanation = 'Select this causal step.'
   if (!explanation && button.classList.contains('story-event')) explanation = 'Inspect the exact event behind this outcome step.'
-  if (!explanation && button.classList.contains('inspect-boundary-path')) explanation = 'Expand the exact retained events supporting this boundary episode and select its first event.'
+  if (!explanation && button.classList.contains('inspect-boundary-path')) explanation = 'Show the exact recorded events supporting this group response and select its first event.'
   if (!explanation && button.classList.contains('save-person')) explanation = 'Validate and save these person assumptions as a new draft revision without calling an LLM.'
   if (!explanation && button.dataset.eventId) explanation = 'Inspect this exact event in the selected causal step.'
-  if (!explanation && button.dataset.person) explanation = 'Show this participant or analytical composite account.'
+  if (!explanation && button.dataset.person) explanation = 'Show what this participant did or what crossed this group.'
   if (!explanation && button.dataset.nodeId) explanation = 'Inspect this retained node on the map.'
   if (!explanation && button.id === 'expand-boundary') explanation = 'Return to the exact components inside this analytical composite.'
-  if (!explanation && button.id === 'inspect-composite') explanation = 'Show this analytical composite on the configured interaction map.'
+  if (!explanation && button.id === 'inspect-composite') explanation = 'Highlight the members of this group on the map.'
   if (!explanation) explanation = `Use ${button.textContent.trim() || 'this control'}.`
   button.title = explanation
   if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', explanation)
@@ -1068,6 +1068,13 @@ function refLabel(ref) {
   return node?.label || String(ref || '').replaceAll('_', ' ')
 }
 
+function readableActionSummary(value) {
+  return String(value || '').replace(
+    'The coordinator proposed scope_reduced at reduced scope.',
+    'The coordinator submitted the smaller deployment for final approval.',
+  )
+}
+
 function exactEvent(eventId) {
   return (current?.timeline || []).find((item) => item.event_id === eventId)
     || (current?.events || []).find((item) => item.event_id === eventId)
@@ -1094,35 +1101,63 @@ function renderCrossing(crossing) {
 
 function renderBoundaryActivity(activity, snapshot) {
   if (activity === undefined) {
-    return '<p class="muted">Boundary activity is unavailable for this older retained run. The simulator will not invent crossings from labels, configured routes, or timing.</p>'
+    return '<p class="muted">This saved run predates group-flow summaries. Its individual participant histories and exact evidence are still available.</p>'
   }
   if (activity === null) {
-    return '<p class="muted">Loading the server-projected activity at this selected event…</p>'
+    return '<p class="muted">Loading what had entered or left this group at the selected point…</p>'
   }
   const crossingById = new Map((activity.crossings || []).map((item) => [item.crossing_id, item]))
   if (!(activity.crossings || []).length) {
-    return `<p><strong>No realized boundary crossing has occurred yet.</strong> The configured scope contains ${html(snapshot?.member_ids?.length || 0)} exact members, ${html(snapshot?.inbound_route_ids?.length || 0)} inbound route${snapshot?.inbound_route_ids?.length === 1 ? '' : 's'}, and ${html(snapshot?.outbound_route_ids?.length || 0)} outbound route${snapshot?.outbound_route_ids?.length === 1 ? '' : 's'}.</p>`
+    return '<p><strong>Nothing has entered or left this group yet.</strong> The selected point is before any recorded exchange with the rest of the simulation.</p>'
   }
-  return (activity.episodes || []).map((episode, episodeIndex) => {
+  const episodeAccounts = (activity.episodes || []).map((episode, episodeIndex) => {
     const inputs = (episode.input_crossing_ids || []).map((id) => renderCrossing(crossingById.get(id)))
     const output = episode.output_crossing_id ? renderCrossing(crossingById.get(episode.output_crossing_id)) : null
-    const contributors = (episode.contributing_member_ids || []).map(refLabel)
+    const contributorNodes = (episode.contributing_member_ids || []).map((memberId) =>
+      nodesAtSelectedEvent().find((node) => node.id === memberId),
+    ).filter(Boolean)
+    const contributorPeople = contributorNodes.filter((node) => node.kind === 'person').map((node) => node.label)
+    const contributorProcesses = contributorNodes.filter((node) => node.kind !== 'person')
+    const contributorSummary = contributorPeople.length
+      ? `${contributorPeople.join(', ')}${contributorProcesses.length ? `, with ${contributorProcesses.length} supporting process${contributorProcesses.length === 1 ? '' : 'es'}` : ''}`
+      : contributorProcesses.length
+        ? `${contributorProcesses.length} supporting process${contributorProcesses.length === 1 ? '' : 'es'}`
+        : 'No member contribution is recorded yet.'
     const external = (episode.external_result_event_ids || []).map((eventId) =>
       exactEvent(eventId)?.summary || String(exactEvent(eventId)?.event_kind || eventId).replaceAll('_', ' ')
     )
     const evidenceIds = episodeEvidenceIds(episode, crossingById)
+    const status = episode.status === 'completed' ? 'complete' : 'in progress'
     return `<section class="boundary-episode ${episode.status}">
-      <span class="eyebrow">Coordination episode ${html(episodeIndex + 1)} · ${html(episode.status.replaceAll('_', ' '))}</span>
+      <span class="eyebrow">Group response ${html(episodeIndex + 1)} · ${html(status)}</span>
       <dl class="boundary-flow">
-        <div><dt>Boundary input</dt><dd>${inputs.length ? inputs.join('<br>') : 'Autonomous internal trigger; no incoming crossing retained.'}</dd></div>
-        <div><dt>Internal coordination</dt><dd>${contributors.length ? html(contributors.join(', ')) : 'No contributing member is retained yet.'} · ${html((episode.internal_event_ids || []).length)} exact internal step${(episode.internal_event_ids || []).length === 1 ? '' : 's'}</dd></div>
-        <div><dt>Boundary output</dt><dd>${output || 'Internal coordination in progress; no boundary output yet.'}</dd></div>
-        <div><dt>External result</dt><dd>${external.length ? html(external.join(' ')) : output ? 'No downstream acceptance or world change is retained at this selected event.' : 'Not applicable until an output crosses the boundary.'}</dd></div>
+        <div><dt>What reached the group</dt><dd>${inputs.length ? inputs.join('<br>') : 'This activity began inside the group; nothing arrived from outside.'}</dd></div>
+        <div><dt>Who responded inside</dt><dd>${html(contributorSummary)}</dd></div>
+        <div><dt>What left the group</dt><dd>${output || 'Nothing has left the group yet.'}</dd></div>
+        <div><dt>What changed outside</dt><dd>${external.length ? html(external.join(' ')) : output ? 'No outside change is recorded yet.' : 'Nothing yet; the activity remains inside the group.'}</dd></div>
       </dl>
-      <button type="button" class="inspect-boundary-path" data-episode-index="${episodeIndex}" ${evidenceIds.length ? '' : 'disabled'}>Inspect exact causal path</button>
-      <details class="boundary-evidence" data-episode-index="${episodeIndex}"><summary>${html(evidenceIds.length)} retained exact event${evidenceIds.length === 1 ? '' : 's'}</summary><div class="focus-list">${evidenceIds.map((eventId) => `<button type="button" data-event-id="${html(eventId)}">${html(exactEvent(eventId)?.kind?.replaceAll('_', ' ') || eventId)}</button>`).join('')}</div></details>
+      <button type="button" class="inspect-boundary-path" data-episode-index="${episodeIndex}" ${evidenceIds.length ? '' : 'disabled'}>Show supporting events</button>
+      <details class="boundary-evidence" data-episode-index="${episodeIndex}"><summary>Technical evidence · ${html(evidenceIds.length)} exact event${evidenceIds.length === 1 ? '' : 's'}</summary><div class="focus-list">${evidenceIds.map((eventId) => `<button type="button" data-event-id="${html(eventId)}">${html(exactEvent(eventId)?.kind?.replaceAll('_', ' ') || eventId)}</button>`).join('')}</div></details>
     </section>`
   }).join('')
+  const incoming = (activity.crossings || []).filter((crossing) => crossing.direction === 'incoming')
+  const outgoing = (activity.crossings || []).filter((crossing) => crossing.direction === 'outgoing')
+  const incomingSources = [...new Set(incoming.map((crossing) => refLabel(crossing.source_ref)))]
+  const outgoingTargets = [...new Set(outgoing.map((crossing) => refLabel(crossing.target_ref)))]
+  const received = incoming.length
+    ? `The group received ${incoming.length} outside input${incoming.length === 1 ? '' : 's'} from ${incomingSources.join(', ')}.`
+    : 'No outside input reached the group.'
+  const produced = outgoing.length
+    ? `Its members and supporting processes produced ${outgoing.length} outward action${outgoing.length === 1 ? '' : 's'}, sent to ${outgoingTargets.join(', ')}.`
+    : 'No action or message has left the group yet.'
+  return `<section class="group-flow-summary">
+      <h4>What the group did by this point</h4>
+      <p>${html(received)} ${html(produced)}</p>
+    </section>
+    <details class="group-activity-details">
+      <summary>Show how this group activity was derived</summary>
+      <div class="group-episode-list">${episodeAccounts}</div>
+    </details>`
 }
 
 async function refreshBoundaryActivitiesAtSelection() {
@@ -1156,6 +1191,9 @@ function showTrace(person) {
     ).filter(Boolean)
     const people = members.filter((member) => member.kind === 'person').map((member) => member.label)
     const processes = members.filter((member) => member.kind === 'mechanism').map((member) => member.label)
+    const groupExplanation = people.length
+      ? `This view follows ${people.length} people as one group. It shows what reached them, how they responded, and what left. The people and supporting processes make decisions and cause changes; “${boundary.label}” only summarizes their combined activity.`
+      : `This view groups ${snapshot?.member_ids?.length || 0} modeled components. It shows what entered or left the group and which components produced those changes; “${boundary.label}” does not make decisions itself.`
     const hasTypedActivity = Object.prototype.hasOwnProperty.call(boundary, 'activity')
     const activity = selectedBoundaryActivities
       ? selectedBoundaryActivities[boundary.id]
@@ -1164,16 +1202,21 @@ function showTrace(person) {
         : (hasTypedActivity ? boundary.activity : undefined)
     $('#trace').innerHTML = `
       <article class="trace-step composite-account">
-        <span class="eyebrow">Analytical composite · does not act</span>
+        <span class="eyebrow">Group view</span>
         <h3>${html(boundary.label)}</h3>
-        <p>${html(boundary.description)} It summarizes ${html(people.length)} people${people.length ? ` (${html(people.join(', '))})` : ''}${processes.length ? ` and ${html(processes.length)} exact mechanism${processes.length === 1 ? '' : 's'}` : ''}; those members act, while this boundary only groups their retained activity.</p>
+        <p>${html(groupExplanation)}</p>
         <div class="boundary-activity">${renderBoundaryActivity(activity, snapshot)}</div>
-        <dl class="aggregate-facts">
-          <div><dt>Visible exact members</dt><dd>${html(snapshot?.member_ids?.length || 0)}</dd></div>
-          <div><dt>Internal routes</dt><dd>${html(snapshot?.internal_route_ids?.length || 0)}</dd></div>
-          <div><dt>World executor</dt><dd>No</dd></div>
-        </dl>
-        <button id="inspect-composite">Inspect this composite on the map</button>
+        <button id="inspect-composite">Highlight this group on the map</button>
+        <details class="participant-technical">
+          <summary>Technical details</summary>
+          <dl class="aggregate-facts">
+            <div><dt>Modeled components</dt><dd>${html(snapshot?.member_ids?.length || 0)}</dd></div>
+            <div><dt>Internal connections</dt><dd>${html(snapshot?.internal_route_ids?.length || 0)}</dd></div>
+            <div><dt>People included</dt><dd>${html(people.length)}</dd></div>
+            <div><dt>Supporting processes</dt><dd>${html(processes.length)}</dd></div>
+            <div><dt>Acts as a separate world entity?</dt><dd>No — analysis only</dd></div>
+          </dl>
+        </details>
       </article>`
     $('#inspect-composite').onclick = () => showBoundary(boundary.id)
     document.querySelectorAll('.inspect-boundary-path').forEach((button) => {
@@ -1203,21 +1246,38 @@ function showTrace(person) {
   const entries = (current?.traces || []).filter((entry) => entry.person === person)
   const totalActions = entries.reduce((count, entry) => count + (entry.actions?.length || 0), 0)
   const totalObservations = entries.reduce((count, entry) => count + (entry.observations?.length || 0), 0)
-  const label = person.replaceAll('_', ' ')
+  const label = refLabel(person)
   $('#trace').innerHTML = entries.length ? `
     <article class="trace-summary">
-      <span class="eyebrow">${html(String(entries[0].participant_kind || 'person').replaceAll('_', ' '))} account</span>
-      <p>${html(label)} was activated ${entries.length} time${entries.length === 1 ? '' : 's'}, received ${totalObservations} retained observation${totalObservations === 1 ? '' : 's'}, and made ${totalActions} proposed action${totalActions === 1 ? '' : 's'}. The retained moments below show what it knew and did without treating this account as access to the whole world.</p>
-    </article>` + entries.map((entry) => {
+      <span class="eyebrow">${entries[0].participant_kind === 'state_machine' ? 'Process history' : 'Participant history'}</span>
+      <h3>${html(label)}</h3>
+      <p>${html(label)} took part in ${entries.length} moment${entries.length === 1 ? '' : 's'}, received ${totalObservations} piece${totalObservations === 1 ? '' : 's'} of information, and proposed ${totalActions} action${totalActions === 1 ? '' : 's'}. The moments below show what was available and what happened next.</p>
+    </article>` + entries.map((entry, entryIndex) => {
     const matches = selectedEvent?.activation === entry.activation
+    const actionSummaries = (entry.actions || []).map((action) => readableActionSummary(action.public_summary)).filter(Boolean)
+    const observationSources = [...new Set((entry.observations || []).map((observation) =>
+      refLabel(observation.apparent_source_ref),
+    ).filter(Boolean))]
+    const observationAccount = entry.observations.length
+      ? `Received ${entry.observations.length} new piece${entry.observations.length === 1 ? '' : 's'} of information${observationSources.length ? ` from ${observationSources.join(', ')}` : ''}.`
+      : 'No new information arrived at this moment.'
+    const orientation = entry.orientation && entry.orientation !== 'Scripted zero-cost reference action.'
+      ? `<p class="participant-reasoning"><strong>Reasoning:</strong> ${html(entry.orientation)}</p>`
+      : ''
     return `
       <article class="trace-step ${matches ? 'event-match' : ''}">
-        <strong>${html(entry.activation)} · ${html(causalTime(entry))} · ${html(entry.status)}</strong>
-        <small>${html(String(entry.participant_kind || 'person').replaceAll('_',' '))} · activated by ${html(causeSummary(entry.activation_causes) || 'legacy schedule')} · ${html(entry.model_call_count || 0)} model call(s)</small>
-        <p>${html(entry.orientation || 'No private orientation was recorded.')}</p>
-        <details>
-          <summary>${entry.observations.length} observations · ${entry.actions.length} actions</summary>
+        <strong>${html(storyTime(entry, entryIndex + 1))}</strong>
+        <p>${html(actionSummaries.length ? actionSummaries.join(' ') : 'No outward action was taken.')}</p>
+        <small>${html(observationAccount)}</small>
+        ${orientation}
+        <details class="participant-technical">
+          <summary>Technical trace</summary>
           <pre>${html(JSON.stringify({
+            activation_id:entry.activation,
+            causal_order:entry.causal_timestamp,
+            status:entry.status,
+            participant_kind:entry.participant_kind,
+            model_call_count:entry.model_call_count || 0,
             activation_causes:entry.activation_causes,
             scheduled_update_before:entry.scheduled_update_before,
             update_schedule:entry.update_schedule,
@@ -1817,10 +1877,10 @@ function render(run) {
   const participantTabs = people.map((person) => {
     const kind = current.traces.find((entry) => entry.person === person)?.participant_kind
     const suffix = kind === 'state_machine' ? ' · exact process' : ''
-    return `<button data-person="${html(person)}">${html(person.replaceAll('_',' '))}${html(suffix)}</button>`
+    return `<button data-person="${html(person)}">${html(refLabel(person))}${html(suffix === ' · exact process' ? ' · process' : '')}</button>`
   })
   const compositeTabs = (current.boundaries || []).map((boundary) =>
-    `<button data-person="${html(boundary.id)}" title="Analytical composite; it summarizes members but does not act">${html(boundary.label)} · composite</button>`
+    `<button data-person="${html(boundary.id)}" title="Show what entered, happened inside, and left this group">${html(boundary.label)} · group view</button>`
   )
   $('#trace-tabs').innerHTML = [...participantTabs, ...compositeTabs].join('')
   $('#trace').style.minHeight = ''
