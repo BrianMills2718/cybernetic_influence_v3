@@ -1198,6 +1198,15 @@ def create_app(
                     "through_event_id": through_event_id,
                     "boundaries": raw_boundaries,
                 }
+            if (
+                document.get("scenario") == "coordination_decision"
+                and document.get("execution") == "scripted"
+            ):
+                # Narration is a derived read model. Reproject it from retained
+                # exact evidence so older saved proofs gain the current readable
+                # presentation without rewriting their authoritative record.
+                document = deepcopy(document)
+                document["narration"] = _coordination_reference_narration(document)
             return document
         except InvalidRunIdError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error

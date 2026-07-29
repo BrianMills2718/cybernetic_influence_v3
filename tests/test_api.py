@@ -1419,6 +1419,31 @@ def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
         if item["id"] == "deployment_partnership"
     )["activity"] == activity
 
+    legacy_document = RunStore(tmp_path).get(run_id)
+    legacy_narration = deepcopy(legacy_document["narration"])
+    legacy_narration["moments"][0]["detailed_paragraphs"] = [
+        {
+            "text": "Routed alignment_message through connection legacy_route. "
+            "Committed mechanism legacy_delivery as state revision 4.",
+            "source_event_ids": legacy_narration["moments"][0]["source_event_ids"],
+        }
+    ]
+    legacy_document["narration"] = legacy_narration
+    RunStore(tmp_path).save(legacy_document)
+    refreshed = api.get(f"/api/runs/{run_id}")
+    assert refreshed.status_code == 200
+    refreshed_text = " ".join(
+        paragraph["text"]
+        for item in refreshed.json()["narration"]["moments"]
+        for paragraph in item["detailed_paragraphs"]
+    )
+    assert "through connection" not in refreshed_text
+    assert "state revision" not in refreshed_text
+    retained_legacy_text = RunStore(tmp_path).get(run_id)["narration"]["moments"][0][
+        "detailed_paragraphs"
+    ][0]["text"]
+    assert "through connection" in retained_legacy_text
+
     event_before_output = next(
         item for item in document["events"] if item["sequence"] == output["sequence"] - 1
     )
