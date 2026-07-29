@@ -4,7 +4,7 @@ from copy import deepcopy
 from pathlib import Path
 from threading import Event, Thread
 import time
-from typing import Any
+from typing import Any, cast
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -1440,7 +1440,7 @@ def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
         if item["id"] == "deployment_partnership"
     )["activity"] == activity
 
-    legacy_document = RunStore(tmp_path).get(run_id)
+    legacy_document = cast(dict[str, Any], RunStore(tmp_path).get(run_id))
     legacy_narration = deepcopy(legacy_document["narration"])
     legacy_narration["moments"][0]["detailed_paragraphs"] = [
         {
@@ -1460,7 +1460,10 @@ def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
     )
     assert "through connection" not in refreshed_text
     assert "state revision" not in refreshed_text
-    retained_legacy_text = RunStore(tmp_path).get(run_id)["narration"]["moments"][0][
+    retained_legacy_document = cast(
+        dict[str, Any], RunStore(tmp_path).get(run_id)
+    )
+    retained_legacy_text = retained_legacy_document["narration"]["moments"][0][
         "detailed_paragraphs"
     ][0]["text"]
     assert "through connection" in retained_legacy_text

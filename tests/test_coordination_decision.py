@@ -38,6 +38,7 @@ from cybernetic_influence.scenarios.coordination_decision import (
     CoordinationRuntimePaused,
     DecisionProposal,
     IssueItem,
+    LlmTerminalProposalPayload,
     MeetingSchedule,
     MeetingSlot,
     SourceDispositionRecord,
@@ -110,6 +111,7 @@ def test_live_coordination_terminal_action_retains_structured_gate_inputs() -> N
     )
 
     payload = decision.actions[0].payload
+    assert isinstance(payload, LlmTerminalProposalPayload)
     assert payload.evidence_refs == ["independent_calibration_response"]
     assert payload.active_partner_ids == list(PERSON_IDS)
     normalized = _normalized_coordination_payload(
