@@ -398,10 +398,10 @@ function storyTime(item, fallback = 1) {
   const logicalTime = Number(item?.logical_time)
   if (!Number.isFinite(logicalTime)) return `Moment ${fallback}`
   const unit = String(current?.time_unit || 'step')
-  if (unit === 'minute') {
+  if (unit === 'minute' || unit === 'scenario_minute') {
     const day = Math.floor(logicalTime / (24 * 60))
     const minute = logicalTime % (24 * 60)
-    return minute === 0 ? `Day ${day}` : `Day ${day} · ${minute} minutes later`
+    return minute === 0 ? `Day ${day}` : `Day ${day} · minute ${minute}`
   }
   const label = unit.replaceAll('_', ' ')
   return `${logicalTime} ${label}${logicalTime === 1 ? '' : 's'} into the simulation`
@@ -1636,8 +1636,8 @@ function renderTurnNarratives() {
       const participants = moment.participants || [moment.person || 'system']
       return `
       <button class="turn-narrative" data-activation="${html(moment.activation)}">
-        <span>${html(storyTime(moment, momentNumber))} · ${html(storyParticipants(participants))}</span>
         <p>${html(moment.concise_narrative || moment.narrative)}</p>
+        <small class="narrative-meta">${html(storyTime(moment, momentNumber))} · ${html(storyParticipants(participants))}</small>
       </button>`
     }).join('')
     detailed.innerHTML = moments.map((moment, index) => {
@@ -1650,17 +1650,18 @@ function renderTurnNarratives() {
       ).join(' · ')
       if (!paragraphs.length) {
         return `<article class="detailed-narrative-moment legacy" data-activation="${html(moment.activation)}">
-          <span>Moment ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
           <p>${html(moment.concise_narrative || moment.narrative)}</p>
+          <small class="narrative-meta">${html(storyTime(moment, momentNumber))} · ${html(storyParticipants(participants))}</small>
           <small>Detailed account was not retained for this older run.</small>
         </article>`
       }
+      const exactEventIds = [...new Set(paragraphs.flatMap((paragraph) => paragraph.source_event_ids || []))]
       return `<article class="detailed-narrative-moment" data-activation="${html(moment.activation)}">
-        <span>Moment ${html(momentNumber)} · ${html(participants.map((item) => String(item).replaceAll('_',' ')).join(' + '))}</span>
         ${paragraphs.map((paragraph) => `<p>${html(paragraph.text)}</p>`).join('')}
+        <small class="narrative-meta">${html(storyTime(moment, momentNumber))} · ${html(storyParticipants(participants))}</small>
         ${context
-          ? `<button type="button" class="evidence-context-button" data-activation="${html(moment.activation)}">Evidence supplied to the narrator</button><small>Current exact events: ${html((context.current_event_ids || []).join(' · '))} · earlier narrated accounts: ${priorNarratives || 'none'} · provenance, not proof of entailment</small>`
-          : `<small>${html(paragraphs.flatMap((paragraph) => paragraph.source_event_ids || []).join(' · '))}</small>`}
+          ? `<details class="narrative-evidence"><summary>Show narrative evidence</summary><button type="button" class="evidence-context-button" data-activation="${html(moment.activation)}">Inspect this causal step</button><small>Current exact events: ${html((context.current_event_ids || []).join(' · '))} · earlier narrated accounts: ${priorNarratives || 'none'} · provenance, not proof of entailment</small></details>`
+          : `<details class="narrative-evidence"><summary>Show ${html(exactEventIds.length)} exact event${exactEventIds.length === 1 ? '' : 's'}</summary><small>${html(exactEventIds.join(' · '))}</small></details>`}
       </article>`
     }).join('')
     document.querySelectorAll('.turn-narrative').forEach((button) => {
@@ -1674,6 +1675,9 @@ function renderTurnNarratives() {
         const index = causalMoments().findIndex((moment) => moment.activation === article.dataset.activation)
         if (index >= 0) selectMoment(index)
       }
+    })
+    document.querySelectorAll('.narrative-evidence').forEach((details) => {
+      details.onclick = (event) => event.stopPropagation()
     })
     document.querySelectorAll('.evidence-context-button').forEach((button) => {
       button.onclick = (event) => {

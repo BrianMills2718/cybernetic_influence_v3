@@ -72,6 +72,36 @@ def main() -> None:
         assert page.locator("#analytical-scale-toggle").is_enabled()
         assert page.locator("#analytical-boundary").is_enabled()
 
+        first_story = page.locator("#turn-narratives .turn-narrative").first
+        assert first_story.locator("p").is_visible()
+        assert first_story.locator("p").inner_text().startswith("The schedule opened")
+        first_metadata = first_story.locator(".narrative-meta").inner_text()
+        assert first_metadata.startswith("Day 0 ·")
+        assert "scenario minutes into" not in first_metadata
+
+        page.locator("#narrative-detailed").click()
+        detailed_story = page.locator("#detailed-narrative")
+        detailed_story.wait_for(state="visible")
+        detailed_prose = " ".join(detailed_story.locator("p").all_inner_texts())
+        for internal_phrase in (
+            "through connection",
+            "Committed mechanism",
+            "state revision",
+            '{"',
+        ):
+            assert internal_phrase not in detailed_prose
+        assert (
+            "The coordinator's request for explicit review reached 4 team members."
+            in detailed_prose
+        )
+        assert detailed_story.locator(".detailed-narrative-moment").first.evaluate(
+            "card => card.querySelector('p').compareDocumentPosition(card.querySelector('.narrative-meta')) & Node.DOCUMENT_POSITION_FOLLOWING"
+        )
+        assert not detailed_story.locator(".narrative-evidence small").first.is_visible()
+        if args.screenshot:
+            args.screenshot.parent.mkdir(parents=True, exist_ok=True)
+            page.locator("#narrative-section").screenshot(path=str(args.screenshot))
+
         page.locator("#analytical-scale-toggle").click()
         page.locator(
             ".cy-graph-bar strong",
@@ -82,10 +112,6 @@ def main() -> None:
         assert page.locator("#analytical-scale-toggle").inner_text().startswith(
             "Expand "
         )
-        if args.screenshot:
-            args.screenshot.parent.mkdir(parents=True, exist_ok=True)
-            page.screenshot(path=str(args.screenshot), full_page=True)
-
         page.locator("#analytical-scale-toggle").click()
         page.locator(".cy-graph-bar strong", has_text="World topology").wait_for()
         assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
@@ -158,8 +184,9 @@ def main() -> None:
     assert not console_errors, console_errors
     assert not failed_requests, failed_requests
     print(
-        f"PASS {run_id}: deep link, all projections, projection-preserving "
-        "spatial/causal collapse/expand, both composites, and service-desk preview"
+        f"PASS {run_id}: narrative hierarchy and readable detailed story; deep link, "
+        "all projections, projection-preserving spatial/causal collapse/expand, "
+        "both composites, and service-desk preview"
     )
 
 

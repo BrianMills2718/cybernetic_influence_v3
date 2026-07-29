@@ -258,6 +258,7 @@ def _coordination_reference_narration(
                 "The coordinator submitted the smaller plan for final approval."
             ),
             "changed commitment to support_reduced": "supported a smaller deployment",
+            "changed commitment to support_full": "supported the full deployment",
             "changed commitment to defer": "decided to wait for more information",
             "The retained scheduler": "The schedule",
             "modeled day": "day",
@@ -273,6 +274,74 @@ def _coordination_reference_narration(
         for source, target in replacements.items():
             result = result.replace(source, target)
         return result[0].upper() + result[1:] if result else result
+
+    def exact_result_paragraphs(
+        events: list[dict[str, object]],
+    ) -> list[dict[str, object]]:
+        outcomes: list[tuple[str, str]] = []
+        for event in events:
+            summary = event.get("summary")
+            event_id = event.get("event_id")
+            if (
+                event.get("kind") != "mechanism_executed"
+                or not isinstance(summary, str)
+                or not isinstance(event_id, str)
+                or " outcome " not in summary
+            ):
+                continue
+            outcomes.append((summary.rpartition(" outcome ")[2].rstrip("."), event_id))
+        if not outcomes:
+            return []
+        ordered_codes = list(dict.fromkeys(code for code, _ in outcomes))
+        counts = {code: sum(item == code for item, _ in outcomes) for code in ordered_codes}
+        labels = {
+            "meeting_wake_recorded": "The schedule retained the next meeting.",
+            "issue_open": "The relevant issue was recorded as open.",
+            "issue_resolved": "The relevant issue was recorded as resolved.",
+            "commitment_recorded": "The latest participant commitment was recorded.",
+            "source_disposition_recorded": "The team's disposition of the new concern was recorded.",
+            "verification_answered": "The independent verification result was recorded.",
+            "scope_threshold_denied_no_change": (
+                "The proposal record rejected the requested scope because the required support was absent."
+            ),
+            "scope_threshold_recorded": "The proposal record accepted the selected scope.",
+            "terminal_decision_accepted": (
+                "The final decision passed the exact support and review gate."
+            ),
+            "external_decision_received": (
+                "The external decision registry received the final decision."
+            ),
+        }
+        sentences: list[str] = []
+        for code in ordered_codes:
+            count = counts[code]
+            if code == "alignment_message_delivered":
+                sentences.append(
+                    f"The coordinator's request for explicit review reached {count} "
+                    f"team member{'s' if count != 1 else ''}."
+                )
+            elif code == "source_message_delivered":
+                sentences.append(
+                    f"{count} new concern{'s' if count != 1 else ''} reached "
+                    f"the responsible team member{'s' if count != 1 else ''}."
+                )
+            elif code == "verification_response_delivered":
+                sentences.append(
+                    f"The verification result reached {count} "
+                    f"team member{'s' if count != 1 else ''}."
+                )
+            elif code in labels:
+                sentences.append(labels[code])
+            else:
+                sentences.append(
+                    f"The exact workflow recorded {code.replace('_', ' ')}."
+                )
+        return [
+            {
+                "text": " ".join(sentences),
+                "source_event_ids": [event_id for _, event_id in outcomes],
+            }
+        ]
 
     for raw_moment in raw_moments:
         if not isinstance(raw_moment, dict):
@@ -314,16 +383,14 @@ def _coordination_reference_narration(
             if len(summaries) > 1 and summaries[-1] != summaries[0]:
                 selected_summaries.append(summaries[-1])
             concise = (
-                f"At {modeled_time}, {participant_text} advanced the "
+                f"{participant_text.capitalize()} advanced the "
                 f"decision process. {' '.join(selected_summaries)}"
             )
-            detailed = " ".join(summaries)
         else:
             concise = (
-                f"At {modeled_time}, {participant_text} completed its "
+                f"{participant_text.capitalize()} completed its "
                 "scheduled opportunity without a retained external action or world change."
             )
-            detailed = concise
         action_summaries = [
             readable_summary(str(item["summary"]))
             for item in events
@@ -332,14 +399,37 @@ def _coordination_reference_narration(
         ]
         if participants and all(item.endswith("_pressure_source") for item in participants):
             concise = (
-                f"On {modeled_time}, new technical, government-oversight, and "
+                "New technical, government-oversight, and "
                 "local safety concerns reached the team."
             )
         elif action_summaries:
-            concise = f"On {modeled_time}: {' '.join(action_summaries)}"
+            concise = " ".join(action_summaries)
         if len(concise) > 360:
             concise = f"{concise[:357].rstrip()}…"
         number = len(moments) + 1
+        exact_paragraphs = exact_result_paragraphs(events)
+        action_event_ids = [
+            str(item["event_id"])
+            for item in events
+            if item.get("kind") == "action_attempted"
+            and isinstance(item.get("event_id"), str)
+        ]
+        detailed_paragraphs: list[dict[str, object]] = []
+        if action_summaries:
+            detailed_paragraphs.append(
+                {
+                    "text": concise,
+                    "source_event_ids": action_event_ids,
+                }
+            )
+        detailed_paragraphs.extend(exact_paragraphs)
+        if not detailed_paragraphs:
+            detailed_paragraphs.append(
+                {
+                    "text": readable_summary(concise),
+                    "source_event_ids": event_ids,
+                }
+            )
         moments.append(
             {
                 "narrative_version": 2,
@@ -352,20 +442,7 @@ def _coordination_reference_narration(
                 "narrative": concise,
                 "concise_narrative": concise,
                 "source_event_ids": event_ids,
-                "detailed_paragraphs": [
-                    {
-                        "text": detailed,
-                        "source_event_ids": event_ids,
-                    },
-                    {
-                        "text": (
-                            "This account reports retained attempts, routed effects, "
-                            "exact mechanism decisions, and commits at this causal "
-                            "moment; it does not add an organization-level mind."
-                        ),
-                        "source_event_ids": event_ids,
-                    },
-                ],
+                "detailed_paragraphs": detailed_paragraphs,
             }
         )
     return {

@@ -112,7 +112,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="narrative-concise"' in page.text
     assert 'id="narrative-detailed"' in page.text
     assert "Narrative detail" in page.text
-    assert ">Detailed</button>" in page.text
+    assert ">Detailed story</button>" in page.text
     assert 'id="detailed-narrative"' in page.text
     assert "Play simulation" in page.text
     assert 'id="lifecycle-help"' in page.text
@@ -1377,6 +1377,20 @@ def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
     assert 12 <= len(document["narration"]["moments"]) <= 28
     assert all(
         item["concise_narrative"] and item["detailed_paragraphs"]
+        for item in document["narration"]["moments"]
+    )
+    detailed_text = " ".join(
+        paragraph["text"]
+        for item in document["narration"]["moments"]
+        for paragraph in item["detailed_paragraphs"]
+    )
+    assert "through connection" not in detailed_text
+    assert "Committed mechanism" not in detailed_text
+    assert "state revision" not in detailed_text
+    assert '{"' not in detailed_text
+    assert "The coordinator's request for explicit review reached 4 team members." in detailed_text
+    assert all(
+        not item["concise_narrative"].startswith(("On day", "At day"))
         for item in document["narration"]["moments"]
     )
     assert [item["moment"] for item in document["narration"]["moments"]] == list(

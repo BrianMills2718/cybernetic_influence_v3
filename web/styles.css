@@ -154,14 +154,16 @@ summary { cursor:pointer; font-weight:700; }
 #turn-narratives,#detailed-narrative { display:grid; gap:10px; }
 #detailed-narrative { max-height:680px; overflow:auto; padding-right:4px; }
 .turn-narrative { display:grid; gap:7px; padding:14px 16px; border-left:4px solid #487ca7; border-radius:8px; background:var(--surface2); text-align:left; font-weight:500; }
-.turn-narrative span { color:#b9d7f5; font-size:12px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
-.turn-narrative p { margin:0; line-height:1.5; }
+.turn-narrative p { margin:0; color:#eef5fc; font-size:15px; line-height:1.55; }
 .turn-narrative small { color:var(--muted); }
 .turn-narrative.active { border-color:#fff; background:#203b56; }
 .detailed-narrative-moment { display:grid; gap:8px; padding:16px 18px; border-left:4px solid #567c9e; border-radius:8px; background:#111c28; cursor:pointer; }
-.detailed-narrative-moment > span { color:#b9d7f5; font-size:12px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
-.detailed-narrative-moment p { max-width:84ch; margin:0; line-height:1.62; }
+.detailed-narrative-moment p { max-width:78ch; margin:0; color:#e8f0f8; font-size:15px; line-height:1.68; }
 .detailed-narrative-moment small { color:var(--muted); font-size:11px; }
+.narrative-meta { display:block; color:#788da1 !important; font-size:11px !important; font-weight:500; letter-spacing:0; text-transform:none; }
+.narrative-evidence { margin-top:4px; color:var(--muted); font-size:11px; }
+.narrative-evidence summary { width:max-content; cursor:pointer; color:#9fc4e5; font-weight:750; }
+.narrative-evidence small { display:block; max-width:86ch; margin-top:8px; overflow-wrap:anywhere; line-height:1.45; }
 .evidence-context-button,.prior-narrative-link { justify-self:start; padding:0; border:0; background:transparent; color:#b9d7f5; font:inherit; font-size:11px; font-weight:800; cursor:pointer; text-decoration:underline; }
 .detailed-narrative-moment.active { border-color:#fff; background:#203b56; }
 .detailed-narrative-moment.legacy { border-style:dashed; }
