@@ -614,10 +614,17 @@ requires them to answer an analyst question that current contracts cannot.
   client `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`; an independent replay of
   the configured set returns DeepSeek V4 Flash from both the global catalog
   and the scenario-specific live gate.
-- **Current limiting cause:** the certified behavior revision has not yet been
-  deployed with the seven exact observation IDs, and no authorized live
-  baseline has been run from that target. Deployment and one paid canary remain
-  the explicit 21A4 resume boundary; route certification itself is complete.
+- **Observed live boundary:** the private Mac deployed `5803e1b` with shared
+  client `c464058` and all seven retained observations. Its one authorized
+  DeepSeek V4 Flash `none` baseline, `run_21a45803e1b0`, completed 29 valid
+  provider-costed participant calls (`$0.008249917`) before the exact terminal
+  gate rejected its own unparented terminal-decision representation. The model
+  used the permitted proposal representation; this is a simulator lineage
+  defect, not a provider or schema failure.
+- **Current limiting cause:** the zero-cost repair that propagates the
+  triggering proposal as terminal-representation lineage is locally verified
+  but not deployed. Replacing the retained failed paid baseline requires fresh
+  authorization; no model switch or automatic rerun is permitted.
 
 ## Explicit MVP Deferrals
 

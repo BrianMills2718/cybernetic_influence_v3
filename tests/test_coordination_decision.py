@@ -627,6 +627,13 @@ def test_baseline_trace_contains_ordinary_review_friction_before_full_deployment
         if event.event_kind == "state_committed"
         and external_receipt.event_id in event.causal_parent_event_ids
     )
+    terminal_representation = result.core_result.final_state.representations[
+        "terminal_decision_deploy_on_time"
+    ]
+    assert terminal_attempt.representation_id == "deployment_proposal_copy"
+    assert terminal_representation.parent_representation_ids == [
+        "deployment_proposal_copy"
+    ]
     assert len(
         {
             terminal_attempt.event_id,

@@ -2579,6 +2579,7 @@ def _exact_terminal_decision(context: MechanismContext) -> MechanismOutcome:
             source="deadline",
         )
     proposal = DecisionProposal.model_validate(context.effect.payload)
+    triggering_representation = _required_effect_representation(context)
     if proposal.proposed_by != "mission_coordinator":
         return MechanismOutcome(
             outcome_code="terminal_decision_denied_actor_mismatch"
@@ -2620,6 +2621,7 @@ def _exact_terminal_decision(context: MechanismContext) -> MechanismOutcome:
         status=proposal.requested_status,
         scope=proposal.requested_scope,
         source="reviewed_proposal",
+        parent_representation_id=triggering_representation.representation_id,
     )
 
 
@@ -2628,6 +2630,7 @@ def _accepted_terminal_outcome(
     status: FinalDecision,
     scope: DecisionScope,
     source: Literal["reviewed_proposal", "deadline"],
+    parent_representation_id: str | None = None,
 ) -> MechanismOutcome:
     record = TerminalDecisionRecord(status=status, scope=scope, source=source)
     content = _render_model(record)
@@ -2646,6 +2649,11 @@ def _accepted_terminal_outcome(
                 encoding="application/vnd.cybernetic.terminal-decision+json",
                 content=content,
                 actual_source_ref="terminal_decision_gate",
+                parent_representation_ids=(
+                    [parent_representation_id]
+                    if parent_representation_id is not None
+                    else []
+                ),
             )
         ],
         effects=[
@@ -2776,6 +2784,7 @@ def _scripted_mission_coordinator(item: ActiveSystemInput) -> ActiveStepResult:
         actions.append(
             ActionIntent(
                 output_port_id="terminal_proposal_out",
+                representation_id="deployment_proposal_copy",
                 payload=DecisionProposal(
                     proposal_id="meeting_four_terminal_proposal",
                     proposed_by="mission_coordinator",

@@ -150,14 +150,25 @@ restarting completed work.
   (`routeobs1_8b6c1697c9dddad1d6dd474a`). Every observation is bound to
   shared-client revision `c46405838ffc8d30a17a2353b7d55a3ae1f3516b` and
   replays against the current exact schema digest.
-- **Current boundary:** with those seven configured observation IDs, both the
-  global model catalog and the scenario-specific Coordination gate advertise
-  only `openrouter/deepseek/deepseek-v4-flash`. No deployment or live baseline
-  has yet been performed from this certification set.
-- **Resume event:** the operator explicitly authorizes deployment of behavior
-  revision `29efcf399c91e450dd98da913decd81774cd40ef` with the retained
-  certification environment and one DeepSeek V4 Flash `none` live baseline
-  canary under the existing 48-participant/32-narrator and `$0.74` hard caps.
+- **Observed deployment and canary:** the private Mac now runs simulator
+  `5803e1b0e1744592862bcf559bf5eb27573776c8` with shared client
+  `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`; its config exposes only
+  DeepSeek V4 Flash for live Coordination. The single authorized baseline
+  `run_21a45803e1b0` retained 29 completed, provider-costed DeepSeek `none`
+  participant calls for `$0.008249917`, then failed closed before narration.
+  At the final meeting, the coordinator correctly used the permitted
+  `deployment_proposal_copy`, but `terminal_decision_gate` created its
+  terminal-decision representation without naming that triggering token as a
+  parent. The causal core rejected the exact outcome with
+  `MechanismContractError`; no model call failed and no fallback occurred.
+- **Current boundary:** a zero-cost repair now makes the terminal decision
+  representation inherit the triggering proposal token and makes the scripted
+  path exercise that same representation-bearing interface. The repair passes
+  its full local test and build gate, but is not deployed and the failed paid
+  baseline will not be replaced without a new authorization.
+- **Resume event:** the operator explicitly authorizes deployment of the
+  repaired canonical revision and one replacement DeepSeek V4 Flash `none`
+  baseline under the existing 48-participant/32-narrator and `$0.74` hard caps.
   Then verify the deployed config endpoint, inspect every call and the full
   trace, restart/reopen the retained run, and request the 21A4 human readout.
 

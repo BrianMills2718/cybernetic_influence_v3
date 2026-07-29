@@ -21,6 +21,30 @@ service `cybernetic-influence-v3-openrouter`, then an owner-only raw secret file
 when the Keychain is locked to noninteractive services. The credential is not
 stored in the repository or LaunchAgent plist.
 
+Current V3 deployment observed 2026-07-29:
+
+- simulator revision `5803e1b0e1744592862bcf559bf5eb27573776c8` and shared
+  client `c46405838ffc8d30a17a2353b7d55a3ae1f3516b` passed the Mac's strict
+  typing, 173-test, production-build, and LaunchAgent-template gates before
+  restart;
+- its private config exposes the Coordination decision scenario and permits
+  only `openrouter/deepseek/deepseek-v4-flash` at `none` reasoning. The
+  LaunchAgent binds the generic participant/narrator pair and all five exact
+  Coordination person-schema observations separately;
+- authorized baseline `run_21a45803e1b0` retained 29 completed DeepSeek
+  participant calls with provider-observed `$0.008249917` cost. Every call was
+  structurally completed and costed; narration never began because the exact
+  runtime failed earlier;
+- the terminal action correctly selected `deployment_proposal_copy`, but
+  `terminal_decision_gate` created its derived terminal-decision representation
+  without naming that source as a parent. The causal core therefore failed
+  closed with `MechanismContractError: terminal_decision_gate: copied
+  representation must name the triggering token as a parent`;
+- do not rerun this paid baseline or switch models automatically. A local
+  repair now propagates the required parent lineage and aligns the scripted
+  terminal action with the live interface, but it requires a separately
+  authorized deployment and replacement canary.
+
 Current V3 deployment observed 2026-07-28:
 
 - simulator behavior revision:
