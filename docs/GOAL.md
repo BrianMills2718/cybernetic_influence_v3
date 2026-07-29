@@ -136,23 +136,30 @@ restarting completed work.
   The UI and API now derive Coordination live availability from a per-scenario
   certified-model list; without all five current person-schema observations,
   the live action remains unavailable rather than falling back.
-- **Observed certification evidence:** DeepSeek V4 Flash `none` produced fresh
+- **Observed certification evidence:** DeepSeek V4 Flash `none` now has current
   parseable observations for generic `LlmDecision`
-  (`routeobs1_642ea0a3d2f0d5c643913b5a`),
-  `CausalMomentNarration` (`routeobs1_fccd6216c6e0b7ba73d8f6a7`), and
-  `MissionCoordinatorLlmDecision`
-  (`routeobs1_b93a2b195341f17f0ba933d1`) against shared-client revision
-  `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`.
-- **Current blocker:** the technical-lead schema call completed successfully
-  under trace
-  `cybernetic_influence_v3/29efcf3/route_certification/TechnicalLeadLlmDecision`,
-  but its OpenRouter generation identity was not retained before the bounded
-  metadata lookup was interrupted. It cannot be certified from the retained
-  receipt alone. The policy, local-liaison, and partner schemas were not called.
-- **Resume event:** the operator explicitly authorizes one replacement
-  technical-lead certification call plus the three not-yet-run schema calls.
-  Then retain all five observation IDs, deploy the exact certified revision,
-  verify the scenario-specific model list, and run one live baseline canary.
+  (`routeobs1_642ea0a3d2f0d5c643913b5a`), `CausalMomentNarration`
+  (`routeobs1_fccd6216c6e0b7ba73d8f6a7`), and all five Coordination person
+  schemas: `MissionCoordinatorLlmDecision`
+  (`routeobs1_b93a2b195341f17f0ba933d1`), `TechnicalLeadLlmDecision`
+  (`routeobs1_224f0038fc3c41d9d0639931`),
+  `PolicyRepresentativeLlmDecision`
+  (`routeobs1_bc287a4ba1e8d746b605485b`), `LocalLiaisonLlmDecision`
+  (`routeobs1_c4f23d5fc55f91758348ff64`), and
+  `PartnerRepresentativeLlmDecision`
+  (`routeobs1_8b6c1697c9dddad1d6dd474a`). Every observation is bound to
+  shared-client revision `c46405838ffc8d30a17a2353b7d55a3ae1f3516b` and
+  replays against the current exact schema digest.
+- **Current boundary:** with those seven configured observation IDs, both the
+  global model catalog and the scenario-specific Coordination gate advertise
+  only `openrouter/deepseek/deepseek-v4-flash`. No deployment or live baseline
+  has yet been performed from this certification set.
+- **Resume event:** the operator explicitly authorizes deployment of behavior
+  revision `29efcf399c91e450dd98da913decd81774cd40ef` with the retained
+  certification environment and one DeepSeek V4 Flash `none` live baseline
+  canary under the existing 48-participant/32-narrator and `$0.74` hard caps.
+  Then verify the deployed config endpoint, inspect every call and the full
+  trace, restart/reopen the retained run, and request the 21A4 human readout.
 
 ## Done
 

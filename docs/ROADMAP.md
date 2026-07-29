@@ -609,14 +609,15 @@ requires them to answer an analyst question that current contracts cannot.
   `29efcf399c91e450dd98da913decd81774cd40ef`; the shared UI now contains the
   scripted Coordination scenario and a certification-gated native-person seam.
 - **Current packet:** 21A4 route certification, deployment, live baseline, and
-  human readout. Generic participant, narrator, and mission-coordinator schema
-  observations are retained; the other four person schemas do not yet form a
-  complete certification set.
-- **Current limiting cause:** one successful technical-lead response lacks its
-  retained OpenRouter generation identity after interrupted metadata lookup.
-  Replacing that already-paid call requires explicit authorization; three
-  other person-schema certification calls have not yet been made. Until all
-  five are current, Coordination is correctly projected as reference-only.
+  human readout. Generic participant and narrator observations plus all five
+  exact Coordination person-schema observations are retained against shared
+  client `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`; an independent replay of
+  the configured set returns DeepSeek V4 Flash from both the global catalog
+  and the scenario-specific live gate.
+- **Current limiting cause:** the certified behavior revision has not yet been
+  deployed with the seven exact observation IDs, and no authorized live
+  baseline has been run from that target. Deployment and one paid canary remain
+  the explicit 21A4 resume boundary; route certification itself is complete.
 
 ## Explicit MVP Deferrals
 
