@@ -33,6 +33,7 @@ class _RouteAdvertisement(TypedDict):
 
     label: str
     certification_env: str
+    coordination_certification_env: str
     narrator_reasoning_effort: ReasoningEffort
     agent_reasoning_efforts: NotRequired[tuple[ReasoningEffort, ...]]
     experimental_agent_reasoning_efforts: NotRequired[tuple[ReasoningEffort, ...]]
@@ -45,11 +46,17 @@ _ADVERTISEMENT: dict[str, _RouteAdvertisement] = {
     "openrouter/openai/gpt-5.6-terra": {
         "label": "OpenAI GPT-5.6 Terra",
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_TERRA",
+        "coordination_certification_env": (
+            "CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA"
+        ),
         "narrator_reasoning_effort": "low",
     },
     "openrouter/deepseek/deepseek-v4-flash": {
         "label": "DeepSeek V4 Flash",
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH",
+        "coordination_certification_env": (
+            "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH"
+        ),
         # `none` is the only certified simulator setting.  The shared client
         # also supports high and xhigh, which the operator explicitly asked to
         # make available for investigation.  They remain visibly experimental:
@@ -203,10 +210,38 @@ def _validated_certification_basis(
     configured: str,
 ) -> str | None:
     """Replay two exact route observations before projecting a selectable model."""
+    expected_schema_digests = _current_schema_digests()
+    return _validated_schema_group_basis(
+        model,
+        configured,
+        expected_schema_digests,
+    )
+
+
+def _validated_coordination_certification_basis(
+    model: str,
+    configured: str,
+) -> str | None:
+    """Replay every exact person schema used by live coordination."""
+    return _validated_schema_group_basis(
+        model,
+        configured,
+        _current_coordination_schema_digests(),
+    )
+
+
+def _validated_schema_group_basis(
+    model: str,
+    configured: str,
+    expected_schema_digests: dict[str, str] | None,
+) -> str | None:
+    """Validate one complete current-revision schema observation group."""
+    if expected_schema_digests is None:
+        return None
     observation_ids = {
         item.strip() for item in configured.split(",") if item.strip()
     }
-    if len(observation_ids) != 2:
+    if len(observation_ids) != len(expected_schema_digests):
         return None
     try:
         from llm_client.route_certification import RouteCertificationStore
@@ -229,14 +264,11 @@ def _validated_certification_basis(
     if any(item is None for item in selected):
         return None
     now = datetime.now(timezone.utc)
-    required_schemas = {"LlmDecision", "CausalMomentNarration"}
-    expected_schema_digests = _current_schema_digests()
     revision = llm_client_revision()
     typed = [item for item in selected if item is not None]
     if (
         {item.schema_class.rsplit(".", maxsplit=1)[-1] for item in typed}
-        != required_schemas
-        or expected_schema_digests is None
+        != set(expected_schema_digests)
         or any(
             item.requested_model != model
             or not item.transport_certifies
@@ -254,6 +286,25 @@ def _validated_certification_basis(
     return ",".join(sorted(observation_ids))
 
 
+def coordination_live_model_ids() -> list[str]:
+    """Return globally advertised routes certified for all coordination people."""
+    globally_advertised = {
+        str(choice["model"])
+        for choice in model_catalog()
+    }
+    supported: list[str] = []
+    for model, advertisement in _ADVERTISEMENT.items():
+        configured = os.getenv(
+            advertisement["coordination_certification_env"], ""
+        ).strip()
+        if (
+            model in globally_advertised
+            and _validated_coordination_certification_basis(model, configured)
+        ):
+            supported.append(model)
+    return supported
+
+
 def _current_schema_digests() -> dict[str, str] | None:
     """Reproduce the shared runtime's exact OpenRouter provider schemas."""
     try:
@@ -268,6 +319,30 @@ def _current_schema_digests() -> dict[str, str] | None:
     schemas = {
         "LlmDecision": LlmDecision,
         "CausalMomentNarration": CausalMomentNarration,
+    }
+    return {
+        name: route_schema_sha256(
+            openrouter_native_provider_schema(schema)
+        )
+        for name, schema in schemas.items()
+    }
+
+
+def _current_coordination_schema_digests() -> dict[str, str] | None:
+    """Reproduce every provider schema actually used by coordination people."""
+    try:
+        from llm_client import (
+            openrouter_native_provider_schema,
+            route_schema_sha256,
+        )
+        from cybernetic_influence.scenarios.coordination_decision import (
+            COORDINATION_PERSON_DECISION_MODELS,
+        )
+    except ImportError:
+        return None
+    schemas = {
+        schema.__name__: schema
+        for schema in COORDINATION_PERSON_DECISION_MODELS.values()
     }
     return {
         name: route_schema_sha256(

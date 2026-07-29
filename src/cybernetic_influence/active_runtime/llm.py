@@ -470,10 +470,7 @@ class NativeLlmActiveSystem:
                 if isinstance(parsed, BaseModel)
                 else parsed
             )
-            implementation_decision = self.decision_model.model_validate(decision_input)
-            decision = LlmDecision.model_validate(
-                implementation_decision.model_dump(mode="json")
-            )
+            decision = cast(Any, self.decision_model.model_validate(decision_input))
         except Exception as error:
             cost, cost_source = _observed_cost(meta)
             evidence = ModelCallEvidence(

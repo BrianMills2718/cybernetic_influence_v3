@@ -252,6 +252,11 @@ def reference_narration() -> dict[str, object]:
 
 def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
     timeline = _list_of_mappings(document.get("timeline"))
+    timeline_by_id = {
+        str(event["event_id"]): event
+        for event in timeline
+        if isinstance(event.get("event_id"), str)
+    }
     traces = _list_of_mappings(document.get("traces"))
     projected_moments = _list_of_mappings(document.get("moments"))
     events_by_activation: dict[str, list[dict[str, object]]] = {}
@@ -304,7 +309,38 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
                 "projected causal moment lacks a valid activation/time contract"
             )
         activation_traces = traces_by_activation.get(activation, [])
-        events = events_by_activation.get(activation, [])
+        projected_event_ids = projected_moment.get("event_ids")
+        selected_events = (
+            [
+                timeline_by_id[event_id]
+                for event_id in projected_event_ids
+                if isinstance(event_id, str) and event_id in timeline_by_id
+            ]
+            if isinstance(projected_event_ids, list)
+            else []
+        )
+        events: list[dict[str, object]] = [
+            {
+                key: event[key]
+                for key in (
+                    "event_id",
+                    "kind",
+                    "summary",
+                    "logical_time",
+                    "state_revision",
+                    "mechanism_id",
+                    "mechanism_kind",
+                    "mechanism_description",
+                    "transition_contract",
+                    "representation_abstraction",
+                    "representation_known_omissions",
+                )
+                if key in event
+            }
+            for event in selected_events
+        ]
+        if not events:
+            events = list(events_by_activation.get(activation, []))
         if not events:
             private_updates = [
                 str(trace["person"])

@@ -61,7 +61,8 @@ user: |
 
   Propose at most {{ max_actions }} action(s). Each action must select one
   listed output_port_id, use a listed representation_id or null, provide only
-  the payload needed by that interface as a JSON-encoded object string, and give a concise public_summary.
+  the payload required by the response schema for that interface, and give a
+  concise public_summary.
   representation_id is a separate action field and must never also appear
   inside payload.
   If you take no action, return an empty actions list and a nonempty

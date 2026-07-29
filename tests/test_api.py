@@ -18,6 +18,12 @@ from cybernetic_influence.active_runtime import (
 from cybernetic_influence.api import create_app
 from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 from cybernetic_influence.run_store import RunStore
+from cybernetic_influence.scenarios.coordination_decision import (
+    PERSON_IDS,
+    baseline_coordination_fixture,
+    coordination_runtime_fixture,
+    run_scripted_coordination,
+)
 from cybernetic_influence.scenarios.service_desk import (
     RuntimePaused,
     run_event_driven_service_desk as original_run_service_desk,
@@ -43,10 +49,16 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
                 "OPENROUTER_API_KEY": "test-key",
                 "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary-terra",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary-deepseek",
+                "CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA": "test-coordination-terra",
+                "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH": "test-coordination-deepseek",
             },
         ),
         patch(
             "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_coordination_certification_basis",
             side_effect=lambda _model, configured: configured or None,
         ),
     ):
@@ -65,7 +77,11 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "coordination_decision",
     }
     coordination = config.json()["scenarios"]["coordination_decision"]
-    assert coordination["supports_live"] is False
+    assert coordination["supports_live"] is True
+    assert coordination["live_model_ids"] == [
+        "openrouter/openai/gpt-5.6-terra",
+        "openrouter/deepseek/deepseek-v4-flash",
+    ]
     assert {item["id"] for item in coordination["arms"]} == {
         "baseline",
         "heterogeneous_pressure",
@@ -1378,7 +1394,7 @@ def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
     assert document["model_calls"] == 0
     assert document["completion"]
     assert document["outcome"]["final_status"]
-    assert document["live_progress"]
+    assert document["live_progress"] == []
     assert 12 <= len(document["narration"]["moments"]) <= 28
     assert all(
         item["concise_narrative"] and item["detailed_paragraphs"]
@@ -1493,7 +1509,9 @@ def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
     progress = api.get(f"/api/runs/{run_id}/progress", params={"after_sequence": 0})
     assert progress.status_code == 200
     latest_sequence = progress.json()["latest_sequence"]
-    assert progress.json()["projection"]["boundaries"]
+    assert latest_sequence == 0
+    assert progress.json()["records"] == []
+    assert progress.json()["projection"] is None
     unchanged = api.get(
         f"/api/runs/{run_id}/progress",
         params={"after_sequence": latest_sequence},
@@ -1514,14 +1532,141 @@ def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
     assert rejected.status_code == 409
 
 
-def test_coordination_scenario_rejects_live_execution(tmp_path: Path) -> None:
-    response = client(tmp_path).post(
-        "/api/runs",
-        json={
-            "scenario": "coordination_decision",
-            "arm_id": "baseline",
-            "execution": "live",
-        },
-    )
+def test_coordination_live_execution_requires_explicit_spend_authorization(
+    tmp_path: Path,
+) -> None:
+    with patch.dict("os.environ", {"CYBERNETIC_INFLUENCE_LIVE": ""}):
+        response = client(tmp_path).post(
+            "/api/runs",
+            json={
+                "scenario": "coordination_decision",
+                "arm_id": "baseline",
+                "execution": "live",
+            },
+        )
+    assert response.status_code == 403
+    assert "CYBERNETIC_INFLUENCE_LIVE=1" in response.json()["detail"]
+
+
+def test_coordination_live_execution_requires_scenario_schema_certification(
+    tmp_path: Path,
+) -> None:
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
+            },
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+    ):
+        response = client(tmp_path).post(
+            "/api/runs",
+            json={
+                "scenario": "coordination_decision",
+                "arm_id": "baseline",
+                "execution": "live",
+                "llm_options": {
+                    "model": "openrouter/deepseek/deepseek-v4-flash",
+                    "agent_reasoning_effort": "none",
+                    "max_total_cost": 0.20,
+                },
+            },
+        )
+
     assert response.status_code == 422
-    assert "zero-cost reference execution only" in response.json()["detail"]
+    assert "coordination participant schemas" in response.json()["detail"]
+
+
+def test_coordination_live_api_selects_provider_people_and_live_narration(
+    tmp_path: Path,
+) -> None:
+    captured: list[dict[str, object]] = []
+
+    def capture_run(fixture: Any, bindings: Any, **kwargs: Any) -> Any:
+        captured.append(
+            {
+                "provider_people": {
+                    person_id
+                    for person_id in PERSON_IDS
+                    if bindings[person_id].implementation.provider_bound
+                },
+                "per_call_budget": kwargs["runtime_config"].per_call_budget,
+                "per_run_budget": kwargs["runtime_config"].per_run_budget,
+            }
+        )
+        return run_scripted_coordination(
+            coordination_runtime_fixture(baseline_coordination_fixture()),
+            run_id=kwargs["run_id"],
+        )
+
+    def narrate(*_args: Any, **_kwargs: Any) -> dict[str, object]:
+        return {
+            "status": "completed",
+            "model_calls": 0,
+            "cost": 0.0,
+            "moments": [],
+            "calls": [],
+        }
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
+                "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH": "test-coordination-canary",
+                "LLM_CLIENT_REVISION": "test-client-revision",
+            },
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_coordination_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+        patch("cybernetic_influence.api.run_coordination", side_effect=capture_run),
+        patch("cybernetic_influence.api.narrate_live_moments", side_effect=narrate),
+    ):
+        api = client(tmp_path)
+        response = api.post(
+            "/api/runs",
+            json={
+                "scenario": "coordination_decision",
+                "arm_id": "baseline",
+                "execution": "live",
+                "llm_options": {
+                    "model": "openrouter/deepseek/deepseek-v4-flash",
+                    "agent_reasoning_effort": "none",
+                    "max_total_cost": 0.20,
+                },
+            },
+        )
+        assert response.status_code == 202, response.text
+        run_id = response.json()["run_id"]
+        retained: dict[str, object] | None = None
+        for _ in range(200):
+            candidate = api.get(f"/api/runs/{run_id}").json()
+            if candidate["status"] in {"completed", "failed"}:
+                retained = candidate
+                break
+            time.sleep(0.01)
+
+    assert retained is not None
+    assert retained["status"] == "completed"
+    assert retained["execution"] == "live"
+    assert captured == [
+        {
+            "provider_people": set(PERSON_IDS),
+            "per_call_budget": 0.05,
+            "per_run_budget": 0.20,
+        }
+    ]

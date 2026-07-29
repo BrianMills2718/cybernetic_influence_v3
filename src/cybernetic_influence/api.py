@@ -75,6 +75,7 @@ from cybernetic_influence.run_store import (
 from cybernetic_influence.run_configuration import (
     EffectiveRunLlmConfiguration,
     RunLlmOptions,
+    coordination_live_model_ids,
     live_options_contract,
     llm_client_revision,
     resolve_live_configuration,
@@ -119,12 +120,16 @@ from cybernetic_influence.scenarios.purchase_payment import (
 from cybernetic_influence.scenarios.coordination_decision import (
     MINUTES_PER_DAY,
     CoordinationDecisionFixture,
+    CoordinationRuntimePaused,
     CoordinationRuntimeFixture,
     baseline_coordination_fixture,
+    coordination_native_bindings,
     coordination_run_control_plan,
+    coordination_runtime_config,
     coordination_runtime_fixture,
+    coordination_scripted_bindings,
     heterogeneous_pressure_coordination_fixture,
-    run_scripted_coordination,
+    run_coordination,
     stabilization_coordination_fixture,
 )
 
@@ -634,6 +639,7 @@ def create_app(
     @app.get("/api/config")
     def config() -> dict[str, object]:
         live_options = live_options_contract()
+        coordination_live_models = coordination_live_model_ids()
         live_defaults = cast(dict[str, object], live_options["defaults"])
         return {
             "version": __version__,
@@ -709,7 +715,8 @@ def create_app(
                     "label": "Coordination decision",
                     **_scenario_explanation("coordination_decision"),
                     "profiles": ["position_context"],
-                    "supports_live": False,
+                    "supports_live": bool(coordination_live_models),
+                    "live_model_ids": coordination_live_models,
                     "run_control_options": (
                         stabilization_coordination_fixture()
                         .run_control_options.model_dump(mode="json")
@@ -1636,11 +1643,6 @@ def create_app(
                 status_code=422,
                 detail="run_control is not available for this scenario",
             )
-        if request_body.scenario == "coordination_decision" and request_body.execution == "live":
-            raise HTTPException(
-                status_code=422,
-                detail="coordination decision currently supports zero-cost reference execution only",
-            )
         live = request_body.execution == "live"
         if not live and request_body.llm_options is not None:
             raise HTTPException(
@@ -1660,6 +1662,17 @@ def create_app(
                 )
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error)) from error
+            if (
+                request_body.scenario == "coordination_decision"
+                and effective_llm.model not in coordination_live_model_ids()
+            ):
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        "the selected model is not currently certified for all "
+                        "coordination participant schemas"
+                    ),
+                )
         run_id = request_body.run_id or f"run_{uuid4().hex[:12]}"
         worker_execution = live and bool(
             getattr(live_worker_context, "active", False)
@@ -1967,18 +1980,51 @@ def create_app(
                     summary=summary,
                 )
             elif coordination_fixture is not None:
-                result = run_scripted_coordination(
+                if effective_llm is not None:
+                    coordination_fixture = coordination_runtime_fixture(
+                        coordination_fixture.contract,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
+                    )
+                coordination_bindings = (
+                    coordination_native_bindings(
+                        coordination_fixture,
+                        trace_id_prefix=run_id,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
+                    )
+                    if effective_llm is not None
+                    else coordination_scripted_bindings(coordination_fixture)
+                )
+                result = run_coordination(
                     coordination_fixture,
+                    coordination_bindings,
                     run_id=run_id,
-                    checkpoint_observer=retain_checkpoint,
-                    progress_observer=lambda update, checkpoint: retain_progress(
-                        run_id,
-                        update,
-                        checkpoint,
-                        initial_state=coordination_fixture.scenario.initial_state,
-                        analytical_boundaries=(
-                            coordination_fixture.scenario.analytical_boundaries
-                        ),
+                    runtime_config=(
+                        coordination_runtime_config(
+                            per_call_budget=(
+                                effective_llm.participant_per_call_ceiling
+                            ),
+                            per_run_budget=effective_llm.max_total_cost
+                        )
+                        if effective_llm is not None
+                        else None
+                    ),
+                    checkpoint_observer=(retain_checkpoint if live else None),
+                    pause_requested=pause.is_set,
+                    stop_requested=stop.is_set,
+                    progress_observer=(
+                        lambda update, checkpoint: retain_progress(
+                            run_id,
+                            update,
+                            checkpoint,
+                            initial_state=coordination_fixture.scenario.initial_state,
+                            analytical_boundaries=(
+                                coordination_fixture.scenario.analytical_boundaries
+                            ),
+                        )
+                        if live
+                        else None
                     ),
                 )
                 coordination_outcome, headline, summary = _coordination_outcome(
@@ -1993,7 +2039,7 @@ def create_app(
                     scenario="coordination_decision",
                     profile=selected_profile,
                     arm_id=coordination_fixture.contract.condition.condition,
-                    execution="scripted",
+                    execution=request_body.execution,
                     created_at=created_at,
                     outcome=coordination_outcome,
                     headline=headline,
@@ -2016,7 +2062,7 @@ def create_app(
                 run_id=run_id,
                 effective_llm=effective_llm,
             )
-            if coordination_fixture is not None:
+            if coordination_fixture is not None and not live:
                 narrated["narration"] = _coordination_reference_narration(
                     narrated
                 )
@@ -2024,7 +2070,7 @@ def create_app(
             narrated["llm_configuration"] = initial["llm_configuration"]
             narrated["model_call_summaries"] = _result_call_summaries(result)
             return runs.save(narrated)
-        except RuntimePaused as paused_error:
+        except (RuntimePaused, CoordinationRuntimePaused) as paused_error:
             paused_document = {**initial, "status": "paused", "pause_message": "Paused after a completed causal step.", **_checkpoint_progress_projection(paused_error.checkpoint), "continuation": _checkpoint_continuation(paused_error.checkpoint, lifecycle="paused")}
             return runs.save(retain_progress_history(paused_document, run_id))
         except Exception as error:

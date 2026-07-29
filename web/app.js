@@ -558,9 +558,24 @@ function configureScenario(scenarioId) {
     $('#modeled-horizon').value = controls.default_horizon
     $('#modeled-horizon-help').textContent = 'The simulation stops before activating a later causal step once this modeled time is reached, unless its compiled terminal condition is met first.'
   }
+  const allLiveChoices = runtimeConfig.live_options?.models || []
+  const allowedModelIds = Array.isArray(selected.live_model_ids)
+    ? new Set(selected.live_model_ids)
+    : null
+  const liveChoices = allowedModelIds
+    ? allLiveChoices.filter((choice) => allowedModelIds.has(choice.model))
+    : allLiveChoices
+  const priorModel = $('#model').value
+  $('#model').innerHTML = liveChoices.map((choice) =>
+    `<option value="${html(choice.model)}">${html(choice.label)}</option>`
+  ).join('')
+  $('#model').value = liveChoices.some((choice) => choice.model === priorModel)
+    ? priorModel
+    : liveChoices.find((choice) => choice.default)?.model || liveChoices[0]?.model || ''
+  configureReasoningChoices()
   const liveAvailable = Boolean(
     runtimeConfig.live_authorized
-    && (runtimeConfig.live_options?.models || []).length
+    && liveChoices.length
   )
   const scenarioSupportsLive = selected.supports_live !== false
   $('#live').disabled = !liveAvailable || !scenarioSupportsLive
@@ -1535,7 +1550,7 @@ function selectMoment(index) {
   selectedMomentIndex = Math.max(0, Math.min(index, moments.length - 1))
   const moment = moments[selectedMomentIndex]
   const eventIndex = moment.event_ids.length
-    ? current.timeline.findIndex((event) => event.event_id === moment.event_ids[0])
+    ? current.timeline.findIndex((event) => event.event_id === moment.event_ids.at(-1))
     : moment.representative_event_index
   selectEvent(Math.max(0, eventIndex), moment.activation)
 }

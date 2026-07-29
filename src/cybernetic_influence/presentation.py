@@ -719,7 +719,11 @@ def build_analyst_document(
     edges = analyst_edges(final_state)
     timeline = analyst_timeline(result, temporal_states)
     trajectory = analyst_trajectory(timeline)
-    moments = analyst_moments(result, timeline)
+    moments = analyst_moments(
+        result,
+        timeline,
+        coalesce_exact_work=scenario == "coordination_decision",
+    )
     boundaries = analyst_boundaries(
         analytical_boundaries,
         temporal_states,
@@ -796,8 +800,16 @@ def analyst_trajectory(
 def analyst_moments(
     result: ActiveRuntimeResult,
     timeline: Sequence[Mapping[str, object]],
+    *,
+    coalesce_exact_work: bool = False,
 ) -> list[dict[str, object]]:
-    """Project atomic activation sets as the primary human time units."""
+    """Project atomic activation sets as the primary human time units.
+
+    Coordination runs may collapse adjacent exact-only records between the
+    same participant activations for a readable institutional account.  The
+    default retains every causal record for scenarios whose public contracts
+    expose those records one-for-one.
+    """
     timeline_ids = {
         str(event["event_id"]): index for index, event in enumerate(timeline)
     }
@@ -807,7 +819,8 @@ def analyst_moments(
         entity_id: entity.entity_kind
         for entity_id, entity in result.core_result.final_state.entities.items()
     }
-    for moment_number, (record_kind, record) in enumerate(
+    prior_exact_attempt_count: int | None = None
+    for record_causal_time, (record_kind, record) in enumerate(
         _causal_records(result), start=1
     ):
         event_indices = [
@@ -820,12 +833,29 @@ def analyst_moments(
         if record_kind == "exact":
             exact_record = record
             assert isinstance(exact_record, ExactWorkRecord)
+            if (
+                coalesce_exact_work
+                and moments
+                and prior_exact_attempt_count == exact_record.prior_attempt_count
+                and moments[-1]["participants"] == ["exact_mechanisms"]
+            ):
+                moments[-1]["logical_time"] = exact_record.logical_time
+                moments[-1]["causal_time"] = record_causal_time
+                moments[-1]["causal_timestamp"] = f"c{record_causal_time}"
+                moments[-1]["representative_event_index"] = last_event_index
+                cast(list[str], moments[-1]["event_ids"]).extend(
+                    str(timeline[index]["event_id"])
+                    for index in event_indices
+                )
+                cast(list[str], moments[-1]["exact_work_ids"]).append(
+                    exact_record.work_id
+                )
+                continue
             moments.append(
                 {
-                    "moment": moment_number,
                     "activation": exact_record.work_id,
-                    "causal_time": moment_number,
-                    "causal_timestamp": f"c{moment_number}",
+                    "causal_time": record_causal_time,
+                    "causal_timestamp": f"c{record_causal_time}",
                     "logical_time": exact_record.logical_time,
                     "participants": ["exact_mechanisms"],
                     "participant_kinds": {"exact_mechanisms": "exact"},
@@ -847,17 +877,19 @@ def analyst_moments(
                     ],
                     "representative_event_index": last_event_index,
                     "silent": False,
+                    "exact_work_ids": [exact_record.work_id],
                 }
             )
+            prior_exact_attempt_count = exact_record.prior_attempt_count
             continue
+        prior_exact_attempt_count = None
         attempt = record
         assert isinstance(attempt, ActivationAttemptRecord)
         moments.append(
             {
-                "moment": moment_number,
                 "activation": attempt.activation_id,
-                "causal_time": moment_number,
-                "causal_timestamp": f"c{moment_number}",
+                "causal_time": record_causal_time,
+                "causal_timestamp": f"c{record_causal_time}",
                 "logical_time": attempt.logical_time,
                 "participants": [
                     participant.requested_active_system_id
@@ -884,6 +916,8 @@ def analyst_moments(
                 "silent": not event_indices,
             }
         )
+    for moment_number, moment in enumerate(moments, start=1):
+        moment["moment"] = moment_number
     return moments
 
 

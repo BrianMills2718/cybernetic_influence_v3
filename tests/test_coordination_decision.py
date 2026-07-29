@@ -22,6 +22,7 @@ from cybernetic_influence.scenarios.coordination_decision import (
     MAX_CAUSAL_MOMENTS,
     MAX_PARTICIPANT_CALLS,
     MEETING_DAYS,
+    MEETING_TIMES,
     PARTNERSHIP_BOUNDARY_ID,
     PERSON_IDS,
     PRESSURE_SOURCE_CARRIER_IDS,
@@ -30,6 +31,8 @@ from cybernetic_influence.scenarios.coordination_decision import (
     SCENARIO_ID,
     SOURCE_BOUNDARY_ID,
     CommitmentRecord,
+    COORDINATION_PERSON_DECISION_MODELS,
+    CoordinationLlmDecision,
     CoordinationConditionConfig,
     CoordinationDecisionFixture,
     CoordinationRuntimePaused,
@@ -42,13 +45,134 @@ from cybernetic_influence.scenarios.coordination_decision import (
     baseline_coordination_fixture,
     condition_independent_scenario_dump,
     coordination_decision_fixtures,
+    coordination_native_bindings,
     coordination_runtime_fixture,
     heterogeneous_pressure_coordination_fixture,
     run_scripted_coordination,
     scenario_fingerprint,
     stabilization_coordination_fixture,
     validate_coordination_fixture_family,
+    _normalized_coordination_payload,
 )
+
+
+def test_live_coordination_binds_only_people_to_provider_cognition() -> None:
+    model = "openrouter/deepseek/deepseek-v4-flash"
+    runtime = coordination_runtime_fixture(
+        baseline_coordination_fixture(),
+        model=model,
+        reasoning_effort="none",
+    )
+    bindings = coordination_native_bindings(
+        runtime,
+        trace_id_prefix="coordination_live_contract",
+        model=model,
+        reasoning_effort="none",
+    )
+
+    assert all(
+        bindings[person_id].implementation.provider_bound for person_id in PERSON_IDS
+    )
+    assert all(
+        not bindings[process_id].implementation.provider_bound
+        for process_id in (*PRESSURE_SOURCE_IDS, "meeting_clock")
+    )
+    assert {
+        spec.active_system_id: spec.implementation_id
+        for spec in runtime.active_specs
+    } == {
+        active_system_id: binding.implementation_id
+        for active_system_id, binding in bindings.items()
+    }
+
+
+def test_live_coordination_terminal_action_retains_structured_gate_inputs() -> None:
+    decision = CoordinationLlmDecision.model_validate(
+        {
+            "orientation": "The reviewed evidence and commitments support a decision.",
+            "memory_update": "Retain the proposed terminal decision.",
+            "actions": [
+                {
+                    "output_port_id": "terminal_proposal_out",
+                    "representation_id": None,
+                    "payload": {
+                        "requested_status": "deploy_on_time",
+                        "requested_scope": "full",
+                        "evidence_refs": ["independent_calibration_response"],
+                        "acknowledged_issue_ids": ["oversight_review"],
+                        "active_partner_ids": list(PERSON_IDS),
+                    },
+                    "public_summary": "The coordinator proposed full deployment.",
+                }
+            ],
+            "silence_reason": None,
+        }
+    )
+
+    payload = decision.actions[0].payload
+    assert payload.evidence_refs == ["independent_calibration_response"]
+    assert payload.active_partner_ids == list(PERSON_IDS)
+    normalized = _normalized_coordination_payload(
+        "mission_coordinator",
+        "terminal_proposal_out",
+        payload.model_dump(mode="json"),
+    )
+    assert DecisionProposal.model_validate(normalized).proposed_by == (
+        "mission_coordinator"
+    )
+
+
+def test_live_schema_rejects_simulator_owned_actor_identity() -> None:
+    coordinator_model = COORDINATION_PERSON_DECISION_MODELS["mission_coordinator"]
+
+    with pytest.raises(ValidationError):
+        coordinator_model.model_validate(
+            {
+                "orientation": "The reviewed commitments support a proposal.",
+                "memory_update": "Retain the reviewed proposal.",
+                "actions": [
+                    {
+                        "output_port_id": "terminal_proposal_out",
+                        "representation_id": None,
+                        "payload": {
+                            "proposal_id": "model_chosen_id",
+                            "proposed_by": "partner_representative",
+                            "requested_status": "scope_reduced",
+                            "requested_scope": "reduced",
+                            "evidence_refs": [],
+                            "acknowledged_issue_ids": [],
+                            "active_partner_ids": list(PERSON_IDS),
+                        },
+                        "public_summary": "The coordinator proposed reduced scope.",
+                    }
+                ],
+                "silence_reason": None,
+            }
+        )
+
+
+def test_live_person_schema_rejects_an_interface_owned_by_someone_else() -> None:
+    partner_model = COORDINATION_PERSON_DECISION_MODELS["partner_representative"]
+
+    with pytest.raises(ValidationError):
+        partner_model.model_validate(
+            {
+                "orientation": "The group would benefit from another message.",
+                "memory_update": "Retain the discussion.",
+                "actions": [
+                    {
+                        "output_port_id": "alignment_message_out",
+                        "representation_id": None,
+                        "payload": {
+                            "sender_id": "partner_representative",
+                            "content": "Continue review.",
+                        },
+                        "public_summary": "The partner sent an alignment message.",
+                    }
+                ],
+                "silence_reason": None,
+            }
+        )
 
 
 def test_contract_three_arm_family_differs_only_by_reviewed_condition() -> None:
@@ -409,7 +533,12 @@ def test_scripted_vertical_completes_four_meetings_with_distinct_zero_cost_outco
         attempt
         for attempt in result.attempts
         if "meeting_clock" in attempt.declared_active_system_ids
-        and len(attempt.declared_active_system_ids) > 1
+        and attempt.logical_time in MEETING_TIMES
+    ]
+    meeting_observations = [
+        observation
+        for observation in final_state.observations.values()
+        if observation.apparent_source_ref == "meeting_scheduler"
     ]
 
     assert result.completion is not None
@@ -420,10 +549,14 @@ def test_scripted_vertical_completes_four_meetings_with_distinct_zero_cost_outco
     assert [attempt.logical_time for attempt in meetings] == [
         day * 24 * 60 for day in MEETING_DAYS
     ]
-    assert all(
-        set(PERSON_IDS) <= set(attempt.declared_active_system_ids)
-        for attempt in meetings
-    )
+    assert len(meeting_observations) == len(MEETING_DAYS) * len(PERSON_IDS)
+    assert {
+        person_id: sum(
+            observation.target_entity_id == person_id
+            for observation in meeting_observations
+        )
+        for person_id in PERSON_IDS
+    } == {person_id: len(MEETING_DAYS) for person_id in PERSON_IDS}
     assert len(result.attempts) + len(result.exact_work) >= 12
     assert final_state.fact("external_decision_registry.received_status").value == (
         expected_status

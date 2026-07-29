@@ -141,7 +141,9 @@ def main() -> None:
         assert "took part in" in page.locator("#trace .trace-summary p").inner_text()
         assert "was activated" not in page.locator("#trace .trace-summary p").inner_text()
         first_participant_moment = page.locator("#trace .trace-step").first
-        assert first_participant_moment.locator("strong").inner_text() == "Day 0"
+        assert first_participant_moment.locator("strong").inner_text().startswith(
+            "Day 0"
+        )
         assert (
             "requested explicit, reasoned review"
             in first_participant_moment.locator("p").first.inner_text()
