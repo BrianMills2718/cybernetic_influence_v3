@@ -250,12 +250,17 @@ LLM_ROUTE_CERTIFICATION_ROOT=/Users/b/Library/Application Support/LLMClient/rout
 LLM_CLIENT_TIMEOUT_POLICY=allow
 CYBERNETIC_INFLUENCE_CERT_TERRA=<participant observation>,<narrator observation>
 CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH=<participant observation>,<narrator observation>
+CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA=<all exact Coordination person-schema observations, or empty>
+CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH=<all exact Coordination person-schema observations, or empty>
 ```
 
 An observation is accepted only when its requested model, exact provider-schema
 digest, shared-client revision, successful transport evidence, and seven-day
 freshness all replay successfully. Registry membership or a configured key is
-not enough.
+not enough. The global pair makes a route available to scenarios using the
+generic person schema. Coordination remains reference-only unless its separate
+scenario group contains one current observation for each of the five exact
+person schemas.
 
 OpenRouter's generation metadata endpoint is eventually consistent. A
 successful model call may be followed by repeated
@@ -279,11 +284,14 @@ the raw key in
 owned by `b` with mode `0600`. The launcher refuses other owners or modes.
 
 Render the LaunchAgent template with the new commit in `__BUILD_COMMIT__`, the
-approved Tailscale login in `__ALLOWED_TAILSCALE_USERS__`, and
-`/Users/b/Library/Application Support/LLMClient` in
-`__LLM_CLIENT_DATA_ROOT__`. Set `__OPENROUTER_KEY_FILE__` to the protected file
-path even when Keychain is preferred; it is the fail-closed fallback. Validate
-the result with `plutil -lint`, then use:
+approved Tailscale login in `__ALLOWED_TAILSCALE_USERS__`, the global and
+scenario-specific certification groups in their corresponding `__CERT_*__`
+placeholders, and `/Users/b/Library/Application Support/LLMClient` in
+`__LLM_CLIENT_DATA_ROOT__`. Use an empty string for a scenario-specific group
+that has not been certified; never reuse a global pair in its place. Set
+`__OPENROUTER_KEY_FILE__` to the protected file path even when Keychain is
+preferred; it is the fail-closed fallback. Validate the result with
+`plutil -lint`, then use:
 
 ```bash
 launchctl bootout "gui/$(id -u)/com.cybernetic-influence.v3"

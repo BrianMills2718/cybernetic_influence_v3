@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import plistlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -23,6 +24,24 @@ from cybernetic_influence.run_configuration import (
 
 
 MODEL = "openrouter/openai/gpt-5.6-terra"
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_launch_agent_binds_global_and_coordination_certification_groups() -> None:
+    with (ROOT / "deploy" / "com.cybernetic-influence.v3.plist").open("rb") as stream:
+        launch_agent = plistlib.load(stream)
+
+    environment = launch_agent["EnvironmentVariables"]
+    assert environment["CYBERNETIC_INFLUENCE_CERT_TERRA"] == "__CERT_TERRA__"
+    assert environment["CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH"] == (
+        "__CERT_DEEPSEEK_V4_FLASH__"
+    )
+    assert environment["CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA"] == (
+        "__CERT_COORDINATION_TERRA__"
+    )
+    assert environment[
+        "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH"
+    ] == "__CERT_COORDINATION_DEEPSEEK_V4_FLASH__"
 
 
 def test_local_package_revision_matches_shared_client_observation_format(
