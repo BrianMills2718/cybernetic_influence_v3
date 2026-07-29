@@ -500,6 +500,28 @@ function placeNode(
   }
 }
 
+function nearestCommonPlace(
+  placeIds: string[],
+  placeById: Map<string, PlaceView>,
+): string | null {
+  if (!placeIds.length) return null
+  const ancestors = (placeId: string): string[] => {
+    const result: string[] = []
+    let current: string | null = placeId
+    const visited = new Set<string>()
+    while (current && !visited.has(current)) {
+      visited.add(current)
+      result.push(current)
+      current = placeById.get(current)?.parentPlaceId ?? null
+    }
+    return result
+  }
+  const chains = placeIds.map(ancestors)
+  return chains[0].find((candidate) =>
+    chains.every((chain) => chain.includes(candidate)),
+  ) ?? null
+}
+
 function buildWorldGraph(options: CanvasOptions): {
   nodes: Node<CanvasNodeData>[]
   edges: Edge<CanvasEdgeData>[]
@@ -509,8 +531,15 @@ function buildWorldGraph(options: CanvasOptions): {
   const eventFocus = new Set(options.event?.spatial_focus_ids ?? [])
   const activeParticipants = new Set(options.activity?.participantIds ?? [])
   const placeById = new Map(world.places.map((place) => [place.id, place]))
+  const boundary = options.boundary
+  const collapsedBoundary = boundary
+    && options.collapsedBoundaryId === boundary.id
+    ? boundary
+    : null
+  const collapsedMemberIds = new Set(collapsedBoundary?.memberIds ?? [])
   const roots = world.places.filter((place) => place.parentPlaceId === null)
   const nodes: Node<CanvasNodeData>[] = []
+  const placeWidths = new Map<string, number>()
   let rootOffset = 30
 
   roots.forEach((root) => {
@@ -519,6 +548,7 @@ function buildWorldGraph(options: CanvasOptions): {
     )
     const width = Math.max(800, 90 + Math.max(1, children.length) * 360)
     const height = 560
+    placeWidths.set(root.id, width)
     nodes.push(placeNode(root, {
       position: { x: rootOffset, y: 30 },
       width,
@@ -546,13 +576,15 @@ function buildWorldGraph(options: CanvasOptions): {
     list.push(placement)
     occupants.set(placement.placeId, list)
   })
+  const visibleOccupantCounts = new Map<string, number>()
   occupants.forEach((placements, placeId) => {
     if (!placeById.has(placeId)) return
     placements
       .sort((left, right) => left.entityId.localeCompare(right.entityId))
-      .forEach((placement, index) => {
-        const raw = currentNodes.get(placement.entityId)
-        if (!raw) return
+      .filter((placement) => !collapsedMemberIds.has(placement.entityId))
+      .map((placement) => ({ placement, raw: currentNodes.get(placement.entityId) }))
+      .filter((item): item is { placement: PlacementView; raw: AnalystNode } => Boolean(item.raw))
+      .forEach(({ placement, raw }, index) => {
         const node = toCanvasNode(
           raw,
           eventFocus.has(raw.id)
@@ -575,8 +607,49 @@ function buildWorldGraph(options: CanvasOptions): {
             height: WORLD_NODE_HEIGHT,
           },
         })
+        visibleOccupantCounts.set(placeId, index + 1)
       })
   })
+
+  if (collapsedBoundary) {
+    const memberPlacements = world.placements.filter((placement) =>
+      collapsedMemberIds.has(placement.entityId),
+    )
+    const hostPlaceId = nearestCommonPlace(
+      [...new Set(memberPlacements.map((placement) => placement.placeId))],
+      placeById,
+    )
+    const aggregate = currentNodes.get(collapsedBoundary.id)
+    const hostPlace = hostPlaceId ? placeById.get(hostPlaceId) : null
+    if (hostPlaceId && hostPlace && aggregate) {
+      const leaf = hostPlace.parentPlaceId !== null
+      const visibleCount = visibleOccupantCounts.get(hostPlaceId) ?? 0
+      const node = toCanvasNode(
+        {
+          ...aggregate,
+          description: `${memberPlacements.length} placed member${memberPlacements.length === 1 ? '' : 's'} summarized at their nearest shared spatial container. The composite is an analytical view, not a physically located executor.`,
+        },
+        Boolean(options.event?.boundary_ids?.includes(collapsedBoundary.id))
+          || memberPlacements.some((placement) =>
+            eventFocus.has(placement.entityId) || activeParticipants.has(placement.entityId),
+          ),
+        options.selectedNodeId === collapsedBoundary.id,
+      )
+      nodes.push({
+        ...node,
+        parentNode: hostPlaceId,
+        extent: 'parent',
+        position: leaf
+          ? { x: 38, y: 88 + Math.ceil(visibleCount / 2) * 92 }
+          : { x: Math.max(18, (placeWidths.get(hostPlaceId) ?? 800) - 270), y: 18 },
+        style: {
+          ...node.style,
+          width: 238,
+          height: 108,
+        },
+      })
+    }
+  }
 
   return {
     nodes,
@@ -641,7 +714,7 @@ function buildGraph(options: CanvasOptions): {
   const canvasEdges = options.edges.map((item) =>
     toCanvasEdge(item, event, options.selectedEdgeId === item.id, options.activity),
   )
-  if (options.boundary) {
+  if (options.boundary && options.collapsedBoundaryId === null) {
     return {
       nodes: expandedBoundaryLayout(
         canvasNodes,
@@ -745,7 +818,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
         <span>
           <strong>
             {worldMode
-              ? 'World topology'
+              ? collapsed ? 'World topology · collapsed composite' : 'World topology'
               : trajectoryMode
                 ? 'Realized causal trajectory'
               : collapsed ? 'Collapsed composite' : 'Expanded exact network'}

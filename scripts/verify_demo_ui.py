@@ -69,8 +69,29 @@ def main() -> None:
             "Collapse "
         )
         assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
-        assert page.locator("#analytical-scale-toggle").is_disabled()
-        assert page.locator("#analytical-boundary").is_disabled()
+        assert page.locator("#analytical-scale-toggle").is_enabled()
+        assert page.locator("#analytical-boundary").is_enabled()
+
+        page.locator("#analytical-scale-toggle").click()
+        page.locator(
+            ".cy-graph-bar strong",
+            has_text="World topology · collapsed composite",
+        ).wait_for()
+        assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
+        assert page.locator(".cy-flow-node--analytical_boundary").count() == 1
+        assert page.locator("#analytical-scale-toggle").inner_text().startswith(
+            "Expand "
+        )
+        if args.screenshot:
+            args.screenshot.parent.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(args.screenshot), full_page=True)
+
+        page.locator("#analytical-scale-toggle").click()
+        page.locator(".cy-graph-bar strong", has_text="World topology").wait_for()
+        assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
+        assert page.locator("#analytical-scale-toggle").inner_text().startswith(
+            "Collapse "
+        )
 
         page.locator("#causal-layout").click()
         assert page.locator("#causal-layout").get_attribute("aria-pressed") == "true"
@@ -89,8 +110,12 @@ def main() -> None:
 
         page.locator("#spatial-layout").click()
         assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
-        assert page.locator("#analytical-scale-toggle").is_disabled()
-        assert page.locator("#analytical-boundary").is_disabled()
+        assert page.locator("#analytical-scale-toggle").is_enabled()
+        page.locator(
+            ".cy-graph-bar strong",
+            has_text="World topology · collapsed composite",
+        ).wait_for()
+        assert page.locator(".cy-flow-node--analytical_boundary").count() == 1
         page.locator("#causal-layout").click()
         assert page.locator("#causal-layout").get_attribute("aria-pressed") == "true"
         page.locator(".cy-graph-bar strong", has_text="Collapsed composite").wait_for()
@@ -113,15 +138,28 @@ def main() -> None:
         assert page.locator("#causal-layout").get_attribute("aria-pressed") == "true"
         page.locator(".cy-graph-bar strong", has_text="Collapsed composite").wait_for()
 
-        if args.screenshot:
-            args.screenshot.parent.mkdir(parents=True, exist_ok=True)
-            page.screenshot(path=str(args.screenshot), full_page=True)
+        page.locator("#scenario").select_option("service_desk")
+        page.wait_for_function(
+            """() => document.querySelectorAll('#analytical-boundary option').length === 1
+                && document.querySelector('#spatial-layout')?.getAttribute('aria-pressed') === 'true'"""
+        )
+        assert page.locator("#analytical-scale-toggle").is_enabled()
+        page.locator("#analytical-scale-toggle").click()
+        page.locator(
+            ".cy-graph-bar strong",
+            has_text="World topology · collapsed composite",
+        ).wait_for()
+        assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
+        assert page.locator(".cy-flow-node--analytical_boundary").count() == 1
+        page.locator("#analytical-scale-toggle").click()
+        page.locator(".cy-graph-bar strong", has_text="World topology").wait_for()
+
         browser.close()
     assert not console_errors, console_errors
     assert not failed_requests, failed_requests
     print(
         f"PASS {run_id}: deep link, all projections, projection-preserving "
-        "collapse/expand, and both composites"
+        "spatial/causal collapse/expand, both composites, and service-desk preview"
     )
 
 
