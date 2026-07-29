@@ -102,6 +102,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Spatial topology" in page.text
     assert "Configured interaction pathways" in page.text
     assert "Realized causal graph" in page.text
+    assert 'id="analytical-scale-control"' in page.text
+    assert 'id="analytical-boundary"' in page.text
+    assert 'id="analytical-scale-toggle"' in page.text
     assert "Account for the selected moment" in page.text
     assert "What happened" in page.text
     assert "Advanced" in page.text
@@ -180,7 +183,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"requestSerial !== previewRequestSerial" in app_script.content
     assert b"/api/scenarios/${encodeURIComponent(scenario)}/preview" in app_script.content
     assert b"the realized causal graph appears only after events are committed" in app_script.content
-    assert b"else renderGraph()" in app_script.content
+    assert b"$('#analytical-scale-toggle').onclick" in app_script.content
+    assert b"selectedGraphView = 'causal'" in app_script.content
     assert b"how did this condition change the path to safe closure" in app_script.content
     assert b"modeled elapsed time T+" in app_script.content
     assert b"aria-pressed" in app_script.content

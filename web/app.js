@@ -53,6 +53,7 @@ const buttonTooltips = {
   'spatial-layout': 'Show authored places, occupants, and physical links. This does not grant access or permission.',
   'causal-layout': 'Show configured interaction pathways. A pathway does not itself grant authority.',
   'trajectory-layout': 'Show only the causal events that occurred in the selected run.',
+  'analytical-scale-toggle': 'Collapse the selected analytical composite into one node, or expand it back into its exact components.',
   'previous-event': 'Select the previous causal step.',
   'next-event': 'Select the next causal step.',
   'narrative-concise': 'Read the one-sentence account for each causal step.',
@@ -333,8 +334,7 @@ function renderAuthoring() {
       viewMode: selectedAuthoringGraphView, event: null,
       initialRevision: authoringPreview.initial_revision, selectedNodeId: null, selectedEdgeId: null,
       boundary: null, collapsedBoundaryId: null,
-      analyticalScaleHelp: 'The analytical boundary is a view, not an actor.',
-      onToggleBoundary: () => {}, onSelectNode: () => {}, onSelectEdge: () => {},
+      onSelectNode: () => {}, onSelectEdge: () => {},
     })
   } else {
     $('#authoring-graph').classList.remove('react-canvas-host')
@@ -607,6 +607,7 @@ async function loadScenarioPreview() {
   selectedNodeId = null
   selectedEdgeId = null
   $('#map-section').hidden = false
+  renderScaleControls()
   renderProjectionControls()
   renderGraph()
   $('#inspector').innerHTML = `<span class="eyebrow">Configured starting state</span><h2>Ready to play</h2><p>Select a place, person, record, mechanism, or pathway to inspect the scenario as configured. The realized causal graph will appear after the simulation commits events.</p>`
@@ -886,6 +887,33 @@ function renderScaleControls() {
   if (selectedScale !== 'exact' && !boundaries.some((item) => item.id === selectedScale)) {
     selectedScale = 'exact'
   }
+  const control = $('#analytical-scale-control')
+  control.hidden = boundaries.length === 0
+  if (!boundaries.length) return
+  const selector = $('#analytical-boundary')
+  const priorChoice = selector.value
+  selector.innerHTML = boundaries.map((boundary) =>
+    `<option value="${html(boundary.id)}">${html(boundary.label)}</option>`
+  ).join('')
+  const selectedBoundaryId = selectedScale !== 'exact'
+    ? selectedScale
+    : boundaries.some((item) => item.id === priorChoice) ? priorChoice : boundaries[0].id
+  selector.value = selectedBoundaryId
+  const selected = boundaries.find((item) => item.id === selectedBoundaryId)
+  const collapsed = selectedScale !== 'exact'
+  const toggle = $('#analytical-scale-toggle')
+  toggle.textContent = `${collapsed ? 'Expand' : 'Collapse'} ${selected?.label || 'analytical composite'}`
+  toggle.title = collapsed
+    ? 'Show the exact people, information, objects, and mechanisms inside this analytical composite.'
+    : 'Group this analytical composite into one derived node. This changes only the view, not what acts in the simulation.'
+  toggle.setAttribute('aria-label', `Analytical scale: ${toggle.textContent}`)
+}
+
+function selectedScaleBoundaryId() {
+  const boundaries = current?.boundaries || []
+  if (selectedScale !== 'exact') return selectedScale
+  const selected = $('#analytical-boundary')?.value
+  return boundaries.some((item) => item.id === selected) ? selected : boundaries[0]?.id || null
 }
 
 function showBoundary(boundaryId) {
@@ -1259,7 +1287,7 @@ function renderGraph() {
   if (window.CyberneticGraph) {
     graph.classList.add('react-canvas-host')
     const authoredBoundary = selectedScale === 'exact'
-      ? (current.boundaries || [])[0] || null
+      ? (current.boundaries || []).find((item) => item.id === selectedScaleBoundaryId()) || null
       : null
     const snapshot = boundarySnapshot(authoredBoundary)
     window.CyberneticGraph.render(graph, {
@@ -1270,7 +1298,6 @@ function renderGraph() {
       world:worldProjection(),
       trajectory:current?.trajectory || null,
       viewMode:selectedGraphView,
-      analyticalScaleHelp:runtimeConfig.live_options?.help?.analytical_scale || 'Analytical scale collapses an execution-inert composite for inspection; it does not create another acting system.',
       boundary:authoredBoundary && snapshot ? {
         id:authoredBoundary.id,
         label:authoredBoundary.label,
@@ -1297,14 +1324,6 @@ function renderGraph() {
         showNode(nodeId)
       },
       onSelectEdge:(edge) => showEdge(edge),
-      onToggleBoundary:(boundaryId) => {
-        selectedScale = selectedScale === 'exact' ? boundaryId : 'exact'
-        selectedNodeId = null
-        selectedEdgeId = null
-        renderScaleControls()
-        if (current?.timeline?.length) selectEvent(selectedEventIndex)
-        else renderGraph()
-      },
     })
     return
   }
@@ -1866,6 +1885,21 @@ $('#trajectory-layout').onclick = () => {
   selectedGraphView = 'trajectory'
   selectedNodeId = current?.timeline?.[selectedEventIndex]?.event_id || null
   selectedEdgeId = null
+  renderProjectionControls()
+  renderGraph()
+}
+$('#analytical-boundary').onchange = () => {
+  if (selectedScale !== 'exact') selectedScale = $('#analytical-boundary').value
+  renderScaleControls()
+  if (selectedGraphView === 'causal') renderGraph()
+}
+$('#analytical-scale-toggle').onclick = () => {
+  const boundaryId = $('#analytical-boundary').value
+  selectedScale = selectedScale === 'exact' ? boundaryId : 'exact'
+  selectedGraphView = 'causal'
+  selectedNodeId = null
+  selectedEdgeId = null
+  renderScaleControls()
   renderProjectionControls()
   renderGraph()
 }

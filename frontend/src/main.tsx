@@ -117,7 +117,6 @@ interface CanvasOptions {
   world: WorldView | null
   trajectory: TrajectoryView | null
   viewMode: 'world' | 'causal' | 'trajectory'
-  analyticalScaleHelp: string
   collapsedBoundaryId: string | null
   selectedNodeId: string | null
   selectedEdgeId: string | null
@@ -127,7 +126,6 @@ interface CanvasOptions {
   } | null
   onSelectNode: (nodeId: string) => void
   onSelectEdge: (edge: AnalystEdge) => void
-  onToggleBoundary: (boundaryId: string) => void
 }
 
 interface CanvasNodeData {
@@ -738,10 +736,6 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
     setEdges,
   ])
 
-  const boundaryId = options.boundary?.id ?? options.collapsedBoundaryId
-  const boundaryLabel = options.boundary?.label
-    ?? options.nodes.find((node) => node.id === boundaryId)?.label
-    ?? 'analytical composite'
   const collapsed = options.collapsedBoundaryId !== null
   const worldMode = options.viewMode === 'world'
   const trajectoryMode = options.viewMode === 'trajectory'
@@ -761,17 +755,6 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
             ? ` · ${options.world.unplacedEntityIds.length} logical entities are outside this spatial projection; inspect them in Configured interaction pathways`
             : ''}
         </span>
-        <div className="cy-graph-actions">
-          {!worldMode && !trajectoryMode && boundaryId && (
-          <button
-            title={options.analyticalScaleHelp}
-            aria-label={`Analytical scale: ${collapsed ? 'expand' : 'collapse'} ${boundaryLabel}`}
-            onClick={() => options.onToggleBoundary(boundaryId)}
-          >
-            Analytical scale: {collapsed ? 'Expand' : 'Collapse'} {boundaryLabel}
-          </button>
-          )}
-        </div>
       </div>
       <div className="cy-graph-canvas">
         <ReactFlow

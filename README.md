@@ -90,6 +90,18 @@ make serve
 
 Open <http://127.0.0.1:8620>.
 
+After changing the browser workflow, run the real deep-link and multiscale-map
+smoke check against the running server:
+
+```bash
+.venv/bin/python -m playwright install chromium  # first use only
+make ui-smoke
+```
+
+This zero-cost check creates a scripted coordination run, opens its saved-run
+URL in Chromium, and exercises the spatial map, both analytical composites,
+collapse, expand, console errors, and failed network requests.
+
 The native LLM path uses the shared `llm_client` checkout installed in the
 environment. Scripted runs require no provider and make no model calls.
 The private Mac host currently advertises exact-schema-certified Terra and

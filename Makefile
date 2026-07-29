@@ -4,7 +4,7 @@ LLM_CLIENT_ROOT ?= ../active/llm_client
 HOST ?= 127.0.0.1
 PORT ?= 8620
 
-.PHONY: install ui-install ui-build test typecheck deploy-check check serve
+.PHONY: install ui-install ui-build ui-smoke test typecheck deploy-check check serve
 
 install: ui-install
 	python3 -m venv $(VENV) || virtualenv --clear $(VENV)
@@ -21,6 +21,9 @@ ui-install:
 
 ui-build:
 	npm --prefix frontend run build
+
+ui-smoke:
+	$(PYTHON) scripts/verify_demo_ui.py --base-url http://$(HOST):$(PORT)
 
 test:
 	$(PYTHON) -m pytest -q tests
