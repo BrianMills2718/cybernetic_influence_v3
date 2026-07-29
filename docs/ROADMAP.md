@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-07-27
+updated: 2026-07-29
 ---
 
 # Cybernetic Influence V3 Roadmap
@@ -337,6 +337,183 @@ terminal conditions, horizons, recurring processes, and measurement
 specifications. A
 longer run must contain more modeled dynamics; a larger turn limit alone is not
 a valid extension.
+
+### Post-MVP candidate initiative: composable scenario authoring
+
+**Lifecycle:** candidate initiative, not part of the active Research MVP goal.
+The current thirteen-packet sequence still ends at 21C2. After that closeout,
+the operator must explicitly select, replace, or decline this initiative before
+bounded design or implementation begins.
+
+**Roadmap mode and currency:** `roadmap_mutation`, current through source and
+test inspection on 2026-07-29. Consulted authorities are this roadmap, the
+active Research MVP goal, Slice 17, ADRs 006/010/011, the causal and active
+runtime contracts, the authored compiler, and current `data-contracts`
+composition source. Broader workflow-framework research is materially excluded:
+the reversible decision is whether to reuse Brian's existing shared semantic
+core through an adapter, and current repository evidence settles that boundary
+without a new framework comparison.
+
+**Outcome ID:** `composable_scenario_authoring_v1`.
+
+**Actor and job:** for an analyst who needs to explore a bounded situation that
+does not match an existing scenario template, turn a natural-language
+description into a reviewable configuration assembled from validated reusable
+components, then run and inspect it through the existing simulator.
+
+**Stage and investment boundary:** private PoC. The objective is one genuinely
+new scenario assembled without scenario-specific Python, not a universal world
+language, public marketplace, automatic ontology, or production plugin system.
+
+**Canonical outcome exemplar:** the analyst describes a laboratory cold-storage
+incident containing two people, a temperature-monitoring device, a configurable
+finite-state control process, an alarm representation and delivery pathway, a
+protected-room access gate, spatial locations, and a terminal condition. The
+authoring assistant proposes only registered component types and explicit
+wiring. The analyst reviews unresolved assumptions and the spatial/configured
+graphs, approves the compiled configuration, runs it, and can explain from the
+narrative and exact trace whether the sample was protected, which information
+reached each person, which device transitions occurred, and why any attempted
+access or intervention succeeded or failed.
+
+The eventual directly inspectable review artifacts are the retained approved-
+scenario URL and retained run URL on the canonical private simulator. They must
+show the original description, compiled component identities, validation
+result, maps, narrative, exact participant/mechanism evidence, and outcome.
+Those artifacts do not exist yet, so this candidate is currently
+`not_reviewable` and `not_observed`.
+
+**Progress dimensions:** outcome progress is `not_observed`; enabling progress
+includes the technically observed causal runtime and contract-tested shared
+composition library; process progress is this candidate roadmap only and does
+not advance product status.
+
+**Negative and ambiguity controls:**
+
+- an attempted connection between incompatible payload contracts fails before
+  approval with the exact two interfaces and contracts shown;
+- a requested behavior with no registered implementation remains an explicit
+  unresolved capability rather than becoming generated code or a fictitious
+  mechanism;
+- removing the alarm delivery pathway prevents the person from observing the
+  alarm instead of granting non-local knowledge; and
+- replacing the detailed controller with a declared coarse implementation may
+  preserve its typed boundary behavior, but cannot support claims about omitted
+  internal transitions.
+
+**Evidence step-down:** approved draft and compiler diagnostics -> component-
+pack and implementation-version manifest -> compiled scenario fingerprint ->
+runtime binding/conformance evidence -> retained causal events and state ->
+maps, participant accounts, and narrative. A valid compilation licenses only
+structural and executable compatibility; it does not establish behavioral
+liveness, empirical fidelity, psychological validity, or predictive accuracy.
+
+#### Current truth and landscape disposition
+
+Technical execution of the generic causal substrate is observed: the existing
+runtime validates entities, places, ports, routes, carriers, representations,
+mechanism read/write surfaces, implementation bindings, autonomous schedules,
+and exact traces. Technical execution of general scenario composition is not
+observed. The authored compiler deliberately selects only
+`resource_request_v1` or `information_campaign_v1` and owns their scenario-
+specific mechanisms and bindings.
+
+The preferred landscape disposition is **adopt through a thin domain adapter**:
+
+- retain the Cybernetic causal core as the execution, scheduling, world-state,
+  trace, and replay authority;
+- consume `data_contracts.composition` for versioned action packs, payload and
+  resource contracts, dependency compilation, applicability, implementation
+  identity, lineage, guarded transitions, and conformance evidence;
+- add Cybernetic-owned component semantics for event ports, world facts,
+  carriers, spatial substrates, positive durations, active-system interfaces,
+  fidelity declarations, and compilation into the existing runtime; and
+- reject both a second project-local generic composition algebra and any design
+  that treats `data_contracts.composition` as a scheduler or simulator.
+
+The shared package's `CompositeContract` describes atomic versus visibly
+expanded actions; it does not define an organization, analytical boundary, or
+Levin-style composite agency. Existing execution-inert analytical boundaries
+remain authoritative for those views.
+
+Current source evidence observed on 2026-07-29: `data-contracts` revision
+`d845be0c5813ab26e9bf2f1eaf4473a262ac541b` passes its 232 focused composition
+tests locally. That is contract-level library evidence only. Cybernetic V3 does
+not currently depend on it, and no integrated or deployed claim is licensed.
+
+#### Backward capability path
+
+| ID | Required capability | Owner | Dependency | Current state | Satisfaction gate |
+|---|---|---|---|---|---|
+| `CSC-C0` | Existing causal execution, active systems, traces, maps, narrative, pause/resume | Cybernetic V3 | hard | satisfied for current templates | Preserve current runtime contracts and regression suite |
+| `CSC-C1` | Versioned Cybernetic component vocabulary and catalog projection | shared semantic core + Cybernetic domain adapter | hard | missing | At least one agent interface, typed delivery mechanism, configurable finite-state process, exact gate, carrier, and spatial substrate compile from registered descriptors |
+| `CSC-C2` | Composition compiler from component instances and wiring into existing runtime records | Cybernetic V3 | hard | missing | Valid configuration produces complete `CausalScenario`, active specs, trusted bindings, manifest digest, and no scenario-specific Python |
+| `CSC-C3` | Static compatibility and implementation-readiness report | shared validators + Cybernetic compiler | hard | partial | Type, cardinality, direction, resource, timing, authority, implementation, and invariant failures are explicit and pass both-sign controls |
+| `CSC-C4` | Conversational draft/revision over the catalog | Cybernetic authoring | sequencing | partial | The LLM may select and configure registered components, but cannot invent implementation identities or erase unresolved capability gaps |
+| `CSC-C5` | Pre-run review and executable evidence in the existing UI/API | Cybernetic API/UI | operational | partial | Approved configuration and validation report are inspectable before Play; run reopens with existing maps, narrative, and exact evidence |
+| `CSC-C6` | Canonical composed-scenario outcome probe | Cybernetic product surface | evidence | missing | The cold-storage exemplar runs without scenario-specific Python and its positive and negative cases remain traceable |
+| `CSC-C7` | Broader component library or a second domain | future selection | optional | deferred | Add only after the canonical exemplar is observed and the variation changes representativeness rather than merely increasing count |
+
+The first missing boundary is `CSC-C1`: Cybernetic has runtime instances but no
+versioned catalog contract that says which reusable component types exist, what
+typed interfaces and resources they require, and which validated implementation
+each type binds. Without that seam, general authoring would either remain
+template-specific or let the model invent unexecutable structure.
+
+#### Shortest critical path and selected goals
+
+1. **`CSC-G1` — direct blocker: bounded component-composition seam.** Select a
+   pinned shared-composition revision and produce a Cybernetic domain mapping
+   that compiles one fixed, declarative component graph containing an active
+   person interface, typed delivery, configurable finite-state process, exact
+   gate, information carrier, positive timing, and spatial substrate into the
+   unchanged runtime. The review surface is a compiler report plus the ordinary
+   pre-run graphs. It must prove both a valid assembly and failures for an
+   incompatible connection and a missing implementation. Route this goal to
+   bounded design before work-unit decomposition.
+2. **`CSC-G2` — representative vertical: conversational composed scenario.**
+   Extend the existing authoring conversation to propose, revise, approve, and
+   run the cold-storage exemplar entirely from the validated catalog. The user
+   must be able to inspect the compiled assumptions and graph before Play and
+   step the completed narrative down to exact component and participant traces.
+
+Do not select `CSC-C7`, generalized component discovery, automatic component
+creation, nested aggregate execution, or cross-project plugin distribution
+until the `CSC-G2` artifact is stakeholder-observed. A second scenario advances
+the initiative only if it reuses the catalog while materially testing a new
+composition boundary.
+
+#### Continue, scale, reset, and stop rules
+
+- **Continue** with the current Research MVP and retain its active goal. This
+  candidate does not explain or repair the pending 21A4 deployment/readout.
+- **Select after MVP** only if the operator still values open-ended scenario
+  authoring more than the post-MVP composite-agency assay or another research
+  question.
+- **Scale** only after `CSC-G2` is technically observed, directly inspectable,
+  and understandable to the operator, with all negative and ambiguity controls
+  retained.
+- **Reset** if the shared composition contracts cannot represent the required
+  typed, temporal, authority, and implementation seams without turning shared
+  infrastructure into a Cybernetic-specific workflow engine; preserve useful
+  vocabulary and move the minimal contract into the consuming repo.
+- **Stop** if a useful new scenario still requires scenario-specific mechanism
+  code for every ordinary variation, if compilation cannot distinguish missing
+  capability from invalid wiring, or if the resulting UI hides rather than
+  clarifies the exact causal model.
+
+**Next-skill handoff after explicit initiative selection:**
+
+```yaml
+next_skill:
+  name: bounded-design
+reason: CSC-G1 needs a bounded cross-repository contract and compiler seam before executable work units can be named.
+required_inputs:
+  - initiative_id
+  - goal_id
+  - outcome_probe
+  - roadmap_revision
+```
 
 ## Binding Architectural Direction
 
