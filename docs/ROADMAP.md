@@ -603,19 +603,20 @@ requires them to answer an analyst question that current contracts cannot.
 
 ## Cadence and Observation State
 
-- **Last representative execution:** 2026-07-27, exact-revision Service Desk
-  pause/resume and completed participant trajectory on `08614b4`.
-- **Last representative narration probe:** `run_e589d6e3a769`; seven valid
-  accounts followed by a strict out-of-context citation failure.
-- **Observed limitation:** model-selected arbitrary event IDs do not remain
-  reliable across a full sequential narration, although the prose and causal
-  execution are valid.
-- **Next implementation packet:** 20D2 only after explicit
-  certification/deployment/spend authorization; **next integrated replay:**
-  its paused/resumed fully narrated Service Desk proof.
-- **Current limiting cause:** the still-unobserved integrated v3 narrator
-  proof, followed by the naturally multi-episode Slice-21 scenario—not
-  scheduler throughput, provider transport, or graph rendering.
+- **Last accepted integrated proof:** Service Desk `run_20d2d0000004`, with
+  pause/resume, exact completion, and all 25 simulator-grounded narratives.
+- **Current canonical revision:**
+  `29efcf399c91e450dd98da913decd81774cd40ef`; the shared UI now contains the
+  scripted Coordination scenario and a certification-gated native-person seam.
+- **Current packet:** 21A4 route certification, deployment, live baseline, and
+  human readout. Generic participant, narrator, and mission-coordinator schema
+  observations are retained; the other four person schemas do not yet form a
+  complete certification set.
+- **Current limiting cause:** one successful technical-lead response lacks its
+  retained OpenRouter generation identity after interrupted metadata lookup.
+  Replacing that already-paid call requires explicit authorization; three
+  other person-schema certification calls have not yet been made. Until all
+  five are current, Coordination is correctly projected as reference-only.
 
 ## Explicit MVP Deferrals
 

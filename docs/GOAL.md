@@ -122,41 +122,37 @@ restarting completed work.
 
 ## Current State
 
-- **Demonstrated:** Packet 20D1 replaces model-selected event IDs with v3
-  simulator-owned narration context, including locally validated digest,
-  run-identity, current-event, and prior-record chains. Focused narration,
-  API-corruption, run-configuration, type, browser-script, and graph-build
-  checks pass without a provider call.
-- **Current increment:** Packet 20D2 operator readout.
-- **Observed 20D2 boundary:** the private Mac is on `5465e012`; DeepSeek Flash
-  `none` has a fresh V3 narrator-schema route observation. Baseline
-  `run_20d2a0000001` paused and resumed correctly, then failed closed when the
-  model selected `representation_id: null` for an interface that required one.
-  It retained eight calls and `$0.001218052` provider-observed cost; no V3
-  narration or terminal outcome exists.
-- **Observed Terra replacement:** `run_20d2b0000002` completed safely with
-  Terra `medium` people and Terra `low` narration, but narration stopped at
-  16/25 moments when a valid narrator call cost `$0.0203225`, above the fixed
-  `$0.02` per-call ceiling. It retained 27 calls and `$0.2113171875` observed
-  cost, so it is not the required complete V3 proof.
-- **Observed `$0.025` replay:** `run_20d2c0000003` completed safely after
-  pause/resume, with 31 unique calls, 90 unique events, and
-  `$0.3051715625` observed cost. Narration still stopped at 20/25 moments when
-  a valid `$0.0252121875` call exceeded the new per-call ceiling. The trace
-  shows cumulative full-detail prior narration as the direct cost driver.
-- **Observed compact proof:** `run_20d2d0000004` used the repaired compact
-  continuity input, paused and resumed its retained checkpoint, then completed
-  `closed_confirmed` at causal time 11 with 90 unique events, 35 unique calls,
-  `$0.1360228125` provider-observed cost, no provider errors, and all 25 V3
-  causal-moment accounts retained. The contexts are version 2 under
-  `causal_moment_narrator/v4`; complete simulator-owned evidence and prior
-  record chains remain retained outside model prompts. An older authored run
-  also reopened after restart at zero spend.
-- **Resume event:** operator answers the three packet-20D2 readout questions
-  against `run_20d2d0000004`: whether each meaningful arc is intelligible
-  without raw evidence, a disputed statement steps down to exact retained
-  events, and the stopping reason is clear. No further paid replay is needed
-  for this packet unless that readout identifies a specific defect.
+- **Demonstrated through 21A2:** the compact Service Desk proof
+  `run_20d2d0000004` completed after pause/resume with all 25 grounded
+  narratives, and the recurring Coordination reference scenario is now
+  inspectable through the shared narrative, participant/group, and three-map
+  UI rather than a scenario-specific page.
+- **Canonical implementation:** `29efcf399c91e450dd98da913decd81774cd40ef`
+  binds five Coordination people to scenario-specific native-LLM schemas while
+  sources, the meeting clock, analytical composites, and exact mechanisms
+  remain non-provider executors. Simulator-owned actor/proposal identities are
+  absent from the LLM schemas and attached only after validation.
+- **Current increment:** Packet 21A4 route certification and live baseline.
+  The UI and API now derive Coordination live availability from a per-scenario
+  certified-model list; without all five current person-schema observations,
+  the live action remains unavailable rather than falling back.
+- **Observed certification evidence:** DeepSeek V4 Flash `none` produced fresh
+  parseable observations for generic `LlmDecision`
+  (`routeobs1_642ea0a3d2f0d5c643913b5a`),
+  `CausalMomentNarration` (`routeobs1_fccd6216c6e0b7ba73d8f6a7`), and
+  `MissionCoordinatorLlmDecision`
+  (`routeobs1_b93a2b195341f17f0ba933d1`) against shared-client revision
+  `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`.
+- **Current blocker:** the technical-lead schema call completed successfully
+  under trace
+  `cybernetic_influence_v3/29efcf3/route_certification/TechnicalLeadLlmDecision`,
+  but its OpenRouter generation identity was not retained before the bounded
+  metadata lookup was interrupted. It cannot be certified from the retained
+  receipt alone. The policy, local-liaison, and partner schemas were not called.
+- **Resume event:** the operator explicitly authorizes one replacement
+  technical-lead certification call plus the three not-yet-run schema calls.
+  Then retain all five observation IDs, deploy the exact certified revision,
+  verify the scenario-specific model list, and run one live baseline canary.
 
 ## Done
 
