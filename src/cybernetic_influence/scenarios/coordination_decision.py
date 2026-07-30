@@ -1918,8 +1918,22 @@ def run_coordination(
     ], condition_ids: list[str] | None = None) -> CompletionRecord:
         matched = condition_ids or []
         evidence = _terminal_evidence_event_ids(session, run_control, matched)
+        terminal_summaries = {
+            "decision_deploy_on_time": "The reviewed full deployment decision was accepted and recorded.",
+            "decision_delayed": "The delayed deployment decision was accepted and recorded.",
+            "decision_scope_reduced": "The reviewed reduced-scope decision was accepted and recorded.",
+            "decision_partner_disengaged": "The partner-disengagement outcome was accepted and recorded.",
+            "decision_no_decision_by_horizon": "The decision deadline was recorded without an approved deployment.",
+        }
         summaries = {
-            "terminal_condition_met": "The team's final decision was accepted and recorded.",
+            "terminal_condition_met": next(
+                (
+                    terminal_summaries[condition_id]
+                    for condition_id in matched
+                    if condition_id in terminal_summaries
+                ),
+                "The team's exact terminal outcome was accepted and recorded.",
+            ),
             "modeled_time_horizon": "The modeled deadline passed without its required exact transition.",
             "quiescent_before_terminal": "No modeled work remained before a terminal decision was retained.",
             "operator_stopped": "The operator stopped at a causal boundary.",

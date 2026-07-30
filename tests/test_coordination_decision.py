@@ -531,6 +531,11 @@ def test_scripted_vertical_completes_four_meetings_with_distinct_zero_cost_outco
         run_id=f"coordination_{runtime.contract.condition.condition}",
     )
     final_state = result.core_result.final_state
+    if expected_status == "no_decision_by_horizon":
+        assert result.completion is not None
+        assert result.completion.public_summary == (
+            "The decision deadline was recorded without an approved deployment."
+        )
     meetings = [
         attempt
         for attempt in result.attempts

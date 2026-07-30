@@ -1885,6 +1885,26 @@ def test_invalid_measurement_does_not_invalidate_completed_world_run(
     assert history[0]["coordination_measurement_status"] == "invalid"
 
 
+def test_coordination_no_decision_story_does_not_invent_partner_withdrawal(
+    tmp_path: Path,
+) -> None:
+    retained = client(tmp_path).post(
+        "/api/runs",
+        json={
+            "scenario": "coordination_decision",
+            "arm_id": "heterogeneous_pressure",
+            "execution": "scripted",
+        },
+    ).json()
+
+    assert retained["story"]["headline"] == "The group did not reach a decision"
+    assert retained["story"]["summary"] == (
+        "No proposal satisfied the final decision gate before the modeled "
+        "deadline, so no deployment was approved."
+    )
+    assert "withdrew" not in retained["story"]["summary"]
+
+
 def test_coordination_live_execution_requires_scenario_schema_certification(
     tmp_path: Path,
 ) -> None:

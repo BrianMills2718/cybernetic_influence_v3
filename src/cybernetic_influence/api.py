@@ -229,8 +229,8 @@ def _coordination_outcome(
             "team members to support a smaller version, and that decision was recorded."
         ),
         "no_decision_by_horizon": (
-            "The team could not resolve its technical, policy, and local concerns. "
-            "One partner withdrew, so no deployment was approved before the deadline."
+            "No proposal satisfied the final decision gate before the modeled "
+            "deadline, so no deployment was approved."
         ),
     }
     outcome = {
