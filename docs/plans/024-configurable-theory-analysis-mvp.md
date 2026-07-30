@@ -321,10 +321,11 @@ Provider-free evidence:
   `889fa1392b2229421efbe100fa015763f3ff692057bac34f21f0e280c327a5b3`,
   and schema digest
   `538c97c19570d26d847b67c3b513e2bafc8b4a6354ff86add7a081ca3be663a9`;
-- each authoring message uses the operator-selected Luna, Terra, or Sol route
-  and thinking level, with Luna medium as the default, at most three structured
-  attempts of at most 8,000 output tokens, and a `$0.10` per-attempt request
-  ceiling (`$0.30` maximum usage-based exposure per message);
+- each authoring message uses an operator-selected subscription or OpenRouter
+  route and thinking level. Packet 24C adds subscription-backed Terra medium as
+  the default required by the canonical proof. A message permits at most three
+  structured attempts of at most 8,000 output tokens and a `$0.10` per-attempt
+  request ceiling (`$0.30` maximum usage-based exposure per message);
 - selected MVP analyses make zero model calls and use no route or reasoning
   level. `RunEvidenceBundleV1` has schema digest
   `75e70ba826efcf9f19e7cd2e52ed09c502d6e69eec5568079634e2ce74df5a96`;

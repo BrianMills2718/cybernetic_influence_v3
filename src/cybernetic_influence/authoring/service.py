@@ -31,6 +31,7 @@ from cybernetic_influence.authoring.models import (
 from cybernetic_influence.authoring.store import AuthoringDraftStore, DraftConflictError
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
+    CODEX_TERRA_MODEL,
     structured_backend_options,
 )
 from cybernetic_influence.run_store import now_iso
@@ -39,12 +40,13 @@ StructuredCall = Callable[..., tuple[Any, Any]]
 AUTHORING_TASK = "cybernetic_influence_v3_scenario_draft"
 AUTHORING_MAX_BUDGET = 0.10
 AuthoringModel = Literal[
+    "codex/gpt-5.6-terra",
     "codex/gpt-5.6-luna",
     "openrouter/openai/gpt-5.6-terra",
     "openrouter/openai/gpt-5.6-sol",
 ]
 AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
-AUTHORING_MODEL: AuthoringModel = CODEX_LUNA_MODEL
+AUTHORING_MODEL: AuthoringModel = CODEX_TERRA_MODEL
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
 AUTHORING_MAX_TOKENS = 8000
@@ -62,8 +64,16 @@ class AuthoringModelOption(TypedDict):
 
 AUTHORING_MODEL_OPTIONS: tuple[AuthoringModelOption, ...] = (
     {
+        "model": CODEX_TERRA_MODEL,
+        "label": "Terra · subscription",
+        "provider": "ChatGPT Codex subscription",
+        "billing_mode": "subscription_included",
+        "reasoning_efforts": ("medium",),
+        "default_reasoning_effort": "medium",
+    },
+    {
         "model": CODEX_LUNA_MODEL,
-        "label": "Luna",
+        "label": "Luna · subscription",
         "provider": "ChatGPT Codex subscription",
         "billing_mode": "subscription_included",
         "reasoning_efforts": ("low", "medium", "high"),
@@ -71,7 +81,7 @@ AUTHORING_MODEL_OPTIONS: tuple[AuthoringModelOption, ...] = (
     },
     {
         "model": "openrouter/openai/gpt-5.6-terra",
-        "label": "Terra",
+        "label": "Terra · OpenRouter",
         "provider": "OpenRouter",
         "billing_mode": "usage_based",
         "reasoning_efforts": ("none", "low", "medium", "high", "xhigh", "max"),

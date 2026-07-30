@@ -425,6 +425,7 @@ def test_authoring_and_theory_call_contracts_are_exact_and_provider_free(
     assert {
         item["model"] for item in authoring["model_options"]
     } == {
+        "codex/gpt-5.6-terra",
         "codex/gpt-5.6-luna",
         "openrouter/openai/gpt-5.6-terra",
         "openrouter/openai/gpt-5.6-sol",
@@ -662,12 +663,13 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
     )
     config = api.get("/api/config").json()["authoring"]
     assert [(item["label"], item["model"]) for item in config["models"]] == [
-        ("Luna", "codex/gpt-5.6-luna"),
-        ("Terra", "openrouter/openai/gpt-5.6-terra"),
+        ("Terra · subscription", "codex/gpt-5.6-terra"),
+        ("Luna · subscription", "codex/gpt-5.6-luna"),
+        ("Terra · OpenRouter", "openrouter/openai/gpt-5.6-terra"),
         ("Sol", "openrouter/openai/gpt-5.6-sol"),
     ]
     assert config["reasoning_efforts"] == ["none", "low", "medium", "high", "xhigh", "max"]
-    assert config["models"][0]["reasoning_efforts"] == ["low", "medium", "high"]
+    assert config["models"][0]["reasoning_efforts"] == ["medium"]
     assert config["models"][0]["default_reasoning_effort"] == "medium"
 
     draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
@@ -1075,7 +1077,7 @@ def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) ->
         )
     )
     config = api.get("/api/config").json()["authoring"]
-    assert config["model"] == "codex/gpt-5.6-luna"
+    assert config["model"] == "codex/gpt-5.6-terra"
     assert config["reasoning_effort"] == "medium"
     draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
     drafted = api.post(
