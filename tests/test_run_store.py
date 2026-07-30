@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -105,9 +106,9 @@ def test_restart_invalidates_only_interrupted_post_run_measurement(
     assert retained["status"] == "completed"
     assert retained["story"] == {"headline": "World outcome retained"}
     assert retained["coordination_measurement_status"] == "invalid"
-    assert retained["coordination_measurement_failure"]["error_type"] == (
-        "InterruptedMeasurement"
-    )
+    failure = retained["coordination_measurement_failure"]
+    assert isinstance(failure, Mapping)
+    assert failure["error_type"] == "InterruptedMeasurement"
 
 
 def test_run_summary_marks_only_measurements_that_need_validation(

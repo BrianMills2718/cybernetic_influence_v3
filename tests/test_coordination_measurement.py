@@ -6,7 +6,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pydantic import ValidationError
@@ -15,6 +15,7 @@ from cybernetic_influence.active_runtime.models import ActiveRuntimeResult
 from cybernetic_influence.analysis.coordination import (
     CODER_PROMPT_VERSION,
     CODER_TASK,
+    ExactValues,
     analyze_coordination_run,
     build_measurement_evidence_bundle,
     calculate_exact_values,
@@ -30,6 +31,7 @@ from cybernetic_influence.analysis.coordination_measurement import (
     MEASUREMENT_SPEC_VERSION,
     CoderOutput,
     EvidenceAttachment,
+    ExactMeasureId,
     IndicatorEvidence,
     IndicatorEvidenceConsumer,
     MeasurementCallEvidence,
@@ -55,7 +57,10 @@ FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "coordination_measurement"
 
 
 def _fixture(name: str) -> dict[str, object]:
-    return json.loads((FIXTURE_ROOT / f"{name}.json").read_text())
+    return cast(
+        dict[str, object],
+        json.loads((FIXTURE_ROOT / f"{name}.json").read_text()),
+    )
 
 
 def _attachments(fixture: dict[str, object]) -> list[EvidenceAttachment]:
@@ -64,8 +69,16 @@ def _attachments(fixture: dict[str, object]) -> list[EvidenceAttachment]:
     return [EvidenceAttachment.model_validate(item) for item in payload]
 
 
-def _exact_values() -> dict[str, object]:
-    return {measure_id: None for measure_id in EXACT_MEASURE_IDS}
+def _exact_values() -> ExactValues:
+    return cast(ExactValues, {measure_id: None for measure_id in EXACT_MEASURE_IDS})
+
+
+def _object_value(
+    values: ExactValues, measure_id: ExactMeasureId
+) -> dict[str, Any]:
+    value = values[measure_id]
+    assert isinstance(value, dict)
+    return cast(dict[str, Any], value)
 
 
 def _call_evidence() -> MeasurementCallEvidence:
@@ -280,7 +293,10 @@ def test_run_measurement_keeps_exact_and_coded_values_structurally_separate() ->
     assert measurement.exact_values["issue_reopening"] == 1
     assert measurement.coded_indicators[0].indicator_id == ("conditional_trust_episode")
 
-    invalid_exact_values = {**exact_values, "conditional_trust_episode": "increase"}
+    invalid_exact_values: dict[str, Any] = {
+        str(measure_id): value for measure_id, value in exact_values.items()
+    }
+    invalid_exact_values["conditional_trust_episode"] = "increase"
     with pytest.raises(ValidationError):
         RunMeasurement(
             measurement_id="measurement_positive",
@@ -288,7 +304,7 @@ def test_run_measurement_keeps_exact_and_coded_values_structurally_separate() ->
             measurement_spec_version=1,
             measurement_spec_fingerprint=COORDINATION_MEASUREMENT_SPEC_FINGERPRINT,
             scenario_fingerprint="a" * 64,
-            exact_values=invalid_exact_values,
+            exact_values=cast(Any, invalid_exact_values),
             coded_indicators=coded_indicators,
             coder_call=_call_evidence(),
             limitations=["Synthetic fixture."],
@@ -327,11 +343,11 @@ def test_exact_calculators_read_typed_pressure_trace_and_state() -> None:
     assert values["final_deployment_status"] == "no_decision_by_horizon"
     assert values["final_approved_scope"] == "none"
     assert values["partners_retained"] == {"count": 4, "proportion": 0.8}
-    assert values["verification_requests"]["total"] == 1
-    assert values["issue_reopening"]["count"] == 1
-    assert values["disengagement"]["count"] == 1
-    assert values["deliberation_load"]["meeting_cycles"] == 4
-    assert values["modeled_time_to_terminal"]["scenario_minutes"] == 14408
+    assert _object_value(values, "verification_requests")["total"] == 1
+    assert _object_value(values, "issue_reopening")["count"] == 1
+    assert _object_value(values, "disengagement")["count"] == 1
+    assert _object_value(values, "deliberation_load")["meeting_cycles"] == 4
+    assert _object_value(values, "modeled_time_to_terminal")["scenario_minutes"] == 14408
 
 
 def test_exact_calculators_preserve_distinct_scripted_outcomes() -> None:
@@ -348,8 +364,13 @@ def test_exact_calculators_preserve_distinct_scripted_outcomes() -> None:
         "heterogeneous_pressure": "no_decision_by_horizon",
         "stabilization": "scope_reduced",
     }
-    assert observed["baseline"]["issue_reopening"]["count"] == 0
-    assert observed["heterogeneous_pressure"]["issue_reopening"]["count"] == 1
+    assert _object_value(observed["baseline"], "issue_reopening")["count"] == 0
+    assert (
+        _object_value(observed["heterogeneous_pressure"], "issue_reopening")[
+            "count"
+        ]
+        == 1
+    )
 
 
 def test_fake_coder_call_retains_full_call_contract_without_system_ids() -> None:

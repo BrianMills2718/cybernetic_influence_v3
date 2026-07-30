@@ -2006,12 +2006,15 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
     assert retained is not None
     assert retained["status"] == "completed"
     assert retained["execution"] == "live"
-    assert retained["coordination_measurement_readout"]["status"] == "available", (
+    measurement_readout = cast(
+        dict[str, Any], retained["coordination_measurement_readout"]
+    )
+    assert measurement_readout["status"] == "available", (
         retained.get("coordination_measurement_failure")
     )
     assert retained["measurement_model_calls"] == 1
-    assert len(retained["coordination_measurement_readout"]["exact_measures"]) == 15
-    assert len(retained["coordination_measurement_readout"]["coded_indicators"]) == 3
+    assert len(measurement_readout["exact_measures"]) == 15
+    assert len(measurement_readout["coded_indicators"]) == 3
     history = api.get("/api/runs").json()["runs"]
     retained_summary = next(item for item in history if item["run_id"] == run_id)
     assert retained_summary["coordination_measurement_status"] == "available"
