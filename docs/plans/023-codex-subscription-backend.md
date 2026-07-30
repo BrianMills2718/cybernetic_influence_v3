@@ -59,7 +59,7 @@ and realized-causal views.
 ## Deployed evidence
 
 - Mac simulator behavior revision `6944dd26e1b905b3d3089c1b9045430090110ed1`
-  with shared client `2e5ae3815bdfd46af2e552670613364eb0c9da61`
+  with shared client `2e5ae381556c710f891c390783c5403df8038407`
   passed the production build, typing, and all 183 tests before restart.
 - Fresh Mac observations certify the exact generic participant and narrator
   schemas plus all five Coordination person schemas through `codex_cli`.

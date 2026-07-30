@@ -25,7 +25,7 @@ credential is not stored in the repository or LaunchAgent plist.
 Codex subscription deployment observed 2026-07-29:
 
 - simulator behavior revision `6944dd26e1b905b3d3089c1b9045430090110ed1`
-  and shared client `2e5ae3815bdfd46af2e552670613364eb0c9da61`
+  and shared client `2e5ae381556c710f891c390783c5403df8038407`
   passed the production build, strict typing, and all 183 tests on the Mac;
 - the LaunchAgent verifies `codex login status` reports ChatGPT authentication,
   sets subscription billing, and treats OpenRouter credentials as optional;
