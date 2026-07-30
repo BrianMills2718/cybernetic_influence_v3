@@ -7,15 +7,19 @@ import subprocess
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Final, Literal
+from typing import Final
 
-CODEX_LUNA_MODEL: Final[Literal["codex/gpt-5.6-luna"]] = "codex/gpt-5.6-luna"
+CODEX_LUNA_MODEL: Final = "codex/gpt-5.6-luna"
+CODEX_TERRA_MODEL: Final = "codex/gpt-5.6-terra"
+CODEX_SUBSCRIPTION_MODELS: Final[frozenset[str]] = frozenset(
+    {CODEX_LUNA_MODEL, CODEX_TERRA_MODEL}
+)
 _CODEX_LOGIN_MARKER = "Logged in using ChatGPT"
 
 
 def is_codex_subscription_model(model: str) -> bool:
     """Return whether this exact route uses local ChatGPT Codex authentication."""
-    return model == CODEX_LUNA_MODEL
+    return model in CODEX_SUBSCRIPTION_MODELS
 
 
 def codex_subscription_available() -> bool:

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Exercise and retain the exact simulator schemas through Codex Luna."""
+"""Exercise and retain the exact simulator schemas through a Codex route."""
 
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -18,6 +19,7 @@ from cybernetic_influence.active_runtime.llm import LlmDecision
 from cybernetic_influence.analysis.coordination_measurement import CoderOutput
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
+    CODEX_TERRA_MODEL,
     structured_backend_options,
 )
 from cybernetic_influence.narration import CausalMomentNarration
@@ -58,14 +60,15 @@ def _messages(schema: type[BaseModel]) -> list[dict[str, str]]:
 def _certify(
     schema: type[BaseModel],
     *,
+    model: str,
     trace_id: str,
     store: RouteCertificationStore,
     evidence_root: Path,
     llm_client_revision_value: str,
 ) -> str:
-    with structured_backend_options(CODEX_LUNA_MODEL) as backend_options:
+    with structured_backend_options(model) as backend_options:
         parsed, result = call_llm_structured(
-            CODEX_LUNA_MODEL,
+            model,
             _messages(schema),
             response_model=schema,
             task="cybernetic_influence_route_certification",
@@ -99,6 +102,23 @@ def _certify(
 
 
 def main() -> None:
+    route = sys.argv[1] if len(sys.argv) > 1 else "luna"
+    routes = {
+        "luna": (
+            CODEX_LUNA_MODEL,
+            "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA",
+            "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA",
+        ),
+        "terra": (
+            CODEX_TERRA_MODEL,
+            "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA",
+            "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_TERRA",
+        ),
+    }
+    try:
+        model, global_env, coordination_env = routes[route]
+    except KeyError as error:
+        raise SystemExit("usage: certify_codex_luna.py [luna|terra]") from error
     revision = llm_client_revision()
     data_root = Path(
         os.environ.get("LLM_CLIENT_DATA_ROOT", "~/projects/data")
@@ -114,7 +134,8 @@ def main() -> None:
     global_ids = [
         _certify(
             schema,
-            trace_id=f"cybernetic-influence/certification/luna/{schema.__name__}",
+            model=model,
+            trace_id=f"cybernetic-influence/certification/{route}/{schema.__name__}",
             store=store,
             evidence_root=observability_db,
             llm_client_revision_value=revision,
@@ -128,8 +149,9 @@ def main() -> None:
     coordination_ids = [
         _certify(
             schema,
+            model=model,
             trace_id=(
-                "cybernetic-influence/certification/luna/coordination/"
+                f"cybernetic-influence/certification/{route}/coordination/"
                 f"{schema.__name__}"
             ),
             store=store,
@@ -138,11 +160,8 @@ def main() -> None:
         )
         for schema in coordination_schemas
     ]
-    print(f"CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA={','.join(global_ids)}")
-    print(
-        "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA="
-        f"{','.join(coordination_ids)}"
-    )
+    print(f"{global_env}={','.join(global_ids)}")
+    print(f"{coordination_env}={','.join(coordination_ids)}")
 
 
 if __name__ == "__main__":

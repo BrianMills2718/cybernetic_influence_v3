@@ -9,6 +9,7 @@ from pytest import MonkeyPatch
 
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
+    CODEX_TERRA_MODEL,
     codex_subscription_available,
     structured_backend_options,
 )
@@ -51,6 +52,13 @@ def test_codex_structured_backend_is_isolated_and_has_no_fallback() -> None:
         assert "fallback_models" not in options
     assert retained_root is not None
     assert not retained_root.exists()
+
+
+def test_codex_terra_uses_the_same_isolated_subscription_backend() -> None:
+    with structured_backend_options(CODEX_TERRA_MODEL) as options:
+        assert options["codex_transport"] == "cli"
+        assert options["sandbox_mode"] == "read-only"
+        assert "fallback_models" not in options
 
 
 def test_non_codex_routes_retain_the_shared_client_defaults() -> None:

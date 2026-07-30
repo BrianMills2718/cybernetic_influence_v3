@@ -104,10 +104,12 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
             {
                 "OPENROUTER_API_KEY": "test-key",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
+                "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
                 "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary-terra",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary-deepseek",
                 "CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA": "test-coordination-terra",
                 "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA": "test-coordination-luna",
+                "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_TERRA": "test-coordination-codex-terra",
                 "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH": "test-coordination-deepseek",
             },
         ),
@@ -129,7 +131,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert config.status_code == 200
     assert config.json()["version"] == "0.13.0"
     assert config.json()["build_commit"] == "development"
-    assert config.json()["model"] == "codex/gpt-5.6-luna"
+    assert config.json()["model"] == "codex/gpt-5.6-terra"
     assert config.json()["reasoning_effort"] == "medium"
     assert config.json()["profiles"] == ["position_context", "procedural_control"]
     assert set(config.json()["scenarios"]) == {
@@ -141,6 +143,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     coordination = config.json()["scenarios"]["coordination_decision"]
     assert coordination["supports_live"] is True
     assert coordination["live_model_ids"] == [
+        "codex/gpt-5.6-terra",
         "codex/gpt-5.6-luna",
         "openrouter/openai/gpt-5.6-terra",
         "openrouter/deepseek/deepseek-v4-flash",
@@ -155,14 +158,18 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert controls["default_terminal_condition_ids"] == ["confirmed_closure"]
     assert controls["default_horizon"] >= 87
     assert [choice["model"] for choice in config.json()["live_options"]["models"]] == [
+        "codex/gpt-5.6-terra",
         "codex/gpt-5.6-luna",
         "openrouter/openai/gpt-5.6-terra",
         "openrouter/deepseek/deepseek-v4-flash",
     ]
-    luna = config.json()["live_options"]["models"][0]
+    terra = config.json()["live_options"]["models"][0]
+    assert terra["agent_reasoning_efforts"] == ["medium"]
+    assert terra["billing_mode"] == "subscription_included"
+    luna = config.json()["live_options"]["models"][1]
     assert luna["agent_reasoning_efforts"] == ["medium"]
     assert luna["billing_mode"] == "subscription_included"
-    deepseek = config.json()["live_options"]["models"][2]
+    deepseek = config.json()["live_options"]["models"][3]
     assert deepseek["agent_reasoning_efforts"] == ["none", "high", "xhigh"]
     assert deepseek["experimental_agent_reasoning_efforts"] == ["high", "xhigh"]
     assert config.json()["scenarios"]["service_desk"]["assumptions"]
@@ -517,6 +524,7 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
                 "OPENROUTER_API_KEY": "test-key",
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
+                "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
                 "LLM_CLIENT_REVISION": CLIENT_REVISION,
             },
@@ -625,6 +633,7 @@ def test_unadvertised_live_model_is_rejected_without_retained_run(
                 "OPENROUTER_API_KEY": "test-key",
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
+                "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
                 "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary-deepseek",
             },
@@ -763,6 +772,7 @@ def test_live_worker_retains_pending_activation_before_commit(tmp_path: Path) ->
                 "OPENROUTER_API_KEY": "test-key",
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
+                "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
             },
         ),
@@ -1551,6 +1561,7 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
                 "OPENROUTER_API_KEY": "test-key",
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
+                "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
                 "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary-deepseek",
             },
@@ -1619,6 +1630,7 @@ def test_invalid_live_run_id_does_not_leave_the_live_lock_held(tmp_path: Path) -
                 "OPENROUTER_API_KEY": "test-key",
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
+                "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
             },
         ),

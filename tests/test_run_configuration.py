@@ -25,7 +25,7 @@ from cybernetic_influence.run_configuration import (
 )
 
 MODEL = "openrouter/openai/gpt-5.6-terra"
-CODEX_MODEL = "codex/gpt-5.6-luna"
+CODEX_MODEL = "codex/gpt-5.6-terra"
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT_REVISION = installed_llm_client_revision()
 
@@ -39,6 +39,9 @@ def test_launch_agent_binds_global_and_coordination_certification_groups() -> No
     assert environment["CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA"] == (
         "__CERT_CODEX_LUNA__"
     )
+    assert environment["CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA"] == (
+        "__CERT_CODEX_TERRA__"
+    )
     assert environment["CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH"] == (
         "__CERT_DEEPSEEK_V4_FLASH__"
     )
@@ -47,6 +50,9 @@ def test_launch_agent_binds_global_and_coordination_certification_groups() -> No
     )
     assert environment["CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA"] == (
         "__CERT_COORDINATION_CODEX_LUNA__"
+    )
+    assert environment["CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_TERRA"] == (
+        "__CERT_COORDINATION_CODEX_TERRA__"
     )
     assert environment["LLM_CLIENT_AGENT_BILLING_MODE"] == "subscription"
     assert environment["LLM_CLIENT_OPENROUTER_ROUTING"] == "off"
@@ -179,7 +185,7 @@ def test_codex_catalog_requires_login_and_exact_schema_observations(
     monkeypatch.setenv("LLM_CLIENT_REVISION", CLIENT_REVISION)
     monkeypatch.setenv("LLM_ROUTE_CERTIFICATION_ROOT", str(tmp_path))
     monkeypatch.setenv(
-        "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA",
+        "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA",
         f"{participant.observation_id},{narrator.observation_id}",
     )
 
