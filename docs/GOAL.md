@@ -130,34 +130,33 @@ restarting completed work.
   UI rather than a scenario-specific page.
 - **Canonical implementation and deployment:** canonical `main` contains the
   behavior deployed on the private Mac as simulator
-  `9975e22484cf89bf219684d6d83b4993e2f1bf61`, with shared client
-  `144d118658ee1c99275576e7e212475021613930`.
-  The service advertises only subscription-backed `codex/gpt-5.6-luna` at
-  medium reasoning, allows 48 participant and 57 narrator calls, and retains
-  at most one post-run evidence-coder call.
+  `83cb3c7f48b57bef0290b03222c659c1d110d363`, with shared client
+  `7501811bee49fe4c20af2d2a50e4040a596b328b`.
+  The service defaults to subscription-backed `codex/gpt-5.6-terra` at medium
+  reasoning and separately advertises certified Luna/medium without fallback.
+  It allows 48 participant and 57 narrator calls and retains at most one
+  post-run evidence-coder call.
 - **Current increment:** Packet 21B2's readout is implemented, deployed, and
   fixture/browser verified. Exact measures, evidence-coded interpretations,
   provenance, limitations, and exact evidence step-down share the existing
   Simulation and Run history surfaces. The authorized three-canary gate is
   partially observed but not accepted as a complete set.
-- **Observed Luna certification evidence:** fresh generic participant and
-  narrator observations are
-  `routeobs1_56b0b98db7c880cb98e97fb6` and
-  `routeobs1_8144013e9491d66c2cd7324f`. Five Coordination person schemas plus
-  `CoderOutput` passed in observations
-  `routeobs1_e50f88ee18b0a0f274c50416`,
-  `routeobs1_9c882b94dff926589efd0d35`,
-  `routeobs1_10adfdcddfacb0a164ee52b8`,
-  `routeobs1_391ff629f3382ea8890adc64`,
-  `routeobs1_ae8a98a5feafd2c73e73f598`, and
-  `routeobs1_5f0084307ba9a3a313314a94`.
-- **Accepted Packet-21B2 canary evidence:** baseline `run_77448454c858`
-  completed `deploy_on_time` at full scope with all five partners retained,
-  zero final open risks, 41 participant calls, 30 narrator calls, and one
-  valid coder call. All 72 Luna/medium calls completed with
-  `subscription_included` accounting, complete zero-cost coverage, and no
-  fallback. The retained exact and evidence-coded sections pass the same
-  structurally and visually distinct readout contract verified before deploy.
+- **Observed route certification evidence:** the exact generic participant,
+  narrator, five Coordination-person, and evidence-coder schemas passed on the
+  deployed client revision for both Terra/medium and Luna/medium. Terra is the
+  default; Luna remains an explicit alternative, not a fallback. Exact
+  observation IDs are retained in the Mac operations record and certification
+  store.
+- **Accepted Packet-21B2 canary evidence:** Terra baseline
+  `run_994222dd246f` completed `deploy_on_time`, full scope, five retained
+  partners, zero final open risks, and a valid measurement in 38 participant,
+  29 narrator, and one coder call. Terra stabilization `run_e2c6181e721f`
+  completed `no_decision_by_horizon`, five retained partners, two final open
+  risks, and a valid measurement in 47 participant, 42 narrator, and one coder
+  call. All 158 Terra/medium calls completed with `subscription_included`
+  accounting, complete zero-cost coverage, no retries, and no fallback. The
+  observed stabilization trajectory first converged on reduced scope, then
+  retained later technical and sovereignty concerns through the deadline.
 - **Unaccepted pressure evidence:** `run_23135344d0d5` reached exact
   `no_decision_by_horizon` and a valid measurement but exceeded the former
   32-narrator preflight bound. After the narrator bound was corrected,
@@ -166,11 +165,11 @@ restarting completed work.
   corrected. The current-summary run `run_e3173c381918` then ended at the
   48-call participant safety limit before a terminal decision, so its
   measurement correctly remained invalid.
-- **Unaccepted stabilization evidence:** `run_43f57f7751f4` failed on its
-  first Luna participant call with `Selected model is at capacity`.
-  Replacement `run_0f1f1b031e02` completed 11 participant calls with no
-  fallback before the same capacity rejection on call 12. No third attempt
-  was launched, and neither failure is attributed to its prompt or schema.
+- **Historical stabilization failures:** `run_43f57f7751f4` and
+  `run_0f1f1b031e02` retained explicit Luna capacity rejections. The operator
+  then authorized Terra for faster progress; the accepted Terra stabilization
+  above supersedes those failures without reclassifying them as prompt or
+  schema defects.
 - **Historical 21A4 restart and rendered readback:** after restart, the retained file hash,
   65-call ledger, cost, outcome, events, and narratives were unchanged and no
   provider call occurred. The exact deep link renders all three maps,
@@ -193,13 +192,11 @@ restarting completed work.
   event on the existing map/timeline. A failed or interrupted assay cannot
   rewrite a completed world run. The normal story, maps, participant/group
   accounts, pause/resume controls, and Advanced evidence remain present.
-- **Resume event:** operator judgment is required on two independent
-  boundaries: whether to raise the Coordination participant-call ceiling above
-  48 so a pressure trajectory can reach its exact deadline, and whether to
-  retry Luna stabilization after the service reports available capacity (or
-  explicitly choose another certified route). Do not silently change either
-  the structural bound or the selected model. Slice 21C remains blocked until
-  one valid current-revision canary exists for every condition.
+- **Resume event:** operator judgment is required on whether to raise the
+  Coordination participant-call ceiling above 48 so a Terra pressure
+  trajectory can reach its exact deadline. Do not silently change that
+  structural bound. Slice 21C remains blocked until one valid current-revision
+  Terra pressure canary completes the same-model set.
 
 ## Done
 

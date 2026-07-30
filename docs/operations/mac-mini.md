@@ -16,35 +16,37 @@ the machine's Serve configuration because its other listeners are unrelated.
 
 Packet 21B2 deployment observed 2026-07-30:
 
-- simulator `9975e22484cf89bf219684d6d83b4993e2f1bf61` and shared client
-  `144d118658ee1c99275576e7e212475021613930` are running behind the private
-  URL. The config advertises only `codex/gpt-5.6-luna` at medium reasoning,
-  with 48 participant, 57 narrator, and one post-run coder call allowed;
-- fresh generic participant/narrator certification observations are
-  `routeobs1_56b0b98db7c880cb98e97fb6` and
-  `routeobs1_8144013e9491d66c2cd7324f`. The five Coordination person schemas
-  plus `CoderOutput` are bound by
-  `routeobs1_e50f88ee18b0a0f274c50416`,
-  `routeobs1_9c882b94dff926589efd0d35`,
-  `routeobs1_10adfdcddfacb0a164ee52b8`,
-  `routeobs1_391ff629f3382ea8890adc64`,
-  `routeobs1_ae8a98a5feafd2c73e73f598`, and
-  `routeobs1_5f0084307ba9a3a313314a94`;
-- accepted baseline `run_77448454c858` completed 41 participant, 30 narrator,
-  and one coder call through Luna/medium with no fallback and complete
-  subscription-included zero-cost coverage. It retained exact
+- simulator `83cb3c7f48b57bef0290b03222c659c1d110d363` and shared client
+  `7501811bee49fe4c20af2d2a50e4040a596b328b` are running behind the private
+  URL. The config defaults to `codex/gpt-5.6-terra` at medium reasoning and
+  separately advertises certified Luna/medium, with 48 participant, 57
+  narrator, and one post-run coder call allowed;
+- Terra generic participant/narrator certification observations are
+  `routeobs1_4f9772426288e374ab4c4460` and
+  `routeobs1_ac896d144bea9fc40db5f66a`; its five Coordination person schemas
+  plus `CoderOutput` are bound by `routeobs1_adf8cf81d926d5ef4b185627`,
+  `routeobs1_834e9e26e778184bf945354e`,
+  `routeobs1_d7d7824142051f8c4bbb2546`,
+  `routeobs1_74e266ff78785303e9f0905b`,
+  `routeobs1_6930d041f684abc0e356afb3`, and
+  `routeobs1_7655ebcee683cbf74955560a`;
+- Luna generic participant/narrator certification observations are
+  `routeobs1_ff4e493f370c2a643ba4bf59` and
+  `routeobs1_718bec3ff7f4b167dada2901`; its Coordination certification group is
+  retained in the LaunchAgent and certification store;
+- accepted Terra baseline `run_994222dd246f` completed 38 participant, 29
+  narrator, and one coder call with no error, retry, or fallback. It retained
+  exact
   `deploy_on_time`, full scope, all five partners, zero final open risks, and a
   valid provenance-labeled measurement;
+- accepted Terra stabilization `run_e2c6181e721f` completed 47 participant, 42
+  narrator, and one coder call with no error, retry, or fallback. It retained
+  exact `no_decision_by_horizon`, five partners, two final open risks, and a
+  valid measurement after the trajectory first converged on reduced scope;
 - current-summary pressure `run_e3173c381918` ended at the 48-call participant
   safety limit before a terminal decision, after earlier retained pressure
   runs exposed and motivated the narrator-bound and completion-summary
-  repairs;
-- stabilization `run_43f57f7751f4` failed on its first participant call with
-  Luna's explicit `Selected model is at capacity` response. Replacement
-  `run_0f1f1b031e02` completed 11 participant calls, then received the same
-  response on call 12. No third retry was launched. These failures are Codex
-  subscription capacity evidence, not OpenRouter activity or a demonstrated
-  prompt/schema defect.
+  repairs. The participant ceiling remains unchanged pending operator judgment.
 
 Live execution uses the shared `llm_client` checkout at
 `/Users/b/code/llm_client`. The LaunchAgent starts through

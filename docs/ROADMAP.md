@@ -791,30 +791,31 @@ requires them to answer an analyst question that current contracts cannot.
 - **Last accepted integrated proof:** Service Desk `run_20d2d0000004`, with
   pause/resume, exact completion, and all 25 simulator-grounded narratives.
 - **Current deployed behavior revision:**
-  `9975e22484cf89bf219684d6d83b4993e2f1bf61`; the deployed shared client is
-  `144d118658ee1c99275576e7e212475021613930`. The shared UI contains the
+  `83cb3c7f48b57bef0290b03222c659c1d110d363`; the deployed shared client is
+  `7501811bee49fe4c20af2d2a50e4040a596b328b`. The shared UI contains the
   Coordination scenario, measurement readout, and certification-gated
   native-person seam.
-- **Current packet:** Packet 21B2's API/UI portion is deployed and its baseline
-  canary is accepted.
+- **Current packet:** Packet 21B2's API/UI portion is deployed and same-route
+  Terra baseline and stabilization canaries are accepted.
   It retains at most one evidence-coder call after a completed live
   Coordination run; projects exact and coded evidence separately in the
   existing Simulation and Run history surfaces; preserves invalid, unclear,
   and interrupted-analysis states without changing the world outcome; and
   steps every coded claim down to retained exact events.
-- **Observed live proof:** `run_77448454c858` completed `deploy_on_time` at
-  full scope with all five partners retained, zero final open risks, 41
-  participant calls, 30 narrator calls, and one valid evidence-coder call. All
-  72 Luna/medium calls completed through the operator's ChatGPT Codex
-  subscription with no fallback and complete `$0` marginal-cost coverage.
+- **Observed live proof:** Terra/medium baseline `run_994222dd246f` completed
+  `deploy_on_time` at full scope with all five partners retained and zero final
+  open risks; its 38 participant, 29 narrator, and one evidence-coder call all
+  completed without retry or fallback. Terra/medium stabilization
+  `run_e2c6181e721f` completed `no_decision_by_horizon` after two concerns
+  remained open; its 47 participant, 42 narrator, and one evidence-coder call
+  also completed without retry or fallback. All 158 calls used the operator's
+  ChatGPT Codex subscription with complete `$0` marginal-cost coverage.
 - **Current limiting causes:** current-summary pressure run
   `run_e3173c381918` reached the 48-call participant safety limit before an
-  exact terminal decision. Stabilization runs `run_43f57f7751f4` and
-  `run_0f1f1b031e02` separately failed on explicit Luna capacity rejections;
-  the latter first completed 11 Luna participant calls. Operator judgment is
-  required before raising the structural call ceiling or retrying/switching the
-  selected route. Slice 21C remains gated on valid current-revision pressure
-  and stabilization canaries.
+  exact terminal decision. The operator explicitly changed the canary route
+  from capacity-limited Luna to Terra, but did not authorize raising that
+  structural ceiling. Slice 21C remains gated only on a valid current-revision
+  Terra pressure canary and the ceiling decision needed to admit it.
 
 ## Explicit MVP Deferrals
 

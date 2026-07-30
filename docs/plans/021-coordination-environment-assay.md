@@ -1131,29 +1131,27 @@ story, outcome, participants/groups, and Run history with no console, request,
 or page error. No provider call or deployment occurred.
 
 **Observed authorized deployment evidence (2026-07-30):** simulator
-`9975e22484cf89bf219684d6d83b4993e2f1bf61` is deployed with shared client
-`144d118658ee1c99275576e7e212475021613930` and advertises only
-subscription-backed `codex/gpt-5.6-luna` at medium reasoning. Baseline
-`run_77448454c858` is the accepted canary: 41 participant, 30 narrator, and one
-coder call all completed without fallback and with complete
-`subscription_included` zero-cost coverage. It retained exact
-`deploy_on_time`, full scope, five partners, zero final open risks, and a valid
-measurement whose three model-coded directions remain separately labeled and
-evidence-linked.
+`83cb3c7f48b57bef0290b03222c659c1d110d363` is deployed with shared client
+`7501811bee49fe4c20af2d2a50e4040a596b328b`. The operator explicitly changed
+the default canary route from capacity-limited Luna to certified
+subscription-backed `codex/gpt-5.6-terra` at medium reasoning; Luna remains a
+separately certified option with no fallback between them. Terra baseline
+`run_994222dd246f` completed `deploy_on_time`, full scope, five partners, zero
+final open risks, and a valid measurement in 38 participant, 29 narrator, and
+one coder call. Terra stabilization `run_e2c6181e721f` completed
+`no_decision_by_horizon`, five partners, two final open risks, and a valid
+measurement in 47 participant, 42 narrator, and one coder call. All 158 calls
+completed without error, retry, or fallback and with complete
+`subscription_included` zero-cost coverage.
 
-The pressure and stabilization gate is not accepted. Pressure runs first
+The three-condition gate is not yet accepted. Pressure runs first
 exposed and motivated a structurally derived 57-call narrator ceiling and a
 grounded completion-summary repair. On the repaired deployed summary,
 `run_e3173c381918` ended at the 48-call participant safety limit before an
-exact terminal decision, so the coder correctly did not run. Stabilization
-`run_43f57f7751f4` failed on its first Luna participant call with the explicit
-CLI response `Selected model is at capacity`; replacement
-`run_0f1f1b031e02` completed 11 Luna participant calls before the same
-capacity response on call 12. These failures are retained and are not evidence
-of a prompt/schema defect. Do not launch a third capacity retry, raise the
-participant ceiling, or switch routes without operator judgment. Slice 21C
-remains blocked on one valid current-revision canary for each missing
-condition.
+exact terminal decision, so the coder correctly did not run. The Terra
+baseline and stabilization above now provide a valid same-model pair. Do not
+raise the participant ceiling without operator judgment. Slice 21C remains
+blocked only on a valid current-revision Terra pressure canary.
 
 **Slice 21B is done when:**
 
