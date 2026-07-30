@@ -33,7 +33,7 @@ Codex subscription deployment observed 2026-07-29:
   schemas and all five Coordination person schemas. The private config exposes
   `codex/gpt-5.6-luna` at medium reasoning as the default and records
   `verified local ChatGPT Codex login` plus `subscription_included`;
-- deployed live run `run_4ff946d1debc` completed with three participant and
+- deployed live run `run_5bb293db1358` completed with three participant and
   three narrator calls, the exact `Entered equipment room` outcome, fully
   observable `$0` marginal subscription cost, and no model fallback;
 - rendered browser verification `run_535a61277c16` passed deep-link reopening,

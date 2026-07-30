@@ -63,7 +63,7 @@ and realized-causal views.
   passed the production build, typing, and all 183 tests before restart.
 - Fresh Mac observations certify the exact generic participant and narrator
   schemas plus all five Coordination person schemas through `codex_cli`.
-- Deployed run `run_4ff946d1debc` completed the authorized physical-access
+- Deployed run `run_5bb293db1358` completed the authorized physical-access
   trajectory with three participant and three narrator calls, medium reasoning,
   no fallback, fully observable subscription billing, and `$0` marginal cost.
 - Browser verification `run_535a61277c16` passed direct-link reopening, all
