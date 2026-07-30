@@ -166,7 +166,7 @@ concrete source, message, channel, and social context
   -> collective decision outcome
 ```
 
-[Slice 18](../plans/018-bdm-informed-person-review.md) already exposes a small,
+[Slice 18](../archive/plans/018-bdm-informed-person-review.md) already exposes a small,
 reviewable person vocabulary informed by the BDM. It must remain selective:
 the BDM itself warns that its drivers are entangled, context dependent, and not
 a universal weighted causal model. A future coordination assay may use those

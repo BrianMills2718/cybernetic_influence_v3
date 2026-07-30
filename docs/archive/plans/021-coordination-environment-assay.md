@@ -1,7 +1,7 @@
 ---
-doc_role: implementation_plan
-authority: bounded_design
-status: completed_foundation_comparison_deferred
+doc_role: historical_evidence
+authority: evidence
+status: archived_completed_foundation
 created: 2026-07-25
 updated: 2026-07-30
 ---
@@ -16,7 +16,7 @@ are completed reusable foundations. The former active 21C1–21C2 repeated live
 matrix is now post-MVP and must not be resumed from this document.
 
 Current execution authority moved to
-[Slice 24](024-configurable-theory-analysis-mvp.md), which makes the scenario
+[Slice 24](../../plans/024-configurable-theory-analysis-mvp.md), which makes the scenario
 configurable and adds separate per-run Waltzman and Levin analysis over a
 common evidence bundle. This plan remains the implementation/evidence history
 for the fixed scenario and its optional future comparison machinery.
@@ -68,8 +68,8 @@ Use this message for every later delegation, replacing only `<PACKET>`:
 > Commit only the coherent verified packet and report the commit and evidence.
 
 This plan is grounded in the complete
-[source note](../research/001-from-minds-to-coordination.md) and
-[ADR 012](../adr/012-decision-environment-measures-are-derived.md). The paper
+[source note](../../research/001-from-minds-to-coordination.md) and
+[ADR 012](../../adr/012-decision-environment-measures-are-derived.md). The paper
 supplies constructs and candidate indicators, not validated scales or causal
 truth.
 
@@ -106,12 +106,12 @@ The partnership's analytical boundary is a reversible view over the people,
 records, routes, and mechanisms below it. Slice 21 asks how its decision process
 changes. It does not yet ask whether that boundary is a useful composite-agent
 model. The latter question is owned by
-[Slice 22](022-composite-agency-perturbation-assay.md) after 21C.
+[Slice 22](../../plans/022-composite-agency-perturbation-assay.md) after 21C.
 
 At this scale, exact routed effects entering the partnership are derived
 boundary inputs, exact routed effects leaving it are derived boundary outputs,
 and the member-level causal chain between them is a coordination episode under
-[ADR 006](../adr/006-boundaries-are-derived-coarse-grainings.md). This is a
+[ADR 006](../../adr/006-boundaries-are-derived-coarse-grainings.md). This is a
 presentation-time analyst projection over the retained event prefix, not
 organization cognition or world state. It may update while a run is in
 progress, but it never feeds back into execution.
@@ -1303,8 +1303,8 @@ analysis in an inspectable way.
 ### Slice 22 — Composite-agency perturbation assay
 
 After Slice 21C passes, follow the separate
-[Slice 22 plan](022-composite-agency-perturbation-assay.md). It applies
-[ADR 006](../adr/006-boundaries-are-derived-coarse-grainings.md) to the exact
+[Slice 22 plan](../../plans/022-composite-agency-perturbation-assay.md). It applies
+[ADR 006](../../adr/006-boundaries-are-derived-coarse-grainings.md) to the exact
 same scenario and analytical boundary through matched component, structure,
 feedback, and shock perturbations. Slice 22 owns its capability definition,
 contracts, stopping rule, and lower-agent packets; this plan does not duplicate
@@ -1351,5 +1351,5 @@ sign-off against the frozen batch and readout.
 - automated policy recommendations;
 - generalized swarm infrastructure;
 - public deployment or multi-user operation; and
-- all evasion and [Slice 22](022-composite-agency-perturbation-assay.md)
+- all evasion and [Slice 22](../../plans/022-composite-agency-perturbation-assay.md)
   composite-agency work until 21C passes.

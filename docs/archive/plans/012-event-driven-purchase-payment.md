@@ -282,7 +282,7 @@ as its own bounded change.
 ## Landscape and Authority Disposition
 
 Landscape disposition: **linked**. This slice reuses
-[ADR 010](../adr/010-autonomous-multirate-process-time.md), the implemented
+[ADR 010](../../adr/010-autonomous-multirate-process-time.md), the implemented
 Service Desk runner, and `ActiveRuntimeSession.next_due_activation()`. No new
 shared subsystem, interoperability standard, or build/buy decision is open, so
 external prior-art research cannot change the bounded choice.

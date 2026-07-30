@@ -1,7 +1,7 @@
 ---
-doc_role: active_plan
-authority: implementation_plan
-status: completed
+doc_role: historical_evidence
+authority: evidence
+status: archived_completed
 created: 2026-07-25
 predecessor: 016-canonical-analyst-demo.md
 ---

@@ -1,86 +1,29 @@
 # Cybernetic Influence V3
 
-A clean implementation of a traceable cybernetic multiscale agency simulator.
+Cybernetic Influence is a traceable multiscale-agency simulator. It represents
+people, information carriers, stateful objects, interfaces, connections, and
+exact mechanisms separately. An organization is an analytical boundary over
+those concrete members, not another mind or world executor.
 
-The simulator models people, information, stateful objects, interfaces,
-connections, and mechanisms separately. Organizations are analytical
-boundaries—not hidden minds or executors. Occupied positions are external
-social context remembered and interpreted by people, not intrinsic behavioral
-programs.
+The current MVP is to configure a bounded coordination scenario and obtain
+separate, evidence-bound findings relevant to Waltzman's coordination ideas
+and Levin-style composite agency. It is not a prediction engine and it does not
+yet make robustness or perturbation comparisons part of a normal run.
 
-Current direction and MVP boundaries are maintained in
-[docs/ROADMAP.md](docs/ROADMAP.md). Binding architectural decisions live under
-[`docs/adr/`](docs/adr/README.md), and
-[`docs/plans/`](docs/plans/README.md) identifies the active implementation
-packet and indexes completed evidence.
+## Start here
 
-## Working simulator
+- [Current goal](docs/GOAL.md) — outcome, scope, and acceptance criteria.
+- [Roadmap](docs/ROADMAP.md) — current truth and implementation sequence.
+- [Active design: Slice 24](docs/plans/024-configurable-theory-analysis-mvp.md)
+  — the only executable continuation plan.
+- [Architectural decisions](docs/adr/README.md) — binding ontology and runtime
+  constraints.
+- [Research basis](docs/research/001-from-minds-to-coordination.md) — what the
+  Waltzman source does and does not support.
+- [Historical archive](docs/archive/README.md) — completed plans and dated host
+  evidence, preserved for recovery rather than normal execution.
 
-The simulator currently includes:
-
-- a service-desk scenario with normal, missing-channel, and speed-pressure
-  conditions, plus an explicit operations-center/customer-site geography that
-  remains separate from digital communication and authority;
-- a physical-access scenario that keeps credential proof, policy
-  authorization, latch operability, crossing, and sensor feedback distinct;
-- a purchase-to-payment scenario that keeps a person's approval attempt,
-  concrete policy and signing records, exact internal authorization, and a
-  deliberately coarse external processor result distinct;
-- authoritative topological places, entity placements, and concrete spatial
-  links whose existence never implies permission or successful traversal;
-- personal-disposition plus remembered-position cognition;
-- an explicit procedural control profile;
-- autonomous causal moments in the Service Desk and purchase-to-payment
-  scenarios: each person or exact process may wake from delivered information
-  or retained internal timing, everyone due together receives the same frozen
-  pre-moment state, and every successive moment has a unique causal timestamp;
-- an exact three-phase remediation process that advances without model calls,
-  including one moment shared with a triager reconsidering without new input;
-- zero-cost scripted reference runs;
-- live LLM runs behind `CYBERNETIC_INFLUENCE_LIVE=1`;
-- typed live-run controls for deployment-certified model routes, model-supported
-  agent reasoning, and a total spend authorization, with the effective policy
-  retained on success or failure;
-- inline explanations of scenario assumptions, known omissions, fidelity
-  questions, maps, analytical scales, narratives, and exact evidence;
-- sequential live-LLM causal-moment narratives grounded in exact causal event
-  IDs and informed by the prior moment narratives;
-- a pannable, zoomable, selectable causal graph of people, information, world
-  objects, mechanisms, and concrete declared routes;
-- a separate realized-trajectory graph of retained events and explicit
-  causal-parent links, synchronized with the moment inspector and distinct from
-  both spatial topology and possible structural routes;
-- a synchronized world-topology graph with place containers, event-time
-  occupants, pathway substrates, and one-click return to exact causal flow;
-- reversible execution-inert aggregate views—including separate operating,
-  finance, and end-to-end purchase views—with explicit information-loss counts,
-  expanded composite hulls, and one-step return to exact evidence at the same
-  revision;
-- event-focused graph nodes, routes, and participant traces;
-- event-revision snapshots rather than final-state leakage into earlier events;
-- analyst-safe evidence that redacts mechanism-only values and protected
-  representation content;
-- a separate run-history workspace that survives refreshes and server restarts;
-- pause at a validated causal boundary and continuation of retained Service
-  Desk runs, including live LLM runs on the same deployment and configuration;
-- recoverable deletion and visible failed/interrupted records;
-- conversational typed authoring through a task-tested structured model, with
-  retained feedback revisions and per-message Terra/Sol plus thinking selection,
-  revisioned review and approval for reviewed resource-request and
-  information-campaign templates;
-- BDM-informed authored-person cards exposing directly editable dispositions,
-  memories, values, goals, beliefs, decision tendencies, perceived social
-  conditions, current state, capabilities, and limitations; direct edits are
-  retained without an LLM call and do not grant runtime authority or interfaces;
-- explicit zero-cost-reference and live-person execution for approved authored
-  scenarios; live people receive those reviewed profiles plus only private
-  memory, delivered observations, and currently exposed interfaces, while
-  existing exact mechanisms alone commit world effects;
-- an exact information-campaign reference path that distinguishes a source's
-  publication attempt, configured channel delivery, and recipient assessment
-  without pretending to infer persuasion or geopolitical effects.
-
-## Run
+## Run locally
 
 ```bash
 make install
@@ -90,120 +33,22 @@ make serve
 
 Open <http://127.0.0.1:8620>.
 
-After changing the browser workflow, run the real deep-link and multiscale-map
-smoke check against the running server:
+Scripted reference runs are zero-cost. Live LLM execution requires the shared
+`llm_client` integration and explicit live authorization; model availability,
+reasoning options, and observed spend are shown by the running application.
+Do not infer current route availability from historical documentation.
 
-```bash
-.venv/bin/python -m playwright install chromium  # first use only
-make ui-smoke
-```
+## What the application shows
 
-This zero-cost check creates a scripted coordination run, opens its saved-run
-URL in Chromium, and exercises the spatial map, both analytical composites,
-collapse, expand, console errors, and failed network requests.
+- a pre-run spatial topology and configured interaction-pathway map;
+- a realized causal graph after retained events exist;
+- concise and detailed causal narratives grounded in retained evidence;
+- person, process, and execution-inert composite accounts; and
+- scenario assumptions, exact mechanisms, and analyst-safe trace step-down.
 
-The native LLM path uses the shared `llm_client` checkout installed in the
-environment. Scripted runs require no provider and make no model calls.
-The private Mac host currently advertises exact-schema-certified Terra and
-DeepSeek V4 Flash routes. DeepSeek with `none` reasoning is the default;
-DeepSeek `high` and `xhigh` are visibly experimental, and unsupported
-`medium` is rejected by shared-client policy. Configured candidates that fail
-route or full-run evidence stay absent.
-
-The current short Service Desk and authored-template flows have completed their
-bounded technical proofs and received operator observation. Their main product
-limitation is now explicit: each authored template is one short transaction,
-the retained moment account is intentionally concise, and a completed run does
-not yet explain whether a terminal condition, horizon, quiescence, operator
-stop, or safety bound ended it.
-
-[Slice 20](docs/plans/020-inspectable-extended-runs.md) is the active packet. It
-adds a detailed evidence-cited narrative alongside the concise timeline and a
-typed run-control/completion contract, proved first on current runs. No general
-game master currently judges completion. Exact reviewed world-state terminal
-conditions remain the default, with a semantic stop judge left optional and
-non-authoritative.
-
-Live runs retain ordered analyst-safe checkpoints while they execute. The map
-shows pending participants from a frozen causal moment, then only routes and
-state changes supported by committed causal events. The browser polls that
-retained evidence; it does not infer activity from scenario names or hidden
-agent state. Labeled moving tokens appear only for retained deliveries/effects
-on resolved graph edges. Narration begins only after causal execution completes
-so narration spend cannot change the live trajectory.
-
-[Slice 21](docs/plans/021-coordination-environment-assay.md) is the next
-representative vertical. It will model a synthetic multinational
-bio-surveillance decision across recurring meetings and compare baseline,
-heterogeneous information pressure, and stabilization. The proposed measures
-come from the complete
-[paper source note](docs/research/001-from-minds-to-coordination.md) and remain
-derived evidence-bound analyst views under
-[ADR 012](docs/adr/012-decision-environment-measures-are-derived.md), not hidden
-global state inserted into people's prompts.
-
-Slice 21—not filler added to an existing transaction—is where the first
-naturally longer run must appear: at least four meeting cycles and twelve
-meaningful causal moments.
-
-Typed scenario authoring currently supports two bounded reviewed templates;
-its compiler and approval contract is in
-[Slice 17](docs/plans/017-conversational-scenario-authoring.md). Reviewed
-authored people can drive either approved template through the same native LLM
-boundary; [Slice 19](docs/plans/019-live-authored-people.md) owns that
-profile-to-trace contract and its bounded OpenRouter evidence.
-
-The user-facing Service Desk simulation is autonomous and event driven. Its
-initial customer report starts the triager; thereafter, newly delivered
-observations and retained `next_update_at` intentions form the next frozen
-activation set. A person can therefore reconsider without a new message, while
-an exact state-machine controller can advance more often without paying for an
-LLM call. The UI and narrator expose each moment's unique causal timestamp,
-participant kind, and activation cause. A separate scenario clock is retained
-for authored process delays; the Service Desk currently uses uncalibrated
-process ticks rather than claiming realistic elapsed seconds. Exact subevents
-within moment `c2`, for example, have canonical trace positions `c2.1`,
-`c2.2`, and so on; explicit parent links, not that stable replay order, state
-which events actually caused others. The older fixed nine-activation schedule
-remains only inside the closed
-fidelity-report harness so historical comparison evidence retains its original
-sampling contract.
-
-The multirate Service Desk now requires every non-metadata causal child event to
-complete at a later modeled scenario time than its parent. Its first timing
-source is a declared scenario-wide minimum duration, not a real-world estimate.
-If the retained single-threaded trace order delays an otherwise-ready event, that
-additional delay is retained separately as runtime serialization rather than
-being attributed to the scenario assumption.
-Other authored scenarios remain legacy zero-duration traces until a concrete
-timing slice migrates them. The realized activity/event causal graph is distinct
-from the existing structural graph of entities and possible routes. See
-[ADR 010](docs/adr/010-autonomous-multirate-process-time.md).
-
-Runs are retained under `artifacts/runs/`. Override that location with
-`CYBERNETIC_INFLUENCE_RUNS_DIR`. A shared development host can bind another
-interface explicitly:
-
-```bash
-make serve HOST=0.0.0.0 PORT=8620
-```
-
-Binding a network interface does not add authentication. Use private-network
-access rather than exposing this development server publicly. When Tailscale
-Serve fronts the app, restrict run endpoints to one or more injected logins:
-
-```bash
-export CYBERNETIC_INFLUENCE_ALLOWED_TAILSCALE_USERS="operator@example.com"
-```
-
-The comma-separated allowlist is optional for a local-only process. The Mac
-development host enables it. Live execution also requires
-`CYBERNETIC_INFLUENCE_LIVE=1`; the private Mac development host currently
-enables it behind the allowlist.
-
-`requirements-dev.lock` pins the accepted application and test environment.
-The shared `llm_client` checkout remains a separately versioned optional
-integration because scripted reference runs do not require a provider.
+For a private Mac development host, use the concise
+[host runbook](docs/operations/mac-mini.md). It links dated deployment and
+capacity records only when they are needed for diagnosis.
 
 ## Lineage
 
@@ -211,4 +56,5 @@ integration because scripted reference runs do not require a provider.
 - `cybernetic_influence_v2`: governed architecture and evidence work.
 - this repository: clean product/runtime line with no V2 imports.
 
-The earlier repositories remain historical sources, not runtime dependencies.
+The earlier repositories and archived V3 slices are historical sources, not
+runtime dependencies or current instructions.

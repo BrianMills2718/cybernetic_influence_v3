@@ -1,7 +1,7 @@
 ---
-doc_role: active_plan
-authority: implementation_plan
-status: superseded
+doc_role: historical_evidence
+authority: evidence
+status: archived_superseded
 created: 2026-07-24
 updated: 2026-07-25
 predecessor: 013-configurable-explainable-runs.md

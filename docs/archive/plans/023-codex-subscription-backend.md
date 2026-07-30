@@ -1,4 +1,18 @@
+---
+doc_role: historical_evidence
+authority: evidence
+status: archived_completed_deployment_evidence
+archived: 2026-07-30
+---
+
 # Plan 023: Codex subscription backend
+
+## Archive disposition
+
+This provider/deployment proof is retained as evidence only. It does not state
+the current provider default or route availability; inspect the running
+application and current shared-client capability evidence before authorizing a
+live run.
 
 **Status:** Complete
 

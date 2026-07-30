@@ -1,7 +1,7 @@
 ---
-doc_role: proposed_plan
-authority: scoped
-status: superseded
+doc_role: historical_evidence
+authority: evidence
+status: archived_superseded
 created: 2026-07-24
 predecessor: 014-pausable-live-runs.md
 ---

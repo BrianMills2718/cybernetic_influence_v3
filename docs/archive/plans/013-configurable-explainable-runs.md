@@ -550,7 +550,8 @@ This slice did not add:
 
 Landscape disposition: **linked**.
 
-- [Roadmap](../ROADMAP.md) owns the approved two-increment order.
+- [Roadmap](../../ROADMAP.md) owned the approved two-increment order at the
+  time of this archived plan.
 - `api.py`, scenario binding factories, `active_runtime`, `narration.py`, and
   the retained analyst document are the current simulator contracts.
 - Shared `llm_client` public model registry, `ALLOWED_EXECUTION_MODELS`,

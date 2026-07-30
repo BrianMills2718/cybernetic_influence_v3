@@ -1,12 +1,19 @@
 ---
-doc_role: implementation_plan
-authority: bounded_design
-status: in_progress
+doc_role: historical_evidence
+authority: evidence
+status: archived_superseded_by_slice_24
 created: 2026-07-25
 updated: 2026-07-27
 ---
 
 # Slice 20: Inspectable extended runs
+
+## Archive disposition
+
+This plan is retained for runtime and narrative evidence. It no longer owns an
+execution frontier: [Slice 24](../../plans/024-configurable-theory-analysis-mvp.md)
+is the active plan. The assignment text below is historical and must not be
+treated as a current task.
 
 ## Assignment
 

@@ -1,7 +1,7 @@
 ---
-doc_role: implementation_plan
-authority: implementation_plan
-status: complete
+doc_role: historical_evidence
+authority: evidence
+status: archived_completed
 created: 2026-07-25
 updated: 2026-07-27
 predecessor: 015-calibrated-elapsed-time.md

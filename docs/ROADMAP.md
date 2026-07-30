@@ -190,8 +190,8 @@ Detailed implementation authority:
 |---|---|---|
 | [Goal](GOAL.md) | update/active | Owns the new MVP completion contract |
 | This roadmap | update/active | Owns current direction and first missing boundary |
-| [Slice 17](plans/017-conversational-scenario-authoring.md) | reuse unchanged | Completed authoring foundation |
-| [Slice 21](plans/021-coordination-environment-assay.md) | completed foundation; 21C post-MVP | Runtime and per-run Waltzman work are reused; paid comparison is not active |
+| [Slice 17](archive/plans/017-conversational-scenario-authoring.md) | reuse unchanged | Completed authoring foundation |
+| [Slice 21](archive/plans/021-coordination-environment-assay.md) | completed foundation; 21C post-MVP | Runtime and per-run Waltzman work are reused; paid comparison is not active |
 | [Slice 22](plans/022-composite-agency-perturbation-assay.md) | post-MVP candidate | Perturbation is not the MVP goal |
 | [Slice 24](plans/024-configurable-theory-analysis-mvp.md) | active bounded design | Owns the new execution frontier |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
