@@ -28,10 +28,14 @@
     <string>1</string>
     <key>CYBERNETIC_INFLUENCE_CERT_TERRA</key>
     <string>__CERT_TERRA__</string>
+    <key>CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA</key>
+    <string>__CERT_CODEX_LUNA__</string>
     <key>CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH</key>
     <string>__CERT_DEEPSEEK_V4_FLASH__</string>
     <key>CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA</key>
     <string>__CERT_COORDINATION_TERRA__</string>
+    <key>CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA</key>
+    <string>__CERT_COORDINATION_CODEX_LUNA__</string>
     <key>CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH</key>
     <string>__CERT_COORDINATION_DEEPSEEK_V4_FLASH__</string>
     <key>CYBERNETIC_INFLUENCE_OPENROUTER_KEY_FILE</key>
@@ -45,7 +49,9 @@
     <key>LLM_ROUTE_CERTIFICATION_ROOT</key>
     <string>__LLM_ROUTE_CERTIFICATION_ROOT__</string>
     <key>LLM_CLIENT_OPENROUTER_ROUTING</key>
-    <string>on</string>
+    <string>off</string>
+    <key>LLM_CLIENT_AGENT_BILLING_MODE</key>
+    <string>subscription</string>
     <key>LLM_CLIENT_PROJECT</key>
     <string>cybernetic_influence_v3</string>
     <key>LLM_CLIENT_TIMEOUT_POLICY</key>

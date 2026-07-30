@@ -22,8 +22,8 @@ from cybernetic_influence.run_configuration import (
     resolve_live_configuration,
 )
 
-
 MODEL = "openrouter/openai/gpt-5.6-terra"
+CODEX_MODEL = "codex/gpt-5.6-luna"
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -33,12 +33,20 @@ def test_launch_agent_binds_global_and_coordination_certification_groups() -> No
 
     environment = launch_agent["EnvironmentVariables"]
     assert environment["CYBERNETIC_INFLUENCE_CERT_TERRA"] == "__CERT_TERRA__"
+    assert environment["CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA"] == (
+        "__CERT_CODEX_LUNA__"
+    )
     assert environment["CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH"] == (
         "__CERT_DEEPSEEK_V4_FLASH__"
     )
     assert environment["CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA"] == (
         "__CERT_COORDINATION_TERRA__"
     )
+    assert environment["CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA"] == (
+        "__CERT_COORDINATION_CODEX_LUNA__"
+    )
+    assert environment["LLM_CLIENT_AGENT_BILLING_MODE"] == "subscription"
+    assert environment["LLM_CLIENT_OPENROUTER_ROUTING"] == "off"
     assert environment[
         "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH"
     ] == "__CERT_COORDINATION_DEEPSEEK_V4_FLASH__"
@@ -58,7 +66,7 @@ def _observation(
     *,
     observed_at: datetime,
 ) -> RouteCertificationObservation:
-    schema_digests = _current_schema_digests()
+    schema_digests = _current_schema_digests(MODEL)
     assert schema_digests is not None
     return RouteCertificationObservation.build(
         requested_model=MODEL,
@@ -84,7 +92,7 @@ def _coordination_observation(
     *,
     observed_at: datetime,
 ) -> RouteCertificationObservation:
-    schema_digests = _current_coordination_schema_digests()
+    schema_digests = _current_coordination_schema_digests(MODEL)
     assert schema_digests is not None
     return RouteCertificationObservation.build(
         requested_model=MODEL,
@@ -103,6 +111,71 @@ def _coordination_observation(
         selected_attempt_receipt_digest="c" * 64,
         evidence_ref=f"/test/{schema_class}.json",
     )
+
+
+def _codex_observation(
+    schema_class: str,
+    *,
+    observed_at: datetime,
+) -> RouteCertificationObservation:
+    schema_digests = _current_schema_digests(CODEX_MODEL)
+    assert schema_digests is not None
+    return RouteCertificationObservation.build(
+        requested_model=CODEX_MODEL,
+        resolved_model=CODEX_MODEL,
+        upstream_provider_name="OpenAI Codex subscription",
+        upstream_provider_endpoint="codex_cli",
+        execution_mode="workspace_agent",
+        schema_class=schema_class,
+        schema_sha256=schema_digests[schema_class],
+        outcome="parseable",
+        failure_stage="none",
+        logical_call_id=f"logical-{schema_class}",
+        trace_id=f"trace-{schema_class}",
+        observed_at=observed_at,
+        llm_client_revision="test-revision",
+        selected_attempt_receipt_digest=None,
+        evidence_ref=f"/test/{schema_class}.json",
+    )
+
+
+def test_codex_catalog_requires_login_and_exact_schema_observations(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    now = datetime.now(timezone.utc)
+    store = RouteCertificationStore(tmp_path / "observations")
+    participant = _codex_observation("LlmDecision", observed_at=now)
+    narrator = _codex_observation("CausalMomentNarration", observed_at=now)
+    store.append(participant)
+    store.append(narrator)
+    monkeypatch.setattr(
+        "cybernetic_influence.run_configuration.codex_subscription_available",
+        lambda: True,
+    )
+    monkeypatch.setenv("LLM_CLIENT_REVISION", "test-revision")
+    monkeypatch.setenv("LLM_ROUTE_CERTIFICATION_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA",
+        f"{participant.observation_id},{narrator.observation_id}",
+    )
+
+    catalog = model_catalog()
+
+    assert [item["model"] for item in catalog] == [CODEX_MODEL]
+    assert catalog[0]["agent_reasoning_efforts"] == ["medium"]
+    assert catalog[0]["default_agent_reasoning_effort"] == "medium"
+    assert catalog[0]["narrator_reasoning_effort"] == "medium"
+    assert catalog[0]["availability_basis"] == (
+        "verified local ChatGPT Codex login"
+    )
+    assert catalog[0]["billing_mode"] == "subscription_included"
+
+    monkeypatch.setattr(
+        "cybernetic_influence.run_configuration.codex_subscription_available",
+        lambda: False,
+    )
+    assert model_catalog() == []
 
 
 def test_model_catalog_requires_two_current_replayed_schema_observations(
@@ -127,7 +200,7 @@ def test_model_catalog_requires_two_current_replayed_schema_observations(
     assert [item["model"] for item in catalog] == [MODEL]
     assert catalog[0]["agent_reasoning_efforts"] == ["none", "low", "medium", "high"]
     assert catalog[0]["experimental_agent_reasoning_efforts"] == []
-    assert catalog[0]["default_agent_reasoning_effort"] == "none"
+    assert catalog[0]["default_agent_reasoning_effort"] == "medium"
     assert catalog[0]["narrator_reasoning_effort"] == "low"
 
     monkeypatch.setenv(
@@ -168,7 +241,7 @@ def test_coordination_requires_every_current_person_schema_observation(
     narrator = _observation("CausalMomentNarration", observed_at=now)
     coordination = [
         _coordination_observation(schema_class, observed_at=now)
-        for schema_class in (_current_coordination_schema_digests() or {})
+        for schema_class in (_current_coordination_schema_digests(MODEL) or {})
     ]
     for observation in [participant, narrator, *coordination]:
         store.append(observation)

@@ -494,9 +494,7 @@ async function loadConfig() {
   $('#authoring-reasoning').value = authoring.reasoning_effort || authoringReasoning[0]
   $('#authoring-model').title = 'The model selected here will produce only the next saved draft revision.'
   $('#authoring-reasoning').title = 'The thinking level selected here will apply only to the next saved draft revision.'
-  $('#authoring-runtime').textContent = authoringModels.length
-    ? `Your selected model and thinking level apply only to the next message. One message may make up to ${authoring.maximum_attempts_per_message || 1} structured attempt(s), each capped at $${Number(authoring.maximum_cost_per_attempt || 0).toFixed(2)}. The saved conversation records the selection, trace, and observed cost for every revision.`
-    : 'Structured authoring configuration is unavailable.'
+  updateAuthoringRuntime()
   scenarioCatalog = config.scenarios || {}
   $('#scenario').innerHTML = Object.entries(scenarioCatalog).map(([id, item]) =>
     `<option value="${html(id)}">${html(item.label)}</option>`
@@ -654,6 +652,27 @@ function selectedModelChoice() {
   return choices.find((choice) => choice.model === $('#model').value)
 }
 
+function isSubscriptionModel(choice = selectedModelChoice()) {
+  return choice?.billing_mode === 'subscription_included'
+}
+
+function updateAuthoringRuntime() {
+  const authoring = runtimeConfig.authoring || {}
+  const choice = (authoring.models || []).find(
+    (item) => item.model === $('#authoring-model').value
+  )
+  if (!choice) {
+    $('#authoring-runtime').textContent = 'Structured authoring configuration is unavailable.'
+    return
+  }
+  const attempts = authoring.maximum_attempts_per_message || 1
+  const accounting = choice.billing_mode === 'subscription_included'
+    ? 'It is included with the signed-in ChatGPT Codex subscription; Codex usage limits apply.'
+    : `Each attempt has a $${Number(authoring.maximum_cost_per_attempt || 0).toFixed(2)} request ceiling.`
+  $('#authoring-runtime').textContent =
+    `Your selected model and thinking level apply only to the next message. One message may make up to ${attempts} structured attempt(s). ${accounting} The saved conversation records the selection, trace, and observed cost for every revision.`
+}
+
 function configureReasoningChoices(preferred = null) {
   const choice = selectedModelChoice()
   const efforts = choice?.agent_reasoning_efforts || ['low', 'medium', 'high']
@@ -703,6 +722,8 @@ function updateAuthorizationPreview() {
   const reasoning = $('#reasoning').value || 'medium'
   const narratorReasoning = selectedModelChoice()?.narrator_reasoning_effort || 'low'
   const planned = Number($('#max-cost').value || 0)
+  const subscriptionIncluded = isSubscriptionModel()
+  $('#max-cost-field').hidden = subscriptionIncluded
   const baseline = (runtimeConfig.cost_baselines || []).find((item) =>
     item.scenario === $('#scenario').value &&
     item.arm === $('#arm').value &&
@@ -713,8 +734,9 @@ function updateAuthorizationPreview() {
   const estimate = baseline
     ? `Expected observed spend: about $${Number(baseline.median_cost).toFixed(4)} from ${baseline.sample_count} comparable completed live run${baseline.sample_count === 1 ? '' : 's'} (range $${Number(baseline.minimum_cost).toFixed(4)}–$${Number(baseline.maximum_cost).toFixed(4)}).`
     : 'Expected observed spend: no comparable completed live run is retained yet.'
-  $('#cost-details').textContent =
-    `${estimate} Planning amount: $${planned.toFixed(2)}. A returned valid simulation is not terminated because observed or partially observed cost crosses this amount. Provider requests still carry per-call budgets of $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} for participants and $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} for narration; call-count and causal-step limits bound runtime growth.`
+  $('#cost-details').textContent = subscriptionIncluded
+    ? `${modelLabel} is included with the signed-in ChatGPT Codex subscription; marginal provider cost is recorded as $0. Codex usage limits still apply. This run allows at most ${Number(limits.maximum_participant_calls || 0)} participant calls and ${Number(limits.maximum_narrator_calls || 0)} narrator calls.`
+    : `${estimate} Planning amount: $${planned.toFixed(2)}. A returned valid simulation is not terminated because observed or partially observed cost crosses this amount. Provider requests still carry per-call budgets of $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} for participants and $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} for narration; call-count and causal-step limits bound runtime growth.`
 }
 
 function describeCondition() {
@@ -1876,11 +1898,15 @@ function render(run) {
     : 'observed provider cost'
   $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator) · $${Number(current.cost).toFixed(6)} ${costCoverage} · ${current.run_id}`
   const llm = current.llm_configuration
+  const retainedModelChoice = (runtimeConfig.live_options?.models || []).find(
+    (choice) => choice.model === llm?.model
+  )
+  const retainedBilling = retainedModelChoice?.billing_mode
   $('#run-config-readout').innerHTML = llm ? `
     <strong>Effective live configuration</strong>
     <span>${html(llm.model)}</span>
     <span>${html(llm.agent_reasoning_effort)} agent reasoning · ${html(llm.narrator_reasoning_effort)} narrator reasoning</span>
-    <span>$${Number(llm.max_total_cost).toFixed(2)} planning amount · $${Number(current.cost).toFixed(6)} ${html(costCoverage)}</span>
+    <span>${retainedBilling === 'subscription_included' ? 'ChatGPT Codex subscription included' : `$${Number(llm.max_total_cost).toFixed(2)} planning amount`} · $${Number(current.cost).toFixed(6)} ${html(costCoverage)}</span>
     <small>${html(String(llm.selection_basis).replaceAll('_',' '))} · llm_client ${html(llm.llm_client_revision)}</small>
   ` : `
     <strong>Reference execution</strong>
@@ -2013,6 +2039,7 @@ $('#model').onchange = () => {
   updateAuthorizationPreview()
 }
 $('#authoring-live-model').onchange = () => configureAuthoringLiveReasoning()
+$('#authoring-model').onchange = updateAuthoringRuntime
 $('#reasoning').onchange = () => {
   updateReasoningHelp()
   updateAuthorizationPreview()

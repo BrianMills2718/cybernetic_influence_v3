@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Mapping, Sequence
 from hashlib import sha256
 from importlib import resources
-import json
 from typing import Any, cast
 
+import yaml
 from jinja2 import Environment, StrictUndefined
 from pydantic import BaseModel, ConfigDict, Field
-import yaml
 
+from cybernetic_influence.llm_backend import structured_backend_options
 
 NARRATOR_TASK = "cybernetic_causal_moment_narration"
 NARRATOR_MAX_BUDGET = 0.025
@@ -119,24 +120,26 @@ def narrate_live_moments(
         cost_source = "unavailable"
         cost_covers_all_attempts = False
         try:
-            parsed, meta = call(
-                model,
-                [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                model_justification=(
-                    "Use the run-configured narration model to generate the "
-                    "bounded analyst-facing causal-moment account."
-                ),
-                response_model=CausalMomentNarration,
-                task=NARRATOR_TASK,
-                trace_id=trace_id,
-                max_budget=NARRATOR_MAX_BUDGET,
-                max_tokens=NARRATOR_MAX_TOKENS,
-                timeout=NARRATOR_TIMEOUT_SECONDS,
-                reasoning_effort=reasoning_effort,
-            )
+            with structured_backend_options(model) as backend_options:
+                parsed, meta = call(
+                    model,
+                    [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    model_justification=(
+                        "Use the run-configured narration model to generate the "
+                        "bounded analyst-facing causal-moment account."
+                    ),
+                    response_model=CausalMomentNarration,
+                    task=NARRATOR_TASK,
+                    trace_id=trace_id,
+                    max_budget=NARRATOR_MAX_BUDGET,
+                    max_tokens=NARRATOR_MAX_TOKENS,
+                    timeout=NARRATOR_TIMEOUT_SECONDS,
+                    reasoning_effort=reasoning_effort,
+                    **backend_options,
+                )
             cost = _observed_cost(meta)
             cost_source = str(getattr(meta, "cost_source", "unavailable"))
             cost_covers_all_attempts = _cost_covers_all_attempts(meta)

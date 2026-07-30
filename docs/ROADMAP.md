@@ -30,6 +30,12 @@ claim to reproduce every omitted computation or predict a real system.
 ## Current Stage and Truth
 
 Stage: MVP/PoC.
+[Slice 23: Codex subscription backend](plans/023-codex-subscription-backend.md)
+is the current bounded operations repair: use `codex/gpt-5.6-luna` at medium
+reasoning through the operator's ChatGPT Codex subscription for participants,
+narration, and scenario authoring, while retaining OpenRouter as an explicit
+alternative and never silently changing models. Exact schema probes and one
+complete local live run pass; Mac deployment acceptance is pending.
 [Slice 19: live authored people](plans/019-live-authored-people.md) is
 technically complete on canonical
 `main` and the private Mac development host. An analyst can conversationally

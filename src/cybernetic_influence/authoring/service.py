@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from hashlib import sha256
 from importlib import resources
-import json
 from typing import Annotated, Any, Literal, cast
 
 import yaml
@@ -23,29 +23,42 @@ from cybernetic_influence.authoring.models import (
     ScenarioDraftProposal,
 )
 from cybernetic_influence.authoring.store import AuthoringDraftStore, DraftConflictError
+from cybernetic_influence.llm_backend import (
+    CODEX_LUNA_MODEL,
+    structured_backend_options,
+)
 from cybernetic_influence.run_store import now_iso
 
 StructuredCall = Callable[..., tuple[Any, Any]]
 AUTHORING_TASK = "cybernetic_influence_v3_scenario_draft"
 AUTHORING_MAX_BUDGET = 0.10
 AuthoringModel = Literal[
+    "codex/gpt-5.6-luna",
     "openrouter/openai/gpt-5.6-terra",
     "openrouter/openai/gpt-5.6-sol",
 ]
 AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
-AUTHORING_MODEL: AuthoringModel = "openrouter/openai/gpt-5.6-terra"
+AUTHORING_MODEL: AuthoringModel = CODEX_LUNA_MODEL
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
 AUTHORING_MODEL_OPTIONS: tuple[dict[str, str], ...] = (
     {
+        "model": CODEX_LUNA_MODEL,
+        "label": "Luna",
+        "provider": "ChatGPT Codex subscription",
+        "billing_mode": "subscription_included",
+    },
+    {
         "model": "openrouter/openai/gpt-5.6-terra",
         "label": "Terra",
         "provider": "OpenRouter",
+        "billing_mode": "usage_based",
     },
     {
         "model": "openrouter/openai/gpt-5.6-sol",
         "label": "Sol",
         "provider": "OpenRouter",
+        "billing_mode": "usage_based",
     },
 )
 AUTHORING_REASONING_EFFORTS: tuple[AuthoringReasoningEffort, ...] = (
@@ -267,20 +280,22 @@ class DraftAuthoringService:
                 candidate=candidate,
             )
             try:
-                parsed, meta = self.call(
-                    model,
-                    [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                    response_model=_ProposalConsumer,
-                    task=AUTHORING_TASK,
-                    trace_id=trace_id,
-                    max_budget=AUTHORING_MAX_BUDGET,
-                    max_tokens=4000,
-                    model_justification=(
-                        "Select and populate one reviewed executable scenario template "
-                        "from a bounded natural-language situation."
-                    ),
-                    reasoning_effort=reasoning_effort,
-                )
+                with structured_backend_options(model) as backend_options:
+                    parsed, meta = self.call(
+                        model,
+                        [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                        response_model=_ProposalConsumer,
+                        task=AUTHORING_TASK,
+                        trace_id=trace_id,
+                        max_budget=AUTHORING_MAX_BUDGET,
+                        max_tokens=4000,
+                        model_justification=(
+                            "Select and populate one reviewed executable scenario template "
+                            "from a bounded natural-language situation."
+                        ),
+                        reasoning_effort=reasoning_effort,
+                        **backend_options,
+                    )
                 if isinstance(parsed, ScenarioDraftProposal):
                     proposal = parsed
                     candidate = _provider_candidate_from_proposal(parsed)

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import time
+from pathlib import Path
 
 from fastapi.testclient import TestClient
+from llm_client import LLMCapabilityError, LLMQuotaExhaustedError
 from pytest import MonkeyPatch
+from test_authoring_compiler import _proposal
+from test_authoring_information_campaign import information_campaign_proposal
 
 import cybernetic_influence.api as api_module
 from cybernetic_influence.active_runtime import (
@@ -15,16 +18,13 @@ from cybernetic_influence.active_runtime import (
 )
 from cybernetic_influence.api import create_app
 from cybernetic_influence.authoring.compiler import CompiledScenario
+from cybernetic_influence.authoring.models import ResourceRequestWorkflowDraft
 from cybernetic_influence.authoring.service import (
-    _ProposalConsumer,
     _prompt,
+    _ProposalConsumer,
     _provider_candidate_from_proposal,
 )
-from cybernetic_influence.authoring.models import ResourceRequestWorkflowDraft
 from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
-from llm_client import LLMCapabilityError, LLMQuotaExhaustedError
-from test_authoring_compiler import _proposal
-from test_authoring_information_campaign import information_campaign_proposal
 
 
 class _Meta:
@@ -259,6 +259,7 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
     )
     config = api.get("/api/config").json()["authoring"]
     assert [(item["label"], item["model"]) for item in config["models"]] == [
+        ("Luna", "codex/gpt-5.6-luna"),
         ("Terra", "openrouter/openai/gpt-5.6-terra"),
         ("Sol", "openrouter/openai/gpt-5.6-sol"),
     ]
@@ -611,7 +612,7 @@ def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) ->
         )
     )
     config = api.get("/api/config").json()["authoring"]
-    assert config["model"] == "openrouter/openai/gpt-5.6-terra"
+    assert config["model"] == "codex/gpt-5.6-luna"
     assert config["reasoning_effort"] == "medium"
     draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
     drafted = api.post(

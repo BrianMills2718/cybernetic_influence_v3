@@ -11,13 +11,17 @@ from typing import Literal, NotRequired, TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from cybernetic_influence.llm_backend import (
+    CODEX_LUNA_MODEL,
+    codex_subscription_available,
+    is_codex_subscription_model,
+)
 from cybernetic_influence.narration import NARRATOR_MAX_BUDGET
 
-
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh"]
-DEFAULT_MODEL = "openrouter/deepseek/deepseek-v4-flash"
-DEFAULT_REASONING_EFFORT: ReasoningEffort = "none"
-NARRATOR_REASONING_EFFORT: Literal["low"] = "low"
+DEFAULT_MODEL = CODEX_LUNA_MODEL
+DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium"
+NARRATOR_REASONING_EFFORT: Literal["medium"] = "medium"
 PARTICIPANT_PER_CALL_CEILING = 0.05
 NARRATOR_PER_CALL_CEILING = NARRATOR_MAX_BUDGET
 SERVER_MAX_TOTAL_COST = 0.74
@@ -43,6 +47,15 @@ class _RouteAdvertisement(TypedDict):
 # A route enters this set only after the exact participant and narrator schemas
 # have been exercised in the deployment environment.
 _ADVERTISEMENT: dict[str, _RouteAdvertisement] = {
+    CODEX_LUNA_MODEL: {
+        "label": "OpenAI GPT-5.6 Luna · Codex subscription",
+        "certification_env": "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA",
+        "coordination_certification_env": (
+            "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA"
+        ),
+        "agent_reasoning_efforts": ("medium",),
+        "narrator_reasoning_effort": "medium",
+    },
     "openrouter/openai/gpt-5.6-terra": {
         "label": "OpenAI GPT-5.6 Terra",
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_TERRA",
@@ -129,6 +142,11 @@ def model_catalog() -> list[dict[str, object]]:
     choices: list[dict[str, object]] = []
     for model, advertisement in _ADVERTISEMENT.items():
         info = registry.get(model)
+        codex_available = (
+            codex_subscription_available()
+            if is_codex_subscription_model(model)
+            else False
+        )
         configured_certification = os.getenv(
             str(advertisement["certification_env"]), ""
         ).strip()
@@ -138,9 +156,18 @@ def model_catalog() -> list[dict[str, object]]:
         )
         if (
             model not in ALLOWED_EXECUTION_MODELS
-            or info is None
-            or info.get("structured_output") is not True
-            or info.get("available") is not True
+            or (
+                is_codex_subscription_model(model)
+                and not codex_available
+            )
+            or (
+                not is_codex_subscription_model(model)
+                and (
+                    info is None
+                    or info.get("structured_output") is not True
+                    or info.get("available") is not True
+                )
+            )
             or not certification_basis
         ):
             continue
@@ -170,6 +197,15 @@ def model_catalog() -> list[dict[str, object]]:
             continue
         if not supported_efforts:
             continue
+        availability_basis: str
+        billing_mode: str
+        if is_codex_subscription_model(model):
+            availability_basis = "verified local ChatGPT Codex login"
+            billing_mode = "subscription_included"
+        else:
+            assert info is not None
+            availability_basis = f"configured credential: {info['api_key_env']}"
+            billing_mode = "usage_based"
         choices.append(
             {
                 "model": model,
@@ -190,9 +226,8 @@ def model_catalog() -> list[dict[str, object]]:
                 ),
                 "narrator_reasoning_effort": narrator_effort,
                 "structured_output": True,
-                "availability_basis": (
-                    f"configured credential: {info['api_key_env']}"
-                ),
+                "availability_basis": availability_basis,
+                "billing_mode": billing_mode,
                 "certification_basis": certification_basis,
             }
         )
@@ -210,7 +245,7 @@ def _validated_certification_basis(
     configured: str,
 ) -> str | None:
     """Replay two exact route observations before projecting a selectable model."""
-    expected_schema_digests = _current_schema_digests()
+    expected_schema_digests = _current_schema_digests(model)
     return _validated_schema_group_basis(
         model,
         configured,
@@ -226,7 +261,7 @@ def _validated_coordination_certification_basis(
     return _validated_schema_group_basis(
         model,
         configured,
-        _current_coordination_schema_digests(),
+        _current_coordination_schema_digests(model),
     )
 
 
@@ -305,13 +340,15 @@ def coordination_live_model_ids() -> list[str]:
     return supported
 
 
-def _current_schema_digests() -> dict[str, str] | None:
-    """Reproduce the shared runtime's exact OpenRouter provider schemas."""
+def _current_schema_digests(model: str = DEFAULT_MODEL) -> dict[str, str] | None:
+    """Reproduce the exact provider schema used by the selected route."""
     try:
         from llm_client import (
+            codex_native_provider_schema,
             openrouter_native_provider_schema,
             route_schema_sha256,
         )
+
         from cybernetic_influence.active_runtime.llm import LlmDecision
         from cybernetic_influence.narration import CausalMomentNarration
     except ImportError:
@@ -320,21 +357,25 @@ def _current_schema_digests() -> dict[str, str] | None:
         "LlmDecision": LlmDecision,
         "CausalMomentNarration": CausalMomentNarration,
     }
-    return {
-        name: route_schema_sha256(
-            openrouter_native_provider_schema(schema)
-        )
-        for name, schema in schemas.items()
-    }
+    projector = (
+        codex_native_provider_schema
+        if is_codex_subscription_model(model)
+        else openrouter_native_provider_schema
+    )
+    return {name: route_schema_sha256(projector(schema)) for name, schema in schemas.items()}
 
 
-def _current_coordination_schema_digests() -> dict[str, str] | None:
-    """Reproduce every provider schema actually used by coordination people."""
+def _current_coordination_schema_digests(
+    model: str = DEFAULT_MODEL,
+) -> dict[str, str] | None:
+    """Reproduce every provider schema used by coordination people."""
     try:
         from llm_client import (
+            codex_native_provider_schema,
             openrouter_native_provider_schema,
             route_schema_sha256,
         )
+
         from cybernetic_influence.scenarios.coordination_decision import (
             COORDINATION_PERSON_DECISION_MODELS,
         )
@@ -344,12 +385,12 @@ def _current_coordination_schema_digests() -> dict[str, str] | None:
         schema.__name__: schema
         for schema in COORDINATION_PERSON_DECISION_MODELS.values()
     }
-    return {
-        name: route_schema_sha256(
-            openrouter_native_provider_schema(schema)
-        )
-        for name, schema in schemas.items()
-    }
+    projector = (
+        codex_native_provider_schema
+        if is_codex_subscription_model(model)
+        else openrouter_native_provider_schema
+    )
+    return {name: route_schema_sha256(projector(schema)) for name, schema in schemas.items()}
 
 
 def resolve_live_configuration(

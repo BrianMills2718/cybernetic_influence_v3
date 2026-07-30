@@ -14,6 +14,13 @@ instructions to continue their former “next slice” sections.
 
 ## Current sequence
 
+[Slice 23: Codex subscription backend](023-codex-subscription-backend.md) is a
+bounded deployment-path replacement for the existing live verticals, not a new
+research slice. Luna/medium now passes exact participant, narrator, authoring,
+and Coordination schema probes plus one complete local live run. Mac deployment
+and retained browser/trace inspection remain before it becomes the canonical
+demo default.
+
 [Slice 20: Inspectable extended runs](020-inspectable-extended-runs.md) now
 includes generic polling-backed live progress: strict runtime checkpoints keep
 the existing Simulation graph visible, animate only retained causal evidence,

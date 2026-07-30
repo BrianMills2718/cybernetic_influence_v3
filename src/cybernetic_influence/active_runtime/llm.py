@@ -2,18 +2,25 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
 import functools
-from hashlib import sha256
-from importlib import resources
 import json
 import re
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from hashlib import sha256
+from importlib import resources
 from typing import Any, Final, Literal, cast
 
-from jinja2 import Environment, StrictUndefined
-from pydantic import BaseModel, ConfigDict, Field, Json, field_validator, model_validator
 import yaml
+from jinja2 import Environment, StrictUndefined
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    Json,
+    field_validator,
+    model_validator,
+)
 
 from cybernetic_influence.active_runtime.models import (
     ActionIntent,
@@ -26,6 +33,7 @@ from cybernetic_influence.active_runtime.protocol import (
     ActiveSystemExecutionError,
 )
 from cybernetic_influence.causal_core.models import canonical_record_digest
+from cybernetic_influence.llm_backend import structured_backend_options
 
 _FORBID = ConfigDict(extra="forbid", strict=True)
 _UNPRICED_COST_SOURCES = frozenset({"unavailable", "unspecified"})
@@ -439,14 +447,16 @@ class NativeLlmActiveSystem:
             }
             if self.reasoning_effort is not None:
                 call_kwargs["reasoning_effort"] = self.reasoning_effort
-            parsed, meta = call(
-                self.model,
-                [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                **call_kwargs,
-            )
+            with structured_backend_options(self.model) as backend_options:
+                parsed, meta = call(
+                    self.model,
+                    [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    **call_kwargs,
+                    **backend_options,
+                )
         except Exception as error:
             evidence = ModelCallEvidence(
                 status="failed",
