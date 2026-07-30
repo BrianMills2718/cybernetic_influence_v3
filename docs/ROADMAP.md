@@ -775,8 +775,9 @@ requires them to answer an analyst question that current contracts cannot.
 
 - **Last accepted integrated proof:** Service Desk `run_20d2d0000004`, with
   pause/resume, exact completion, and all 25 simulator-grounded narratives.
-- **Current canonical revision:**
-  `8f59c28f5b96792d459ff60f42f879659aa68fd6`; the shared UI contains the
+- **Current deployed behavior revision:**
+  `8f59c28f5b96792d459ff60f42f879659aa68fd6`; canonical `main` contains this
+  behavior plus its retained evidence updates. The shared UI contains the
   scripted Coordination scenario and a certification-gated native-person seam.
 - **Current packet:** 21A4 human readout. The deployed simulator and all seven
   route observations are bound to shared client

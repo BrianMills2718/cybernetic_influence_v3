@@ -128,9 +128,9 @@ restarting completed work.
   narratives, and the recurring Coordination reference scenario is now
   inspectable through the shared narrative, participant/group, and three-map
   UI rather than a scenario-specific page.
-- **Canonical implementation and deployment:** canonical `main` and the private
-  Mac were freshly observed on 2026-07-29 at simulator
-  `8f59c28f5b96792d459ff60f42f879659aa68fd6`; the deployed shared client is
+- **Canonical implementation and deployment:** canonical `main` contains the
+  behavior deployed and freshly observed on the private Mac on 2026-07-29 at
+  simulator `8f59c28f5b96792d459ff60f42f879659aa68fd6`; the deployed shared client is
   `68949c9427ae4e2249aa2d6bc51949739385c275`. The service is running and its
   config exposes only DeepSeek V4 Flash `none` for live Coordination.
 - **Current increment:** Packet 21A4 technical execution is complete and its
