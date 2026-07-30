@@ -1130,6 +1130,31 @@ tests, the frontend build, and a 1440x1000 Chromium pass preserve the maps,
 story, outcome, participants/groups, and Run history with no console, request,
 or page error. No provider call or deployment occurred.
 
+**Observed authorized deployment evidence (2026-07-30):** simulator
+`9975e22484cf89bf219684d6d83b4993e2f1bf61` is deployed with shared client
+`144d118658ee1c99275576e7e212475021613930` and advertises only
+subscription-backed `codex/gpt-5.6-luna` at medium reasoning. Baseline
+`run_77448454c858` is the accepted canary: 41 participant, 30 narrator, and one
+coder call all completed without fallback and with complete
+`subscription_included` zero-cost coverage. It retained exact
+`deploy_on_time`, full scope, five partners, zero final open risks, and a valid
+measurement whose three model-coded directions remain separately labeled and
+evidence-linked.
+
+The pressure and stabilization gate is not accepted. Pressure runs first
+exposed and motivated a structurally derived 57-call narrator ceiling and a
+grounded completion-summary repair. On the repaired deployed summary,
+`run_e3173c381918` ended at the 48-call participant safety limit before an
+exact terminal decision, so the coder correctly did not run. Stabilization
+`run_43f57f7751f4` failed on its first Luna participant call with the explicit
+CLI response `Selected model is at capacity`; replacement
+`run_0f1f1b031e02` completed 11 Luna participant calls before the same
+capacity response on call 12. These failures are retained and are not evidence
+of a prompt/schema defect. Do not launch a third capacity retry, raise the
+participant ceiling, or switch routes without operator judgment. Slice 21C
+remains blocked on one valid current-revision canary for each missing
+condition.
+
 **Slice 21B is done when:**
 
 - every metric declares construct, provenance class, unit, and limitations;

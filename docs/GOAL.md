@@ -3,7 +3,7 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-07-28
+updated: 2026-07-30
 ---
 
 # Research MVP Continuous-Execution Goal
@@ -129,39 +129,49 @@ restarting completed work.
   inspectable through the shared narrative, participant/group, and three-map
   UI rather than a scenario-specific page.
 - **Canonical implementation and deployment:** canonical `main` contains the
-  behavior deployed and freshly observed on the private Mac on 2026-07-29 at
-  simulator `fa2da28ad50d1fe77428d424af7276855bc0d25d`; the deployed shared
-  client is `144d118658ee1c99275576e7e212475021613930`. The service is running
-  with Luna/medium as its subscription-backed default.
-- **Current increment:** Packet 21B2's zero-spend implementation is complete
-  after the operator accepted
-  the 21A4 narrative and evidence readout. Five Coordination people
-  use scenario-specific native-LLM schemas while sources, the meeting clock,
-  analytical composites, and exact mechanisms remain non-provider executors.
-  The UI and API derive Coordination live availability from the complete
-  per-scenario certification set rather than falling back.
-- **Observed certification evidence:** DeepSeek V4 Flash `none` now has current
-  parseable observations for generic `LlmDecision`
-  (`routeobs1_b23c1d902f7d49429598d6f3`), `CausalMomentNarration`
-  (`routeobs1_b83c1bf9cefc179a7e0b5650`), and all five Coordination person
-  schemas: `MissionCoordinatorLlmDecision`
-  (`routeobs1_6d235df74a36c6671a22dc39`), `TechnicalLeadLlmDecision`
-  (`routeobs1_2d2414497529629f729fd51e`),
-  `PolicyRepresentativeLlmDecision`
-  (`routeobs1_ea79cbe005b46de152adbd7e`), `LocalLiaisonLlmDecision`
-  (`routeobs1_dfbc17c844d3f8d10c3c350e`), and
-  `PartnerRepresentativeLlmDecision`
-  (`routeobs1_7edc2427624c701b47e63eec`). Every observation is bound to
-  shared-client revision `68949c9427ae4e2249aa2d6bc51949739385c275` and
-  replays against the current exact schema digest.
-- **Observed live proof:** baseline `run_21a48f59c28f` completed all four
-  meetings through `decision_deploy_on_time`, with 338 unique events, 28
-  narrated moments, 37 participant calls, 28 narrator calls, and
-  `$0.0215453528` known cost. All 65 calls selected a validated DeepSeek
-  response. Nine schema repairs and one 180-second timeout recovered on one
-  retry; the unknown timeout price is retained honestly as incomplete cost
-  coverage rather than terminating the trajectory.
-- **Restart and rendered readback:** after restart, the retained file hash,
+  behavior deployed on the private Mac as simulator
+  `9975e22484cf89bf219684d6d83b4993e2f1bf61`, with shared client
+  `144d118658ee1c99275576e7e212475021613930`.
+  The service advertises only subscription-backed `codex/gpt-5.6-luna` at
+  medium reasoning, allows 48 participant and 57 narrator calls, and retains
+  at most one post-run evidence-coder call.
+- **Current increment:** Packet 21B2's readout is implemented, deployed, and
+  fixture/browser verified. Exact measures, evidence-coded interpretations,
+  provenance, limitations, and exact evidence step-down share the existing
+  Simulation and Run history surfaces. The authorized three-canary gate is
+  partially observed but not accepted as a complete set.
+- **Observed Luna certification evidence:** fresh generic participant and
+  narrator observations are
+  `routeobs1_56b0b98db7c880cb98e97fb6` and
+  `routeobs1_8144013e9491d66c2cd7324f`. Five Coordination person schemas plus
+  `CoderOutput` passed in observations
+  `routeobs1_e50f88ee18b0a0f274c50416`,
+  `routeobs1_9c882b94dff926589efd0d35`,
+  `routeobs1_10adfdcddfacb0a164ee52b8`,
+  `routeobs1_391ff629f3382ea8890adc64`,
+  `routeobs1_ae8a98a5feafd2c73e73f598`, and
+  `routeobs1_5f0084307ba9a3a313314a94`.
+- **Accepted Packet-21B2 canary evidence:** baseline `run_77448454c858`
+  completed `deploy_on_time` at full scope with all five partners retained,
+  zero final open risks, 41 participant calls, 30 narrator calls, and one
+  valid coder call. All 72 Luna/medium calls completed with
+  `subscription_included` accounting, complete zero-cost coverage, and no
+  fallback. The retained exact and evidence-coded sections pass the same
+  structurally and visually distinct readout contract verified before deploy.
+- **Unaccepted pressure evidence:** `run_23135344d0d5` reached exact
+  `no_decision_by_horizon` and a valid measurement but exceeded the former
+  32-narrator preflight bound. After the narrator bound was corrected,
+  `run_0a363bc1bb66` completed 43 narratives and a valid measurement but
+  exposed a false static human-facing withdrawal summary. That summary was
+  corrected. The current-summary run `run_e3173c381918` then ended at the
+  48-call participant safety limit before a terminal decision, so its
+  measurement correctly remained invalid.
+- **Unaccepted stabilization evidence:** `run_43f57f7751f4` failed on its
+  first Luna participant call with `Selected model is at capacity`.
+  Replacement `run_0f1f1b031e02` completed 11 participant calls with no
+  fallback before the same capacity rejection on call 12. No third attempt
+  was launched, and neither failure is attributed to its prompt or schema.
+- **Historical 21A4 restart and rendered readback:** after restart, the retained file hash,
   65-call ledger, cost, outcome, events, and narratives were unchanged and no
   provider call occurred. The exact deep link renders all three maps,
   analytical scale, initial situation, story, outcome, and participant/group
@@ -183,12 +193,13 @@ restarting completed work.
   event on the existing map/timeline. A failed or interrupted assay cannot
   rewrite a completed world run. The normal story, maps, participant/group
   accounts, pause/resume controls, and Advanced evidence remain present.
-- **Resume event:** authorization is now granted to certify the added
-  `CoderOutput` route schema through `codex/gpt-5.6-luna` at medium reasoning,
-  deploy that exact Packet 21B2 revision, and run one new baseline, one
-  heterogeneous-pressure, and one stabilization live canary through the
-  operator's ChatGPT Codex subscription. The 21A4 DeepSeek baseline cannot be
-  reused because it predates the measurement spec and executable revision.
+- **Resume event:** operator judgment is required on two independent
+  boundaries: whether to raise the Coordination participant-call ceiling above
+  48 so a pressure trajectory can reach its exact deadline, and whether to
+  retry Luna stabilization after the service reports available capacity (or
+  explicitly choose another certified route). Do not silently change either
+  the structural bound or the selected model. Slice 21C remains blocked until
+  one valid current-revision canary exists for every condition.
 
 ## Done
 

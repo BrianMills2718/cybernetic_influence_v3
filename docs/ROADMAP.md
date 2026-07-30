@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-07-29
+updated: 2026-07-30
 ---
 
 # Cybernetic Influence V3 Roadmap
@@ -87,9 +87,13 @@ exact `deploy_on_time` outcome after the deployed repair preserved a valid
 retry across incomplete price coverage. Its technical run/restart/browser gate
 passes. The operator confirmed that its four-meeting story is understandable
 without raw evidence and that a disputed passage can step down to understandable
-exact evidence. Packets 21B0–B1 now freeze the versioned measurement contract,
+exact evidence. Packets 21B0–B1 freeze the versioned measurement contract,
 both-sign controls, exact calculators, fake-tested coder seam, and retained
-run-measurement artifact. Packet 21B2 is the next implementation boundary.
+run-measurement artifact. Packet 21B2's readout is now implemented and
+deployed. Its Luna baseline is accepted, while its current pressure run reached
+the participant safety limit and two stabilization attempts encountered an
+explicit Luna capacity rejection. The three-condition live-canary gate
+therefore remains open; Slice 21C has not begun.
 [Slice 22: composite-agency perturbation
 assay](plans/022-composite-agency-perturbation-assay.md) is separately gated by
 Slice 21C and operationalizes the later Levin-style question on that same
@@ -787,28 +791,30 @@ requires them to answer an analyst question that current contracts cannot.
 - **Last accepted integrated proof:** Service Desk `run_20d2d0000004`, with
   pause/resume, exact completion, and all 25 simulator-grounded narratives.
 - **Current deployed behavior revision:**
-  `fa2da28ad50d1fe77428d424af7276855bc0d25d`; the deployed shared client is
+  `9975e22484cf89bf219684d6d83b4993e2f1bf61`; the deployed shared client is
   `144d118658ee1c99275576e7e212475021613930`. The shared UI contains the
-  scripted Coordination scenario and a certification-gated native-person seam.
-- **Current packet:** Packet 21B2's fixture-backed API/UI portion is complete.
+  Coordination scenario, measurement readout, and certification-gated
+  native-person seam.
+- **Current packet:** Packet 21B2's API/UI portion is deployed and its baseline
+  canary is accepted.
   It retains at most one evidence-coder call after a completed live
   Coordination run; projects exact and coded evidence separately in the
   existing Simulation and Run history surfaces; preserves invalid, unclear,
   and interrupted-analysis states without changing the world outcome; and
-  steps every coded claim down to retained exact events. Deployment and live
-  canaries remain at the explicit authorization boundary.
-- **Observed live proof:** `run_21a48f59c28f` completed four meeting cycles,
-  338 unique events, 28 narrated moments, and exact terminal outcome
-  `deploy_on_time` through 65 validated DeepSeek calls. Known cost is
-  `$0.0215453528`; one timed-out attempt is unpriced, so coverage is explicitly
-  incomplete. Restart/reopen produced no new call or cost, and rendered readback
-  preserved every primary UI surface.
-- **Current limiting cause:** no technical blocker is known. Authorization is
-  granted to certify the added coder schema through subscription-backed Luna at
-  medium reasoning, deploy the exact Packet 21B2 revision, and collect a new
-  baseline plus one pressure and one stabilization measurement canary. The
-  older DeepSeek live baseline is not fingerprint-compatible with this
-  measurement revision.
+  steps every coded claim down to retained exact events.
+- **Observed live proof:** `run_77448454c858` completed `deploy_on_time` at
+  full scope with all five partners retained, zero final open risks, 41
+  participant calls, 30 narrator calls, and one valid evidence-coder call. All
+  72 Luna/medium calls completed through the operator's ChatGPT Codex
+  subscription with no fallback and complete `$0` marginal-cost coverage.
+- **Current limiting causes:** current-summary pressure run
+  `run_e3173c381918` reached the 48-call participant safety limit before an
+  exact terminal decision. Stabilization runs `run_43f57f7751f4` and
+  `run_0f1f1b031e02` separately failed on explicit Luna capacity rejections;
+  the latter first completed 11 Luna participant calls. Operator judgment is
+  required before raising the structural call ceiling or retrying/switching the
+  selected route. Slice 21C remains gated on valid current-revision pressure
+  and stabilization canaries.
 
 ## Explicit MVP Deferrals
 

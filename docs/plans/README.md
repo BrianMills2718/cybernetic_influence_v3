@@ -30,10 +30,11 @@ and human readout. Do not manufacture empty turns or add a general game-master
 actor.
 
 [Slice 21: Coordination-environment assay](021-coordination-environment-assay.md)
-is planned after Slice 20. It builds one synthetic, recurring multinational
-decision first; only then does it add paper-inspired evidence measures and a
-baseline/pressure/stabilization comparison. Its evasion extensions remain
-gated. [Slice 22: Composite-agency perturbation
+has completed its recurring scenario, measurement contracts, and deployed
+measurement readout. Its Luna/medium baseline canary is accepted; pressure is
+stopped at the participant safety bound and stabilization is blocked by a
+repeated explicit Luna capacity rejection. Slice 21C has not begun, and its
+evasion extensions remain gated. [Slice 22: Composite-agency perturbation
 assay](022-composite-agency-perturbation-assay.md) is a separate gate after
 Slice 21C; it reuses the same scenario to test goal preservation, correction,
 recovery, and rerouting under concrete perturbations without creating an

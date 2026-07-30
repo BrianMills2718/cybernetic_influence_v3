@@ -14,6 +14,38 @@ The service binds only to `127.0.0.1:8620`. Tailscale Serve adds the
 tailnet-only HTTPS listener. Do not use Funnel for this port, and do not reset
 the machine's Serve configuration because its other listeners are unrelated.
 
+Packet 21B2 deployment observed 2026-07-30:
+
+- simulator `9975e22484cf89bf219684d6d83b4993e2f1bf61` and shared client
+  `144d118658ee1c99275576e7e212475021613930` are running behind the private
+  URL. The config advertises only `codex/gpt-5.6-luna` at medium reasoning,
+  with 48 participant, 57 narrator, and one post-run coder call allowed;
+- fresh generic participant/narrator certification observations are
+  `routeobs1_56b0b98db7c880cb98e97fb6` and
+  `routeobs1_8144013e9491d66c2cd7324f`. The five Coordination person schemas
+  plus `CoderOutput` are bound by
+  `routeobs1_e50f88ee18b0a0f274c50416`,
+  `routeobs1_9c882b94dff926589efd0d35`,
+  `routeobs1_10adfdcddfacb0a164ee52b8`,
+  `routeobs1_391ff629f3382ea8890adc64`,
+  `routeobs1_ae8a98a5feafd2c73e73f598`, and
+  `routeobs1_5f0084307ba9a3a313314a94`;
+- accepted baseline `run_77448454c858` completed 41 participant, 30 narrator,
+  and one coder call through Luna/medium with no fallback and complete
+  subscription-included zero-cost coverage. It retained exact
+  `deploy_on_time`, full scope, all five partners, zero final open risks, and a
+  valid provenance-labeled measurement;
+- current-summary pressure `run_e3173c381918` ended at the 48-call participant
+  safety limit before a terminal decision, after earlier retained pressure
+  runs exposed and motivated the narrator-bound and completion-summary
+  repairs;
+- stabilization `run_43f57f7751f4` failed on its first participant call with
+  Luna's explicit `Selected model is at capacity` response. Replacement
+  `run_0f1f1b031e02` completed 11 participant calls, then received the same
+  response on call 12. No third retry was launched. These failures are Codex
+  subscription capacity evidence, not OpenRouter activity or a demonstrated
+  prompt/schema defect.
+
 Live execution uses the shared `llm_client` checkout at
 `/Users/b/code/llm_client`. The LaunchAgent starts through
 `deploy/run-with-provider-secret.sh`, which first verifies that the Codex CLI is
