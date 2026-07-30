@@ -3,7 +3,7 @@ doc_role: source_evidence
 authority: evidence
 status: active
 created: 2026-07-25
-updated: 2026-07-27
+updated: 2026-07-30
 ---
 
 # Source Note: *From Minds to Coordination*
@@ -202,9 +202,10 @@ at least four possible patterns: loss of competence, effective-goal drift or
 capture, fragmentation into incompatible subgroups, and successful defensive
 adaptation. Rational caution is not automatically degradation.
 
-The coordination assay must be observed before this composite-agency assay.
-The former establishes the concrete multi-episode substrate and derived
-measurements; the latter reuses it for matched perturbations under
+The current MVP uses this connection to produce an observational,
+Levin-informed per-run readout alongside the Waltzman readout. Stronger claims
+about recovery, robustness, member replacement, or persuadability remain later
+experimental questions under
 [ADR 006](../adr/006-boundaries-are-derived-coarse-grainings.md).
 
 ## What the paper does not establish
@@ -227,15 +228,50 @@ does not establish:
 
 ## Project implications
 
-The project will:
+The paper affects three different contracts and must not be flattened into one
+trace or measurement requirement.
 
-- model local beliefs, information deliveries, requests, commitments, and
-  decisions as concrete simulation state and events;
-- derive paper-inspired measurements after execution with exact evidence
-  step-down under [ADR 012](../adr/012-decision-environment-measures-are-derived.md);
-- compare baseline, heterogeneous pressure, and stabilization conditions;
-- separate direct trace measures from LLM-coded analytical judgments;
-- report indicator vectors and uncertainty without collapsing them into a
-  universal trust, coordination, or agency score; and
-- defer evasion and composite-agency assays until the basic coordination
-  vertical is observed.
+### Scenario inputs
+
+The scenario language must be able to represent:
+
+- heterogeneous sources, messages, recipients, channels, timing, repetition,
+  and local context;
+- different person-local credibility judgments, perceived risks, commitments,
+  and decision thresholds;
+- formal and informal decision procedures, authority, feedback, deadlines, and
+  stabilizing resources; and
+- adaptive, distributed, persistent, or intermittent interaction patterns when
+  the selected scenario requires them.
+
+The hypothesis that heterogeneous messages can collectively change decision
+conditions without sharing one narrative is primarily a scenario-expressiveness
+requirement. It is not itself a per-run measurement.
+
+### Per-run analysis
+
+After execution, a versioned analysis specification may use configuration,
+world state, events, representation lineage, participant output, timing,
+boundary activity, and completion evidence to derive:
+
+- trust-structure, perceived-risk, and coordination-readiness findings;
+- local and subgroup differences;
+- interactions among those dimensions; and
+- an observational Levin-informed account of collective goal pursuit through
+  the same concrete substrate.
+
+The retained trace is one input to a broader run-evidence bundle. Exact,
+calculated, and LLM-coded findings remain visibly separate, and narrator prose
+is not measurement source truth.
+
+### Post-MVP experiments
+
+Repeated baseline/pressure/stabilization comparisons, directional-invariant
+claims, evasion challenges, controlled perturbations, member replacement,
+robustness, persuadability, causal attribution, and empirical calibration
+belong to an explicit experiment specification after the per-run MVP is
+observed.
+
+No layer collapses its findings into a universal trust, coordination, or agency
+score. [ADR 012](../adr/012-decision-environment-measures-are-derived.md)
+governs the measurement/evidence separation.

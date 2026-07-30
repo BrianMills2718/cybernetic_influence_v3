@@ -14,6 +14,13 @@ The service binds only to `127.0.0.1:8620`. Tailscale Serve adds the
 tailnet-only HTTPS listener. Do not use Funnel for this port, and do not reset
 the machine's Serve configuration because its other listeners are unrelated.
 
+Planning disposition updated 2026-07-30: the Packet-21C capacity and resume
+records below remain dated runtime evidence, but they are no longer an active
+instruction to launch the repeated comparison. The canonical
+[roadmap](../ROADMAP.md) and [goal](../GOAL.md) now route MVP work through
+[Slice 24](../plans/024-configurable-theory-analysis-mvp.md). A future
+comparison requires explicit post-MVP selection.
+
 Packet 21C1 deployment and capacity boundary observed 2026-07-30:
 
 - simulator `b2f0655e8a613cbc109467332dcbe0cadff5b93a` and unchanged shared

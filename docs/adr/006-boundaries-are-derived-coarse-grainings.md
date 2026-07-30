@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 2026-07-23; boundary-flow clarification accepted 2026-07-28.
+Accepted — 2026-07-23; boundary-flow clarification accepted 2026-07-28;
+observational-versus-experimental agency clarification accepted 2026-07-30.
 
 ## Context
 
@@ -185,17 +186,25 @@ boundary did or did not preserve its reviewed goal:
 - degraded coordination can prevent distributed commitments from becoming a
   timely collective action.
 
-The corresponding composite-agency claim requires a second experimental layer
-after the coordination assay. It compares matched component, structural,
-feedback, and shock interventions and measures goal preservation, correction,
-recovery, rerouting, and member-replacement robustness. A slow or cautious
-decision is not by itself loss of agency: the goal specification must include
-the relevant validity and safety constraints, not only speed or deployment.
+One run can support an observational Levin-informed readout: candidate goal and
+constraints, boundary inputs and outputs, collective glue, internal coordination
+episodes, and any error correction, persistence, adaptation, or fragmentation
+that actually occurred. Unobserved robustness, recovery, member replacement,
+and persuadability remain `not_tested`.
 
-This connection is specified in
-[Slice 22](../plans/022-composite-agency-perturbation-assay.md). It does not
-change this ADR's prohibition on aggregate executors or authorize a scalar
-agency score.
+A stronger composite-agency claim requires a later experimental layer. It may
+compare matched component, structural, feedback, and shock interventions and
+measure goal preservation, correction, recovery, rerouting, and
+member-replacement robustness. A slow or cautious decision is not by itself
+loss of agency: the goal specification must include the relevant validity and
+safety constraints, not only speed or deployment.
+
+The per-run MVP connection is specified in
+[Slice 24](../plans/024-configurable-theory-analysis-mvp.md); the stronger
+experimental connection remains in post-MVP
+[Slice 22](../plans/022-composite-agency-perturbation-assay.md). Neither changes
+this ADR's prohibition on aggregate executors or authorizes a scalar agency
+score.
 
 This ADR records the question but does not authorize organization-level
 executors, agency scores, causal-attribution machinery, or a new MVP scenario.

@@ -1,20 +1,32 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: in_progress_21b1_complete
+status: completed_foundation_comparison_deferred
 created: 2026-07-25
-updated: 2026-07-29
+updated: 2026-07-30
 ---
 
 # Slice 21: Coordination-environment assay
 
+## Current disposition
+
+The recurring coordination runtime, typed boundary activity, per-run
+Waltzman-inspired measurement, readout, and provider-free comparison contract
+are completed reusable foundations. The former active 21C1–21C2 repeated live
+matrix is now post-MVP and must not be resumed from this document.
+
+Current execution authority moved to
+[Slice 24](024-configurable-theory-analysis-mvp.md), which makes the scenario
+configurable and adds separate per-run Waltzman and Levin analysis over a
+common evidence bundle. This plan remains the implementation/evidence history
+for the fixed scenario and its optional future comparison machinery.
+
 ## Assignment boundary
 
-Begin only after Packet 20D2's completion record and dual-level narration are
-implemented and observed. Implement 21A and obtain its human readout before
-21B. Implement 21B and inspect its full measurement traces before 21C. Do not
-begin the evasion variants or Levin-style composite-agency assay until the
-baseline/pressure/stabilization vertical passes.
+Do not execute another packet from this plan under the current MVP goal.
+If repeated comparison is explicitly selected after MVP, re-plan from current
+canonical truth rather than treating the historical 21C sequence as standing
+authorization.
 
 Work in a clean linked worktree based on the current clean descendant of
 `main`. For each packet below: implement only that packet, run its
@@ -1156,7 +1168,9 @@ Terra pressure `run_2a4055a4a51f` completed at the exact day-10
 partners, two final open risks, and a valid measurement in 48 participant, 43
 narrator, and one coder call. Those 92 calls had no error, retry, or fallback
 and complete `subscription_included` zero-cost coverage. The three-condition
-gate is accepted with 250 same-route calls total; Slice 21C is now next.
+gate is accepted with 250 same-route calls total. Under the superseded
+comparison-centered goal, Slice 21C was next. Under the current goal, this
+accepted gate is reusable evidence and Slice 24 is active.
 
 **Slice 21B is done when:**
 
@@ -1167,14 +1181,17 @@ gate is accepted with 250 same-route calls total; Slice 21C is now next.
 - rerendering a retained measurement makes no provider call; and
 - full measurement traces pass direct inspection.
 
-## Slice 21C — Baseline, pressure, and stabilization comparison
+## Slice 21C — Historical post-MVP comparison
+
+This section preserves implemented comparison contracts and incomplete run
+evidence. It is not part of the active MVP sequence.
 
 **Classification:** representative comparison.
 
 ### Packet 21C0 — Comparison contract and zero-cost matrix
 
 Freeze the comparison schema, validity rules, batch fingerprint, and replicate
-count before paid execution. For the MVP use two valid trajectories per
+count before paid execution. The historical design used two valid trajectories per
 condition (six total); this is an exploratory paired PoC, not statistical
 inference. Run a six-run scripted matrix at zero cost. Calculation must preserve
 per-run values, invalid runs, missing indicators, subgroup disagreement,
@@ -1236,16 +1253,16 @@ was launched. That failure reproduced a v1 contract gap: replacing it would
 either hide the invalid attempt or displace one of the six required valid
 slots. Version 2 now retains such attempts separately with strict
 configuration, cost, fingerprint-availability, invalid-count, and
-content-fingerprint controls. Packet 21C1 remains incomplete pending restored
-capacity and explicit replacement authorization.
+content-fingerprint controls. Packet 21C1 remains historically incomplete; it
+is not waiting on capacity under the current goal.
 
-### Packet 21C2 — Comparison readout, sign-off, and MVP closeout
+### Packet 21C2 — Historical comparison readout and sign-off
 
 Add the comparison to existing Run history with condition summaries,
 trajectory/range views, invalid-run counts, subgroup disagreement, limitations,
 and step-down to each retained run and exact evidence. Use independent
 evaluation sign-off before the comparison changes a continue/stop decision.
-Then obtain the human MVP readout: the operator can explain the synthetic result
+Then obtain the historical comparison readout: the operator can explain the synthetic result
 from narrative/maps, dispute a measurement, identify why each run stopped, and
 finds no demo-blocking comprehension or control defect. Record that evidence,
 mark Slices 20–21 complete, update the roadmap and plan index, commit, and stop.
@@ -1266,7 +1283,7 @@ application or a hidden batch-run store.
 - consequential interpretation receives independent evaluation sign-off before
   it changes the roadmap.
 
-## Later extensions, gated by 21C
+## Post-MVP candidate extensions
 
 ### 21D — Evasion challenge conditions
 

@@ -1,27 +1,29 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: gated_by_slice_21c
+status: post_mvp_candidate
 created: 2026-07-27
-updated: 2026-07-28
+updated: 2026-07-30
 ---
 
 # Slice 22: Composite-agency perturbation assay
 
 ## Assignment boundary
 
-Do not implement this plan until Slice 21C has produced a valid, human-readable
-baseline/pressure/stabilization comparison and its consequential interpretation
-has passed the required evaluation sign-off. Slice 22 reuses that exact scenario,
-measurement specification, run store, graph, narrative, and comparison surface.
+This is a post-MVP experimental candidate, not the current MVP goal. Do not
+implement it until the configurable per-run workflow in
+[Slice 24](024-configurable-theory-analysis-mvp.md) is complete and the operator
+explicitly selects a robustness, recovery, member-replacement, or
+persuadability question that requires controlled perturbation.
+
+When selected, re-plan this candidate against current scenario, evidence-bundle,
+analysis, run-store, graph, and narrative contracts. Do not assume that
+completion of the historical Slice 21 comparison is the only valid gate.
 It does not create another scenario, organization executor, agency score,
 general causal-attribution framework, or generalized perturbation DSL.
 
-Work in a clean linked worktree based on the canonical clean descendant of
-`main` containing accepted Slice 21C. Implement 22A, audit and obtain its
-readout, then re-plan the exploratory thresholds before 22B. Do not spend on
-live or repeated runs without separately reporting the exact call topology and
-hard cost cap and obtaining explicit authorization.
+The detailed contracts below remain design evidence, not standing execution
+authority.
 
 ## Analyst outcome
 

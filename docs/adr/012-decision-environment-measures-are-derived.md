@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: accepted
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-07-30
 ---
 
 # ADR-012: Decision-environment measures are derived
@@ -40,12 +40,28 @@ The runtime continues to model:
 - exact or explicitly coarse mechanisms that commit world effects; and
 - execution-inert analytical boundaries over concrete components.
 
-A measurement layer may derive a decision-environment readout from those
-records. Every derived indicator must declare:
+A measurement layer may derive a decision-environment readout from a retained
+run-evidence bundle. The trace is one evidence source, not the definition of a
+construct. The bundle may include:
+
+- approved scenario configuration and analysis specification;
+- initial, intermediate, and terminal world-state evidence;
+- events and causal parents;
+- information source, representation, ownership, lineage, and delivery;
+- participant observations, attempts, and retained analytical output;
+- mechanism decisions, commits, and rejections;
+- analytical-boundary activity and coordination episodes;
+- modeled timing, outcome, completion reason, and fidelity declarations; and
+- run/model identity and integrity metadata.
+
+Narrator prose is a presentation artifact and is not measurement source truth.
+
+Every derived indicator must declare:
 
 1. its construct and operational definition;
 2. whether it is exact, calculated, or LLM-coded;
-3. the event, state, representation, or trace evidence it uses;
+3. the configuration, event, state, representation, participant, boundary, or
+   other retained evidence it uses;
 4. its aggregation rule, direction, and uncertainty;
 5. what passing the indicator does not establish; and
 6. the version of the measurement specification that produced it.
@@ -70,8 +86,11 @@ measurement contract is satisfied.
 - Coordination readiness is read from behavior such as decision latency,
   reopened issues, commitment divergence, and disengagement rather than from a
   hidden organizational mood.
-- Measurement specifications remain replaceable and versioned independently of
+- Scenario, run, analysis, and experiment specifications remain distinct.
+  Measurement specifications are replaceable and versioned independently of
   scenario execution.
+- A corrupt or failed analysis cannot invalidate or mutate an otherwise
+  completed world run.
 - Intervention comparisons can test whether configured policies, information
   routes, or feedback mechanisms change outcomes without inventing an
   organization-level executor.

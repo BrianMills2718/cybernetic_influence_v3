@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-07-27
+updated: 2026-07-30
 ---
 
 # Implementation Plans
@@ -13,6 +13,18 @@ per completed slice; completed plans are historical evidence, not independent
 instructions to continue their former “next slice” sections.
 
 ## Current sequence
+
+[Slice 24: Configurable theory-informed simulation
+MVP](024-configurable-theory-analysis-mvp.md) is the active bounded design. It
+extends conversational authoring to the existing multi-episode coordination
+runtime, retains a theory-neutral run-evidence bundle, and renders separate
+Waltzman and Levin per-run findings. Its provider-free configured vertical comes
+first; conversational/live proof follows only at the plan's explicit gates.
+
+The active sequence no longer continues from Packet 21C0 into a paid repeated
+comparison. The [current goal](../GOAL.md) and
+[roadmap](../ROADMAP.md) distinguish scenario inputs, run controls, per-run
+analysis, and post-MVP experiments.
 
 [Slice 23: Codex subscription backend](023-codex-subscription-backend.md) is a
 completed deployment-path replacement for the existing live verticals, not a
@@ -41,21 +53,16 @@ provider-free six-run matrix are complete. Packet 21C1's exact deployment is
 complete, but its authorized second-baseline attempt retained a zero-cost
 Codex subscription capacity rejection before any world event. Comparison
 schema version 2 now retains that invalid attempt outside the six selected
-slots without contributing it to measurement values. The next boundary is
-restored capacity plus explicit authorization for one replacement baseline;
-later evasion extensions remain gated.
+slots without contributing it to measurement values. Those comparison artifacts
+remain valid post-MVP infrastructure, but 21C1–21C2 are no longer active work.
 [Slice 22: Composite-agency perturbation
-assay](022-composite-agency-perturbation-assay.md) is a separate gate after
-Slice 21C; it reuses the same scenario to test goal preservation, correction,
-recovery, and rerouting under concrete perturbations without creating an
-organization executor or an agency score.
+assay](022-composite-agency-perturbation-assay.md) is a post-MVP candidate. It
+tests goal preservation, correction, recovery, and rerouting under controlled
+perturbations without creating an organization executor or an agency score.
 
-The roadmap's [ordered MVP completion
-packets](../ROADMAP.md#ordered-mvp-completion-packets) are the sole continuation
-sequence. Assign one packet at a time and require its commit/evidence report.
-Certification, deployment, provider spend, human readout, and independent
-comparison sign-off remain explicit stops. The research MVP ends at 21C2;
-21D and Slice 22 are later gated choices, not unfinished MVP work.
+Slice 24's ordered packets are the sole continuation sequence. Assign one
+packet at a time and require its commit/evidence report. Certification,
+deployment, provider calls, and human readout remain explicit stops.
 
 The source interpretation is retained in
 [From Minds to Coordination](../research/001-from-minds-to-coordination.md);
