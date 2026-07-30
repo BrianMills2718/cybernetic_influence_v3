@@ -21,9 +21,15 @@ from cybernetic_influence.narration import (
     validate_retained_narration,
 )
 from cybernetic_influence.run_store import RunStore
+from cybernetic_influence.run_configuration import MAXIMUM_NARRATOR_CALLS
+from cybernetic_influence.scenarios.coordination_decision import MAX_CAUSAL_MOMENTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_narrator_limit_covers_coordination_activation_and_exact_work_bound() -> None:
+    assert MAXIMUM_NARRATOR_CALLS == 2 * MAX_CAUSAL_MOMENTS + 1
 
 
 def narrated_response(

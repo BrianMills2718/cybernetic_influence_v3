@@ -500,7 +500,7 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
     ) -> dict[str, object]:
         del document, trace_id_prefix
         assert reasoning_effort == "none"
-        assert max_calls == 32
+        assert max_calls == 57
         captured_narration.append((model, max_total_cost))
         return {
             "status": "completed",
@@ -573,7 +573,7 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
         "participant_per_call_ceiling": 0.05,
         "narrator_per_call_ceiling": 0.025,
         "maximum_participant_calls": 48,
-        "maximum_narrator_calls": 32,
+        "maximum_narrator_calls": 57,
         "selection_basis": "operator_selected",
         "llm_client_revision": CLIENT_REVISION,
         "billing_mode": "usage_based",

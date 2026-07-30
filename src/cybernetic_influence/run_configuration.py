@@ -17,6 +17,9 @@ from cybernetic_influence.llm_backend import (
     is_codex_subscription_model,
 )
 from cybernetic_influence.narration import NARRATOR_MAX_BUDGET
+from cybernetic_influence.scenarios.coordination_decision import (
+    MAX_CAUSAL_MOMENTS as COORDINATION_MAX_CAUSAL_MOMENTS,
+)
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh"]
 DEFAULT_MODEL = CODEX_LUNA_MODEL
@@ -27,9 +30,11 @@ NARRATOR_PER_CALL_CEILING = NARRATOR_MAX_BUDGET
 SERVER_MAX_TOTAL_COST = 0.74
 DEFAULT_MAX_TOTAL_COST = 0.74
 MAXIMUM_PARTICIPANT_CALLS = 48
-# The multirate Service Desk may retain participant and exact-work moments in
-# one run.  This bounds a complete account of that representative trace.
-MAXIMUM_NARRATOR_CALLS = 32
+# A Coordination trajectory may retain one activation moment for every allowed
+# attempt plus one coalesced exact-work span before, between, or after those
+# attempts. Preserve the preflight guard while admitting the scenario's full
+# structural bound instead of a smaller service-desk-sized trace.
+MAXIMUM_NARRATOR_CALLS = 2 * COORDINATION_MAX_CAUSAL_MOMENTS + 1
 CERTIFICATION_MAX_AGE = timedelta(days=7)
 
 class _RouteAdvertisement(TypedDict):
