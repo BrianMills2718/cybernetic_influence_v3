@@ -6,6 +6,8 @@ import plistlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+from llm_client import installed_llm_client_revision
 from llm_client.route_certification import (
     RouteCertificationObservation,
     RouteCertificationStore,
@@ -25,6 +27,7 @@ from cybernetic_influence.run_configuration import (
 MODEL = "openrouter/openai/gpt-5.6-terra"
 CODEX_MODEL = "codex/gpt-5.6-luna"
 ROOT = Path(__file__).resolve().parents[1]
+CLIENT_REVISION = installed_llm_client_revision()
 
 
 def test_launch_agent_binds_global_and_coordination_certification_groups() -> None:
@@ -51,14 +54,34 @@ def test_launch_agent_binds_global_and_coordination_certification_groups() -> No
         "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH"
     ] == "__CERT_COORDINATION_DEEPSEEK_V4_FLASH__"
 
+    launcher = (ROOT / "deploy" / "run-with-provider-secret.sh").read_text()
+    assert "validated_llm_client_revision" in launcher
 
-def test_local_package_revision_matches_shared_client_observation_format(
+
+def test_local_revision_uses_validated_shared_client(
     monkeypatch: MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("LLM_CLIENT_REVISION", raising=False)
-    monkeypatch.setattr("cybernetic_influence.run_configuration.version", lambda _: "0.7.0")
+    monkeypatch.setattr(
+        "cybernetic_influence.run_configuration.validated_llm_client_revision",
+        lambda: "installed-revision",
+    )
 
-    assert llm_client_revision() == "package:0.7.0"
+    assert llm_client_revision() == "installed-revision"
+
+
+def test_local_revision_rejects_a_false_deployment_binding(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    def reject() -> str:
+        raise ValueError("configured llm_client revision does not match installed code")
+
+    monkeypatch.setattr(
+        "cybernetic_influence.run_configuration.validated_llm_client_revision",
+        reject,
+    )
+
+    with pytest.raises(ValueError, match="does not match installed code"):
+        llm_client_revision()
 
 
 def _observation(
@@ -81,7 +104,7 @@ def _observation(
         logical_call_id=f"logical-{schema_class}",
         trace_id=f"trace-{schema_class}",
         observed_at=observed_at,
-        llm_client_revision="test-revision",
+        llm_client_revision=CLIENT_REVISION,
         selected_attempt_receipt_digest="b" * 64,
         evidence_ref=f"/test/{schema_class}.json",
     )
@@ -107,7 +130,7 @@ def _coordination_observation(
         logical_call_id=f"logical-{schema_class}",
         trace_id=f"trace-{schema_class}",
         observed_at=observed_at,
-        llm_client_revision="test-revision",
+        llm_client_revision=CLIENT_REVISION,
         selected_attempt_receipt_digest="c" * 64,
         evidence_ref=f"/test/{schema_class}.json",
     )
@@ -133,7 +156,7 @@ def _codex_observation(
         logical_call_id=f"logical-{schema_class}",
         trace_id=f"trace-{schema_class}",
         observed_at=observed_at,
-        llm_client_revision="test-revision",
+        llm_client_revision=CLIENT_REVISION,
         selected_attempt_receipt_digest=None,
         evidence_ref=f"/test/{schema_class}.json",
     )
@@ -153,7 +176,7 @@ def test_codex_catalog_requires_login_and_exact_schema_observations(
         "cybernetic_influence.run_configuration.codex_subscription_available",
         lambda: True,
     )
-    monkeypatch.setenv("LLM_CLIENT_REVISION", "test-revision")
+    monkeypatch.setenv("LLM_CLIENT_REVISION", CLIENT_REVISION)
     monkeypatch.setenv("LLM_ROUTE_CERTIFICATION_ROOT", str(tmp_path))
     monkeypatch.setenv(
         "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA",
@@ -189,7 +212,7 @@ def test_model_catalog_requires_two_current_replayed_schema_observations(
     store.append(participant)
     store.append(narrator)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.setenv("LLM_CLIENT_REVISION", "test-revision")
+    monkeypatch.setenv("LLM_CLIENT_REVISION", CLIENT_REVISION)
     monkeypatch.setenv("LLM_ROUTE_CERTIFICATION_ROOT", str(tmp_path))
     monkeypatch.setenv(
         "CYBERNETIC_INFLUENCE_CERT_TERRA",
@@ -221,7 +244,7 @@ def test_stale_route_observations_do_not_advertise(
     store.append(participant)
     store.append(narrator)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.setenv("LLM_CLIENT_REVISION", "test-revision")
+    monkeypatch.setenv("LLM_CLIENT_REVISION", CLIENT_REVISION)
     monkeypatch.setenv("LLM_ROUTE_CERTIFICATION_ROOT", str(tmp_path))
     monkeypatch.setenv(
         "CYBERNETIC_INFLUENCE_CERT_TERRA",
@@ -246,7 +269,7 @@ def test_coordination_requires_every_current_person_schema_observation(
     for observation in [participant, narrator, *coordination]:
         store.append(observation)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.setenv("LLM_CLIENT_REVISION", "test-revision")
+    monkeypatch.setenv("LLM_CLIENT_REVISION", CLIENT_REVISION)
     monkeypatch.setenv("LLM_ROUTE_CERTIFICATION_ROOT", str(tmp_path))
     monkeypatch.setenv(
         "CYBERNETIC_INFLUENCE_CERT_TERRA",
@@ -277,6 +300,7 @@ def test_experimental_deepseek_effort_is_resolved_without_claiming_certification
                 "agent_reasoning_efforts": ["none", "high", "xhigh"],
                 "experimental_agent_reasoning_efforts": ["high", "xhigh"],
                 "narrator_reasoning_effort": "none",
+                "billing_mode": "usage_based",
             }
         ],
     )

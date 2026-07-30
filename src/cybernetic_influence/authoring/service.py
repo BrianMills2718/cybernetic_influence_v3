@@ -6,7 +6,7 @@ import json
 from collections.abc import Callable
 from hashlib import sha256
 from importlib import resources
-from typing import Annotated, Any, Literal, cast
+from typing import Annotated, Any, Literal, TypedDict, cast
 
 import yaml
 from jinja2 import Environment, StrictUndefined
@@ -41,24 +41,41 @@ AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "ma
 AUTHORING_MODEL: AuthoringModel = CODEX_LUNA_MODEL
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
-AUTHORING_MODEL_OPTIONS: tuple[dict[str, str], ...] = (
+
+
+class AuthoringModelOption(TypedDict):
+    model: AuthoringModel
+    label: str
+    provider: str
+    billing_mode: Literal["subscription_included", "usage_based"]
+    reasoning_efforts: tuple[AuthoringReasoningEffort, ...]
+    default_reasoning_effort: AuthoringReasoningEffort
+
+
+AUTHORING_MODEL_OPTIONS: tuple[AuthoringModelOption, ...] = (
     {
         "model": CODEX_LUNA_MODEL,
         "label": "Luna",
         "provider": "ChatGPT Codex subscription",
         "billing_mode": "subscription_included",
+        "reasoning_efforts": ("low", "medium", "high"),
+        "default_reasoning_effort": "medium",
     },
     {
         "model": "openrouter/openai/gpt-5.6-terra",
         "label": "Terra",
         "provider": "OpenRouter",
         "billing_mode": "usage_based",
+        "reasoning_efforts": ("none", "low", "medium", "high", "xhigh", "max"),
+        "default_reasoning_effort": "medium",
     },
     {
         "model": "openrouter/openai/gpt-5.6-sol",
         "label": "Sol",
         "provider": "OpenRouter",
         "billing_mode": "usage_based",
+        "reasoning_efforts": ("none", "low", "medium", "high", "xhigh", "max"),
+        "default_reasoning_effort": "medium",
     },
 )
 AUTHORING_REASONING_EFFORTS: tuple[AuthoringReasoningEffort, ...] = (
@@ -247,10 +264,18 @@ class DraftAuthoringService:
         model: AuthoringModel = AUTHORING_MODEL,
         reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT,
     ) -> dict[str, object]:
-        if model not in {item["model"] for item in AUTHORING_MODEL_OPTIONS}:
+        selected_model = next(
+            (item for item in AUTHORING_MODEL_OPTIONS if item["model"] == model),
+            None,
+        )
+        if selected_model is None:
             raise ValueError("unsupported authoring model")
-        if reasoning_effort not in AUTHORING_REASONING_EFFORTS:
-            raise ValueError("unsupported authoring reasoning effort")
+        supported_efforts = selected_model["reasoning_efforts"]
+        if reasoning_effort not in supported_efforts:
+            raise ValueError(
+                f"{model} does not support authoring reasoning effort "
+                f"{reasoning_effort!r}; choose one of {', '.join(supported_efforts)}"
+            )
         current = self.store.get(draft_id)
         messages = current["messages"]
         assert isinstance(messages, list)

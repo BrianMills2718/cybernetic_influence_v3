@@ -486,12 +486,7 @@ async function loadConfig() {
     `<option value="${html(choice.model)}">${html(choice.label)} · ${html(choice.provider)}</option>`
   ).join('')
   $('#authoring-model').value = authoring.model || authoringModels[0]?.model || ''
-  const authoringReasoning = authoring.reasoning_efforts || [authoring.reasoning_effort || 'medium']
-  $('#authoring-reasoning').innerHTML = authoringReasoning.map((effort) => {
-    const label = {none:'None', low:'Low', medium:'Medium', high:'High', xhigh:'Extra high', max:'Max'}[effort] || effort
-    return `<option value="${html(effort)}">${html(label)}</option>`
-  }).join('')
-  $('#authoring-reasoning').value = authoring.reasoning_effort || authoringReasoning[0]
+  configureAuthoringReasoningChoices(authoring.reasoning_effort)
   $('#authoring-model').title = 'The model selected here will produce only the next saved draft revision.'
   $('#authoring-reasoning').title = 'The thinking level selected here will apply only to the next saved draft revision.'
   updateAuthoringRuntime()
@@ -671,6 +666,22 @@ function updateAuthoringRuntime() {
     : `Each attempt has a $${Number(authoring.maximum_cost_per_attempt || 0).toFixed(2)} request ceiling.`
   $('#authoring-runtime').textContent =
     `Your selected model and thinking level apply only to the next message. One message may make up to ${attempts} structured attempt(s). ${accounting} The saved conversation records the selection, trace, and observed cost for every revision.`
+}
+
+function configureAuthoringReasoningChoices(preferred = null) {
+  const authoring = runtimeConfig.authoring || {}
+  const choice = (authoring.models || []).find(
+    (item) => item.model === $('#authoring-model').value
+  )
+  const efforts = choice?.reasoning_efforts || authoring.reasoning_efforts || ['medium']
+  $('#authoring-reasoning').innerHTML = efforts.map((effort) => {
+    const label = {none:'None', low:'Low', medium:'Medium', high:'High', xhigh:'Extra high', max:'Max'}[effort] || effort
+    return `<option value="${html(effort)}">${html(label)}</option>`
+  }).join('')
+  $('#authoring-reasoning').value = efforts.includes(preferred)
+    ? preferred
+    : choice?.default_reasoning_effort || efforts[0]
+  updateAuthoringRuntime()
 }
 
 function configureReasoningChoices(preferred = null) {
@@ -1898,10 +1909,7 @@ function render(run) {
     : 'observed provider cost'
   $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator) · $${Number(current.cost).toFixed(6)} ${costCoverage} · ${current.run_id}`
   const llm = current.llm_configuration
-  const retainedModelChoice = (runtimeConfig.live_options?.models || []).find(
-    (choice) => choice.model === llm?.model
-  )
-  const retainedBilling = retainedModelChoice?.billing_mode
+  const retainedBilling = retainedBillingMode(current, llm)
   $('#run-config-readout').innerHTML = llm ? `
     <strong>Effective live configuration</strong>
     <span>${html(llm.model)}</span>
@@ -1943,6 +1951,17 @@ function render(run) {
   else $('#trace').innerHTML = '<p class="muted">No completed participant traces were retained.</p>'
   renderTimeline(current)
   $('#raw').textContent = JSON.stringify(current, null, 2)
+}
+
+function retainedBillingMode(run, llm) {
+  if (llm?.billing_mode) return llm.billing_mode
+  const calls = [...(run.model_call_summaries || []), ...(run.narration?.calls || [])]
+  if (calls.length && calls.every((call) => call.cost_source === 'subscription_included')) {
+    return 'subscription_included'
+  }
+  return (runtimeConfig.live_options?.models || []).find(
+    (choice) => choice.model === llm?.model
+  )?.billing_mode
 }
 
 $('#event-slider').oninput = (event) => selectMoment(Number(event.target.value))
@@ -2039,7 +2058,7 @@ $('#model').onchange = () => {
   updateAuthorizationPreview()
 }
 $('#authoring-live-model').onchange = () => configureAuthoringLiveReasoning()
-$('#authoring-model').onchange = updateAuthoringRuntime
+$('#authoring-model').onchange = () => configureAuthoringReasoningChoices()
 $('#reasoning').onchange = () => {
   updateReasoningHelp()
   updateAuthorizationPreview()

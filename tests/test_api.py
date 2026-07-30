@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+from llm_client import installed_llm_client_revision
 
 from cybernetic_influence.active_runtime import (
     ActiveRuntimeConfig,
@@ -44,6 +45,7 @@ from cybernetic_influence.scenarios.service_desk import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+CLIENT_REVISION = installed_llm_client_revision()
 
 
 def client(run_root: Path) -> TestClient:
@@ -226,6 +228,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function renderAuthoringPeople" in app_script.content
     assert b"/people/${encodeURIComponent(person.entity_id)}" in app_script.content
     assert b"reasoning_effort:$('#authoring-reasoning').value" in app_script.content
+    assert b"function configureAuthoringReasoningChoices" in app_script.content
+    assert b"choice?.reasoning_efforts" in app_script.content
+    assert b"function retainedBillingMode" in app_script.content
+    assert b"call.cost_source === 'subscription_included'" in app_script.content
     assert b"let previewRequestSerial = 0" in app_script.content
     assert b"requestSerial !== previewRequestSerial" in app_script.content
     assert b"/api/scenarios/${encodeURIComponent(scenario)}/preview" in app_script.content
@@ -456,7 +462,7 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
-                "LLM_CLIENT_REVISION": "test-client-revision",
+                "LLM_CLIENT_REVISION": CLIENT_REVISION,
             },
         ),
         patch(
@@ -513,7 +519,8 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
         "maximum_participant_calls": 48,
         "maximum_narrator_calls": 32,
         "selection_basis": "operator_selected",
-        "llm_client_revision": "test-client-revision",
+        "llm_client_revision": CLIENT_REVISION,
+        "billing_mode": "usage_based",
     }
 
 
@@ -1322,7 +1329,7 @@ def test_live_service_desk_resume_reuses_retained_llm_configuration(
         "run_id": "run_feed00000000", "created_at": "2026-07-24T00:00:00+00:00",
         "status": "paused", "scenario": "service_desk", "arm": "baseline",
         "profile": "position_context", "execution": "live",
-        "llm_configuration": {"model": "openrouter/deepseek/deepseek-v4-flash", "agent_reasoning_effort": "none", "narrator_reasoning_effort": "none", "max_total_cost": 0.20, "participant_per_call_ceiling": 0.05, "narrator_per_call_ceiling": 0.02, "maximum_participant_calls": 48, "maximum_narrator_calls": 12, "selection_basis": "operator_selected", "llm_client_revision": "test-client"},
+        "llm_configuration": {"model": "openrouter/deepseek/deepseek-v4-flash", "agent_reasoning_effort": "none", "narrator_reasoning_effort": "none", "max_total_cost": 0.20, "participant_per_call_ceiling": 0.05, "narrator_per_call_ceiling": 0.02, "maximum_participant_calls": 48, "maximum_narrator_calls": 12, "selection_basis": "operator_selected", "llm_client_revision": CLIENT_REVISION},
         "continuation": {"checkpoint": retained_checkpoint.model_dump(mode="json")},
     })
     captured: list[tuple[str, str]] = []
@@ -1339,14 +1346,14 @@ def test_live_service_desk_resume_reuses_retained_llm_configuration(
         max_total_cost=0.20,
         maximum_narrator_calls=12,
         selection_basis="operator_selected",
-        llm_client_revision="test-client",
+        llm_client_revision=CLIENT_REVISION,
     )
     with (
         patch.dict(
             "os.environ",
             {
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
-                "LLM_CLIENT_REVISION": "test-client",
+                "LLM_CLIENT_REVISION": CLIENT_REVISION,
             },
         ),
         patch(
@@ -1401,7 +1408,7 @@ def test_live_service_desk_resume_reuses_retained_llm_configuration(
             "os.environ",
             {
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
-                "LLM_CLIENT_REVISION": "test-client",
+                "LLM_CLIENT_REVISION": CLIENT_REVISION,
             },
         ),
         patch(
@@ -1860,7 +1867,7 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
                 "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH": "test-coordination-canary",
-                "LLM_CLIENT_REVISION": "test-client-revision",
+                "LLM_CLIENT_REVISION": CLIENT_REVISION,
             },
         ),
         patch(

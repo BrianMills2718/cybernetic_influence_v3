@@ -264,6 +264,8 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
         ("Sol", "openrouter/openai/gpt-5.6-sol"),
     ]
     assert config["reasoning_efforts"] == ["none", "low", "medium", "high", "xhigh", "max"]
+    assert config["models"][0]["reasoning_efforts"] == ["low", "medium", "high"]
+    assert config["models"][0]["default_reasoning_effort"] == "medium"
 
     draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
     first = api.post(
@@ -320,6 +322,38 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
         },
     )
     assert reused.status_code == 409
+
+
+def test_luna_rejects_unsupported_authoring_effort_before_dispatch(tmp_path: Path) -> None:
+    calls: list[object] = []
+
+    def proposer(*args: object, **_kwargs: object) -> tuple[object, object]:
+        calls.append(args)
+        return _proposal(), _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=proposer,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    response = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "m1",
+            "message": "Model equipment checkout.",
+            "model": "codex/gpt-5.6-luna",
+            "reasoning_effort": "max",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "choose one of low, medium, high" in response.text
+    assert calls == []
 
 
 def test_provider_failure_becomes_a_visible_bounded_needs_input_state(tmp_path: Path) -> None:

@@ -21,6 +21,12 @@ explicit alternatives. No failed Codex call silently changes model or provider.
    provider cost with `subscription_included` evidence.
 5. If this exact route fails, the simulator fails loudly and reports the
    retained boundary; it does not upgrade or fall back automatically.
+6. A deployment-supplied client revision must match the imported shared-client
+   code before startup or certification. Certification validates the returned
+   content against the exact response model before retaining an observation.
+7. Authoring exposes only reasoning levels supported by the selected route,
+   and each retained run carries its own billing mode so history does not
+   change when the current model catalog changes.
 
 ## Canonical example
 
@@ -39,6 +45,9 @@ and realized-causal views.
 - [x] Add focused regression tests and run the full local checks.
 - [x] Deploy, certify the exact current schemas, and inspect one complete live
       trace before calling the route usable.
+- [x] Bind certification and startup to the installed shared-client revision,
+      validate certification content, constrain authoring reasoning by route,
+      and retain run-level billing provenance.
 
 ## Local evidence
 
@@ -55,6 +64,9 @@ and realized-causal views.
 - The earlier disinformation-campaign authoring prompt compiled into a ready
   typed proposal in two Luna attempts: one visible fidelity-question repair,
   then one accepted result. Both retained `$0` marginal cost.
+- The certification-integrity follow-up passed all 185 simulator tests, static
+  typing, the production frontend build, and deployment-launcher syntax. Its
+  focused configuration, authoring, and API boundary passed 58 tests.
 
 ## Deployed evidence
 

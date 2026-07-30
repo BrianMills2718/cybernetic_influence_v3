@@ -5,10 +5,10 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import cast
 
 from llm_client import (
     call_llm_structured,
-    codex_native_provider_schema,
     compile_codex_structured_success,
 )
 from llm_client.route_certification import RouteCertificationStore
@@ -53,6 +53,7 @@ def _certify(
     trace_id: str,
     store: RouteCertificationStore,
     evidence_root: Path,
+    llm_client_revision_value: str,
 ) -> str:
     with structured_backend_options(CODEX_LUNA_MODEL) as backend_options:
         parsed, result = call_llm_structured(
@@ -78,19 +79,19 @@ def _certify(
         raise RuntimeError(f"{schema.__name__} call retained no logical_call_id")
     observation = compile_codex_structured_success(
         result=result,
-        provider_schema=codex_native_provider_schema(schema),
-        schema_class=schema.__name__,
+        response_model=schema,
         trace_id=trace_id,
-        llm_client_revision=llm_client_revision(),
+        llm_client_revision=llm_client_revision_value,
         evidence_ref=(
             f"sqlite://{evidence_root.resolve()}#logical_call_id={logical_call_id}"
         ),
     )
     store.append(observation)
-    return observation.observation_id
+    return cast(str, observation.observation_id)
 
 
 def main() -> None:
+    revision = llm_client_revision()
     data_root = Path(
         os.environ.get("LLM_CLIENT_DATA_ROOT", "~/projects/data")
     ).expanduser()
@@ -108,6 +109,7 @@ def main() -> None:
             trace_id=f"cybernetic-influence/certification/luna/{schema.__name__}",
             store=store,
             evidence_root=observability_db,
+            llm_client_revision_value=revision,
         )
         for schema in (LlmDecision, CausalMomentNarration)
     ]
@@ -120,6 +122,7 @@ def main() -> None:
             ),
             store=store,
             evidence_root=observability_db,
+            llm_client_revision_value=revision,
         )
         for schema in COORDINATION_PERSON_DECISION_MODELS.values()
     ]

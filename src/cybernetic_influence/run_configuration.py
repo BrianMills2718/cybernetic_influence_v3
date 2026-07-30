@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timedelta, timezone
-from importlib.metadata import PackageNotFoundError, version
 from math import isfinite
 from pathlib import Path
 from typing import Literal, NotRequired, TypedDict, cast
 
+from llm_client import validated_llm_client_revision
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from cybernetic_influence.llm_backend import (
@@ -121,6 +121,7 @@ class EffectiveRunLlmConfiguration(BaseModel):
     maximum_narrator_calls: int = MAXIMUM_NARRATOR_CALLS
     selection_basis: Literal["server_default", "operator_selected"]
     llm_client_revision: str
+    billing_mode: Literal["subscription_included", "usage_based"] | None = None
 
 
 def model_catalog() -> list[dict[str, object]]:
@@ -431,18 +432,16 @@ def resolve_live_configuration(
             "server_default" if options is None else "operator_selected"
         ),
         llm_client_revision=llm_client_revision(),
+        billing_mode=cast(
+            Literal["subscription_included", "usage_based"],
+            choice["billing_mode"],
+        ),
     )
 
 
 def llm_client_revision() -> str:
-    """Return the same package/deployment revision form used by shared-client evidence."""
-    bound = os.getenv("LLM_CLIENT_REVISION", "").strip()
-    if bound:
-        return bound
-    try:
-        return f"package:{version('llm-client')}"
-    except PackageNotFoundError:
-        return "unknown-development"
+    """Return the installed shared-client revision after validating any binding."""
+    return cast(str, validated_llm_client_revision())
 
 
 def live_options_contract() -> dict[str, object]:

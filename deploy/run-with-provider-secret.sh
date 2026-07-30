@@ -16,6 +16,12 @@ if [[ "$codex_login_status" != *"Logged in using ChatGPT"* ]]; then
 fi
 unset codex_login_status
 
+if [[ $# -lt 1 || ! -x "$1" ]]; then
+  echo "The simulator launcher requires an executable Python command." >&2
+  exit 78
+fi
+"$1" -c 'from llm_client import validated_llm_client_revision; validated_llm_client_revision()'
+
 keychain_service="${CYBERNETIC_INFLUENCE_OPENROUTER_KEYCHAIN_SERVICE:-cybernetic-influence-v3-openrouter}"
 keychain_account="${CYBERNETIC_INFLUENCE_OPENROUTER_KEYCHAIN_ACCOUNT:-$(id -un)}"
 
