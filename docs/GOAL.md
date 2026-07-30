@@ -133,7 +133,7 @@ restarting completed work.
   simulator `fa2da28ad50d1fe77428d424af7276855bc0d25d`; the deployed shared
   client is `144d118658ee1c99275576e7e212475021613930`. The service is running
   with Luna/medium as its subscription-backed default.
-- **Current increment:** Packet 21B0 is complete after the operator accepted
+- **Current increment:** Packet 21B1 is complete after the operator accepted
   the 21A4 narrative and evidence readout. Five Coordination people
   use scenario-specific native-LLM schemas while sources, the meeting clock,
   analytical composites, and exact mechanisms remain non-provider executors.
@@ -170,9 +170,15 @@ restarting completed work.
   producer and tolerant consumer models keep exact values, model coding, and
   simulator-owned evidence attachments structurally separate. Nine frozen
   controls cover both signs and all named invalid-input classes.
-- **Resume event:** implement Packet 21B1 using only frozen traces and fake
-  coder responses. Do not deploy or make a provider call; live measurement
-  canaries remain gated at Packet 21B2.
+- **Measurement execution:** all 15 exact values now calculate from typed
+  completed results. One strict injectable coder seam retains the validated raw
+  output and complete call contract, while simulator-owned evidence IDs remain
+  outside the model prompt and output. The resulting artifact is idempotently
+  retained in the existing run document and reopens without a model call.
+- **Resume event:** implement the fixture-backed API and UI portion of Packet
+  21B2, run its frontend/API gates, and then stop with an exact live-canary
+  authorization request. Do not deploy or make a provider call before that
+  authorization.
 
 ## Done
 

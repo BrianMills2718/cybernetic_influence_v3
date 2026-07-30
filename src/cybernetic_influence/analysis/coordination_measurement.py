@@ -241,6 +241,40 @@ class CoderOutput(_ProducedModel):
         return self
 
 
+class MeasurementCallEvidence(_ProducedModel):
+    """Completed shared-client call retained with one run measurement."""
+
+    status: Literal["completed"] = "completed"
+    task: str = Field(min_length=1)
+    trace_id: str = Field(min_length=1)
+    schema_revision: Literal[1]
+    prompt_version: str = Field(min_length=1)
+    model: str = Field(min_length=1)
+    reasoning_effort: str = Field(min_length=1)
+    max_budget: float = Field(gt=0.0)
+    observed_cost: float | None = Field(default=None, ge=0.0)
+    cost_source: str = Field(min_length=1)
+    cost_covers_all_attempts: bool
+    structured_output: CoderOutput
+
+
+class MeasurementCallEvidenceConsumer(_ConsumerModel):
+    """Forward-compatible read projection for coder-call evidence."""
+
+    status: Literal["completed"]
+    task: str = Field(min_length=1)
+    trace_id: str = Field(min_length=1)
+    schema_revision: Literal[1]
+    prompt_version: str = Field(min_length=1)
+    model: str = Field(min_length=1)
+    reasoning_effort: str = Field(min_length=1)
+    max_budget: float = Field(gt=0.0)
+    observed_cost: float | None = Field(default=None, ge=0.0)
+    cost_source: str = Field(min_length=1)
+    cost_covers_all_attempts: bool
+    structured_output: dict[str, JsonValue]
+
+
 class AnalystVisibleEvent(_ProducedModel):
     """Minimal analyst-visible event supplied to the later evidence coder."""
 
@@ -293,10 +327,15 @@ class RunMeasurement(_ProducedModel):
     scenario_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
     exact_values: dict[ExactMeasureId, JsonValue]
     coded_indicators: list[IndicatorEvidence]
+    coder_call: MeasurementCallEvidence
     limitations: list[str] = Field(min_length=1)
 
     @model_validator(mode="after")
     def validate_measurement(self) -> "RunMeasurement":
+        if self.measurement_id != f"measurement_{self.run_id.removeprefix('run_')}":
+            raise ValueError("measurement identity does not match its run")
+        if not self.coder_call.trace_id.startswith(f"{self.run_id}/"):
+            raise ValueError("measurement coder trace does not match its run")
         if self.measurement_spec_fingerprint != (
             COORDINATION_MEASUREMENT_SPEC_FINGERPRINT
         ):
@@ -308,6 +347,19 @@ class RunMeasurement(_ProducedModel):
             raise ValueError("run measurement contains duplicate coded indicators")
         if set(indicator_ids) != set(CODED_MEASURE_IDS):
             raise ValueError("run measurement must retain every frozen coded indicator")
+        raw_by_id = {
+            item.indicator_id: item
+            for item in self.coder_call.structured_output.coded_indicators
+        }
+        for retained in self.coded_indicators:
+            raw = raw_by_id[retained.indicator_id]
+            if (retained.direction, retained.explanation) != (
+                raw.direction,
+                raw.explanation,
+            ):
+                raise ValueError(
+                    "retained coded indicator disagrees with raw structured output"
+                )
         return self
 
 
@@ -321,7 +373,44 @@ class RunMeasurementConsumer(_ConsumerModel):
     scenario_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
     exact_values: dict[ExactMeasureId, JsonValue]
     coded_indicators: list[IndicatorEvidenceConsumer]
+    coder_call: MeasurementCallEvidenceConsumer
     limitations: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_retained_measurement(self) -> "RunMeasurementConsumer":
+        if self.measurement_id != f"measurement_{self.run_id.removeprefix('run_')}":
+            raise ValueError("retained measurement identity does not match its run")
+        if not self.coder_call.trace_id.startswith(f"{self.run_id}/"):
+            raise ValueError("retained measurement coder trace does not match its run")
+        if set(self.exact_values) != set(EXACT_MEASURE_IDS):
+            raise ValueError("retained measurement is missing a frozen exact measure")
+        indicator_ids = [item.indicator_id for item in self.coded_indicators]
+        if len(indicator_ids) != len(set(indicator_ids)) or set(indicator_ids) != set(
+            CODED_MEASURE_IDS
+        ):
+            raise ValueError("retained measurement has invalid coded indicators")
+        raw_items = self.coder_call.structured_output.get("coded_indicators")
+        if not isinstance(raw_items, list):
+            raise ValueError("retained coder call lacks structured indicators")
+        raw_by_id: dict[str, tuple[object, object]] = {}
+        for item in raw_items:
+            if not isinstance(item, dict):
+                raise ValueError("retained coder output contains a malformed indicator")
+            indicator_id = item.get("indicator_id")
+            if not isinstance(indicator_id, str) or indicator_id in raw_by_id:
+                raise ValueError("retained coder output has invalid indicator identity")
+            raw_by_id[indicator_id] = (item.get("direction"), item.get("explanation"))
+        if set(raw_by_id) != set(CODED_MEASURE_IDS):
+            raise ValueError("retained coder output is missing a frozen indicator")
+        for retained in self.coded_indicators:
+            if raw_by_id[retained.indicator_id] != (
+                retained.direction,
+                retained.explanation,
+            ):
+                raise ValueError(
+                    "retained coded indicator disagrees with raw structured output"
+                )
+        return self
 
 
 def validate_coder_output(

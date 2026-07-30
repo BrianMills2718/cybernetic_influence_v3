@@ -1,7 +1,7 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: in_progress_21b0_complete
+status: in_progress_21b1_complete
 created: 2026-07-25
 updated: 2026-07-29
 ---
@@ -1052,8 +1052,8 @@ IDs, provenance, units, limitations, and required event kinds. Strict producer
 and tolerant consumer models separate exact values, model coding, and
 simulator-owned evidence attachments. Nine frozen JSON controls cover positive,
 negative, legitimate environmental event, corrupt/cross-run evidence,
-incomplete run, and scenario/spec revision/fingerprint mismatch cases. Thirteen
-focused tests (14) and analysis-package mypy pass. No UI, provider call, deployment,
+incomplete run, and scenario/spec revision/fingerprint mismatch cases. Fourteen
+focused tests and analysis-package mypy pass. No UI, provider call, deployment,
 or world-execution path changed.
 
 ### Packet 21B1 — Exact calculator and evidence-coder seam
@@ -1073,6 +1073,18 @@ only the analysis, never the world run; task, trace, schema revision, model,
 budget, and observed cost fields are retained; no value feeds back into world
 state or people. Run focused analysis/run-store tests and mypy, audit, commit,
 and stop.
+
+**Observed implementation evidence (2026-07-29):** pure calculators derive all
+15 exact values from typed completed Coordination results, including three
+distinct scripted outcomes, meeting-boundary risk load, decision latency, and
+trace-linked counts. One injectable shared-client seam exposes only redacted
+analyst evidence, returns the three frozen coded fields, and lets the simulator
+attach event/trace context. Its retained call record binds task, run-scoped
+trace, schema and prompt revisions, model, reasoning, budget, raw validated
+output, observed cost, and retry/fallback coverage. A validated measurement is
+idempotently attached to the existing run document and reopens without any
+provider-capable path. Twenty-six focused analysis/run-store tests and mypy
+pass. No provider call, deployment, UI, or world-execution path changed.
 
 ### Packet 21B2 — Measurement readout and authorized canaries
 
