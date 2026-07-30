@@ -118,7 +118,10 @@ MINUTES_PER_DAY = 24 * 60
 MEETING_TIMES: tuple[int, ...] = tuple(day * MINUTES_PER_DAY for day in MEETING_DAYS)
 DECISION_DEADLINE_TIME = DECISION_DEADLINE_DAY * MINUTES_PER_DAY
 MAX_CAUSAL_MOMENTS = 28
-MAX_PARTICIPANT_CALLS = 48
+# This is a run-length guard, not a model of social pressure and not a target.
+# It must be high enough for the bounded 28-moment scenario to reach its exact
+# terminal condition even when several people are activated at one moment.
+MAX_PARTICIPANT_CALLS = 150
 COORDINATION_LLM_TASK = "cybernetic_influence_v3_coordination_step"
 
 PERSON_IDS: tuple[PersonId, ...] = (

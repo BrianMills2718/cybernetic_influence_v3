@@ -736,6 +736,13 @@ function updateAuthorizationPreview() {
   const planned = Number($('#max-cost').value || 0)
   const subscriptionIncluded = isSubscriptionModel()
   const measuresCoordination = $('#scenario').value === 'coordination_decision'
+  const selectedScenario = scenarioCatalog[$('#scenario').value] || {}
+  const participantDecisionLimit = Number(
+    selectedScenario.run_control_options?.max_participant_calls_cap ||
+    selectedScenario.maximum_live_calls ||
+    limits.maximum_participant_calls ||
+    0
+  )
   const measurementPolicy = runtimeConfig.coordination_measurement || {}
   const coderCalls = measuresCoordination ? Number(measurementPolicy.maximum_coder_calls || 0) : 0
   const coderCeiling = measuresCoordination ? Number(measurementPolicy.coder_per_call_ceiling || 0) : 0
@@ -751,8 +758,8 @@ function updateAuthorizationPreview() {
     ? `Expected observed spend: about $${Number(baseline.median_cost).toFixed(4)} from ${baseline.sample_count} comparable completed live run${baseline.sample_count === 1 ? '' : 's'} (range $${Number(baseline.minimum_cost).toFixed(4)}–$${Number(baseline.maximum_cost).toFixed(4)}).`
     : 'Expected observed spend: no comparable completed live run is retained yet.'
   $('#cost-details').textContent = subscriptionIncluded
-    ? `${modelLabel} is included with the signed-in ChatGPT Codex subscription; marginal provider cost is recorded as $0. Codex usage limits still apply. This run allows at most ${Number(limits.maximum_participant_calls || 0)} participant calls, ${Number(limits.maximum_narrator_calls || 0)} narrator calls${coderCalls ? `, and ${coderCalls} post-run evidence-coder call` : ''}.`
-    : `${estimate} Retained planning amount: $${(planned + coderCeiling * coderCalls).toFixed(2)}${coderCalls ? `, including ${coderCalls} post-run coder request capped at $${coderCeiling.toFixed(2)}` : ''}. A returned valid simulation is not terminated because observed or partially observed cost crosses this amount. Provider requests still carry per-call budgets of $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} for participants and $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} for narration; call-count and causal-step limits bound runtime growth.`
+    ? `${modelLabel} is included with the signed-in ChatGPT Codex subscription; marginal provider cost is recorded as $0. Codex usage limits still apply. This run permits at most ${participantDecisionLimit} LLM-driven participant decisions before its run-length guard stops it; it does not aim for that number or change the scenario's simulated pressure. It also permits at most ${Number(limits.maximum_narrator_calls || 0)} narrator calls${coderCalls ? ` and ${coderCalls} post-run evidence-coder call` : ''}.`
+    : `${estimate} Retained planning amount: $${(planned + coderCeiling * coderCalls).toFixed(2)}${coderCalls ? `, including ${coderCalls} post-run coder request capped at $${coderCeiling.toFixed(2)}` : ''}. A returned valid simulation is not terminated because observed or partially observed cost crosses this amount. Provider requests still carry per-call budgets of $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} for participants and $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} for narration; the ${participantDecisionLimit}-decision run-length guard and causal-step limit bound runtime growth.`
 }
 
 function describeCondition() {

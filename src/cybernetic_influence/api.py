@@ -83,6 +83,7 @@ from cybernetic_influence.run_store import (
 )
 from cybernetic_influence.run_configuration import (
     EffectiveRunLlmConfiguration,
+    MAXIMUM_PARTICIPANT_CALLS,
     RunLlmOptions,
     coordination_live_model_ids,
     live_options_contract,
@@ -827,7 +828,7 @@ def create_app(
             "live_authorized": os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1",
             "access_restricted": bool(_allowed_tailscale_users()),
             "scripted_cost": 0.0,
-            "maximum_live_calls": 48,
+            "maximum_live_calls": MAXIMUM_PARTICIPANT_CALLS,
             "maximum_live_cost": 0.74,
             "coordination_measurement": {
                 "maximum_coder_calls": 1,

@@ -153,6 +153,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "heterogeneous_pressure",
         "stabilization",
     }
+    assert coordination["run_control_options"]["max_participant_calls_cap"] == 150
+    assert config.json()["maximum_live_calls"] == 150
+    assert config.json()["live_options"]["limits"]["maximum_participant_calls"] == 150
     assert config.json()["scenarios"]["physical_access"]["arms"][0]["description"]
     controls = config.json()["scenarios"]["service_desk"]["run_control_options"]
     assert controls["default_terminal_condition_ids"] == ["confirmed_closure"]
@@ -281,6 +284,11 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"Resume from retained step" in page.content
     assert b"['service_desk', 'coordination_decision'].includes" in app_script.content
     assert b"known provider cost; one or more retry charges unavailable" in app_script.content
+    assert b"LLM-driven participant decisions" in app_script.content
+    assert (
+        b"does not aim for that number or change the scenario's simulated pressure"
+        in app_script.content
+    )
     assert b"function applyButtonTooltips" in app_script.content
     assert b"new MutationObserver" in app_script.content
     assert b"renderLifecycleControls(current)" in app_script.content
@@ -580,7 +588,7 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
         "max_total_cost": 0.31,
         "participant_per_call_ceiling": 0.05,
         "narrator_per_call_ceiling": 0.025,
-        "maximum_participant_calls": 48,
+        "maximum_participant_calls": 150,
         "maximum_narrator_calls": 57,
         "selection_basis": "operator_selected",
         "llm_client_revision": CLIENT_REVISION,

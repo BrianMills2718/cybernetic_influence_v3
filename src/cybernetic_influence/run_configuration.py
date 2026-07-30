@@ -20,6 +20,7 @@ from cybernetic_influence.llm_backend import (
 from cybernetic_influence.narration import NARRATOR_MAX_BUDGET
 from cybernetic_influence.scenarios.coordination_decision import (
     MAX_CAUSAL_MOMENTS as COORDINATION_MAX_CAUSAL_MOMENTS,
+    MAX_PARTICIPANT_CALLS as COORDINATION_MAX_PARTICIPANT_CALLS,
 )
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh"]
@@ -30,7 +31,7 @@ PARTICIPANT_PER_CALL_CEILING = 0.05
 NARRATOR_PER_CALL_CEILING = NARRATOR_MAX_BUDGET
 SERVER_MAX_TOTAL_COST = 0.74
 DEFAULT_MAX_TOTAL_COST = 0.74
-MAXIMUM_PARTICIPANT_CALLS = 48
+MAXIMUM_PARTICIPANT_CALLS = COORDINATION_MAX_PARTICIPANT_CALLS
 # A Coordination trajectory may retain one activation moment for every allowed
 # attempt plus one coalesced exact-work span before, between, or after those
 # attempts. Preserve the preflight guard while admitting the scenario's full
