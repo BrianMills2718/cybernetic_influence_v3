@@ -1,6 +1,6 @@
 # Plan 023: Codex subscription backend
 
-**Status:** Implemented locally; deployment acceptance pending
+**Status:** Complete
 
 ## Outcome
 
@@ -37,7 +37,7 @@ and realized-causal views.
 - [x] Integrate the isolated backend across all simulator call sites.
 - [x] Make Luna/medium the truthful default in API, authoring, UI, and deploy.
 - [x] Add focused regression tests and run the full local checks.
-- [ ] Deploy, certify the exact current schemas, and inspect one complete live
+- [x] Deploy, certify the exact current schemas, and inspect one complete live
       trace before calling the route usable.
 
 ## Local evidence
@@ -55,3 +55,20 @@ and realized-causal views.
 - The earlier disinformation-campaign authoring prompt compiled into a ready
   typed proposal in two Luna attempts: one visible fidelity-question repair,
   then one accepted result. Both retained `$0` marginal cost.
+
+## Deployed evidence
+
+- Mac simulator behavior revision `6944dd26e1b905b3d3089c1b9045430090110ed1`
+  with shared client `2e5ae3815bdfd46af2e552670613364eb0c9da61`
+  passed the production build, typing, and all 183 tests before restart.
+- Fresh Mac observations certify the exact generic participant and narrator
+  schemas plus all five Coordination person schemas through `codex_cli`.
+- Deployed run `run_4ff946d1debc` completed the authorized physical-access
+  trajectory with three participant and three narrator calls, medium reasoning,
+  no fallback, fully observable subscription billing, and `$0` marginal cost.
+- Browser verification `run_535a61277c16` passed direct-link reopening, all
+  three graph projections, spatial/causal composite collapse, participant/group
+  accounts, narrative modes, and reference pause/resume with no console or
+  failed-network errors. A separate 1440×1000 rendered inspection confirmed the
+  Luna selector and medium reasoning remain visible while the irrelevant
+  usage-based cost field is hidden.

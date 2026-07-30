@@ -16,10 +16,35 @@ the machine's Serve configuration because its other listeners are unrelated.
 
 Live execution uses the shared `llm_client` checkout at
 `/Users/b/code/llm_client`. The LaunchAgent starts through
-`deploy/run-with-provider-secret.sh`, which first checks the login Keychain
-service `cybernetic-influence-v3-openrouter`, then an owner-only raw secret file
-when the Keychain is locked to noninteractive services. The credential is not
-stored in the repository or LaunchAgent plist.
+`deploy/run-with-provider-secret.sh`, which first verifies that the Codex CLI is
+logged in through ChatGPT. It optionally loads an OpenRouter credential from the
+login Keychain service `cybernetic-influence-v3-openrouter`, then an owner-only
+raw secret file when the Keychain is locked to noninteractive services. The
+credential is not stored in the repository or LaunchAgent plist.
+
+Codex subscription deployment observed 2026-07-29:
+
+- simulator behavior revision `6944dd26e1b905b3d3089c1b9045430090110ed1`
+  and shared client `2e5ae3815bdfd46af2e552670613364eb0c9da61`
+  passed the production build, strict typing, and all 183 tests on the Mac;
+- the LaunchAgent verifies `codex login status` reports ChatGPT authentication,
+  sets subscription billing, and treats OpenRouter credentials as optional;
+- fresh Mac observations certify Luna's generic participant and narrator
+  schemas and all five Coordination person schemas. The private config exposes
+  `codex/gpt-5.6-luna` at medium reasoning as the default and records
+  `verified local ChatGPT Codex login` plus `subscription_included`;
+- deployed live run `run_4ff946d1debc` completed with three participant and
+  three narrator calls, the exact `Entered equipment room` outcome, fully
+  observable `$0` marginal subscription cost, and no model fallback;
+- rendered browser verification `run_535a61277c16` passed deep-link reopening,
+  all three graph projections, spatial and causal composite collapse, readable
+  narrative modes, participant/group accounts, and reference pause/resume with
+  no console or failed-request errors. A separate 1440×1000 inspection showed
+  the Luna selector and medium reasoning while hiding the irrelevant
+  usage-based cost field.
+
+The following section is the immediately preceding DeepSeek coordination
+baseline retained for comparison, not the current default.
 
 Current V3 deployment observed 2026-07-29:
 
@@ -210,19 +235,17 @@ Previously verified 2026-07-25 route and compatibility evidence:
 - open limitation: operator usability judgment remains pending; mobile is out
   of scope for this private PoC.
 
-The default live route is
-`openrouter/deepseek/deepseek-v4-flash` at `none` reasoning for participants
-and narration. DeepSeek `high` and `xhigh` are visible experiments rather than
-certified settings; shared-client policy rejects `medium`. Terra remains
-selectable as `openrouter/openai/gpt-5.6-terra` with `none`, `low`, `medium`,
-or `high` participant reasoning and `low` narrator reasoning. Explicit provider
-prefixes are required because bare model identifiers may select direct-provider
-routes in `llm_client`.
+The default live route is `codex/gpt-5.6-luna` at medium reasoning for
+participants and narration. It uses the signed-in ChatGPT Codex subscription;
+usage limits, rather than marginal API price, are the operative external bound.
+OpenRouter routes remain explicit alternatives when their current exact-schema
+observations and credential are available; no failure silently changes model.
 
-Runtime contracts cap each participant call at $0.05 and narration at $0.025 per
-bounded moment. The UI advertises the conservative combined $0.74 envelope.
-Typical Service Desk runs quiesce well before that bound. Only one live run may
-execute at a time.
+Runtime contracts retain per-call budget bounds required by `llm_client`, but
+Luna calls are recorded as subscription-included rather than priced API calls.
+The UI therefore hides the usage-based planning field for Luna and instead
+states that ChatGPT subscription limits apply. OpenRouter alternatives retain
+their explicit cost planning fields. Only one live run may execute at a time.
 
 Service Desk scripted and live runs can pause only after a validated quiescent
 causal boundary. Resume requires the same scenario identity, effective LLM
@@ -287,8 +310,10 @@ LLM_CLIENT_REVISION=<exact shared-client commit>
 LLM_ROUTE_CERTIFICATION_ROOT=/Users/b/Library/Application Support/LLMClient/route_certification
 LLM_CLIENT_TIMEOUT_POLICY=allow
 CYBERNETIC_INFLUENCE_CERT_TERRA=<participant observation>,<narrator observation>
+CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA=<participant observation>,<narrator observation>
 CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH=<participant observation>,<narrator observation>
 CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA=<all exact Coordination person-schema observations, or empty>
+CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA=<all exact Coordination person-schema observations, or empty>
 CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH=<all exact Coordination person-schema observations, or empty>
 ```
 
