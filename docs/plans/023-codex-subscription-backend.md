@@ -84,3 +84,13 @@ and realized-causal views.
   failed-network errors. A separate 1440×1000 rendered inspection confirmed the
   Luna selector and medium reasoning remain visible while the irrelevant
   usage-based cost field is hidden.
+- Certification-integrity deployment `cd333b200e551e4c23b7e482c0e6c2893636dff8`
+  uses shared client `144d118658ee1c99275576e7e212475021613930` and
+  seven fresh revision-bound Luna schema observations. Live physical-access run
+  `run_e81b408516a2` completed with the exact entry outcome, three participant
+  and three narrator calls, medium reasoning, retained
+  `subscription_included` billing, and fully observable `$0` marginal cost.
+- Browser verification `run_edb6edc921ad` passed narrative hierarchy, direct
+  links, all three projections, projection-preserving composite collapse and
+  expansion, both composites, the pre-run Service Desk preview, and
+  Coordination pause/resume.
