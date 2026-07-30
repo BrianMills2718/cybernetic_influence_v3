@@ -16,7 +16,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
 from cybernetic_influence.authoring.compiler import AuthoringCompilationError
-from cybernetic_influence.authoring.models import PersonDraft
+from cybernetic_influence.authoring.models import (
+    CoordinationDecisionWorkflowDraft,
+    PersonDraft,
+)
 from cybernetic_influence.authoring.service import (
     AUTHORING_MAX_ATTEMPTS,
     AUTHORING_MAX_BUDGET,
@@ -54,6 +57,10 @@ from cybernetic_influence.analysis.coordination import (
 )
 from cybernetic_influence.analysis.coordination_readout import (
     coordination_measurement_readout,
+)
+from cybernetic_influence.analysis.theory_retention import (
+    build_reference_theory_analysis,
+    project_retained_theory_analysis,
 )
 from cybernetic_influence.causal_core.models import AnalyticalBoundary, CausalState
 from cybernetic_influence.presentation import (
@@ -843,7 +850,12 @@ def create_app(
                 "reasoning_efforts": list(AUTHORING_REASONING_EFFORTS),
                 "maximum_attempts_per_message": AUTHORING_MAX_ATTEMPTS,
                 "maximum_cost_per_attempt": AUTHORING_MAX_BUDGET,
-                "templates": ["resource_request_v1", "information_campaign_v1"],
+                "templates": [
+                    "resource_request_v1",
+                    "information_campaign_v1",
+                    "coordination_decision_v1",
+                ],
+                "reviewed_coordination_example": True,
             },
             "cost_baselines": runs.cost_baselines(),
         }
@@ -868,6 +880,16 @@ def create_app(
     def create_draft(request: Request) -> dict[str, object]:
         _require_access(request)
         return drafts.create(now=now_iso())
+
+    @app.post("/api/authoring/reviewed-coordination-drafts")
+    def create_reviewed_coordination_draft(
+        request: Request,
+    ) -> dict[str, object]:
+        """Create the canonical typed example without a provider call."""
+
+        _require_access(request)
+        with authoring_lock:
+            return authoring.create_reviewed_coordination_draft()
 
     @app.get("/api/authoring/drafts/{draft_id}")
     def get_draft(draft_id: str, request: Request) -> dict[str, object]:
@@ -922,7 +944,7 @@ def create_app(
         edges = analyst_edges(state)
         return {
             "status": "ready", "preview": True, "scenario": compiled.scenario.scenario_id,
-            "profile": "authored_resource_request", "arm": "approved_draft",
+            "profile": "authored_typed_scenario", "arm": "approved_draft",
             "initial_revision": state.revision, "world": analyst_world(temporal_states),
             "nodes": analyst_nodes(state), "snapshots": {revision: analyst_nodes(state)},
             "edges": edges, "timeline": [], "trajectory": {"nodes": [], "edges": []},
@@ -1085,7 +1107,7 @@ def create_app(
                 daemon=True,
             ).start()
             return JSONResponse(status_code=202, content=initial)
-        result: object | None = None
+        result: ActiveRuntimeResult | None = None
         try:
             result = (
                 compiled.run_live(
@@ -1107,6 +1129,57 @@ def create_app(
                 )
             )
             workflow = compiled.proposal.workflow
+            if isinstance(workflow, CoordinationDecisionWorkflowDraft):
+                if not isinstance(compiled.fixture, CoordinationRuntimeFixture):
+                    raise RuntimeError(
+                        "compiled coordination workflow lacks its runtime fixture"
+                    )
+                coordination_outcome, headline, summary = _coordination_outcome(
+                    result
+                )
+                document = build_analyst_document(
+                    initial_state=compiled.scenario.initial_state,
+                    analytical_boundaries=compiled.scenario.analytical_boundaries,
+                    result=result,
+                    scenario=compiled.scenario.scenario_id,
+                    profile="authored_typed_scenario",
+                    arm_id=workflow.condition,
+                    execution=body.execution,
+                    created_at=created_at,
+                    outcome=coordination_outcome,
+                    headline=headline,
+                    summary=summary,
+                    include_boundary_activity=True,
+                )
+                if not live:
+                    document["theory_analysis"] = (
+                        build_reference_theory_analysis(compiled, result)
+                    )
+                document["run_control"] = coordination_run_control_plan(
+                    compiled.fixture
+                ).model_dump(mode="json")
+                document["completion"] = (
+                    result.completion.model_dump(mode="json")
+                    if result.completion is not None
+                    else None
+                )
+                document["authoring"] = initial["authoring"]
+                narrated = _attach_narration(
+                    document,
+                    live=live,
+                    run_id=run_id,
+                    effective_llm=effective_llm,
+                )
+                if not live:
+                    narrated["narration"] = _coordination_reference_narration(
+                        narrated
+                    )
+                narrated = retain_progress_history(narrated, run_id)
+                narrated["llm_configuration"] = initial["llm_configuration"]
+                narrated["model_call_summaries"] = _result_call_summaries(
+                    result
+                )
+                return runs.save(narrated)
             outcome_entity_id = (
                 workflow.request_id
                 if workflow.template_id == "resource_request_v1"
@@ -1306,6 +1379,11 @@ def create_app(
             document["coordination_measurement_readout"] = (
                 coordination_measurement_readout(document).model_dump(mode="json")
             )
+            projected_theory = project_retained_theory_analysis(
+                document.get("theory_analysis")
+            )
+            if projected_theory is not None:
+                document["theory_analysis"] = projected_theory
             return document
         except InvalidRunIdError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=person-review-v1">
+  <link rel="stylesheet" href="/assets/styles.css?v=theory-readout-v1">
   <link rel="stylesheet" href="/assets/graph-canvas.css?v=readable-run-v2">
 </head>
 <body>
@@ -27,6 +27,13 @@
       <span class="eyebrow">Typed scenario authoring</span>
       <h2>Build a scenario through conversation</h2>
       <p class="muted">Describe what you want, inspect the typed proposal, then send feedback to generate another saved revision. Choose the model and thinking level independently for every message. The assistant can use only reviewed executable templates; it cannot create mechanism code or make an analytical composite act.</p>
+      <aside class="reviewed-example">
+        <div>
+          <strong>Try the reviewed coordination example</strong>
+          <p>Inspect five people deciding whether and how to deploy a shared bio-surveillance capability, then run separate decision-environment and collective-competence analyses.</p>
+        </div>
+        <button id="authoring-load-coordination" type="button">Load reviewed example</button>
+      </aside>
       <section id="authoring-chat" class="authoring-chat" aria-label="Scenario authoring conversation">
         <article class="chat-message assistant">
           <span>Authoring assistant</span>
@@ -243,6 +250,28 @@
         </div>
       </section>
 
+      <section id="theory-analysis-section" class="theory-analysis-section" hidden>
+        <span class="eyebrow">Theory-informed analysis</span>
+        <h2>What this run shows</h2>
+        <p class="muted">These are two separate views over the same retained simulation evidence. Each finding states how it was produced, what supports it, and what remains unknown.</p>
+        <section id="decision-environment-section" class="theory-module">
+          <div>
+            <span class="eyebrow">Waltzman-informed view</span>
+            <h3>Decision environment</h3>
+            <p>How information, expressed risk, verification, commitments, and timing shaped the decision process in this run.</p>
+          </div>
+          <div id="decision-environment-content"></div>
+        </section>
+        <section id="collective-competence-section" class="theory-module">
+          <div>
+            <span class="eyebrow">Levin-informed view</span>
+            <h3>Collective competence</h3>
+            <p>What the configured group boundary accomplished relative to its goal, and which capacities were observed or remain untested.</p>
+          </div>
+          <div id="collective-competence-content"></div>
+        </section>
+      </section>
+
       <section id="participant-section">
         <span class="eyebrow">People and groups</span>
         <h2>Follow a participant or view the team as a whole</h2>
@@ -315,6 +344,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=spatial-scale-v1"></script>
-  <script src="/assets/app.js?v=coordination-measurement-v1"></script>
+  <script src="/assets/app.js?v=theory-readout-v1"></script>
 </body>
 </html>

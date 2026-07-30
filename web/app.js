@@ -39,6 +39,7 @@ const buttonTooltips = {
   'history-tab': 'Open or remove previously retained simulation runs.',
   'readme-tab': 'Read how the simulator, maps, and evidence should be interpreted.',
   'authoring-draft': 'Send this message with the selected model and thinking level to generate the next saved draft revision.',
+  'authoring-load-coordination': 'Create a saved, already typed coordination example without making a model call.',
   'authoring-copy-link': 'Copy a link that reopens this automatically saved draft.',
   'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
   'authoring-run': 'Run the approved draft with fixed zero-cost reference actions. This checks the compiled routes and exact mechanisms, not the reviewed personalities.',
@@ -111,7 +112,38 @@ function setWorkspaceView(view) {
 function authoringSummary(proposal) {
   const people = (proposal.people || []).map((person) => person.label).join(', ')
   const places = (proposal.places || []).map((place) => place.label).join(', ')
+  const coordination = proposal.workflow?.template_id === 'coordination_decision_v1'
   const informationCampaign = proposal.workflow?.template_id === 'information_campaign_v1'
+  if (coordination) {
+    const workflow = proposal.workflow
+    const goal = workflow.collective_goal || {}
+    const analyses = new Set(workflow.analysis?.analysis_ids || [])
+    return `
+      <span class="eyebrow">Compiled typed proposal · coordination decision</span>
+      <h3>${html(proposal.title || 'Untitled coordination draft')}</h3>
+      <p>${html(proposal.description || '')}</p>
+      <div class="configuration-review">
+        <section>
+          <span class="eyebrow">Scenario inputs</span>
+          <h4>Who and what is being modeled</h4>
+          <p><strong>${html((proposal.people || []).length)} people</strong> review one shared decision while ${html((proposal.information || []).length)} concrete concerns arrive through configured routes.</p>
+          <p><strong>Candidate goal:</strong> ${html(goal.description || goal.label || 'No goal supplied')}</p>
+          <small>${html(people)} · meetings on days ${html((workflow.meeting_days || []).join(', '))} · ${html(workflow.condition?.replaceAll('_', ' '))} condition</small>
+        </section>
+        <section>
+          <span class="eyebrow">Run controls</span>
+          <h4>How this reference run ends</h4>
+          <p>Fixed zero-call participant policies run until a reviewed terminal outcome occurs or the day ${html(workflow.deadline_day)} horizon is reached.</p>
+          <small>${html((workflow.terminal_outcomes || []).map((item) => item.replaceAll('_', ' ')).join(' · '))}</small>
+        </section>
+        <section>
+          <span class="eyebrow">Selected per-run analyses</span>
+          <h4>What will be calculated afterward</h4>
+          <p>${analyses.has('waltzman_decision_environment_v1') ? '<strong>Decision environment</strong> examines information, risk, verification, commitments, and timing. ' : ''}${analyses.has('levin_collective_competence_v1') ? '<strong>Collective competence</strong> examines the configured boundary relative to its candidate goal.' : ''}</p>
+          <small>These analyses read retained evidence and cannot act in the simulation.</small>
+        </section>
+      </div>`
+  }
   const workflow = informationCampaign
     ? 'a retained claim is published through a configured channel, delivered to a recipient, and exactly recorded when assessed. Persuasion, truth, virality, and geopolitical outcomes are not inferred.'
     : 'an authored request is delivered to a reviewer, checked against copied eligibility and resource availability, then delivered back to the requester.'
@@ -315,7 +347,8 @@ function renderAuthoring() {
   $('#authoring-approve').hidden = !approvable
   $('#authoring-run').hidden = draft.status !== 'approved'
   const authoredLiveAvailable = runtimeConfig.live_authorized &&
-    ((runtimeConfig.live_options?.models || []).length > 0)
+    ((runtimeConfig.live_options?.models || []).length > 0) &&
+    draft.proposal?.workflow?.template_id !== 'coordination_decision_v1'
   $('#authoring-live-run').hidden = draft.status !== 'approved' || !authoredLiveAvailable
   $('#authoring-live-settings').hidden = draft.status !== 'approved' || !authoredLiveAvailable
   renderAuthoringProjectionControls()
@@ -1898,7 +1931,7 @@ function exactMeasureCard(measure, compact = false) {
 function renderCoordinationMeasurement(run) {
   const section = $('#coordination-measurement-section')
   const readout = run.coordination_measurement_readout
-  section.hidden = run.scenario !== 'coordination_decision'
+  section.hidden = run.scenario !== 'coordination_decision' || Boolean(run.theory_analysis)
   if (section.hidden) return
   const status = readout?.status || 'not_measured'
   $('#coordination-measurement-headline').textContent = readout?.headline || 'This run has not been measured'
@@ -1940,6 +1973,145 @@ function renderCoordinationMeasurement(run) {
     }
   })
   applyButtonTooltips(section)
+}
+
+const theoryFindingLabels = {
+  waltzman_final_deployment_status:'Final decision',
+  waltzman_final_approved_scope:'Approved scope',
+  waltzman_partners_retained:'Partners retained',
+  waltzman_modeled_time_to_terminal:'Time to decision',
+  waltzman_verification_requests:'Verification activity',
+  waltzman_source_reliance_topology:'Information-source reliance',
+  waltzman_intermediary_bypass:'Information that bypassed intermediaries',
+  waltzman_risk_register_expansion:'Newly recorded risks',
+  waltzman_action_threshold_change:'Changes to the decision threshold',
+  waltzman_unresolved_risk_load:'Unresolved risk at the end',
+  waltzman_decision_latency:'Final-decision processing time',
+  waltzman_deliberation_load:'Deliberation load',
+  waltzman_issue_reopening:'Issues reopened',
+  waltzman_informal_alignment:'Informal alignment',
+  waltzman_disengagement:'Partner disengagement',
+  waltzman_authority_divergence_scope:'Authority divergence',
+  levin_goal_progress:'Progress toward the collective goal',
+  levin_boundary_activity:'What crossed the group boundary',
+  levin_collective_glue:'What connected the group',
+  levin_error_correction:'Observed error correction',
+  levin_persistence_adaptation:'Persistence and adaptation',
+  levin_scale_scope:'Scope of the observation',
+  levin_not_tested:'Collective capacities not tested',
+}
+
+function theoryFindingValue(finding) {
+  const value = finding?.value
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return readableMeasureValue(value)
+  }
+  if (finding.finding_id === 'levin_goal_progress') {
+    return `${String(value.terminal_status || 'No terminal status').replaceAll('_', ' ')} · ${value.acceptable_outcome ? 'within the reviewed acceptable outcomes' : 'outside the reviewed acceptable outcomes'}`
+  }
+  if (finding.finding_id === 'levin_boundary_activity') {
+    return `${value.incoming_crossings || 0} incoming crossing${value.incoming_crossings === 1 ? '' : 's'}, ${value.outgoing_crossings || 0} outgoing crossing${value.outgoing_crossings === 1 ? '' : 's'}, and ${value.completed_coordination_episodes || 0} completed coordination episode${value.completed_coordination_episodes === 1 ? '' : 's'}`
+  }
+  if (finding.finding_id === 'levin_collective_glue') {
+    return `${value.people || 0} people coordinated through ${value.connections || 0} configured connections, ${value.records || 0} records, and ${value.exact_mechanisms || 0} exact mechanisms`
+  }
+  if (finding.finding_id === 'levin_error_correction') {
+    return value.correction_observed
+      ? `${value.error_signal_events || 0} error signal event${value.error_signal_events === 1 ? '' : 's'} and ${value.correction_events || 0} correction event${value.correction_events === 1 ? '' : 's'} were observed`
+      : 'No correction event was observed in this trajectory'
+  }
+  if (finding.finding_id === 'levin_persistence_adaptation') {
+    return `${value.meeting_cycles || 0} meeting cycle${value.meeting_cycles === 1 ? '' : 's'} and ${value.adaptation_events || 0} recorded adaptation event${value.adaptation_events === 1 ? '' : 's'} led to ${String(value.terminal_status || 'no terminal status').replaceAll('_', ' ')}`
+  }
+  if (finding.finding_id === 'levin_scale_scope') {
+    return `${value.spatial_places || 0} places, ${value.temporal_minutes || 0} modeled minutes, and ${value.state_revisions || 0} retained state revisions`
+  }
+  if (finding.finding_id === 'levin_not_tested') {
+    return 'Robustness, controlled shock recovery, member replacement, and persuadability were not tested'
+  }
+  if (value.status === 'not_computed') return 'Not computed in a single run'
+  return readableMeasureValue(value)
+}
+
+function theoryEvidenceButtons(refs = []) {
+  const eventIds = refs
+    .filter((ref) => String(ref).startsWith('event:'))
+    .map((ref) => String(ref).slice('event:'.length))
+  if (eventIds.length) return measurementEvidenceButtons(eventIds, 'Inspect supporting events')
+  return '<small class="theory-config-evidence">Supported by the reviewed configuration, retained state, or run completion record. Exact records remain available in Advanced evidence.</small>'
+}
+
+function theoryFindingCard(finding, compact = false) {
+  const method = finding.method_class === 'llm_coded'
+    ? 'Model interpretation'
+    : finding.method_class === 'calculated'
+      ? 'Calculated from retained evidence'
+      : 'Recorded by the simulator'
+  const visibleMethod = compact
+    ? finding.method_class === 'llm_coded' ? 'Model interpreted' : finding.method_class === 'calculated' ? 'Calculated' : 'Exact record'
+    : method
+  return `<article class="theory-finding${compact ? ' compact' : ''}">
+    <span class="provenance-badge ${finding.method_class === 'llm_coded' ? 'coded' : 'exact'}">${html(visibleMethod)}</span>
+    <h4>${html(theoryFindingLabels[finding.finding_id] || finding.construct_id?.replaceAll('_', ' ') || finding.finding_id)}</h4>
+    <p>${html(theoryFindingValue(finding))}</p>
+    ${compact ? '' : `${theoryEvidenceButtons(finding.evidence_refs)}
+      <details><summary>Uncertainty and limitations</summary><p>${html(finding.uncertainty)}</p><ul>${(finding.limitations || []).map((item) => `<li>${html(item)}</li>`).join('')}</ul></details>`}
+  </article>`
+}
+
+function renderTheoryModule(moduleId, selector, headlineIds) {
+  const module = current.theory_analysis?.modules?.[moduleId]
+  const container = $(selector)
+  if (!module || module.status !== 'available') {
+    container.innerHTML = `<article class="measurement-state invalid"><strong>Analysis unavailable</strong><p>The completed simulation, narrative, maps, and other analysis remain valid. ${module?.error_type ? `This module failed retained validation (${html(module.error_type)}).` : 'No retained readout is available.'}</p></article>`
+    return
+  }
+  const findings = module.readout?.findings || []
+  const headline = headlineIds.map((id) => findings.find((item) => item.finding_id === id)).filter(Boolean)
+  container.innerHTML = `
+    <div class="theory-snapshot">${headline.map((item) => theoryFindingCard(item, true)).join('')}</div>
+    <details class="theory-all-findings">
+      <summary>Review all ${html(findings.length)} findings and their evidence</summary>
+      <div>${findings.map((item) => theoryFindingCard(item)).join('')}</div>
+    </details>
+    <details class="theory-limitations">
+      <summary>Limits of this analysis</summary>
+      <ul>${(module.readout?.limitations || []).map((item) => `<li>${html(item)}</li>`).join('')}</ul>
+    </details>`
+  container.querySelectorAll('.measurement-evidence-button').forEach((button) => {
+    button.onclick = () => {
+      const index = current.timeline.findIndex((event) => event.event_id === button.dataset.measureEventId)
+      if (index >= 0) selectEvent(index)
+    }
+  })
+  applyButtonTooltips(container)
+}
+
+function renderTheoryAnalysis(run) {
+  const section = $('#theory-analysis-section')
+  section.hidden = !run.theory_analysis
+  if (section.hidden) return
+  renderTheoryModule(
+    'decision_environment',
+    '#decision-environment-content',
+    [
+      'waltzman_final_deployment_status',
+      'waltzman_final_approved_scope',
+      'waltzman_partners_retained',
+      'waltzman_unresolved_risk_load',
+      'waltzman_decision_latency',
+    ],
+  )
+  renderTheoryModule(
+    'collective_competence',
+    '#collective-competence-content',
+    [
+      'levin_goal_progress',
+      'levin_boundary_activity',
+      'levin_error_correction',
+      'levin_persistence_adaptation',
+    ],
+  )
 }
 
 function setNarrativeDetail(detail) {
@@ -2002,6 +2174,22 @@ function render(run) {
       $('#arm').value = current.arm
     }
     describeCondition()
+  } else if (current.authoring) {
+    const authoredOption = [...$('#scenario').options].find(
+      (option) => option.value === current.scenario,
+    )
+    if (!authoredOption) {
+      const option = document.createElement('option')
+      option.value = current.scenario
+      option.textContent = `Authored · ${current.authoring.title || current.scenario.replaceAll('_', ' ')}`
+      option.dataset.authoredRun = 'true'
+      $('#scenario').append(option)
+    }
+    $('#scenario').value = current.scenario
+    $('#arm').innerHTML = `<option value="${html(current.arm)}">${html(String(current.arm).replaceAll('_', ' '))}</option>`
+    $('#scenario-title').textContent = current.authoring.title || 'Authored scenario'
+    $('#scenario-description').textContent = current.authoring.description || ''
+    $('#arm-help').textContent = 'This is the concrete condition retained by the approved authored scenario.'
   }
   $('#result').hidden = false
   $('#result-summary-status').textContent = current.status === 'completed'
@@ -2042,6 +2230,7 @@ function render(run) {
   renderInitialSituation(current)
   renderTurnNarratives()
   renderCoordinationMeasurement(current)
+  renderTheoryAnalysis(current)
   setNarrativeDetail(selectedNarrativeDetail)
   const people = [...new Set(current.traces.map((entry) => entry.person))]
   const participantTabs = people.map((person) => {
@@ -2298,6 +2487,24 @@ $('#resume').onclick = async () => {
     $('#run-status').textContent = error.message
   } finally {
     $('#resume').disabled = false
+  }
+}
+
+$('#authoring-load-coordination').onclick = async () => {
+  const button = $('#authoring-load-coordination')
+  button.disabled = true
+  $('#authoring-status').textContent = 'Loading the reviewed typed example…'
+  try {
+    authoringDraft = await request('/api/authoring/reviewed-coordination-drafts', {
+      method:'POST',
+    })
+    await loadAuthoringPreview()
+    syncAuthoringUrl()
+    renderAuthoring()
+  } catch (error) {
+    $('#authoring-status').textContent = error.message
+  } finally {
+    button.disabled = false
   }
 }
 

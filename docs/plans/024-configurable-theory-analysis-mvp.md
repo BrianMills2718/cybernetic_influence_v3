@@ -21,12 +21,15 @@ This is the active implementation plan for
 
 ## Current progress
 
-Packet 24A0 is implemented and provider-free verified. The strict reviewed
-coordination configuration compiles onto the existing runtime, one scripted
-trajectory produces `RunEvidenceBundleV1`, and separate Waltzman and Levin
-reference readouts validate against that common evidence. Packet 24A1 is the
-next executable packet; no API or UI path has yet been added for these new
-contracts.
+Packets 24A0 and 24A1 are implemented and provider-free verified. The strict
+reviewed coordination configuration compiles onto the existing runtime, one
+scripted trajectory produces `RunEvidenceBundleV1`, and separate Waltzman and
+Levin reference readouts validate against that common evidence. The existing
+Author scenario flow can load the reviewed configuration without a provider
+call, distinguish scenario inputs, run controls, and selected analyses, then
+approve, run, reopen, and inspect both readouts alongside the retained maps,
+narrative, and participant/group accounts. Packet 24B is next; conversational
+generation of this template has not yet been added.
 
 ## Current-to-target Delta
 
@@ -251,6 +254,8 @@ authoring prompt, provider route, or deployment.
 ### Packet 24A1 — provider-free configured review flow
 
 **Classification:** representative vertical.
+
+**Status:** complete.
 
 Add API projections and the smallest existing-UI path from a reviewed
 coordination draft through approval, a zero-cost reference run, the common

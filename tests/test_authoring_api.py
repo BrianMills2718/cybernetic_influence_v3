@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 
@@ -83,6 +84,89 @@ def test_draft_is_idempotent_revisioned_previewable_approved_and_runnable(tmp_pa
     assert run.json()["cost"] == 0.0
     assert run.json()["authoring"]["draft_id"] == draft_id
     assert run.json()["authoring"]["description"]
+
+
+def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corruption(
+    tmp_path: Path,
+) -> None:
+    api = _client(tmp_path)
+
+    drafted = api.post("/api/authoring/reviewed-coordination-drafts")
+    assert drafted.status_code == 200
+    draft = drafted.json()
+    assert draft["revision"] == 1
+    assert draft["status"] == "ready_for_review"
+    assert draft["attempts"] == []
+    assert draft["messages"] == []
+    assert draft["proposal"]["workflow"]["template_id"] == (
+        "coordination_decision_v1"
+    )
+
+    preview = api.get(
+        f"/api/authoring/drafts/{draft['draft_id']}/preview"
+    )
+    assert preview.status_code == 200
+    assert preview.json()["world"]["places"]
+    assert {item["id"] for item in preview.json()["boundaries"]} == {
+        "deployment_partnership",
+        "pressure_source_ensemble",
+    }
+
+    approved = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/approve",
+        json={"expected_revision": 1},
+    )
+    assert approved.status_code == 200
+    run = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/runs",
+        json={"execution": "scripted"},
+    )
+    assert run.status_code == 200
+    retained = run.json()
+    assert retained["status"] == "completed"
+    assert retained["execution"] == "scripted"
+    assert retained["model_calls"] == 0
+    assert retained["cost"] == 0.0
+    assert retained["world"]["places"]
+    assert retained["timeline"]
+    assert retained["narration"]["status"] == "completed"
+    assert retained["boundaries"]
+    modules = retained["theory_analysis"]["modules"]
+    assert modules["decision_environment"]["status"] == "available"
+    assert modules["collective_competence"]["status"] == "available"
+
+    reopened = api.get(f"/api/runs/{retained['run_id']}")
+    assert reopened.status_code == 200
+    assert (
+        reopened.json()["theory_analysis"]["bundle"]["record_digest"]
+        == retained["theory_analysis"]["bundle"]["record_digest"]
+    )
+    assert reopened.json()["model_calls"] == 0
+
+    run_path = tmp_path / "runs" / f"{retained['run_id']}.json"
+    raw = json.loads(run_path.read_text(encoding="utf-8"))
+    raw["theory_analysis"]["modules"]["collective_competence"]["readout"][
+        "findings"
+    ][0]["evidence_refs"] = ["event:event_999999"]
+    run_path.write_text(json.dumps(raw), encoding="utf-8")
+
+    isolated = api.get(f"/api/runs/{retained['run_id']}")
+    assert isolated.status_code == 200
+    isolated_body = isolated.json()
+    assert isolated_body["status"] == "completed"
+    assert isolated_body["story"] == retained["story"]
+    assert (
+        isolated_body["theory_analysis"]["modules"]["decision_environment"][
+            "status"
+        ]
+        == "available"
+    )
+    assert (
+        isolated_body["theory_analysis"]["modules"]["collective_competence"][
+            "status"
+        ]
+        == "invalid"
+    )
 
 
 def test_authored_live_run_requires_authorization_and_live_options(

@@ -50,6 +50,10 @@ from cybernetic_influence.analysis.theory_analysis import (
     reference_run_spec,
     validate_readout_against_bundle,
 )
+from cybernetic_influence.analysis.theory_retention import (
+    build_reference_theory_analysis,
+    project_retained_theory_analysis,
+)
 
 __all__ = [
     "BASELINE_CONDITION",
@@ -88,11 +92,13 @@ __all__ = [
     "RunEvidenceBundleV1",
     "RunSpecV1",
     "build_levin_reference_readout",
+    "build_reference_theory_analysis",
     "build_run_evidence_bundle",
     "build_waltzman_reference_readout",
     "compare_coordination_runs",
     "coordination_analysis_specs",
     "measurement_spec_fingerprint",
+    "project_retained_theory_analysis",
     "reference_run_spec",
     "validate_coder_output",
     "validate_readout_against_bundle",

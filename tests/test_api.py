@@ -237,11 +237,15 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="authoring-model"' in page.text
     assert 'id="authoring-reasoning"' in page.text
     assert 'id="authoring-people"' in page.text
+    assert 'id="authoring-load-coordination"' in page.text
     assert "editable scenario assumptions" in page.text
     assert "Copy saved draft link" in page.text
     assert 'id="authoring-spatial-layout"' in page.text
     assert 'id="authoring-causal-layout"' in page.text
     assert 'id="authoring-trajectory-layout"' in page.text
+    assert 'id="theory-analysis-section"' in page.text
+    assert 'id="decision-environment-section"' in page.text
+    assert 'id="collective-competence-section"' in page.text
     assert "How to read a cybernetic simulation" in page.text
     assert 'id="model"' in page.text
     assert 'id="reasoning"' in page.text
@@ -294,6 +298,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"renderLifecycleControls(current)" in app_script.content
     assert b"function loadScenarioPreview" in app_script.content
     assert b"/api/authoring/drafts" in app_script.content
+    assert b"/api/authoring/reviewed-coordination-drafts" in app_script.content
+    assert b"renderTheoryAnalysis" in app_script.content
     assert b"function renderAuthoring" in app_script.content
     assert b"function renderAuthoringChat" in app_script.content
     assert b"function renderAuthoringPeople" in app_script.content

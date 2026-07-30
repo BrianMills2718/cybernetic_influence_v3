@@ -17,6 +17,7 @@ from cybernetic_influence.authoring.compiler import (
     CompiledScenario,
     compile_scenario,
 )
+from cybernetic_influence.authoring.examples import reviewed_coordination_proposal
 from cybernetic_influence.authoring.models import (
     PersonDraft,
     ProfileStatement,
@@ -258,6 +259,30 @@ class DraftAuthoringService:
     def __init__(self, store: AuthoringDraftStore, *, call: StructuredCall | None = None) -> None:
         self.store = store
         self.call = call or _structured_call()
+
+    def create_reviewed_coordination_draft(self) -> dict[str, object]:
+        """Create one saved review draft without making a provider call."""
+
+        proposal = reviewed_coordination_proposal()
+        compile_scenario(proposal)
+        current = self.store.create(now=now_iso())
+        return self.store.replace(
+            str(current["draft_id"]),
+            expected_revision=0,
+            document={
+                **current,
+                "revision": 1,
+                "status": "ready_for_review",
+                "authoring_summary": (
+                    "Ready to review: Multinational bio-surveillance deployment "
+                    "review. This example is already typed and made no model call."
+                ),
+                "proposal": proposal.model_dump(mode="json"),
+                "diagnostics": [],
+                "approval": None,
+                "updated_at": now_iso(),
+            },
+        )
 
     def advance(
         self, draft_id: str, *, expected_revision: int, message_id: str, message: str,
