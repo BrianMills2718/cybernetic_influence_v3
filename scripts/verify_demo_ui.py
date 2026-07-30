@@ -71,6 +71,15 @@ def main() -> None:
         assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
         assert page.locator("#analytical-scale-toggle").is_enabled()
         assert page.locator("#analytical-boundary").is_enabled()
+        assert page.locator("#live").is_checked()
+        page.locator("#run-settings").evaluate("element => element.open = true")
+        assert page.locator("#model").is_visible()
+        assert page.locator("#model").input_value() == "codex/gpt-5.6-luna"
+        assert page.locator("#reasoning").input_value() == "medium"
+        assert page.locator("#max-cost-field").is_hidden()
+        assert "included with the signed-in ChatGPT Codex subscription" in (
+            page.locator("#cost-details").inner_text()
+        )
 
         first_story = page.locator("#turn-narratives .turn-narrative").first
         assert first_story.locator("p").is_visible()
@@ -240,7 +249,9 @@ def main() -> None:
             """() => document.querySelectorAll('#analytical-boundary option').length === 2
                 && document.querySelector('#spatial-layout')?.getAttribute('aria-pressed') === 'true'"""
         )
-        assert not page.locator("#live").is_checked()
+        assert page.locator("#live").is_checked()
+        page.locator("#live").uncheck()
+        assert page.locator("#run").inner_text() == "Play reference simulation"
         page.locator("#run").click()
         page.locator("#pause").wait_for(state="visible")
         page.wait_for_timeout(100)
