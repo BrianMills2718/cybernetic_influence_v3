@@ -74,7 +74,7 @@ def main() -> None:
         assert page.locator("#live").is_checked()
         page.locator("#run-settings").evaluate("element => element.open = true")
         assert page.locator("#model").is_visible()
-        assert page.locator("#model").input_value() == "codex/gpt-5.6-luna"
+        assert page.locator("#model").input_value() == "codex/gpt-5.6-terra"
         assert page.locator("#reasoning").input_value() == "medium"
         assert page.locator("#max-cost-field").is_hidden()
         assert "included with the signed-in ChatGPT Codex subscription" in (

@@ -90,10 +90,10 @@ without raw evidence and that a disputed passage can step down to understandable
 exact evidence. Packets 21B0–B1 freeze the versioned measurement contract,
 both-sign controls, exact calculators, fake-tested coder seam, and retained
 run-measurement artifact. Packet 21B2's readout is now implemented and
-deployed. Its Luna baseline is accepted, while its current pressure run reached
-the participant safety limit and two stabilization attempts encountered an
-explicit Luna capacity rejection. The three-condition live-canary gate
-therefore remains open; Slice 21C has not begun.
+deployed. Its Terra/medium baseline, pressure, and stabilization canaries are
+accepted with valid retained measurements. The pressure canary ran on the
+later revision that raised only the previously inactive participant guard;
+Slice 21C has not begun.
 [Slice 22: composite-agency perturbation
 assay](plans/022-composite-agency-perturbation-assay.md) is separately gated by
 Slice 21C and operationalizes the later Levin-style question on that same
@@ -791,12 +791,13 @@ requires them to answer an analyst question that current contracts cannot.
 - **Last accepted integrated proof:** Service Desk `run_20d2d0000004`, with
   pause/resume, exact completion, and all 25 simulator-grounded narratives.
 - **Current deployed behavior revision:**
-  `83cb3c7f48b57bef0290b03222c659c1d110d363`; the deployed shared client is
+  `fd85ead3565b3f42f9e47b02aa516fb421a457da`; the deployed shared client is
   `7501811bee49fe4c20af2d2a50e4040a596b328b`. The shared UI contains the
   Coordination scenario, measurement readout, and certification-gated
-  native-person seam.
-- **Current packet:** Packet 21B2's API/UI portion is deployed and same-route
-  Terra baseline and stabilization canaries are accepted.
+  native-person seam. Coordination's 150-participant-decision limit is an
+  emergency run-length guard rather than a pressure setting or call target.
+- **Current packet:** Packet 21B2's API/UI portion is deployed and its
+  same-route Terra baseline, pressure, and stabilization canaries are accepted.
   It retains at most one evidence-coder call after a completed live
   Coordination run; projects exact and coded evidence separately in the
   existing Simulation and Run history surfaces; preserves invalid, unclear,
@@ -808,14 +809,16 @@ requires them to answer an analyst question that current contracts cannot.
   completed without retry or fallback. Terra/medium stabilization
   `run_e2c6181e721f` completed `no_decision_by_horizon` after two concerns
   remained open; its 47 participant, 42 narrator, and one evidence-coder call
-  also completed without retry or fallback. All 158 calls used the operator's
-  ChatGPT Codex subscription with complete `$0` marginal-cost coverage.
-- **Current limiting causes:** current-summary pressure run
-  `run_e3173c381918` reached the 48-call participant safety limit before an
-  exact terminal decision. The operator explicitly changed the canary route
-  from capacity-limited Luna to Terra, but did not authorize raising that
-  structural ceiling. Slice 21C remains gated only on a valid current-revision
-  Terra pressure canary and the ceiling decision needed to admit it.
+  also completed without retry or fallback. Terra/medium pressure
+  `run_2a4055a4a51f` completed `no_decision_by_horizon` at its exact day-10
+  condition with five partners retained and two final open risks; its 48
+  participant, 43 narrator, and one evidence-coder call completed without
+  error, retry, fallback, or safety-limit termination. All 250 calls across the
+  accepted set used the operator's ChatGPT Codex subscription with complete
+  `$0` marginal-cost coverage.
+- **Current limiting causes:** no Packet 21B2 implementation or canary blocker
+  remains. Slice 21C is next and must preserve per-run uncertainty rather than
+  presenting one trajectory per condition as a causal effect estimate.
 
 ## Explicit MVP Deferrals
 

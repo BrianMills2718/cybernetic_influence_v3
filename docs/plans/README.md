@@ -16,9 +16,10 @@ instructions to continue their former “next slice” sections.
 
 [Slice 23: Codex subscription backend](023-codex-subscription-backend.md) is a
 completed deployment-path replacement for the existing live verticals, not a
-new research slice. Luna/medium passes exact participant, narrator, authoring,
-and Coordination schema probes, complete local and deployed live runs, and
-retained browser/trace inspection as the canonical demo default.
+new research slice. Terra/medium is the canonical demo default; Terra and
+Luna/medium pass the required exact participant, narrator, authoring, and
+Coordination schema probes, while the accepted Coordination canaries use
+Terra/medium without fallback.
 
 [Slice 20: Inspectable extended runs](020-inspectable-extended-runs.md) now
 includes generic polling-backed live progress: strict runtime checkpoints keep
@@ -31,9 +32,11 @@ actor.
 
 [Slice 21: Coordination-environment assay](021-coordination-environment-assay.md)
 has completed its recurring scenario, measurement contracts, and deployed
-measurement readout. Its Terra/medium baseline and stabilization canaries are
-accepted; pressure remains stopped at the participant safety bound pending an
-operator ceiling decision. Slice 21C has not begun, and its
+measurement readout. Its Terra/medium baseline, pressure, and stabilization
+canaries are accepted on behavior-compatible deployed revisions; the later
+pressure revision changed only the previously inactive participant guard. That
+run terminated at its exact deadline condition under the operator-approved
+150-decision run-length guard. Slice 21C has not begun, and its
 evasion extensions remain gated. [Slice 22: Composite-agency perturbation
 assay](022-composite-agency-perturbation-assay.md) is a separate gate after
 Slice 21C; it reuses the same scenario to test goal preservation, correction,

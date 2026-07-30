@@ -130,17 +130,21 @@ restarting completed work.
   UI rather than a scenario-specific page.
 - **Canonical implementation and deployment:** canonical `main` contains the
   behavior deployed on the private Mac as simulator
-  `83cb3c7f48b57bef0290b03222c659c1d110d363`, with shared client
+  `fd85ead3565b3f42f9e47b02aa516fb421a457da`, with shared client
   `7501811bee49fe4c20af2d2a50e4040a596b328b`.
   The service defaults to subscription-backed `codex/gpt-5.6-terra` at medium
   reasoning and separately advertises certified Luna/medium without fallback.
-  It allows 48 participant and 57 narrator calls and retains at most one
-  post-run evidence-coder call.
+  Coordination allows at most 150 participant decisions as a run-length guard,
+  not a simulated-pressure target; its narrator guard remains 57 calls and it
+  retains at most one post-run evidence-coder call. Other scenarios retain
+  their own lower bounds.
 - **Current increment:** Packet 21B2's readout is implemented, deployed, and
   fixture/browser verified. Exact measures, evidence-coded interpretations,
   provenance, limitations, and exact evidence step-down share the existing
   Simulation and Run history surfaces. The authorized three-canary gate is
-  partially observed but not accepted as a complete set.
+  accepted all three same-route, measurement-compatible canaries. The pressure
+  canary uses the later revision whose only relevant runtime change is the
+  previously inactive participant guard.
 - **Observed route certification evidence:** the exact generic participant,
   narrator, five Coordination-person, and evidence-coder schemas passed on the
   deployed client revision for both Terra/medium and Luna/medium. Terra is the
@@ -153,18 +157,24 @@ restarting completed work.
   29 narrator, and one coder call. Terra stabilization `run_e2c6181e721f`
   completed `no_decision_by_horizon`, five retained partners, two final open
   risks, and a valid measurement in 47 participant, 42 narrator, and one coder
-  call. All 158 Terra/medium calls completed with `subscription_included`
-  accounting, complete zero-cost coverage, no retries, and no fallback. The
+  call. Terra pressure `run_2a4055a4a51f` completed
+  `no_decision_by_horizon`, five retained partners, two final open risks, and a
+  valid measurement in 48 participant, 43 narrator, and one coder call. It
+  terminated at the exact day-10 condition rather than the 150-decision guard.
+  All 250 Terra/medium calls across the accepted set completed with
+  `subscription_included` accounting, complete zero-cost coverage, no retries,
+  and no fallback. The
   observed stabilization trajectory first converged on reduced scope, then
   retained later technical and sovereignty concerns through the deadline.
-- **Unaccepted pressure evidence:** `run_23135344d0d5` reached exact
+- **Superseded pressure evidence:** `run_23135344d0d5` reached exact
   `no_decision_by_horizon` and a valid measurement but exceeded the former
   32-narrator preflight bound. After the narrator bound was corrected,
   `run_0a363bc1bb66` completed 43 narratives and a valid measurement but
   exposed a false static human-facing withdrawal summary. That summary was
   corrected. The current-summary run `run_e3173c381918` then ended at the
   48-call participant safety limit before a terminal decision, so its
-  measurement correctly remained invalid.
+  measurement correctly remained invalid. The accepted current-revision
+  pressure canary above supersedes these attempts without rewriting them.
 - **Historical stabilization failures:** `run_43f57f7751f4` and
   `run_0f1f1b031e02` retained explicit Luna capacity rejections. The operator
   then authorized Terra for faster progress; the accepted Terra stabilization
@@ -192,11 +202,10 @@ restarting completed work.
   event on the existing map/timeline. A failed or interrupted assay cannot
   rewrite a completed world run. The normal story, maps, participant/group
   accounts, pause/resume controls, and Advanced evidence remain present.
-- **Resume event:** operator judgment is required on whether to raise the
-  Coordination participant-call ceiling above 48 so a Terra pressure
-  trajectory can reach its exact deadline. Do not silently change that
-  structural bound. Slice 21C remains blocked until one valid current-revision
-  Terra pressure canary completes the same-model set.
+- **Resume event:** Packet 21B2's same-model canary set is complete. Proceed to
+  Slice 21C's baseline/pressure/stabilization comparison using only valid
+  retained runs and preserve run-level uncertainty; do not treat this single
+  trajectory per condition as an empirical effect estimate.
 
 ## Done
 

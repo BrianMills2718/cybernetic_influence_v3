@@ -1131,7 +1131,7 @@ story, outcome, participants/groups, and Run history with no console, request,
 or page error. No provider call or deployment occurred.
 
 **Observed authorized deployment evidence (2026-07-30):** simulator
-`83cb3c7f48b57bef0290b03222c659c1d110d363` is deployed with shared client
+`fd85ead3565b3f42f9e47b02aa516fb421a457da` is deployed with shared client
 `7501811bee49fe4c20af2d2a50e4040a596b328b`. The operator explicitly changed
 the default canary route from capacity-limited Luna to certified
 subscription-backed `codex/gpt-5.6-terra` at medium reasoning; Luna remains a
@@ -1144,14 +1144,19 @@ measurement in 47 participant, 42 narrator, and one coder call. All 158 calls
 completed without error, retry, or fallback and with complete
 `subscription_included` zero-cost coverage.
 
-The three-condition gate is not yet accepted. Pressure runs first
+Pressure runs first
 exposed and motivated a structurally derived 57-call narrator ceiling and a
 grounded completion-summary repair. On the repaired deployed summary,
 `run_e3173c381918` ended at the 48-call participant safety limit before an
 exact terminal decision, so the coder correctly did not run. The Terra
-baseline and stabilization above now provide a valid same-model pair. Do not
-raise the participant ceiling without operator judgment. Slice 21C remains
-blocked only on a valid current-revision Terra pressure canary.
+baseline and stabilization above provided a valid same-model pair. The operator
+then authorized a 150-participant-decision run-length guard. Current-revision
+Terra pressure `run_2a4055a4a51f` completed at the exact day-10
+`no_decision_by_horizon` condition rather than that guard, retaining five
+partners, two final open risks, and a valid measurement in 48 participant, 43
+narrator, and one coder call. Those 92 calls had no error, retry, or fallback
+and complete `subscription_included` zero-cost coverage. The three-condition
+gate is accepted with 250 same-route calls total; Slice 21C is now next.
 
 **Slice 21B is done when:**
 

@@ -14,13 +14,14 @@ The service binds only to `127.0.0.1:8620`. Tailscale Serve adds the
 tailnet-only HTTPS listener. Do not use Funnel for this port, and do not reset
 the machine's Serve configuration because its other listeners are unrelated.
 
-Packet 21B2 deployment observed 2026-07-30:
+Packet 21B2 deployment and three-condition canary gate observed 2026-07-30:
 
-- simulator `83cb3c7f48b57bef0290b03222c659c1d110d363` and shared client
+- simulator `fd85ead3565b3f42f9e47b02aa516fb421a457da` and shared client
   `7501811bee49fe4c20af2d2a50e4040a596b328b` are running behind the private
   URL. The config defaults to `codex/gpt-5.6-terra` at medium reasoning and
-  separately advertises certified Luna/medium, with 48 participant, 57
-  narrator, and one post-run coder call allowed;
+  separately advertises certified Luna/medium. Coordination permits at most
+  150 participant decisions as an emergency run-length guard, not a simulated
+  pressure setting or target, plus 57 narrator and one post-run coder call;
 - Terra generic participant/narrator certification observations are
   `routeobs1_4f9772426288e374ab4c4460` and
   `routeobs1_ac896d144bea9fc40db5f66a`; its five Coordination person schemas
@@ -43,10 +44,15 @@ Packet 21B2 deployment observed 2026-07-30:
   narrator, and one coder call with no error, retry, or fallback. It retained
   exact `no_decision_by_horizon`, five partners, two final open risks, and a
   valid measurement after the trajectory first converged on reduced scope;
-- current-summary pressure `run_e3173c381918` ended at the 48-call participant
-  safety limit before a terminal decision, after earlier retained pressure
-  runs exposed and motivated the narrator-bound and completion-summary
-  repairs. The participant ceiling remains unchanged pending operator judgment.
+- accepted Terra pressure `run_2a4055a4a51f` completed 48 participant, 43
+  narrator, and one coder call with no error, retry, or fallback. It retained
+  exact `no_decision_by_horizon`, five partners, two final open risks, and a
+  valid measurement, terminating at the day-10 condition rather than the
+  150-decision guard. The 92 calls used only `codex/gpt-5.6-terra` at medium
+  reasoning with complete `subscription_included` zero-cost coverage;
+- superseded pressure `run_e3173c381918` remains retained as evidence of the
+  former 48-call safety-limit failure. The new canary supersedes that failure;
+  it does not rewrite it.
 
 Live execution uses the shared `llm_client` checkout at
 `/Users/b/code/llm_client`. The LaunchAgent starts through
