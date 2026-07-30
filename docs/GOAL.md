@@ -138,13 +138,23 @@ restarting completed work.
   not a simulated-pressure target; its narrator guard remains 57 calls and it
   retains at most one post-run evidence-coder call. Other scenarios retain
   their own lower bounds.
-- **Current increment:** Packet 21B2's readout is implemented, deployed, and
+- **Packet 21B2:** its readout is implemented, deployed, and
   fixture/browser verified. Exact measures, evidence-coded interpretations,
   provenance, limitations, and exact evidence step-down share the existing
-  Simulation and Run history surfaces. The authorized three-canary gate is
-  accepted all three same-route, measurement-compatible canaries. The pressure
+  Simulation and Run history surfaces. The authorized three-canary gate
+  accepts all three same-route, measurement-compatible canaries. The pressure
   canary uses the later revision whose only relevant runtime change is the
   previously inactive participant guard.
+- **Current increment:** Packet 21C0 freezes a strict two-replicate-per-condition
+  comparison contract and passes a provider-free six-run scripted matrix. Batch
+  `88cf2d9484981535385a095f44b2e09621b175378f2b2fc424336bd0d5a6f05f`
+  is governed by contract fingerprint
+  `2ccd1255c429a81559e0419c9ac25464ccc145b4458ad72882ffb0a14c973040` and
+  preserves every run, native-unit values and ranges, missing values, invalid
+  exclusions, coded disagreement, and actor-level source-reliance disagreement.
+  It rejects mixed execution, participant/coder model or reasoning, per-arm
+  scenario fingerprint, and measurement-spec inputs; it produces no scalar
+  trust, risk, readiness, or agency score.
 - **Observed route certification evidence:** the exact generic participant,
   narrator, five Coordination-person, and evidence-coder schemas passed on the
   deployed client revision for both Terra/medium and Luna/medium. Terra is the
@@ -202,10 +212,10 @@ restarting completed work.
   event on the existing map/timeline. A failed or interrupted assay cannot
   rewrite a completed world run. The normal story, maps, participant/group
   accounts, pause/resume controls, and Advanced evidence remain present.
-- **Resume event:** Packet 21B2's same-model canary set is complete. Proceed to
-  Slice 21C's baseline/pressure/stabilization comparison using only valid
-  retained runs and preserve run-level uncertainty; do not treat this single
-  trajectory per condition as an empirical effect estimate.
+- **Resume event:** Packet 21C0 is complete. Before Packet 21C1, report the
+  reusable live canaries and exact additional three-run topology, then obtain
+  explicit deployment and subscription-run authorization. Do not launch or
+  automatically replace a run without that authorization.
 
 ## Done
 

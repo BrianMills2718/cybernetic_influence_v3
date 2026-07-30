@@ -1,5 +1,15 @@
 """Post-run analysis contracts that never participate in world execution."""
 
+from cybernetic_influence.analysis.coordination_comparison import (
+    BASELINE_CONDITION,
+    COMPARISON_CONDITIONS,
+    COMPARISON_CONTRACT_FINGERPRINT,
+    COMPARISON_REPLICATES_PER_CONDITION,
+    COMPARISON_SCHEMA_VERSION,
+    ComparisonRunInput,
+    CoordinationComparison,
+    compare_coordination_runs,
+)
 from cybernetic_influence.analysis.coordination_measurement import (
     CODED_MEASURE_IDS,
     COORDINATION_MEASUREMENT_SPEC,
@@ -24,7 +34,12 @@ from cybernetic_influence.analysis.coordination_measurement import (
 )
 
 __all__ = [
+    "BASELINE_CONDITION",
     "CODED_MEASURE_IDS",
+    "COMPARISON_CONDITIONS",
+    "COMPARISON_CONTRACT_FINGERPRINT",
+    "COMPARISON_REPLICATES_PER_CONDITION",
+    "COMPARISON_SCHEMA_VERSION",
     "COORDINATION_MEASUREMENT_SPEC",
     "COORDINATION_MEASUREMENT_SPEC_FINGERPRINT",
     "DERIVED_MEASURE_IDS",
@@ -32,6 +47,8 @@ __all__ = [
     "MEASUREMENT_SPEC_VERSION",
     "AnalystVisibleEvent",
     "CoderOutput",
+    "ComparisonRunInput",
+    "CoordinationComparison",
     "EvidenceAttachment",
     "IndicatorCoding",
     "IndicatorEvidence",
@@ -42,6 +59,7 @@ __all__ = [
     "MeasurementSpec",
     "RunMeasurement",
     "RunMeasurementConsumer",
+    "compare_coordination_runs",
     "measurement_spec_fingerprint",
     "validate_coder_output",
 ]

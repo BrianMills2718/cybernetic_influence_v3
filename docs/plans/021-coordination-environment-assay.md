@@ -1187,6 +1187,27 @@ fixture changes only its expected arm/readout; stabilization is not assumed to
 succeed; no scalar trust/risk/readiness or agency score exists. Run focused
 comparison tests, audit, commit, and stop before UI or paid execution.
 
+**Observed zero-cost evidence (2026-07-30):** comparison schema version 1 fixes
+two slots for each of baseline, heterogeneous pressure, and stabilization. It
+binds execution mode, participant and coder model/reasoning, per-condition
+scenario fingerprints, measurement specification, and complete run contents
+into contract and batch fingerprints. Batch
+`88cf2d9484981535385a095f44b2e09621b175378f2b2fc424336bd0d5a6f05f`
+under contract fingerprint
+`2ccd1255c429a81559e0419c9ac25464ccc145b4458ad72882ffb0a14c973040`
+contains six valid scripted runs. Every run measurement remains available for
+later evidence step-down; numeric patterns retain per-run values, native units,
+ranges, missing and invalid counts; coded indicators retain between-run
+disagreement; and exact source-reliance edges retain actor-level directional
+disagreement. Invalid runs are explicit nullable slots, never zeroes. Changing
+one pressure measurement changes only the pressure summary. Stabilization's
+observed values are calculated rather than assigned a favorable direction. The
+only pattern label is `candidate_directional_pattern`; no combined score exists.
+The required 38 comparison/measurement tests, analysis mypy, focused lint, and
+diff checks pass with no provider call, deployment, API, or UI change. The
+code-diff audit found and corrected invalid-subgroup zero filling and missing
+coder-identity compatibility before acceptance. Packet 21C0 is complete.
+
 ### Packet 21C1 — Authorized repeated live matrix
 
 Report the exact six-run topology, existing valid canaries eligible for reuse,

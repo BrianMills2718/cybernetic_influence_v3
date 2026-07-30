@@ -36,8 +36,10 @@ measurement readout. Its Terra/medium baseline, pressure, and stabilization
 canaries are accepted on behavior-compatible deployed revisions; the later
 pressure revision changed only the previously inactive participant guard. That
 run terminated at its exact deadline condition under the operator-approved
-150-decision run-length guard. Slice 21C has not begun, and its
-evasion extensions remain gated. [Slice 22: Composite-agency perturbation
+150-decision run-length guard. Packet 21C0's strict comparison contract and
+provider-free six-run matrix are complete; Packet 21C1's live repeated matrix
+is the next authorization boundary, and later evasion extensions remain gated.
+[Slice 22: Composite-agency perturbation
 assay](022-composite-agency-perturbation-assay.md) is a separate gate after
 Slice 21C; it reuses the same scenario to test goal preservation, correction,
 recovery, and rerouting under concrete perturbations without creating an

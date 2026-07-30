@@ -93,7 +93,8 @@ run-measurement artifact. Packet 21B2's readout is now implemented and
 deployed. Its Terra/medium baseline, pressure, and stabilization canaries are
 accepted with valid retained measurements. The pressure canary ran on the
 later revision that raised only the previously inactive participant guard;
-Slice 21C has not begun.
+Packet 21C0's frozen comparison contract and provider-free six-run matrix pass;
+Packet 21C1's live repeated matrix has not begun.
 [Slice 22: composite-agency perturbation
 assay](plans/022-composite-agency-perturbation-assay.md) is separately gated by
 Slice 21C and operationalizes the later Levin-style question on that same
@@ -796,7 +797,7 @@ requires them to answer an analyst question that current contracts cannot.
   Coordination scenario, measurement readout, and certification-gated
   native-person seam. Coordination's 150-participant-decision limit is an
   emergency run-length guard rather than a pressure setting or call target.
-- **Current packet:** Packet 21B2's API/UI portion is deployed and its
+- **Prior packet:** Packet 21B2's API/UI portion is deployed and its
   same-route Terra baseline, pressure, and stabilization canaries are accepted.
   It retains at most one evidence-coder call after a completed live
   Coordination run; projects exact and coded evidence separately in the
@@ -816,9 +817,17 @@ requires them to answer an analyst question that current contracts cannot.
   error, retry, fallback, or safety-limit termination. All 250 calls across the
   accepted set used the operator's ChatGPT Codex subscription with complete
   `$0` marginal-cost coverage.
-- **Current limiting causes:** no Packet 21B2 implementation or canary blocker
-  remains. Slice 21C is next and must preserve per-run uncertainty rather than
-  presenting one trajectory per condition as a causal effect estimate.
+- **Current packet:** Packet 21C0 is complete. Comparison batch
+  `88cf2d9484981535385a095f44b2e09621b175378f2b2fc424336bd0d5a6f05f`
+  contains two zero-cost scripted runs per condition and retains native-unit
+  ranges, invalid and missing dispositions, coded disagreement, and exact
+  actor-level source-reliance disagreement without a composite score. Thirty-
+  eight comparison/measurement tests, mypy, lint, and diff checks pass.
+- **Current limiting causes:** Packet 21C1 requires explicit authorization
+  before deployment or three additional subscription-backed live runs. Existing
+  accepted baseline, pressure, and stabilization canaries are eligible as the
+  first replicate of each condition because their per-condition scenario and
+  measurement fingerprints remain current.
 
 ## Explicit MVP Deferrals
 
