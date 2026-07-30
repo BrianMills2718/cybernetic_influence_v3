@@ -255,7 +255,8 @@ interrupt an in-flight provider request or automatically resume after a server
 restart.
 
 Purchase-to-payment uses the operator-selected effective live configuration;
-the server default is therefore also DeepSeek `none`. Its observation-driven
+the current server default is therefore also subscription-backed Luna at
+medium reasoning. Its observation-driven
 settled and processor-declined paths allow at most four human and four narrator
 calls. Denied or malformed paths quiesce earlier. Pause/resume remains limited
 to Service Desk.

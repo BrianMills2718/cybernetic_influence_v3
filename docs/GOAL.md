@@ -183,12 +183,12 @@ restarting completed work.
   event on the existing map/timeline. A failed or interrupted assay cannot
   rewrite a completed world run. The normal story, maps, participant/group
   accounts, pause/resume controls, and Advanced evidence remain present.
-- **Resume event:** obtain explicit authorization to certify the added
-  `CoderOutput` route schema, deploy the exact Packet 21B2 revision, and run one
-  new baseline, one heterogeneous-pressure, and one stabilization live canary.
-  The 21A4 baseline cannot be reused because it predates the measurement spec
-  and executable revision. Do not deploy or make a provider call before that
-  authorization.
+- **Resume event:** authorization is now granted to certify the added
+  `CoderOutput` route schema through `codex/gpt-5.6-luna` at medium reasoning,
+  deploy that exact Packet 21B2 revision, and run one new baseline, one
+  heterogeneous-pressure, and one stabilization live canary through the
+  operator's ChatGPT Codex subscription. The 21A4 DeepSeek baseline cannot be
+  reused because it predates the measurement spec and executable revision.
 
 ## Done
 

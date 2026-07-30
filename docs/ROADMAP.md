@@ -596,10 +596,11 @@ supports changing them.
 The completed bounded design is
 [Slice 13](plans/013-configurable-explainable-runs.md). Terra and DeepSeek
 `none` pass the participant/narrator schema boundary and complete deployed
-canaries. DeepSeek is the default; `high` and `xhigh` remain experiments rather
-than inheriting the `none` evidence. Its final desktop observation is
-consolidated into the integrated demo gate rather than left as a competing
-active packet.
+canaries. DeepSeek was the default at that slice's acceptance boundary; the
+current simulator default is the subscription-backed Luna route. `high` and
+`xhigh` remain experiments rather than inheriting the `none` evidence. Its
+final desktop observation is consolidated into the integrated demo gate rather
+than left as a competing active packet.
 
 ### 6. Preserve the integrated private demo — implemented, usability judgment deferred
 
@@ -802,11 +803,12 @@ requires them to answer an analyst question that current contracts cannot.
   `$0.0215453528`; one timed-out attempt is unpriced, so coverage is explicitly
   incomplete. Restart/reopen produced no new call or cost, and rendered readback
   preserved every primary UI surface.
-- **Current limiting cause:** no technical blocker is known. The next bounded
-  outcome requires explicit authorization: certify the added coder schema,
-  deploy the exact Packet 21B2 revision, and collect a new baseline plus one
-  pressure and one stabilization measurement canary. The older live baseline
-  is not fingerprint-compatible with this measurement revision.
+- **Current limiting cause:** no technical blocker is known. Authorization is
+  granted to certify the added coder schema through subscription-backed Luna at
+  medium reasoning, deploy the exact Packet 21B2 revision, and collect a new
+  baseline plus one pressure and one stabilization measurement canary. The
+  older DeepSeek live baseline is not fingerprint-compatible with this
+  measurement revision.
 
 ## Explicit MVP Deferrals
 

@@ -1096,13 +1096,15 @@ with retained fixtures and build the frontend. Then report the maximum coder
 calls, per-call request budget, and retained planning amount and stop for
 authorization.
 
-After authorization, deploy the exact revision and run one live pressure and
-one live stabilization canary. The valid 21A4 baseline may be reused only when
-its scenario, model, reasoning, measurement spec, and executable revision match;
-otherwise request authorization for a new baseline. Inspect all participant,
-narrator, and coder traces. A human must confirm that exact and coded measures
-cannot be mistaken for each other and that one coded claim can be disputed from
-its supplied evidence.
+After authorization, deploy the exact revision and run one live baseline, one
+live pressure, and one live stabilization canary through the current default
+`codex/gpt-5.6-luna` subscription route at medium reasoning. Do not silently
+substitute an OpenRouter model. The valid 21A4 DeepSeek baseline is not reusable
+because its model, measurement spec, and executable revision do not match.
+Inspect all participant, narrator, and coder traces. A human must confirm that
+exact and coded measures cannot be mistaken for each other and that one coded
+claim can be disputed from its supplied evidence. Subscription usage limits,
+not an OpenRouter spend estimate, are the external accounting boundary.
 
 **Owned paths:** keep execution in the narrow
 `src/cybernetic_influence/analysis/coordination.py` module, frozen contracts in
