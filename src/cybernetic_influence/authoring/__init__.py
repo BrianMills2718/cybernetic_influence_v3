@@ -3,6 +3,7 @@
 from cybernetic_influence.authoring.compiler import (
     AuthoringCompilationError,
     CompiledScenario,
+    compile_coordination_decision,
     compile_scenario,
     compile_resource_request,
 )
@@ -12,6 +13,7 @@ __all__ = [
     "AuthoringCompilationError",
     "CompiledScenario",
     "ScenarioDraftProposal",
+    "compile_coordination_decision",
     "compile_resource_request",
     "compile_scenario",
 ]

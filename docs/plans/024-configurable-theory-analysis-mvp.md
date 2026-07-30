@@ -19,6 +19,15 @@ This is the active implementation plan for
 [the MVP goal](../GOAL.md). It replaces the former continuation from Packet
 21C0 to a paid repeated comparison.
 
+## Current progress
+
+Packet 24A0 is implemented and provider-free verified. The strict reviewed
+coordination configuration compiles onto the existing runtime, one scripted
+trajectory produces `RunEvidenceBundleV1`, and separate Waltzman and Levin
+reference readouts validate against that common evidence. Packet 24A1 is the
+next executable packet; no API or UI path has yet been added for these new
+contracts.
+
 ## Current-to-target Delta
 
 Current:
@@ -199,6 +208,8 @@ negative.
 ### Packet 24A0 — configuration, evidence, and finding contracts
 
 **Classification:** direct blocker with an explicit return to 24A1.
+
+**Status:** complete.
 
 Implement:
 

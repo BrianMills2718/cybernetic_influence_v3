@@ -19,9 +19,14 @@ from cybernetic_influence.active_runtime import (
     RuntimeProgressObserver,
 )
 from cybernetic_influence.authoring.models import (
+    CoordinationDecisionWorkflowDraft,
     InformationCampaignWorkflowDraft,
     ResourceRequestWorkflowDraft,
     ScenarioDraftProposal,
+)
+from cybernetic_influence.authoring.coordination_decision import (
+    authored_coordination_fixture,
+    validate_coordination_proposal,
 )
 from cybernetic_influence.authoring.information_campaign import (
     InformationCampaignFixture,
@@ -39,6 +44,14 @@ from cybernetic_influence.authoring.resource_request import (
 )
 from cybernetic_influence.causal_core.engine import ExactMechanismBinding
 from cybernetic_influence.causal_core.models import CausalScenario
+from cybernetic_influence.scenarios.coordination_decision import (
+    CoordinationRuntimeFixture,
+    coordination_native_bindings,
+    coordination_runtime_config,
+    coordination_runtime_fixture,
+    run_coordination,
+    run_scripted_coordination,
+)
 
 
 class AuthoringCompilationError(ValueError):
@@ -92,7 +105,11 @@ class CompiledScenario:
 
     proposal: ScenarioDraftProposal
     proposal_digest: str
-    fixture: ResourceRequestFixture | InformationCampaignFixture
+    fixture: (
+        ResourceRequestFixture
+        | InformationCampaignFixture
+        | CoordinationRuntimeFixture
+    )
 
     @property
     def scenario(self) -> CausalScenario:
@@ -100,11 +117,17 @@ class CompiledScenario:
 
     @property
     def exact_bindings(self) -> dict[str, ExactMechanismBinding]:
-        return self.fixture.exact_bindings
+        return dict(self.fixture.exact_bindings)
 
     def run_scripted(
         self, *, run_id: str, progress_observer: RuntimeProgressObserver | None = None
     ) -> ActiveRuntimeResult:
+        if isinstance(self.fixture, CoordinationRuntimeFixture):
+            return run_scripted_coordination(
+                self.fixture,
+                run_id=run_id,
+                progress_observer=progress_observer,
+            )
         if isinstance(self.fixture, InformationCampaignFixture):
             return run_information_campaign(
                 self.fixture,
@@ -139,6 +162,23 @@ class CompiledScenario:
             max_observations_per_system=8,
             max_private_state_bytes=16_384,
         )
+        if isinstance(self.fixture, CoordinationRuntimeFixture):
+            bindings = coordination_native_bindings(
+                self.fixture,
+                trace_id_prefix=run_id,
+                model=model,
+                reasoning_effort=reasoning_effort,
+            )
+            return run_coordination(
+                self.fixture,
+                bindings,
+                run_id=run_id,
+                runtime_config=coordination_runtime_config(
+                    per_call_budget=per_call_budget,
+                    per_run_budget=per_run_budget,
+                ),
+                progress_observer=progress_observer,
+            )
         if isinstance(self.fixture, InformationCampaignFixture):
             campaign_fixture, campaign_bindings = (
                 information_campaign_native_fixture_and_bindings(
@@ -201,7 +241,31 @@ def compile_scenario(proposal: ScenarioDraftProposal) -> CompiledScenario:
             proposal_digest=_proposal_digest(selected),
             fixture=information_campaign_fixture(selected),
         )
+    if proposal.workflow.template_id == "coordination_decision_v1":
+        return compile_coordination_decision(proposal)
     raise AuthoringCompilationError("unknown authored scenario template")
+
+
+def compile_coordination_decision(
+    proposal: ScenarioDraftProposal,
+) -> CompiledScenario:
+    """Compile reviewed coordination values onto existing exact mechanisms."""
+
+    selected = ScenarioDraftProposal.model_validate(proposal.model_dump(mode="json"))
+    if not isinstance(selected.workflow, CoordinationDecisionWorkflowDraft):
+        raise AuthoringCompilationError(
+            "proposal is not a coordination_decision_v1 workflow"
+        )
+    try:
+        validate_coordination_proposal(selected)
+        contract = authored_coordination_fixture(selected)
+    except ValueError as error:
+        raise AuthoringCompilationError(str(error)) from error
+    return CompiledScenario(
+        proposal=selected,
+        proposal_digest=_proposal_digest(selected),
+        fixture=coordination_runtime_fixture(contract),
+    )
 
 
 def _validate_information_campaign(proposal: ScenarioDraftProposal) -> None:
