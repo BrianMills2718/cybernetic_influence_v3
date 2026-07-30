@@ -818,19 +818,23 @@ requires them to answer an analyst question that current contracts cannot.
   accepted set used the operator's ChatGPT Codex subscription with complete
   `$0` marginal-cost coverage.
 - **Current packet:** Packet 21C0 is complete. Comparison batch
-  `88cf2d9484981535385a095f44b2e09621b175378f2b2fc424336bd0d5a6f05f`
+  `e42215e123ed2c3bb838d29a9f88854ea18f7f4ba03630f2484d4dedea38117a`
   contains two zero-cost scripted runs per condition and retains native-unit
   ranges, invalid and missing dispositions, coded disagreement, and exact
-  actor-level source-reliance disagreement without a composite score. Thirty-
-  eight comparison/measurement tests, mypy, lint, and diff checks pass.
+  actor-level source-reliance disagreement without a composite score.
+  Comparison schema version 2 also retains replaced invalid attempts outside
+  the six selected slots, binds them into the batch fingerprint, and counts
+  them without contributing measurement values. Forty-two
+  comparison/measurement tests, mypy, and diff checks pass.
 - **Current limiting cause:** Packet 21C1's exact deployment is complete, but
   authorized second-baseline attempt `run_71a55a23f247` failed before its first
   response when the Codex CLI reported the account usage limit. It retained
   one failed lifecycle and `$0` observed cost. No replacement or further
   condition run was launched. Existing accepted baseline, pressure, and
   stabilization canaries remain eligible as the first replicate of each
-  condition; resume requires restored route capacity and explicit authorization
-  for one replacement baseline.
+  condition. The typed excluded-attempt repair now preserves the failed run if
+  a replacement is authorized; resume requires restored route capacity and
+  explicit authorization for one replacement baseline.
 
 ## Explicit MVP Deferrals
 

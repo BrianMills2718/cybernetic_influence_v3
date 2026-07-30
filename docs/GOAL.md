@@ -147,9 +147,12 @@ restarting completed work.
   previously inactive participant guard.
 - **Current increment:** Packet 21C0 freezes a strict two-replicate-per-condition
   comparison contract and passes a provider-free six-run scripted matrix. Batch
-  `88cf2d9484981535385a095f44b2e09621b175378f2b2fc424336bd0d5a6f05f`
+  `e42215e123ed2c3bb838d29a9f88854ea18f7f4ba03630f2484d4dedea38117a`
   is governed by contract fingerprint
-  `2ccd1255c429a81559e0419c9ac25464ccc145b4458ad72882ffb0a14c973040` and
+  `9ea5929d69c084d392f65d439efb940be817096b7692c0570d75f35ee4b915d2`.
+  Version 2 preserves replaced invalid attempts outside the six selected slots,
+  fingerprints them, counts them as invalid, and never lets them contribute
+  measurement values. It otherwise
   preserves every run, native-unit values and ranges, missing values, invalid
   exclusions, coded disagreement, and actor-level source-reliance disagreement.
   It rejects mixed execution, participant/coder model or reasoning, per-arm
@@ -219,6 +222,9 @@ restarting completed work.
   observed marginal cost because the Codex CLI reported the account usage
   limit. The pressure and stabilization replicates were not launched into that
   known rejection, and the failed baseline was not replaced.
+  The observed failure exposed and now has a tested contract repair: a later
+  authorized replacement can coexist with this invalid attempt while the
+  selected matrix still contains exactly two valid trajectories per condition.
 - **Resume event:** restore capacity on the existing Codex Terra/medium route
   and explicitly authorize one replacement baseline. The already authorized
   pressure and stabilization replicates may then run on the same route. Do not

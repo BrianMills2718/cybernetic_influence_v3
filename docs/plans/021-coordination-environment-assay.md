@@ -1187,14 +1187,18 @@ fixture changes only its expected arm/readout; stabilization is not assumed to
 succeed; no scalar trust/risk/readiness or agency score exists. Run focused
 comparison tests, audit, commit, and stop before UI or paid execution.
 
-**Observed zero-cost evidence (2026-07-30):** comparison schema version 1 fixes
-two slots for each of baseline, heterogeneous pressure, and stabilization. It
-binds execution mode, participant and coder model/reasoning, per-condition
-scenario fingerprints, measurement specification, and complete run contents
-into contract and batch fingerprints. Batch
-`88cf2d9484981535385a095f44b2e09621b175378f2b2fc424336bd0d5a6f05f`
+**Observed zero-cost evidence (2026-07-30):** comparison schema version 2 fixes
+two selected slots for each of baseline, heterogeneous pressure, and
+stabilization. It separately retains any replaced invalid attempts, includes
+them in condition invalid counts and the batch fingerprint, and forbids them
+from contributing measurement values. A missing scenario fingerprint requires
+an explicit `unavailable_before_result` disposition rather than an invented
+value. The contract binds execution mode, participant and coder
+model/reasoning, per-condition known scenario fingerprints, measurement
+specification, and complete selected and excluded contents. Batch
+`e42215e123ed2c3bb838d29a9f88854ea18f7f4ba03630f2484d4dedea38117a`
 under contract fingerprint
-`2ccd1255c429a81559e0419c9ac25464ccc145b4458ad72882ffb0a14c973040`
+`9ea5929d69c084d392f65d439efb940be817096b7692c0570d75f35ee4b915d2`
 contains six valid scripted runs. Every run measurement remains available for
 later evidence step-down; numeric patterns retain per-run values, native units,
 ranges, missing and invalid counts; coded indicators retain between-run
@@ -1203,8 +1207,8 @@ disagreement. Invalid runs are explicit nullable slots, never zeroes. Changing
 one pressure measurement changes only the pressure summary. Stabilization's
 observed values are calculated rather than assigned a favorable direction. The
 only pattern label is `candidate_directional_pattern`; no combined score exists.
-The required 38 comparison/measurement tests, analysis mypy, focused lint, and
-diff checks pass with no provider call, deployment, API, or UI change. The
+The required 42 comparison/measurement tests, analysis mypy, and diff checks
+pass with no provider call, deployment, API, or UI change. The
 code-diff audit found and corrected invalid-subgroup zero filling and missing
 coder-identity compatibility before acceptance. Packet 21C0 is complete.
 
@@ -1228,8 +1232,12 @@ Terra/medium bindings. Authorized second-baseline attempt
 Codex CLI reported the account usage limit. It retained one failed call
 lifecycle, no world event, no narrator/coder call, and `$0` observed marginal
 cost. No automatic replacement or knowingly doomed pressure/stabilization call
-was launched. Packet 21C1 remains incomplete pending restored capacity and
-explicit replacement authorization.
+was launched. That failure reproduced a v1 contract gap: replacing it would
+either hide the invalid attempt or displace one of the six required valid
+slots. Version 2 now retains such attempts separately with strict
+configuration, cost, fingerprint-availability, invalid-count, and
+content-fingerprint controls. Packet 21C1 remains incomplete pending restored
+capacity and explicit replacement authorization.
 
 ### Packet 21C2 — Comparison readout, sign-off, and MVP closeout
 

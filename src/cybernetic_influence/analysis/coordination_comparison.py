@@ -22,7 +22,7 @@ from cybernetic_influence.analysis.coordination_measurement import (
 )
 from cybernetic_influence.scenarios.coordination_decision import PERSON_IDS
 
-COMPARISON_SCHEMA_VERSION = 1
+COMPARISON_SCHEMA_VERSION = 2
 COMPARISON_REPLICATES_PER_CONDITION = 2
 COMPARISON_CONDITIONS = (
     "baseline",
@@ -128,6 +128,68 @@ class ComparisonRunInput(_ProducedModel):
         return self
 
 
+class ComparisonExcludedAttempt(_ProducedModel):
+    """One failed or otherwise invalid attempt replaced outside the six slots."""
+
+    run_id: str = Field(pattern=r"^run_[a-z0-9]+$")
+    condition: Condition
+    requested_replicate: int = Field(ge=1, le=COMPARISON_REPLICATES_PER_CONDITION)
+    run_status: str = Field(min_length=1)
+    execution: Literal["scripted", "live"]
+    participant_model: str = Field(min_length=1)
+    participant_reasoning_effort: str = Field(min_length=1)
+    coder_model: str = Field(min_length=1)
+    coder_reasoning_effort: str = Field(min_length=1)
+    scenario_fingerprint: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
+    scenario_fingerprint_status: Literal["known", "unavailable_before_result"]
+    measurement_spec_version: Literal[1] = 1
+    measurement_spec_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    cost_fully_observable: bool
+    observed_cost: float | None = Field(default=None, ge=0.0)
+    cost_source: str = Field(min_length=1)
+    validity_issues: list[ValidityIssue]
+
+    @model_validator(mode="after")
+    def validate_exclusion(self) -> ComparisonExcludedAttempt:
+        if len(self.validity_issues) != len(set(self.validity_issues)):
+            raise ValueError("excluded attempt validity issues must be unique")
+        if not self.validity_issues:
+            raise ValueError("an excluded attempt must retain a validity issue")
+        has_cost_issue = "unobservable_spend" in self.validity_issues
+        if not self.cost_fully_observable and not has_cost_issue:
+            raise ValueError(
+                "an excluded attempt with incomplete cost coverage requires an unobservable_spend validity issue"
+            )
+        if self.cost_fully_observable and has_cost_issue:
+            raise ValueError(
+                "a fully observable excluded attempt cannot retain unobservable_spend"
+            )
+        if self.cost_fully_observable and self.observed_cost is None:
+            raise ValueError(
+                "a fully observable excluded attempt requires an observed cost"
+            )
+        if self.scenario_fingerprint_status == "known":
+            if self.scenario_fingerprint is None:
+                raise ValueError(
+                    "a known excluded-attempt scenario fingerprint is required"
+                )
+        elif self.scenario_fingerprint is not None:
+            raise ValueError(
+                "an excluded attempt unavailable before a result must omit its scenario fingerprint"
+            )
+        if (
+            self.scenario_fingerprint_status == "unavailable_before_result"
+            and self.run_status == "completed"
+        ):
+            raise ValueError(
+                "a completed excluded attempt cannot mark its scenario fingerprint unavailable before a result"
+            )
+        return self
+
+
 class NumericMetricSpec(_ProducedModel):
     metric_id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     measure_id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
@@ -221,6 +283,13 @@ def _comparison_contract_fingerprint() -> str:
             "rejected",
             "validation_pending",
         ],
+        "excluded_attempts": {
+            "retained_outside_selected_slots": True,
+            "contribute_measurement_values": False,
+            "count_as_invalid_runs": True,
+            "known_configuration_must_match": True,
+            "scenario_fingerprint_status_is_explicit": True,
+        },
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
@@ -315,7 +384,7 @@ class ComparisonRunRecord(ComparisonRunInput):
 
 
 class CoordinationComparison(_ProducedModel):
-    comparison_schema_version: Literal[1] = 1
+    comparison_schema_version: Literal[2] = 2
     comparison_id: str = Field(pattern=r"^comparison_[0-9a-f]{16}$")
     comparison_contract_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     batch_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -331,6 +400,7 @@ class CoordinationComparison(_ProducedModel):
     measurement_spec_version: Literal[1] = 1
     measurement_spec_fingerprint: str
     runs: list[ComparisonRunRecord]
+    excluded_attempts: list[ComparisonExcludedAttempt]
     numeric_patterns: list[NumericCandidatePattern]
     coded_indicators: list[CodedIndicatorComparison]
     subgroup_disagreement: list[SubgroupDisagreement]
@@ -352,7 +422,14 @@ class CoordinationComparison(_ProducedModel):
                 for item in self.runs
             ]
         )
-        if self.batch_fingerprint != _batch_fingerprint(run_inputs):
+        excluded_attempts = _validate_excluded_attempts(
+            run_inputs,
+            self.excluded_attempts,
+        )
+        if self.batch_fingerprint != _batch_fingerprint(
+            run_inputs,
+            excluded_attempts,
+        ):
             raise ValueError("retained comparison batch fingerprint mismatch")
         first = run_inputs[0]
         expected_scenarios = {
@@ -405,6 +482,26 @@ class CoordinationComparison(_ProducedModel):
                 conditions
             ) != set(COMPARISON_CONDITIONS):
                 raise ValueError("retained comparison summary conditions are incomplete")
+        expected_invalid_counts = Counter(
+            item.condition for item in run_inputs if item.validity_issues
+        )
+        expected_invalid_counts.update(
+            item.condition for item in excluded_attempts
+        )
+        condition_summaries = [
+            summary
+            for pattern in self.numeric_patterns
+            for summary in pattern.conditions
+        ] + [
+            summary
+            for indicator in self.coded_indicators
+            for summary in indicator.conditions
+        ]
+        for summary in condition_summaries:
+            if summary.invalid_run_count != expected_invalid_counts[summary.condition]:
+                raise ValueError(
+                    "retained comparison invalid-run count disagrees with run dispositions"
+                )
         subgroup_slots = {
             (item.condition, item.disposition)
             for item in self.subgroup_disagreement
@@ -418,15 +515,28 @@ class CoordinationComparison(_ProducedModel):
             subgroup_slots != expected_subgroup_slots
         ):
             raise ValueError("retained comparison subgroup summaries are incomplete")
+        for subgroup_summary in self.subgroup_disagreement:
+            for subgroup in subgroup_summary.subgroups:
+                if (
+                    subgroup.invalid_run_count
+                    != expected_invalid_counts[subgroup_summary.condition]
+                ):
+                    raise ValueError(
+                        "retained comparison subgroup invalid-run count disagrees with run dispositions"
+                    )
         return self
 
 
 def compare_coordination_runs(
     inputs: Sequence[ComparisonRunInput],
+    *,
+    excluded_attempts: Sequence[ComparisonExcludedAttempt] = (),
 ) -> CoordinationComparison:
     """Validate and compare exactly two retained slots per condition."""
 
     ordered = _validate_matrix(inputs)
+    ordered_excluded = _validate_excluded_attempts(ordered, excluded_attempts)
+    excluded_counts = Counter(item.condition for item in ordered_excluded)
     first = ordered[0]
     records = [
         ComparisonRunRecord.model_validate(
@@ -437,7 +547,7 @@ def compare_coordination_runs(
         )
         for item in ordered
     ]
-    fingerprint = _batch_fingerprint(ordered)
+    fingerprint = _batch_fingerprint(ordered, ordered_excluded)
     return CoordinationComparison(
         comparison_id=f"comparison_{fingerprint[:16]}",
         comparison_contract_fingerprint=COMPARISON_CONTRACT_FINGERPRINT,
@@ -457,9 +567,13 @@ def compare_coordination_runs(
         },
         measurement_spec_fingerprint=first.measurement_spec_fingerprint,
         runs=records,
-        numeric_patterns=[_numeric_pattern(spec, ordered) for spec in NUMERIC_METRICS],
-        coded_indicators=_coded_comparisons(ordered),
-        subgroup_disagreement=_subgroup_comparisons(ordered),
+        excluded_attempts=ordered_excluded,
+        numeric_patterns=[
+            _numeric_pattern(spec, ordered, excluded_counts)
+            for spec in NUMERIC_METRICS
+        ],
+        coded_indicators=_coded_comparisons(ordered, excluded_counts),
+        subgroup_disagreement=_subgroup_comparisons(ordered, excluded_counts),
         limitations=[
             "This is an exploratory two-replicate synthetic comparison, not statistical inference.",
             "Invalid runs remain visible and are excluded from directional calculations.",
@@ -518,13 +632,79 @@ def _validate_matrix(
     return sorted(inputs, key=lambda item: (order[item.condition], item.replicate))
 
 
-def _batch_fingerprint(inputs: Sequence[ComparisonRunInput]) -> str:
+def _validate_excluded_attempts(
+    inputs: Sequence[ComparisonRunInput],
+    excluded_attempts: Sequence[ComparisonExcludedAttempt],
+) -> list[ComparisonExcludedAttempt]:
+    selected_ids = {item.run_id for item in inputs}
+    excluded_ids = [item.run_id for item in excluded_attempts]
+    if len(excluded_ids) != len(set(excluded_ids)) or selected_ids.intersection(
+        excluded_ids
+    ):
+        raise ValueError("comparison selected and excluded run IDs must be unique")
+    first = inputs[0]
+    expected_configuration = (
+        first.execution,
+        first.participant_model,
+        first.participant_reasoning_effort,
+        first.coder_model,
+        first.coder_reasoning_effort,
+        first.measurement_spec_version,
+        first.measurement_spec_fingerprint,
+    )
+    fingerprints = {
+        cast(Condition, condition): next(
+            item.scenario_fingerprint
+            for item in inputs
+            if item.condition == condition
+        )
+        for condition in COMPARISON_CONDITIONS
+    }
+    for attempt in excluded_attempts:
+        configuration = (
+            attempt.execution,
+            attempt.participant_model,
+            attempt.participant_reasoning_effort,
+            attempt.coder_model,
+            attempt.coder_reasoning_effort,
+            attempt.measurement_spec_version,
+            attempt.measurement_spec_fingerprint,
+        )
+        if configuration != expected_configuration:
+            raise ValueError(
+                "excluded attempt configuration does not match the selected batch"
+            )
+        if (
+            attempt.scenario_fingerprint is not None
+            and attempt.scenario_fingerprint != fingerprints[attempt.condition]
+        ):
+            raise ValueError(
+                f"excluded attempt scenario fingerprint does not match condition {attempt.condition!r}"
+            )
+    order = {condition: index for index, condition in enumerate(COMPARISON_CONDITIONS)}
+    return sorted(
+        excluded_attempts,
+        key=lambda item: (
+            order[item.condition],
+            item.requested_replicate,
+            item.run_id,
+        ),
+    )
+
+
+def _batch_fingerprint(
+    inputs: Sequence[ComparisonRunInput],
+    excluded_attempts: Sequence[ComparisonExcludedAttempt],
+) -> str:
     payload = {
         "comparison_schema_version": COMPARISON_SCHEMA_VERSION,
         "comparison_contract_fingerprint": COMPARISON_CONTRACT_FINGERPRINT,
         "replicates_per_condition": COMPARISON_REPLICATES_PER_CONDITION,
         "conditions": list(COMPARISON_CONDITIONS),
         "runs": [item.model_dump(mode="json") for item in inputs],
+        "excluded_attempts": [
+            item.model_dump(mode="json") for item in excluded_attempts
+        ],
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
@@ -533,6 +713,7 @@ def _batch_fingerprint(inputs: Sequence[ComparisonRunInput]) -> str:
 def _numeric_pattern(
     spec: NumericMetricSpec,
     inputs: Sequence[ComparisonRunInput],
+    excluded_counts: Mapping[Condition, int],
 ) -> NumericCandidatePattern:
     values = {
         condition: [
@@ -576,7 +757,10 @@ def _numeric_pattern(
                 unit=spec.unit,
                 per_run=per_run,
                 valid_run_count=sum(not item.validity_issues for item in condition_inputs),
-                invalid_run_count=sum(bool(item.validity_issues) for item in condition_inputs),
+                invalid_run_count=(
+                    sum(bool(item.validity_issues) for item in condition_inputs)
+                    + excluded_counts.get(condition, 0)
+                ),
                 missing_value_count=sum(
                     not item.validity_issues and value is None
                     for item, value in zip(condition_inputs, [x.value for x in per_run])
@@ -625,6 +809,7 @@ def _numeric_value(
 
 def _coded_comparisons(
     inputs: Sequence[ComparisonRunInput],
+    excluded_counts: Mapping[Condition, int],
 ) -> list[CodedIndicatorComparison]:
     indicator_ids = (
         "conditional_trust_episode",
@@ -667,7 +852,10 @@ def _coded_comparisons(
                     condition=condition,
                     per_run=per_run,
                     valid_run_count=sum(not item.validity_issues for item in condition_inputs),
-                    invalid_run_count=sum(bool(item.validity_issues) for item in condition_inputs),
+                    invalid_run_count=(
+                        sum(bool(item.validity_issues) for item in condition_inputs)
+                        + excluded_counts.get(condition, 0)
+                    ),
                     missing_indicator_count=sum(
                         not source.validity_issues and value.direction is None
                         for source, value in zip(condition_inputs, per_run)
@@ -688,6 +876,7 @@ def _coded_comparisons(
 
 def _subgroup_comparisons(
     inputs: Sequence[ComparisonRunInput],
+    excluded_counts: Mapping[Condition, int],
 ) -> list[SubgroupDisagreement]:
     counts: dict[tuple[str, int, str, str], int] = defaultdict(int)
     for item in inputs:
@@ -754,10 +943,13 @@ def _subgroup_comparisons(
                         baseline_values=baseline_values,
                         condition_values=condition_values,
                         valid_run_count=len(condition_observed),
-                        invalid_run_count=sum(
-                            bool(item.validity_issues)
-                            for item in inputs
-                            if item.condition == condition
+                        invalid_run_count=(
+                            sum(
+                                bool(item.validity_issues)
+                                for item in inputs
+                                if item.condition == condition
+                            )
+                            + excluded_counts.get(condition, 0)
                         ),
                         missing_value_count=sum(
                             value is None for value in condition_values

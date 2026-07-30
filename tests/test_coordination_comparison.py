@@ -12,6 +12,7 @@ from cybernetic_influence.analysis.coordination import analyze_coordination_run
 from cybernetic_influence.analysis.coordination_comparison import (
     COMPARISON_CONDITIONS,
     COMPARISON_CONTRACT_FINGERPRINT,
+    ComparisonExcludedAttempt,
     ComparisonRunInput,
     Condition,
     CoordinationComparison,
@@ -149,7 +150,7 @@ def test_zero_cost_six_run_matrix_freezes_truthful_comparison(
 ) -> None:
     comparison = compare_coordination_runs(matrix)
 
-    assert comparison.comparison_schema_version == 1
+    assert comparison.comparison_schema_version == 2
     assert comparison.replicates_per_condition == 2
     assert len(comparison.runs) == 6
     assert all(item.included for item in comparison.runs)
@@ -230,6 +231,194 @@ def test_invalid_run_remains_visible_but_is_excluded(
     )
     assert all(item.invalid_run_count == 1 for item in pressure_subgroups.subgroups)
     assert all(item.condition_values[1] is None for item in pressure_subgroups.subgroups)
+
+
+def _excluded_attempt(
+    matrix: list[ComparisonRunInput],
+    **updates: Any,
+) -> ComparisonExcludedAttempt:
+    selected = matrix[0]
+    payload: dict[str, object] = {
+        "run_id": "run_capacityfailure",
+        "condition": selected.condition,
+        "requested_replicate": 2,
+        "run_status": "failed",
+        "execution": selected.execution,
+        "participant_model": selected.participant_model,
+        "participant_reasoning_effort": selected.participant_reasoning_effort,
+        "coder_model": selected.coder_model,
+        "coder_reasoning_effort": selected.coder_reasoning_effort,
+        "scenario_fingerprint": None,
+        "scenario_fingerprint_status": "unavailable_before_result",
+        "measurement_spec_version": selected.measurement_spec_version,
+        "measurement_spec_fingerprint": selected.measurement_spec_fingerprint,
+        "cost_fully_observable": False,
+        "observed_cost": 0.0,
+        "cost_source": "unavailable",
+        "validity_issues": [
+            "provider_or_schema_failure",
+            "unobservable_spend",
+        ],
+    }
+    return ComparisonExcludedAttempt.model_validate({**payload, **updates})
+
+
+def test_replaced_failure_remains_fingerprinted_and_counted(
+    matrix: list[ComparisonRunInput],
+) -> None:
+    excluded = _excluded_attempt(matrix)
+    comparison = compare_coordination_runs(
+        matrix,
+        excluded_attempts=[excluded],
+    )
+
+    assert len(comparison.runs) == 6
+    assert all(item.included for item in comparison.runs)
+    assert comparison.excluded_attempts == [excluded]
+    baseline = next(
+        item
+        for item in comparison.numeric_patterns[0].conditions
+        if item.condition == "baseline"
+    )
+    assert baseline.valid_run_count == 2
+    assert baseline.invalid_run_count == 1
+    baseline_coded = next(
+        item
+        for item in comparison.coded_indicators[0].conditions
+        if item.condition == "baseline"
+    )
+    assert baseline_coded.invalid_run_count == 1
+    baseline_subgroups = next(
+        item
+        for item in comparison.subgroup_disagreement
+        if item.condition == "baseline" and item.disposition == "relied_on"
+    )
+    assert all(
+        item.invalid_run_count == 1 for item in baseline_subgroups.subgroups
+    )
+    assert comparison.batch_fingerprint != compare_coordination_runs(
+        matrix
+    ).batch_fingerprint
+    changed_exclusion = ComparisonExcludedAttempt.model_validate(
+        {
+            **excluded.model_dump(mode="json"),
+            "cost_source": "different-retained-source",
+        }
+    )
+    assert compare_coordination_runs(
+        matrix,
+        excluded_attempts=[changed_exclusion],
+    ).batch_fingerprint != comparison.batch_fingerprint
+
+
+def test_excluded_attempt_must_be_invalid_and_cost_truthful(
+    matrix: list[ComparisonRunInput],
+) -> None:
+    with pytest.raises(ValueError, match="must retain a validity issue"):
+        _excluded_attempt(matrix, validity_issues=[])
+
+    with pytest.raises(ValueError, match="requires an unobservable_spend"):
+        _excluded_attempt(
+            matrix,
+            validity_issues=["provider_or_schema_failure"],
+        )
+
+    with pytest.raises(ValueError, match="cannot retain unobservable_spend"):
+        _excluded_attempt(
+            matrix,
+            cost_fully_observable=True,
+            cost_source="subscription_included",
+        )
+
+
+def test_excluded_attempt_must_match_known_batch_identity(
+    matrix: list[ComparisonRunInput],
+) -> None:
+    with pytest.raises(ValueError, match="excluded attempt configuration"):
+        compare_coordination_runs(
+            matrix,
+            excluded_attempts=[
+                _excluded_attempt(matrix, participant_model="another-model")
+            ],
+        )
+
+    with pytest.raises(ValueError, match="scenario fingerprint"):
+        compare_coordination_runs(
+            matrix,
+            excluded_attempts=[
+                _excluded_attempt(
+                    matrix,
+                    scenario_fingerprint="f" * 64,
+                    scenario_fingerprint_status="known",
+                )
+            ],
+        )
+
+    with pytest.raises(ValueError, match="run IDs must be unique"):
+        compare_coordination_runs(
+            matrix,
+            excluded_attempts=[
+                _excluded_attempt(matrix, run_id=matrix[0].run_id)
+            ],
+        )
+
+
+def test_excluded_attempt_cannot_hide_known_fingerprint_or_corrupt_counts(
+    matrix: list[ComparisonRunInput],
+) -> None:
+    with pytest.raises(ValueError, match="must omit its scenario fingerprint"):
+        _excluded_attempt(matrix, scenario_fingerprint="f" * 64)
+
+    with pytest.raises(ValueError, match="cannot mark its scenario fingerprint"):
+        _excluded_attempt(matrix, run_status="completed")
+
+    comparison = compare_coordination_runs(
+        matrix,
+        excluded_attempts=[_excluded_attempt(matrix)],
+    ).model_dump(mode="json")
+    numeric_patterns = cast(list[dict[str, object]], comparison["numeric_patterns"])
+    conditions = cast(list[dict[str, object]], numeric_patterns[0]["conditions"])
+    baseline = next(item for item in conditions if item["condition"] == "baseline")
+    baseline["invalid_run_count"] = 0
+    with pytest.raises(ValueError, match="invalid-run count disagrees"):
+        CoordinationComparison.model_validate(comparison)
+
+    coded_comparison = compare_coordination_runs(
+        matrix,
+        excluded_attempts=[_excluded_attempt(matrix)],
+    ).model_dump(mode="json")
+    coded_indicators = cast(
+        list[dict[str, object]],
+        coded_comparison["coded_indicators"],
+    )
+    coded_conditions = cast(
+        list[dict[str, object]],
+        coded_indicators[0]["conditions"],
+    )
+    coded_baseline = next(
+        item for item in coded_conditions if item["condition"] == "baseline"
+    )
+    coded_baseline["invalid_run_count"] = 0
+    with pytest.raises(ValueError, match="invalid-run count disagrees"):
+        CoordinationComparison.model_validate(coded_comparison)
+
+    subgroup_comparison = compare_coordination_runs(
+        matrix,
+        excluded_attempts=[_excluded_attempt(matrix)],
+    ).model_dump(mode="json")
+    subgroup_summaries = cast(
+        list[dict[str, object]],
+        subgroup_comparison["subgroup_disagreement"],
+    )
+    baseline_subgroup = next(
+        item
+        for item in subgroup_summaries
+        if item["condition"] == "baseline" and item["disposition"] == "relied_on"
+    )
+    subgroups = cast(list[dict[str, object]], baseline_subgroup["subgroups"])
+    subgroups[0]["invalid_run_count"] = 0
+    with pytest.raises(ValueError, match="subgroup invalid-run count disagrees"):
+        CoordinationComparison.model_validate(subgroup_comparison)
 
 
 def test_unobservable_cost_requires_visible_exclusion(
@@ -391,6 +580,10 @@ def test_contracts_forbid_extras(matrix: list[ComparisonRunInput]) -> None:
     payload = matrix[0].model_dump(mode="json")
     with pytest.raises(ValidationError, match="extra_forbidden"):
         ComparisonRunInput.model_validate({**payload, "aggregate_score": 0.9})
+
+    excluded = _excluded_attempt(matrix).model_dump(mode="json")
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        ComparisonExcludedAttempt.model_validate({**excluded, "replacement": True})
 
     comparison = compare_coordination_runs(matrix).model_dump(mode="json")
     with pytest.raises(ValidationError, match="extra_forbidden"):

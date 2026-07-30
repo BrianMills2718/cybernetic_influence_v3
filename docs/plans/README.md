@@ -39,8 +39,10 @@ run terminated at its exact deadline condition under the operator-approved
 150-decision run-length guard. Packet 21C0's strict comparison contract and
 provider-free six-run matrix are complete. Packet 21C1's exact deployment is
 complete, but its authorized second-baseline attempt retained a zero-cost
-Codex subscription capacity rejection before any world event. The next boundary
-is restored capacity plus explicit authorization for one replacement baseline;
+Codex subscription capacity rejection before any world event. Comparison
+schema version 2 now retains that invalid attempt outside the six selected
+slots without contributing it to measurement values. The next boundary is
+restored capacity plus explicit authorization for one replacement baseline;
 later evasion extensions remain gated.
 [Slice 22: Composite-agency perturbation
 assay](022-composite-agency-perturbation-assay.md) is a separate gate after
