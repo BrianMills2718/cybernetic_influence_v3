@@ -40,27 +40,18 @@ descriptive context, private memory, delivered observations, and currently
 exposed interfaces; exact mechanisms alone deliver information and commit
 world effects.
 
-[Mac development operations](operations/mac-mini.md) owns the separately dated
-last-observed deployed revision and route evidence. The latest deployed revision
-observed on 2026-07-27 is
-`08614b4e9f4c7d6bd84c34922c16e83314faa814`. Service Desk run
-`run_ca0e512a5763` paused after one participant call, resumed the same
-checkpoint, and completed `closed_confirmed` with 110 unique events, 11
-participant calls, two denied premature closure attempts, and provider-observed
-cost `$0.002085029`.
+[Mac development operations](operations/mac-mini.md) owns dated deployment and
+route evidence. On 2026-07-29 the private Mac was freshly observed running
+canonical simulator `1aeea13d6f00170948405b87b556be2727b59943` with shared
+client `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`; its config exposes only
+DeepSeek V4 Flash `none` for live Coordination.
 
-Two separately authorized narration runs produced valid sequential prose
-through five and seven moments before DeepSeek returned event IDs outside the
-supplied current-moment context. The strict validator correctly made narration
-unavailable. This proves the remaining Slice-20 blocker is the model-owned
-citation-ID contract—not participant execution, pause/resume, transport, cost
-visibility, or the causal runtime.
-
-Technical execution is observed for both authored templates and for the
-configured Service Desk live/pause/resume path. Resume now rechecks explicit
-live-spend authorization and current route certification, preserves the
-retained model policy, and holds the single-live-run lock through narration.
-Exact scenario mechanisms make no model call.
+Slice 20 is technically complete: Service Desk `run_20d2d0000004` paused,
+resumed its retained checkpoint, completed all 25 compact-context narratives,
+and reopened after restart. Technical execution is also observed for both
+authored templates. Resume rechecks live authorization and current route
+certification, preserves the retained model policy, and holds the single-live
+lock through narration. Exact scenario mechanisms make no model call.
 
 The complete authored flow was technically replayed on the deployed host on
 2026-07-25. Draft `draft_5464c3c150cf` was generated in one structured Terra
@@ -81,12 +72,16 @@ the moment accounts are too terse for a larger causal DAG, and run completion
 does not plainly distinguish terminal conditions, scenario outcome, horizon,
 quiescence, operator stop, and safety limits.
 
-[Slice 20: inspectable extended runs](plans/020-inspectable-extended-runs.md) is
-the active packet. It adds concise plus detailed evidence-bound narration and a
-typed completion/horizon contract without manufacturing empty turns.
 [Slice 21: coordination-environment assay](plans/021-coordination-environment-assay.md)
-then supplies the first naturally multi-episode research scenario, grounded in
+is active at Packet 21A4 and supplies the first naturally multi-episode research
+scenario, grounded in
 [Waltzman's coordination framework](research/001-from-minds-to-coordination.md).
+Its latest baseline reached the fourth meeting before the deployed simulator
+treated a valid DeepSeek retry with incomplete price coverage as a terminal
+budget error and retained the prior checkpoint. The verified candidate repair
+keeps known retry cost, marks incomplete coverage, makes aggregate cost
+advisory, extends the provider deadline, and resumes failed Coordination runs
+from their newest validated prefix. It is not canonical or deployed yet.
 [Slice 22: composite-agency perturbation
 assay](plans/022-composite-agency-perturbation-assay.md) is separately gated by
 Slice 21C and operationalizes the later Levin-style question on that same
@@ -783,7 +778,7 @@ requires them to answer an analyst question that current contracts cannot.
 - **Last accepted integrated proof:** Service Desk `run_20d2d0000004`, with
   pause/resume, exact completion, and all 25 simulator-grounded narratives.
 - **Current canonical revision:**
-  `29efcf399c91e450dd98da913decd81774cd40ef`; the shared UI now contains the
+  `1aeea13d6f00170948405b87b556be2727b59943`; the shared UI contains the
   scripted Coordination scenario and a certification-gated native-person seam.
 - **Current packet:** 21A4 route certification, deployment, live baseline, and
   human readout. Generic participant and narrator observations plus all five
@@ -791,17 +786,19 @@ requires them to answer an analyst question that current contracts cannot.
   client `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`; an independent replay of
   the configured set returns DeepSeek V4 Flash from both the global catalog
   and the scenario-specific live gate.
-- **Observed live boundary:** the private Mac deployed `5803e1b` with shared
-  client `c464058` and all seven retained observations. Its one authorized
-  DeepSeek V4 Flash `none` baseline, `run_21a45803e1b0`, completed 29 valid
-  provider-costed participant calls (`$0.008249917`) before the exact terminal
-  gate rejected its own unparented terminal-decision representation. The model
-  used the permitted proposal representation; this is a simulator lineage
-  defect, not a provider or schema failure.
-- **Current limiting cause:** the zero-cost repair that propagates the
-  triggering proposal as terminal-representation lineage is locally verified
-  but not deployed. Replacing the retained failed paid baseline requires fresh
-  authorization; no model switch or automatic rerun is permitted.
+- **Observed live boundary:** DeepSeek V4 Flash `none` baseline
+  `run_21a41aeea130` reached the fourth meeting with 32 retained calls and
+  `$0.0090656792` retained cost. Its next coordinator call timed out once and
+  returned valid structure on retry. The deployed simulator treated the
+  unpriced first attempt as a terminal budget error, dropped the known retry
+  price, and retained the prior committed checkpoint.
+- **Current limiting cause:** the locally verified candidate repairs partial
+  retry accounting, monotonic failed-checkpoint retention, Coordination
+  pause/failure resume, and the 60-second provider deadline. It passes the full
+  simulator suite against shared-client `68949c9`, but remains a candidate
+  until landed and deployed. The operator authorized that deployment and one
+  replacement DeepSeek V4 Flash `none` baseline; no second replacement is
+  authorized.
 
 ## Explicit MVP Deferrals
 

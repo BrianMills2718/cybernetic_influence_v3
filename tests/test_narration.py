@@ -126,6 +126,7 @@ def test_live_moment_narration_groups_participants_and_retains_simulator_owned_c
     assert "Narrated causal moment 1." in prompts[1]
     assert "The retained trace records the decision" not in prompts[1]
     assert all(item["max_tokens"] == 640 for item in call_options)
+    assert all(item["timeout"] == 180 for item in call_options)
     assert all(item["reasoning_effort"] == "high" for item in call_options)
     calls = narration["calls"]
     assert isinstance(calls, list)
@@ -286,7 +287,7 @@ def test_narrator_retains_partial_provider_failure_as_unavailable(tmp_path: Path
     assert "provider stopped" in str(calls[1]["error_message"])
 
 
-def test_narrator_reserves_the_full_account_before_any_provider_call(
+def test_narrator_planning_amount_does_not_suppress_a_valid_account(
     tmp_path: Path,
 ) -> None:
     document = TestClient(create_app(ROOT / "web", tmp_path)).post(
@@ -324,15 +325,12 @@ def test_narrator_reserves_the_full_account_before_any_provider_call(
         structured_call=fake_call,
     )
 
-    assert calls == 0
-    assert narration["status"] == "unavailable"
-    assert narration["cost"] == 0.0
-    boundary = narration["failure_boundary"]
-    assert isinstance(boundary, Mapping)
-    assert boundary["kind"] == "budget_preflight"
-    assert boundary["required_calls"] == len(document["moments"])
-    assert boundary["remaining_authorization"] == pytest.approx(0.025)
-    assert boundary["per_call_ceiling"] == 0.025
+    assert calls == len(document["moments"])
+    assert narration["status"] == "completed"
+    assert narration["cost"] == pytest.approx(0.01 * calls)
+    assert isinstance(narration["cost"], (int, float))
+    assert narration["cost"] > 0.025
+    assert narration["cost_fully_observable"] is True
 
 
 def test_narrator_checks_its_configured_call_limit_before_provider_calls(
@@ -361,7 +359,7 @@ def test_narrator_checks_its_configured_call_limit_before_provider_calls(
     assert boundary["configured_max_calls"] == 1
 
 
-def test_narrator_retains_observed_over_ceiling_cost_as_failure(
+def test_narrator_cost_limit_is_advisory_and_partial_coverage_is_visible(
     tmp_path: Path,
 ) -> None:
     document = TestClient(create_app(ROOT / "web", tmp_path)).post(
@@ -385,24 +383,31 @@ def test_narrator_retains_observed_over_ceiling_cost_as_failure(
                 concise="An unexpectedly expensive account.",
                 current_event_id=source_ids[-1],
             ),
-            SimpleNamespace(cost=0.026, cost_source="provider_reported"),
+            SimpleNamespace(
+                cost=0.026,
+                cost_source="provider_reported",
+                cost_covers_all_attempts=False,
+                warning_records=[{"code": "LLMC_WARN_RETRY"}],
+            ),
         )
 
     narration = narrate_live_moments(
         document,
         model="test-model",
         trace_id_prefix="run_over_ceiling_test",
-        max_total_cost=0.74,
+        max_total_cost=0.001,
         structured_call=expensive_call,
     )
 
-    assert narration["status"] == "unavailable"
-    assert narration["cost"] == 0.026
+    assert narration["status"] == "completed"
+    assert isinstance(narration["cost"], (int, float))
+    assert narration["cost"] > 0.001
+    assert narration["cost_fully_observable"] is False
     calls = narration["calls"]
     assert isinstance(calls, list)
-    assert calls[0]["status"] == "failed"
+    assert all(call["status"] == "completed" for call in calls)
     assert calls[0]["cost"] == 0.026
-    assert "exceeds per-call ceiling" in calls[0]["error_message"]
+    assert calls[0]["cost_covers_all_attempts"] is False
 
 
 def test_narrator_receives_representation_scope_and_private_update_evidence(

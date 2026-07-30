@@ -96,7 +96,7 @@ class RunStore:
 
         These are descriptive history, not provider pricing or a promise about
         a future call.  Keeping the calculation beside the retained evidence
-        lets the UI distinguish an expected spend from its hard authorization.
+        lets the UI distinguish an expected spend from its planning amount.
         """
         buckets: dict[tuple[str, str, str, str, str], list[float]] = {}
         for path in self.root.glob("run_*.json"):

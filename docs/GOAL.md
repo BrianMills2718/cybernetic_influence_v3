@@ -85,8 +85,9 @@ implementation authority; this goal does not duplicate it. For each packet:
 7. stop at the packet's explicit authorization or human-readout boundary.
 
 At an authorization/readout boundary, finish every safe zero-cost preparation,
-report the exact revision, topology, hard cap, evidence, question, and resume
-event, then return control. Absence of authorization is not permission, goal
+report the exact revision, topology, per-call request budgets, planning amount,
+evidence, question, and resume event, then return control. Absence of
+authorization is not permission, goal
 completion, or a technical failure.
 
 ## Loop Bounds
@@ -127,15 +128,16 @@ restarting completed work.
   narratives, and the recurring Coordination reference scenario is now
   inspectable through the shared narrative, participant/group, and three-map
   UI rather than a scenario-specific page.
-- **Canonical implementation:** `29efcf399c91e450dd98da913decd81774cd40ef`
-  binds five Coordination people to scenario-specific native-LLM schemas while
-  sources, the meeting clock, analytical composites, and exact mechanisms
-  remain non-provider executors. Simulator-owned actor/proposal identities are
-  absent from the LLM schemas and attached only after validation.
-- **Current increment:** Packet 21A4 route certification and live baseline.
-  The UI and API now derive Coordination live availability from a per-scenario
-  certified-model list; without all five current person-schema observations,
-  the live action remains unavailable rather than falling back.
+- **Canonical implementation and deployment:** canonical `main` and the private
+  Mac were freshly observed on 2026-07-29 at simulator
+  `1aeea13d6f00170948405b87b556be2727b59943`; the deployed shared client is
+  `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`. The service is running and its
+  config exposes only DeepSeek V4 Flash `none` for live Coordination.
+- **Current increment:** Packet 21A4 remains active. Five Coordination people
+  use scenario-specific native-LLM schemas while sources, the meeting clock,
+  analytical composites, and exact mechanisms remain non-provider executors.
+  The UI and API derive Coordination live availability from the complete
+  per-scenario certification set rather than falling back.
 - **Observed certification evidence:** DeepSeek V4 Flash `none` now has current
   parseable observations for generic `LlmDecision`
   (`routeobs1_642ea0a3d2f0d5c643913b5a`), `CausalMomentNarration`
@@ -150,27 +152,32 @@ restarting completed work.
   (`routeobs1_8b6c1697c9dddad1d6dd474a`). Every observation is bound to
   shared-client revision `c46405838ffc8d30a17a2353b7d55a3ae1f3516b` and
   replays against the current exact schema digest.
-- **Observed deployment and canary:** the private Mac now runs simulator
-  `5803e1b0e1744592862bcf559bf5eb27573776c8` with shared client
-  `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`; its config exposes only
-  DeepSeek V4 Flash for live Coordination. The single authorized baseline
-  `run_21a45803e1b0` retained 29 completed, provider-costed DeepSeek `none`
-  participant calls for `$0.008249917`, then failed closed before narration.
-  At the final meeting, the coordinator correctly used the permitted
-  `deployment_proposal_copy`, but `terminal_decision_gate` created its
-  terminal-decision representation without naming that triggering token as a
-  parent. The causal core rejected the exact outcome with
-  `MechanismContractError`; no model call failed and no fallback occurred.
-- **Current boundary:** a zero-cost repair now makes the terminal decision
-  representation inherit the triggering proposal token and makes the scripted
-  path exercise that same representation-bearing interface. The repair passes
-  its full local test and build gate, but is not deployed and the failed paid
-  baseline will not be replaced without a new authorization.
-- **Resume event:** the operator explicitly authorizes deployment of the
-  repaired canonical revision and one replacement DeepSeek V4 Flash `none`
-  baseline under the existing 48-participant/32-narrator and `$0.74` hard caps.
-  Then verify the deployed config endpoint, inspect every call and the full
-  trace, restart/reopen the retained run, and request the 21A4 human readout.
+- **Observed live boundary:** replacement baseline `run_21a41aeea130` reached
+  the fourth meeting with 32 retained completed participant calls and
+  `$0.0090656792` retained known cost. The next coordinator logical call timed
+  out once, then returned valid structured output on retry with known retry
+  cost `$0.00045962`; the deployed simulator discarded that known price because
+  the timed-out attempt was not yet priced and failed with `ActiveBudgetError`.
+  Its terminal writer also regressed to the previous committed checkpoint, so
+  the retained document incorrectly omits the failed activation and reports
+  full cost coverage. This is accounting/checkpoint policy debt, not evidence
+  that DeepSeek returned invalid structure.
+- **Candidate repair:** `feature/live-coordination` preserves known retry price
+  with an explicit incomplete-coverage flag, treats aggregate cost as planning
+  evidence rather than a post-response stop, extends participant/narrator
+  deadlines from 60 to 180 seconds, and resumes both Service Desk and
+  Coordination from paused or failed validated checkpoints. A real failed
+  coordination activation now resumes without replay or duplicate events. The
+  complete simulator suite passes against shared-client `68949c9`; strict
+  typing, production UI build, and deployment-template checks also pass. This
+  candidate is not canonical or deployed yet.
+- **Resume event:** the operator has authorized landing and deploying the
+  verified repair plus one replacement DeepSeek V4 Flash `none` baseline. Use
+  the existing explicit per-call request budgets and 48-participant/32-narrator
+  growth bounds; retain `$0.74` as a planning amount. Then inspect every call,
+  full trace, price-coverage flag, restart/reopen behavior, and request the
+  21A4 human readout. Do not create a second replacement run without new
+  authorization.
 
 ## Done
 

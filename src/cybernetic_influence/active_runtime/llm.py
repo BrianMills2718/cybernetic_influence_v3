@@ -30,6 +30,7 @@ from cybernetic_influence.causal_core.models import canonical_record_digest
 _FORBID = ConfigDict(extra="forbid", strict=True)
 _UNPRICED_COST_SOURCES = frozenset({"unavailable", "unspecified"})
 _UNRECONCILED_RECOVERY_CODES = frozenset({"LLMC_WARN_RETRY", "LLMC_WARN_FALLBACK"})
+NATIVE_LLM_TIMEOUT_SECONDS = 180
 NATIVE_LLM_CONFIGURATION_CONTRACT = "native-llm-configuration.v1"
 DECISION_WIRE_CONTRACT_V1: Final[Literal["native-decision-wire.v1"]] = (
     "native-decision-wire.v1"
@@ -430,6 +431,7 @@ class NativeLlmActiveSystem:
                 "trace_id": trace_id,
                 "max_budget": validated_input.budget.max_call_cost,
                 "max_tokens": self.max_output_tokens,
+                "timeout": NATIVE_LLM_TIMEOUT_SECONDS,
                 "model_justification": (
                     "Use the model bound into this native active-system "
                     "implementation as an explicit simulation condition."
@@ -472,7 +474,7 @@ class NativeLlmActiveSystem:
             )
             decision = cast(Any, self.decision_model.model_validate(decision_input))
         except Exception as error:
-            cost, cost_source = _observed_cost(meta)
+            cost, cost_source, cost_covers_all_attempts = _observed_cost(meta)
             evidence = ModelCallEvidence(
                 status="failed",
                 trace_id=trace_id,
@@ -483,6 +485,7 @@ class NativeLlmActiveSystem:
                 user_prompt=user,
                 cost=cost,
                 cost_source=cost_source,
+                cost_covers_all_attempts=cost_covers_all_attempts,
                 error_type=type(error).__name__,
                 error_message=str(error),
             )
@@ -491,7 +494,7 @@ class NativeLlmActiveSystem:
                 call_evidence=(evidence,),
             ) from error
 
-        cost, cost_source = _observed_cost(meta)
+        cost, cost_source, cost_covers_all_attempts = _observed_cost(meta)
         evidence = ModelCallEvidence(
             status="completed",
             trace_id=trace_id,
@@ -503,6 +506,7 @@ class NativeLlmActiveSystem:
             structured_output=decision.model_dump(mode="json"),
             cost=cost,
             cost_source=cost_source,
+            cost_covers_all_attempts=cost_covers_all_attempts,
         )
         memory = [entry.model_copy(deep=True) for entry in prior.memory]
         memory.extend(
@@ -632,38 +636,41 @@ def _load_prompt(decision_wire_contract: DecisionWireContract) -> dict[str, str]
     return cast(dict[str, str], payload)
 
 
-def _observed_cost(meta: Any) -> tuple[float | None, str]:
-    """Extract priced metadata without turning unavailable spend into zero."""
+def _observed_cost(meta: Any) -> tuple[float | None, str, bool]:
+    """Retain known price while distinguishing incomplete retry coverage."""
     warning_records = getattr(meta, "warning_records", None)
-    cost_covers_all_attempts = getattr(
+    coverage_hint = getattr(
         meta,
         "cost_covers_all_attempts",
-        False,
+        None,
     )
-    if (
+    recovered = (
         isinstance(warning_records, list)
         and any(
             isinstance(record, dict)
             and record.get("code") in _UNRECONCILED_RECOVERY_CODES
             for record in warning_records
         )
-        and cost_covers_all_attempts is not True
-    ):
-        return None, "unreconciled_provider_attempts"
+    )
+    covers_all_attempts = (
+        coverage_hint
+        if isinstance(coverage_hint, bool)
+        else not recovered
+    )
     try:
         raw_cost = meta.cost
         cost_source = str(meta.cost_source)
     except AttributeError:
-        return None, "unavailable"
+        return None, "unavailable", False
     if raw_cost is None or cost_source in _UNPRICED_COST_SOURCES:
-        return None, cost_source
+        return None, cost_source, False
     try:
         cost = float(raw_cost)
     except (TypeError, ValueError):
-        return None, f"invalid_{cost_source}"
+        return None, f"invalid_{cost_source}", False
     if cost < 0.0:
-        return None, f"invalid_{cost_source}"
-    return cost, cost_source
+        return None, f"invalid_{cost_source}", False
+    return cost, cost_source, covers_all_attempts
 
 
 def _resolve_structured_call() -> StructuredCall:

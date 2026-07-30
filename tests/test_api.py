@@ -11,17 +11,23 @@ from fastapi.testclient import TestClient
 import pytest
 
 from cybernetic_influence.active_runtime import (
+    ActiveRuntimeConfig,
+    ActiveRuntimeSession,
     ActiveStepResult,
     ActiveSystemBinding,
+    ActiveSystemInput,
     ScriptedActiveSystem,
 )
 from cybernetic_influence.api import create_app
 from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 from cybernetic_influence.run_store import RunStore
 from cybernetic_influence.scenarios.coordination_decision import (
+    CoordinationRuntimePaused,
     PERSON_IDS,
     baseline_coordination_fixture,
+    coordination_scripted_bindings,
     coordination_runtime_fixture,
+    run_coordination as original_run_coordination,
     run_scripted_coordination,
 )
 from cybernetic_influence.scenarios.service_desk import (
@@ -155,7 +161,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="model"' in page.text
     assert 'id="reasoning"' in page.text
     assert 'id="max-cost"' in page.text
-    assert "Hard authorization cap" in page.text
+    assert "Cost planning amount" in page.text
     assert 'aria-controls="model-help"' in page.text
     assert 'id="history-view"' in page.text
     assert 'id="simulation-view"' in page.text
@@ -188,6 +194,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"not proof of entailment" in app_script.content
     assert b"Configured interaction pathways show scenario-configured" in app_script.content
     assert b"function renderLifecycleControls" in app_script.content
+    assert b"Resume from retained step" in page.content
+    assert b"['service_desk', 'coordination_decision'].includes" in app_script.content
+    assert b"known provider cost; one or more retry charges unavailable" in app_script.content
     assert b"function applyButtonTooltips" in app_script.content
     assert b"new MutationObserver" in app_script.content
     assert b"renderLifecycleControls(current)" in app_script.content
@@ -941,6 +950,61 @@ def test_failed_run_retains_its_full_validated_continuation(tmp_path: Path) -> N
     assert continuation["checkpoint"]["attempts"]
 
 
+def test_failed_run_prefers_newest_progress_checkpoint_over_stale_commit(
+    tmp_path: Path,
+) -> None:
+    def fail_during_activation(*_args: Any, **kwargs: Any) -> Any:
+        fixture = service_desk_fixture(
+            service_desk_arm_configurations()[0],
+            cognition_profile="position_context",
+        )
+        bindings = service_desk_scripted_bindings(fixture)
+        scripted = bindings["triager"]
+
+        class FailingTriager:
+            implementation_id = scripted.implementation_id
+            provider_bound = False
+
+            def step(self, _active_input: ActiveSystemInput) -> ActiveStepResult:
+                raise RuntimeError("failed after activation-start progress")
+
+        bindings["triager"] = ActiveSystemBinding(
+            FailingTriager.implementation_id,
+            FailingTriager(),
+        )
+        session = ActiveRuntimeSession(
+            fixture.scenario,
+            fixture.exact_bindings,
+            fixture.active_specs,
+            bindings,
+            run_id=kwargs["run_id"],
+            config=ActiveRuntimeConfig(
+                per_call_budget=0.05,
+                per_run_budget=1.0,
+                max_actions_per_system=4,
+                max_observations_per_system=100,
+                max_private_state_bytes=65_536,
+            ),
+            progress_observer=kwargs["progress_observer"],
+        )
+        session.activate(["triager"], logical_time=0)
+
+    with patch(
+        "cybernetic_influence.api.run_event_driven_service_desk",
+        side_effect=fail_during_activation,
+    ):
+        api = client(tmp_path)
+        response = api.post("/api/runs", json={"execution": "scripted"})
+
+    assert response.status_code == 500
+    run_id = api.get("/api/runs").json()["runs"][0]["run_id"]
+    retained = api.get(f"/api/runs/{run_id}").json()
+    checkpoint = retained["continuation"]["checkpoint"]
+    assert retained["status"] == "failed"
+    assert checkpoint["attempts"][-1]["status"] == "failed"
+    assert retained["progress"]["failed_attempts"] == 1
+
+
 def test_scripted_service_desk_pauses_at_a_boundary_and_resumes(
     tmp_path: Path,
 ) -> None:
@@ -994,6 +1058,133 @@ def test_scripted_service_desk_pauses_at_a_boundary_and_resumes(
     assert resumed.status_code == 200, resumed.text
     assert resumed.json()["status"] == "completed"
     assert resumed.json()["outcome"]["final_status"] == "closed_confirmed"
+
+
+@pytest.mark.parametrize("retained_status", ["paused", "failed"])
+def test_scripted_coordination_resumes_exact_retained_boundary(
+    tmp_path: Path,
+    retained_status: str,
+) -> None:
+    entered = Event()
+    release = Event()
+
+    def pauseable_run(*args: Any, **kwargs: Any) -> Any:
+        observer = kwargs["checkpoint_observer"]
+        blocked = False
+
+        def block_after_first_checkpoint(checkpoint: Any) -> None:
+            nonlocal blocked
+            observer(checkpoint)
+            if not blocked:
+                blocked = True
+                entered.set()
+                assert release.wait(timeout=5)
+
+        kwargs["checkpoint_observer"] = block_after_first_checkpoint
+        return original_run_coordination(*args, **kwargs)
+
+    run_id = (
+        "run_c00d0000aa01"
+        if retained_status == "paused"
+        else "run_c00d0000ff01"
+    )
+    with patch(
+        "cybernetic_influence.api.run_coordination",
+        side_effect=pauseable_run,
+    ):
+        api = client(tmp_path)
+        responses: list[Any] = []
+        thread = Thread(
+            target=lambda: responses.append(
+                api.post(
+                    "/api/runs",
+                    json={
+                        "scenario": "coordination_decision",
+                        "arm_id": "baseline",
+                        "execution": "scripted",
+                        "run_id": run_id,
+                    },
+                )
+            )
+        )
+        thread.start()
+        assert entered.wait(timeout=5)
+        requested = api.post(f"/api/runs/{run_id}/pause")
+        assert requested.status_code == 200
+        release.set()
+        thread.join(timeout=5)
+        assert responses[0].status_code == 200, responses[0].text
+        paused = api.get(f"/api/runs/{run_id}").json()
+        assert paused["status"] == "paused"
+        if retained_status == "failed":
+            interrupted = deepcopy(paused)
+            interrupted["status"] = "failed"
+            interrupted["error"] = "TimeoutError: retained provider boundary"
+            interrupted["continuation"]["lifecycle"] = "interrupted"
+            RunStore(tmp_path).save(interrupted)
+
+        resumed = api.post(f"/api/runs/{run_id}/resume")
+        assert resumed.status_code == 200, resumed.text
+        completed = resumed.json()
+
+    assert completed["status"] == "completed", completed.get("error")
+    assert completed["outcome"]["final_status"]
+    event_ids = [item["event_id"] for item in completed["events"]]
+    assert len(event_ids) == len(set(event_ids))
+    activations = [item["activation"] for item in completed["traces"]]
+    assert len(set(activations)) >= 12
+
+
+def test_coordination_resumes_checkpoint_containing_a_failed_activation(
+    tmp_path: Path,
+) -> None:
+    run_id = "run_c00d0000fa11"
+
+    def failing_bindings(fixture: Any) -> dict[str, ActiveSystemBinding]:
+        bindings = coordination_scripted_bindings(fixture)
+        coordinator = bindings["mission_coordinator"]
+
+        class FailingCoordinator:
+            implementation_id = coordinator.implementation_id
+            provider_bound = False
+
+            def step(self, _active_input: ActiveSystemInput) -> ActiveStepResult:
+                raise RuntimeError("provider-like participant failure")
+
+        bindings["mission_coordinator"] = ActiveSystemBinding(
+            FailingCoordinator.implementation_id,
+            FailingCoordinator(),
+        )
+        return bindings
+
+    api = client(tmp_path)
+    with patch(
+        "cybernetic_influence.api.coordination_scripted_bindings",
+        side_effect=failing_bindings,
+    ):
+        failed_response = api.post(
+            "/api/runs",
+            json={
+                "scenario": "coordination_decision",
+                "arm_id": "baseline",
+                "execution": "scripted",
+                "run_id": run_id,
+            },
+        )
+
+    assert failed_response.status_code == 500
+    failed = api.get(f"/api/runs/{run_id}").json()
+    assert failed["status"] == "failed"
+    failed_attempts = failed["continuation"]["checkpoint"]["attempts"]
+    assert failed_attempts[-1]["status"] == "failed", failed["error"]
+
+    resumed = api.post(f"/api/runs/{run_id}/resume")
+    assert resumed.status_code == 200, resumed.text
+    completed = resumed.json()
+    assert completed["status"] == "completed"
+    assert any(item["status"] == "failed" for item in completed["traces"])
+    event_ids = [item["event_id"] for item in completed["events"]]
+    assert len(event_ids) == len(set(event_ids))
 
 
 def test_failed_resumed_run_retains_latest_checkpoint_evidence(tmp_path: Path) -> None:

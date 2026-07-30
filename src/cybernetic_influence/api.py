@@ -1297,7 +1297,12 @@ def create_app(
             raise HTTPException(status_code=404, detail="run not found") from error
         with pause_lock:
             pause = pause_requests.get(run_id)
-        if document.get("scenario") != "service_desk" or document.get("execution") not in {"scripted", "live"} or pause is None:
+        if (
+            document.get("scenario")
+            not in {"service_desk", "coordination_decision"}
+            or document.get("execution") not in {"scripted", "live"}
+            or pause is None
+        ):
             raise HTTPException(status_code=409, detail="this run cannot be paused")
         if document.get("status") not in {"running", "pause_requested"}:
             raise HTTPException(status_code=409, detail="run is not active")
@@ -1325,7 +1330,11 @@ def create_app(
             raise HTTPException(status_code=404, detail="run not found") from error
         with pause_lock:
             stop = stop_requests.get(run_id)
-        if document.get("scenario") != "service_desk" or stop is None:
+        if (
+            document.get("scenario")
+            not in {"service_desk", "coordination_decision"}
+            or stop is None
+        ):
             raise HTTPException(status_code=409, detail="this run cannot be stopped")
         if document.get("status") not in {"running", "pause_requested"}:
             raise HTTPException(status_code=409, detail="run is not active")
@@ -1351,25 +1360,54 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(error)) from error
         except RunNotFoundError as error:
             raise HTTPException(status_code=404, detail="run not found") from error
+        scenario = paused.get("scenario")
         if (
-            (not worker_execution and paused.get("status") != "paused")
-            or paused.get("scenario") != "service_desk"
+            (
+                not worker_execution
+                and paused.get("status") not in {"paused", "failed"}
+            )
+            or scenario not in {"service_desk", "coordination_decision"}
             or paused.get("execution") not in {"scripted", "live"}
         ):
             raise HTTPException(status_code=409, detail="this run cannot be resumed")
         continuation = paused.get("continuation")
         if not isinstance(continuation, dict):
-            raise HTTPException(status_code=422, detail="paused run has no continuation")
+            raise HTTPException(status_code=422, detail="run has no continuation")
         try:
             checkpoint = ActiveRuntimeCheckpoint.model_validate(continuation["checkpoint"])
         except (KeyError, TypeError, ValueError) as error:
-            raise HTTPException(status_code=422, detail="paused checkpoint is invalid") from error
-        arm = next((item for item in service_desk_arm_configurations() if item.arm_id == paused.get("arm")), None)
-        if arm is None:
-            raise HTTPException(status_code=422, detail="paused run has an unknown scenario arm")
+            raise HTTPException(status_code=422, detail="retained checkpoint is invalid") from error
+        arm = next(
+            (
+                item
+                for item in service_desk_arm_configurations()
+                if item.arm_id == paused.get("arm")
+            ),
+            None,
+        )
+        coordination_contract: CoordinationDecisionFixture | None = None
+        if scenario == "service_desk" and arm is None:
+            raise HTTPException(
+                status_code=422,
+                detail="retained run has an unknown scenario arm",
+            )
+        if scenario == "coordination_decision":
+            try:
+                coordination_contract = _coordination_contract(str(paused.get("arm")))
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=422,
+                    detail="retained run has an unknown scenario arm",
+                ) from error
         profile = paused.get("profile")
-        if profile not in {"position_context", "procedural_control"}:
-            raise HTTPException(status_code=422, detail="paused run has an invalid cognition profile")
+        if scenario == "service_desk" and profile not in {
+            "position_context",
+            "procedural_control",
+        }:
+            raise HTTPException(
+                status_code=422,
+                detail="retained run has an invalid cognition profile",
+            )
         live = paused.get("execution") == "live"
         effective_llm: EffectiveRunLlmConfiguration | None = None
         if live:
@@ -1429,9 +1467,10 @@ def create_app(
                     resume_run(run_id, request)
                 except Exception as error:
                     try:
+                        latest = runs.get(run_id)
                         runs.save(
                             {
-                                **resume_document,
+                                **latest,
                                 "status": "failed",
                                 "error": f"{type(error).__name__}: {error}",
                             }
@@ -1464,7 +1503,15 @@ def create_app(
             pause = Event()
             stop = Event()
 
+        latest_resumed_checkpoint = checkpoint.model_copy(deep=True)
+
         def retain_checkpoint(checkpoint: ActiveRuntimeCheckpoint) -> None:
+            nonlocal latest_resumed_checkpoint
+            candidate = checkpoint.model_copy(deep=True)
+            if _checkpoint_order(candidate) >= _checkpoint_order(
+                latest_resumed_checkpoint
+            ):
+                latest_resumed_checkpoint = candidate
             with progress_lock:
                 prior = runs.get(run_id)
                 progress = prior.get("live_progress", [])
@@ -1473,14 +1520,16 @@ def create_app(
                 runs.save(
                     {
                         **paused,
-                        **_checkpoint_progress_projection(checkpoint),
+                        **_checkpoint_progress_projection(
+                            latest_resumed_checkpoint
+                        ),
                         "status": (
                             "stop_requested"
                             if stop.is_set()
                             else "pause_requested" if pause.is_set() else "running"
                         ),
                         "continuation": _checkpoint_continuation(
-                            checkpoint,
+                            latest_resumed_checkpoint,
                             lifecycle="paused" if pause.is_set() else "running",
                         ),
                         "live_progress": progress,
@@ -1488,57 +1537,160 @@ def create_app(
                     }
                 )
 
+        run_control: ResolvedRunControlPlan | None = None
+        if scenario == "service_desk":
+            try:
+                run_control = (
+                    ResolvedRunControlPlan.model_validate(paused["run_control"])
+                    if paused.get("run_control") is not None
+                    else resolve_run_control(service_desk_run_control_options(), None)
+                )
+            except (TypeError, ValueError) as error:
+                raise HTTPException(
+                    status_code=422,
+                    detail="retained run has an invalid run-control plan",
+                ) from error
         try:
-            run_control = (
-                ResolvedRunControlPlan.model_validate(paused["run_control"])
-                if paused.get("run_control") is not None
-                else resolve_run_control(service_desk_run_control_options(), None)
-            )
-        except (TypeError, ValueError) as error:
-            raise HTTPException(status_code=422, detail="paused run has an invalid run-control plan") from error
-        try:
-            fixture = service_desk_fixture(
-                arm,
-                cognition_profile=profile,
-                model=effective_llm.model if effective_llm else SERVICE_DESK_MODEL,
-                reasoning_effort=effective_llm.agent_reasoning_effort if effective_llm else SERVICE_DESK_SCAFFOLD_REASONING_EFFORT,
-            )
-            bindings = service_desk_native_bindings(fixture, trace_id_prefix=run_id, model=effective_llm.model, reasoning_effort=effective_llm.agent_reasoning_effort) if effective_llm else service_desk_scripted_bindings(fixture)
-            resumed = run_event_driven_service_desk(
-                fixture,
-                bindings,
-                run_id=run_id,
-                checkpoint=checkpoint,
-                run_control=run_control,
-                checkpoint_observer=retain_checkpoint,
-                progress_observer=lambda update, item: retain_progress(
-                    run_id, update, item
-                ),
-                pause_requested=pause.is_set,
-                stop_requested=stop.is_set,
-            )
-            readout = event_driven_service_desk_outcome(resumed)
-            document = build_service_desk_analyst_document(fixture=fixture, result=resumed, readout=readout, profile=profile, arm_id=arm.arm_id, execution="live" if live else "scripted", created_at=str(paused["created_at"]))
+            if scenario == "service_desk":
+                if arm is None or run_control is None:  # pragma: no cover - guarded
+                    raise AssertionError("validated service-desk resume lacks inputs")
+                service_profile = cast(ServiceDeskCognitionProfile, profile)
+                fixture = service_desk_fixture(
+                    arm,
+                    cognition_profile=service_profile,
+                    model=(
+                        effective_llm.model if effective_llm else SERVICE_DESK_MODEL
+                    ),
+                    reasoning_effort=(
+                        effective_llm.agent_reasoning_effort
+                        if effective_llm
+                        else SERVICE_DESK_SCAFFOLD_REASONING_EFFORT
+                    ),
+                )
+                bindings = (
+                    service_desk_native_bindings(
+                        fixture,
+                        trace_id_prefix=run_id,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
+                    )
+                    if effective_llm
+                    else service_desk_scripted_bindings(fixture)
+                )
+                resumed = run_event_driven_service_desk(
+                    fixture,
+                    bindings,
+                    run_id=run_id,
+                    checkpoint=checkpoint,
+                    run_control=run_control,
+                    checkpoint_observer=retain_checkpoint,
+                    progress_observer=lambda update, item: retain_progress(
+                        run_id, update, item
+                    ),
+                    pause_requested=pause.is_set,
+                    stop_requested=stop.is_set,
+                )
+                readout = event_driven_service_desk_outcome(resumed)
+                document = build_service_desk_analyst_document(
+                    fixture=fixture,
+                    result=resumed,
+                    readout=readout,
+                    profile=service_profile,
+                    arm_id=arm.arm_id,
+                    execution="live" if live else "scripted",
+                    created_at=str(paused["created_at"]),
+                )
+                document["run_control"] = run_control.model_dump(mode="json")
+            else:
+                if coordination_contract is None:  # pragma: no cover - guarded
+                    raise AssertionError("validated coordination resume lacks contract")
+                coordination_fixture = coordination_runtime_fixture(
+                    coordination_contract,
+                    model=(effective_llm.model if effective_llm else None),
+                    reasoning_effort=(
+                        effective_llm.agent_reasoning_effort
+                        if effective_llm
+                        else None
+                    ),
+                )
+                coordination_bindings = (
+                    coordination_native_bindings(
+                        coordination_fixture,
+                        trace_id_prefix=run_id,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
+                    )
+                    if effective_llm
+                    else coordination_scripted_bindings(coordination_fixture)
+                )
+                resumed = run_coordination(
+                    coordination_fixture,
+                    coordination_bindings,
+                    run_id=run_id,
+                    checkpoint=checkpoint,
+                    checkpoint_observer=retain_checkpoint,
+                    progress_observer=(
+                        (
+                            lambda update, item: retain_progress(
+                                run_id,
+                                update,
+                                item,
+                                initial_state=(
+                                    coordination_fixture.scenario.initial_state
+                                ),
+                                analytical_boundaries=(
+                                    coordination_fixture.scenario.analytical_boundaries
+                                ),
+                            )
+                        )
+                        if live
+                        else (lambda _update, item: retain_checkpoint(item))
+                    ),
+                    pause_requested=pause.is_set,
+                    stop_requested=stop.is_set,
+                )
+                outcome, headline, summary = _coordination_outcome(resumed)
+                document = build_analyst_document(
+                    initial_state=coordination_fixture.scenario.initial_state,
+                    analytical_boundaries=(
+                        coordination_fixture.scenario.analytical_boundaries
+                    ),
+                    result=resumed,
+                    scenario="coordination_decision",
+                    profile=str(profile),
+                    arm_id=coordination_contract.condition.condition,
+                    execution="live" if live else "scripted",
+                    created_at=str(paused["created_at"]),
+                    outcome=outcome,
+                    headline=headline,
+                    summary=summary,
+                    include_boundary_activity=True,
+                )
+                document["run_control"] = coordination_run_control_plan(
+                    coordination_fixture
+                ).model_dump(mode="json")
             document["llm_configuration"] = paused.get("llm_configuration")
-            document["run_control"] = run_control.model_dump(mode="json")
             document["completion"] = (
                 resumed.completion.model_dump(mode="json")
                 if resumed.completion is not None
                 else None
             )
-            document["continuation"] = {"schema_version": 1, "phase": "causal", "lifecycle": "completed_from_checkpoint", "checkpoint_digest": checkpoint.record_digest}
-            return runs.save(
-                retain_progress_history(
-                    _attach_narration(
-                    document,
-                    live=live,
-                    run_id=run_id,
-                    effective_llm=effective_llm,
-                    ),
-                    run_id,
-                )
+            document["continuation"] = {
+                "schema_version": 1,
+                "phase": "causal",
+                "lifecycle": "completed_from_checkpoint",
+                "checkpoint_digest": checkpoint.record_digest,
+            }
+            narrated = _attach_narration(
+                document,
+                live=live,
+                run_id=run_id,
+                effective_llm=effective_llm,
             )
-        except RuntimePaused as paused_error:
+            if scenario == "coordination_decision" and not live:
+                narrated["narration"] = _coordination_reference_narration(narrated)
+            return runs.save(retain_progress_history(narrated, run_id))
+        except (RuntimePaused, CoordinationRuntimePaused) as paused_error:
             paused_document = {
                 **paused,
                 "status": "paused",
@@ -1743,7 +1895,11 @@ def create_app(
 
         def retain_checkpoint(checkpoint: ActiveRuntimeCheckpoint) -> None:
             nonlocal latest_checkpoint
-            latest_checkpoint = checkpoint.model_copy(deep=True)
+            candidate = checkpoint.model_copy(deep=True)
+            if latest_checkpoint is None or _checkpoint_order(
+                candidate
+            ) >= _checkpoint_order(latest_checkpoint):
+                latest_checkpoint = candidate
             with progress_lock:
                 prior = runs.get(run_id)
                 progress = prior.get("live_progress", [])
@@ -2010,21 +2166,27 @@ def create_app(
                         if effective_llm is not None
                         else None
                     ),
-                    checkpoint_observer=(retain_checkpoint if live else None),
+                    checkpoint_observer=retain_checkpoint,
                     pause_requested=pause.is_set,
                     stop_requested=stop.is_set,
                     progress_observer=(
-                        lambda update, checkpoint: retain_progress(
-                            run_id,
-                            update,
-                            checkpoint,
-                            initial_state=coordination_fixture.scenario.initial_state,
-                            analytical_boundaries=(
-                                coordination_fixture.scenario.analytical_boundaries
-                            ),
+                        (
+                            lambda update, checkpoint: retain_progress(
+                                run_id,
+                                update,
+                                checkpoint,
+                                initial_state=(
+                                    coordination_fixture.scenario.initial_state
+                                ),
+                                analytical_boundaries=(
+                                    coordination_fixture.scenario.analytical_boundaries
+                                ),
+                            )
                         )
                         if live
-                        else None
+                        else (
+                            lambda _update, checkpoint: retain_checkpoint(checkpoint)
+                        )
                     ),
                 )
                 coordination_outcome, headline, summary = _coordination_outcome(
@@ -2080,19 +2242,43 @@ def create_app(
             if worker_execution and lock_acquired:
                 live_lock.release()
                 lock_acquired = False
+            retained_before_failure = runs.get(run_id)
+            retained_continuation = retained_before_failure.get("continuation")
+            failure_candidates = (
+                [latest_checkpoint] if latest_checkpoint is not None else []
+            )
+            if isinstance(retained_continuation, dict) and isinstance(
+                retained_continuation.get("checkpoint"), dict
+            ):
+                failure_candidates.append(
+                    ActiveRuntimeCheckpoint.model_validate(
+                        retained_continuation["checkpoint"]
+                    )
+                )
+            failure_checkpoint = (
+                max(
+                    failure_candidates,
+                    key=lambda item: (
+                        item.next_attempt_index,
+                        item.next_commit_index,
+                    ),
+                )
+                if failure_candidates
+                else None
+            )
             failed = {
                 **initial,
                 "status": "failed",
                 "error": f"{type(error).__name__}: {error}",
-                **_checkpoint_failure_projection(latest_checkpoint),
+                **_checkpoint_failure_projection(failure_checkpoint),
                 **(
                     {
                         "continuation": _checkpoint_continuation(
-                            latest_checkpoint,
+                            failure_checkpoint,
                             lifecycle="interrupted",
                         )
                     }
-                    if latest_checkpoint is not None
+                    if failure_checkpoint is not None
                     else {}
                 ),
             }
@@ -2171,6 +2357,9 @@ def _attach_narration(
     narrated["agent_cost"] = agent_cost
     narrated["narration_cost"] = narration_cost
     narrated["cost"] = agent_cost + narration_cost
+    narrated["cost_fully_observable"] = bool(
+        narrated.get("cost_fully_observable", True)
+    ) and bool(narration.get("cost_fully_observable", True))
     narrated["narration"] = narration
     return narrated
 
@@ -2219,6 +2408,9 @@ def _attempt_call_summaries(attempts: object) -> list[dict[str, object]]:
                             "reasoning_effort": call.reasoning_effort,
                             "cost": call.cost,
                             "cost_source": call.cost_source,
+                            "cost_covers_all_attempts": (
+                                call.cost_covers_all_attempts
+                            ),
                             "error_type": call.error_type,
                             "error_message": call.error_message,
                         }.items()
@@ -2245,12 +2437,26 @@ def _checkpoint_failure_projection(
         "cost": checkpoint.total_observed_cost,
         "cost_fully_observable": checkpoint.cost_fully_observable,
         "model_call_summaries": _attempt_call_summaries(checkpoint.attempts),
+        "progress": {
+            "completed_attempts": sum(
+                attempt.status == "committed" for attempt in checkpoint.attempts
+            ),
+            "failed_attempts": sum(
+                attempt.status == "failed" for attempt in checkpoint.attempts
+            ),
+            "logical_time": checkpoint.core_checkpoint.state.logical_time,
+        },
         "failure_boundary": {
             "kind": "active_runtime",
             "attempt_index": checkpoint.next_attempt_index,
             "logical_time": checkpoint.core_checkpoint.state.logical_time,
         },
     }
+
+
+def _checkpoint_order(checkpoint: ActiveRuntimeCheckpoint) -> tuple[int, int]:
+    """Order retained prefixes without allowing a stale observer to regress one."""
+    return checkpoint.next_attempt_index, checkpoint.next_commit_index
 
 
 def _checkpoint_progress_projection(

@@ -118,7 +118,7 @@
         <button id="run">Play simulation</button>
         <button id="pause" hidden>Pause after this causal step</button>
         <button id="stop" hidden>Stop after this causal step</button>
-        <button id="resume" hidden>Resume paused run</button>
+        <button id="resume" hidden>Resume from retained step</button>
         <p id="lifecycle-help" class="muted" aria-live="polite"></p>
         <details id="run-settings">
           <summary>Model, cost, and simulation assumptions</summary>
@@ -134,7 +134,7 @@
               <small id="reasoning-help" class="inline-help" hidden></small>
             </div>
             <div class="setting-field">
-              <div class="setting-label"><label for="max-cost">Hard authorization cap</label><button class="help-button" type="button" data-help="max-cost-help" aria-expanded="false" aria-controls="max-cost-help">?</button></div>
+              <div class="setting-label"><label for="max-cost">Cost planning amount</label><button class="help-button" type="button" data-help="max-cost-help" aria-expanded="false" aria-controls="max-cost-help">?</button></div>
               <input id="max-cost" type="number" min="0.01" step="0.01" inputmode="decimal">
               <small id="max-cost-help" class="inline-help" hidden></small>
             </div>

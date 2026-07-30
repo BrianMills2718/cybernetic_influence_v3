@@ -8,7 +8,6 @@ import json
 import pytest
 
 from cybernetic_influence.active_runtime import (
-    ActiveBudgetError,
     ActiveRuntimeCheckpoint,
     ActiveRuntimeConfig,
     ActiveRuntimeSession,
@@ -21,7 +20,7 @@ from cybernetic_influence.active_runtime import (
     ScriptedActiveSystem,
     UpdateScheduleDirective,
 )
-from cybernetic_influence.active_runtime.llm import render_llm_prompts
+from cybernetic_influence.active_runtime.llm import _observed_cost, render_llm_prompts
 from cybernetic_influence.active_runtime.run_control import (
     ExactFactTerminalCondition,
     ResolvedRunControlPlan,
@@ -78,6 +77,23 @@ from cybernetic_influence.scenarios.purchase_payment import (
 
 
 ALTERNATE_MODEL = "openrouter/deepseek/deepseek-v4-flash"
+
+
+def test_retry_cost_retains_known_price_and_marks_incomplete_coverage() -> None:
+    class PartialRetryMeta:
+        cost = 0.00045962
+        cost_source = "provider_reported"
+        cost_covers_all_attempts = False
+        warning_records = [{"code": "LLMC_WARN_RETRY"}]
+
+    cost, source, covers_all_attempts = _observed_cost(PartialRetryMeta())
+    assert cost == pytest.approx(0.00045962)
+    assert source == "provider_reported"
+    assert covers_all_attempts is False
+
+    PartialRetryMeta.warning_records = []
+    _, _, explicit_coverage = _observed_cost(PartialRetryMeta())
+    assert explicit_coverage is False
 
 
 def test_runtime_progress_updates_are_strict_and_observer_bound() -> None:
@@ -381,7 +397,7 @@ def test_nondefault_model_is_bound_into_every_scenario_implementation_id() -> No
     )
 
 
-def test_provider_call_requires_full_ceiling_but_retains_prior_spend() -> None:
+def test_provider_cost_limit_is_advisory_and_partial_coverage_is_retained() -> None:
     fixture = physical_access_fixture(
         physical_access_arm_configurations()[0]
     )
@@ -409,44 +425,42 @@ def test_provider_call_requires_full_ceiling_but_retains_prior_spend() -> None:
                 structured_output={"orientation": "test"},
                 cost=0.01,
                 cost_source="test",
+                cost_covers_all_attempts=False,
             )
             return result.model_copy(update={"call_evidence": [evidence]})
 
     checkpoints: list[ActiveRuntimeCheckpoint] = []
-    with pytest.raises(
-        ActiveBudgetError,
-        match="cannot fit per-call ceiling",
-    ):
-        run_physical_access(
-            fixture,
-            {
-                "technician": ActiveSystemBinding(
-                    scripted.implementation_id,
-                    CostedProvider(),
-                )
-            },
-            run_id="budget_admission_gate",
-            runtime_config=ActiveRuntimeConfig(
-                per_call_budget=0.05,
-                per_run_budget=0.055,
-                max_actions_per_system=1,
-                max_observations_per_system=8,
-                max_private_state_bytes=16_384,
-            ),
-            checkpoint_observer=checkpoints.append,
-        )
-    assert calls == 1
-    assert checkpoints[-1].total_observed_cost == pytest.approx(0.01)
-    assert checkpoints[-1].attempts[0].status == "committed"
-    assert checkpoints[-1].attempts[-1].status == "failed"
+    result = run_physical_access(
+        fixture,
+        {
+            "technician": ActiveSystemBinding(
+                scripted.implementation_id,
+                CostedProvider(),
+            )
+        },
+        run_id="advisory_cost_accounting",
+        runtime_config=ActiveRuntimeConfig(
+            per_call_budget=0.005,
+            per_run_budget=0.005,
+            max_actions_per_system=1,
+            max_observations_per_system=8,
+            max_private_state_bytes=16_384,
+        ),
+        checkpoint_observer=checkpoints.append,
+    )
+    assert calls >= 1
+    assert result.total_observed_cost == pytest.approx(0.01 * calls)
+    assert result.total_observed_cost > result.config.per_run_budget
+    assert result.cost_fully_observable is False
+    assert all(attempt.status == "committed" for attempt in result.attempts)
     progress = _checkpoint_progress_projection(checkpoints[-1])
-    assert progress["model_calls"] == 1
-    assert progress["cost"] == pytest.approx(0.01)
-    assert progress["progress"] == {
-        "completed_attempts": 1,
-        "failed_attempts": 1,
-        "logical_time": 0,
-    }
+    assert progress["model_calls"] == calls
+    assert progress["cost"] == pytest.approx(0.01 * calls)
+    assert progress["cost_fully_observable"] is False
+    summaries = progress["model_call_summaries"]
+    assert isinstance(summaries, list)
+    assert isinstance(summaries[0], dict)
+    assert summaries[0]["cost_covers_all_attempts"] is False
 
 
 def test_event_driven_service_desk_preserves_frozen_due_sets_with_positive_time() -> None:

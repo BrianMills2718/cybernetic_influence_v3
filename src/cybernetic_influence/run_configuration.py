@@ -423,7 +423,7 @@ def live_options_contract() -> dict[str, object]:
         "help": {
             "model": "The shared client route used by every LLM-modeled person and by the narrator. Exact mechanisms make no model call.",
             "agent_reasoning_effort": "How much reasoning effort each modeled person may use. It does not change their position, dispositions, memory, or observations.",
-            "max_total_cost": "The hard authorization for observed provider spend across people and narration. There is no hidden overage; if a provider reports an over-cap cost after a call, the run fails loudly and retains its evidence.",
+            "max_total_cost": "A planning amount retained with the run. A valid simulation is not terminated when known or partially known provider cost crosses it. Provider requests still carry per-call budgets, while call-count and causal-step limits bound runtime growth.",
             "scenario_condition": "A concrete change to world state or a mechanism—not an instruction inserted into a person's mind.",
             "live_execution": "Live mode lets LLM-modeled people orient and act. Reference mode uses fixed zero-cost policies.",
             "map_projection": "Spatial and causal layouts are two projections of the same retained world and trace.",

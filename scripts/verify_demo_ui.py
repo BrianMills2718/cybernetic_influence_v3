@@ -235,13 +235,36 @@ def main() -> None:
         page.locator("#analytical-scale-toggle").click()
         page.locator(".cy-graph-bar strong", has_text="World topology").wait_for()
 
+        page.locator("#scenario").select_option("coordination_decision")
+        page.wait_for_function(
+            """() => document.querySelectorAll('#analytical-boundary option').length === 2
+                && document.querySelector('#spatial-layout')?.getAttribute('aria-pressed') === 'true'"""
+        )
+        assert not page.locator("#live").is_checked()
+        page.locator("#run").click()
+        page.locator("#pause").wait_for(state="visible")
+        page.wait_for_timeout(100)
+        page.locator("#pause").click()
+        page.locator("#resume").wait_for(state="visible", timeout=60_000)
+        assert page.locator("#resume").inner_text() == "Resume from retained step"
+        assert "completed causal step" in page.locator(
+            "#lifecycle-help"
+        ).inner_text()
+        page.locator("#resume").click()
+        page.wait_for_function(
+            """() => document.querySelector('#run-status')?.textContent === 'Completed'""",
+            timeout=120_000,
+        )
+        assert page.locator("#map-section").is_visible()
+        assert page.locator("#narrative-section").is_visible()
+
         browser.close()
     assert not console_errors, console_errors
     assert not failed_requests, failed_requests
     print(
         f"PASS {run_id}: narrative hierarchy and readable detailed story; deep link, "
         "all projections, projection-preserving spatial/causal collapse/expand, "
-        "both composites, and service-desk preview"
+        "both composites, service-desk preview, and coordination pause/resume"
     )
 
 

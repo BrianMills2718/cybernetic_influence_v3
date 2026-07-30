@@ -18,8 +18,10 @@ NARRATOR_MAX_BUDGET = 0.025
 # The analyst card needs one compact account; a bounded completion prevents a
 # provider-accepted but locally overlong response from breaking the sequence.
 # One response now contains a compact timeline account and the readable
-# evidence-bound passage.  The hard observed-cost ceiling remains unchanged.
+# evidence-bound passage. Provider cost is retained as evidence but does not
+# terminate a valid account after a response has been returned.
 NARRATOR_MAX_TOKENS = 640
+NARRATOR_TIMEOUT_SECONDS = 180
 NARRATOR_REASONING_EFFORT = "low"
 NARRATOR_PROMPT_VERSION = "causal_moment_narrator/v4"
 _LEGACY_V3_PROMPT_VERSION = "causal_moment_narrator/v3"
@@ -74,7 +76,6 @@ def narrate_live_moments(
         }
 
     required_calls = len(moments)
-    required_ceiling = required_calls * NARRATOR_MAX_BUDGET
     if max_calls is not None and required_calls > max_calls:
         return {
             "status": "unavailable",
@@ -93,27 +94,6 @@ def narrate_live_moments(
             "moments": [],
             "calls": [],
         }
-    if required_ceiling > max_total_cost + 1e-12:
-        return {
-            "status": "unavailable",
-            "reason": (
-                "narration was not started because the remaining authorization "
-                f"${max_total_cost:.8f} cannot reserve {required_calls} narrator "
-                f"calls at their ${NARRATOR_MAX_BUDGET:.8f} ceiling"
-            ),
-            "failure_boundary": {
-                "kind": "budget_preflight",
-                "required_calls": required_calls,
-                "required_authorization": required_ceiling,
-                "remaining_authorization": max_total_cost,
-                "per_call_ceiling": NARRATOR_MAX_BUDGET,
-            },
-            "model_calls": 0,
-            "cost": 0.0,
-            "moments": [],
-            "calls": [],
-        }
-
     call = structured_call or _resolve_structured_call()
     run_id = _required_run_id(document)
     prior: list[dict[str, object]] = []
@@ -137,6 +117,7 @@ def narrate_live_moments(
         meta: object | None = None
         cost = 0.0
         cost_source = "unavailable"
+        cost_covers_all_attempts = False
         try:
             parsed, meta = call(
                 model,
@@ -153,21 +134,13 @@ def narrate_live_moments(
                 trace_id=trace_id,
                 max_budget=NARRATOR_MAX_BUDGET,
                 max_tokens=NARRATOR_MAX_TOKENS,
+                timeout=NARRATOR_TIMEOUT_SECONDS,
                 reasoning_effort=reasoning_effort,
             )
             cost = _observed_cost(meta)
             cost_source = str(getattr(meta, "cost_source", "unavailable"))
+            cost_covers_all_attempts = _cost_covers_all_attempts(meta)
             total_cost += cost
-            if cost > NARRATOR_MAX_BUDGET:
-                raise ValueError(
-                    f"narrator call cost {cost:.8f} exceeds per-call ceiling "
-                    f"{NARRATOR_MAX_BUDGET:.8f}"
-                )
-            if total_cost > max_total_cost:
-                raise ValueError(
-                    f"observed narration cost {total_cost:.8f} exceeds remaining "
-                    f"authorization {max_total_cost:.8f}"
-                )
             narration = CausalMomentNarration.model_validate(
                 parsed.model_dump(mode="json")
                 if isinstance(parsed, BaseModel)
@@ -205,6 +178,7 @@ def narrate_live_moments(
                     "reasoning_effort": reasoning_effort,
                     "cost": cost,
                     "cost_source": cost_source,
+                    "cost_covers_all_attempts": cost_covers_all_attempts,
                 }
             )
         except Exception as error:
@@ -217,6 +191,7 @@ def narrate_live_moments(
                     "reasoning_effort": reasoning_effort,
                     "cost": cost if meta is not None else None,
                     "cost_source": cost_source,
+                    "cost_covers_all_attempts": cost_covers_all_attempts,
                     "error_type": type(error).__name__,
                     "error_message": str(error),
                 }
@@ -226,6 +201,10 @@ def narrate_live_moments(
                 "reason": "live causal-moment narration stopped before the run could be fully narrated",
                 "model_calls": len(calls),
                 "cost": total_cost,
+                "cost_fully_observable": all(
+                    item.get("cost_covers_all_attempts") is True
+                    for item in calls
+                ),
                 "moments": narrated,
                 "calls": calls,
             }
@@ -233,6 +212,9 @@ def narrate_live_moments(
         "status": "completed",
         "model_calls": len(calls),
         "cost": total_cost,
+        "cost_fully_observable": all(
+            item.get("cost_covers_all_attempts") is True for item in calls
+        ),
         "moments": narrated,
         "calls": calls,
     }
@@ -245,6 +227,7 @@ def reference_narration() -> dict[str, object]:
         "reason": "causal-moment narration is created only for live LLM runs",
         "model_calls": 0,
         "cost": 0.0,
+        "cost_fully_observable": True,
         "moments": [],
         "calls": [],
     }
@@ -653,3 +636,19 @@ def _observed_cost(meta: object) -> float:
     if isinstance(raw, (int, float)) and not isinstance(raw, bool) and raw >= 0:
         return float(raw)
     return 0.0
+
+
+def _cost_covers_all_attempts(meta: object) -> bool:
+    """Keep retry/fallback price uncertainty visible without stopping narration."""
+    coverage_hint = getattr(meta, "cost_covers_all_attempts", None)
+    if isinstance(coverage_hint, bool):
+        return coverage_hint
+    warning_records = getattr(meta, "warning_records", None)
+    if not isinstance(warning_records, list):
+        return getattr(meta, "cost", None) is not None
+    recovered = any(
+        isinstance(record, dict)
+        and record.get("code") in {"LLMC_WARN_RETRY", "LLMC_WARN_FALLBACK"}
+        for record in warning_records
+    )
+    return not recovered

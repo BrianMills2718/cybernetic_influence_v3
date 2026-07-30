@@ -60,7 +60,7 @@ class ParticipantContractError(ActiveRuntimeError):
 
 
 class ActiveBudgetError(ActiveRuntimeError):
-    """Observed or uncertain provider spend made continuation unsafe."""
+    """Legacy error type retained for a provider call that did not complete."""
 
 
 @dataclass
@@ -424,8 +424,6 @@ class ActiveRuntimeSession:
                     raise ParticipantContractError(
                         "every participant requires an activation cause"
                     )
-            self._require_spend_observable()
-
             canonical_ids = sorted(supplied_ids)
             pre_core = self._core.checkpoint()
             activation_id = f"activation_{self._next_attempt_index:06d}"
@@ -454,8 +452,6 @@ class ActiveRuntimeSession:
                 item = collected[active_system_id]
                 binding = self._active_bindings[active_system_id]
                 try:
-                    if getattr(binding.implementation, "provider_bound", False):
-                        self._require_call_authorization()
                     raw = binding.implementation.step(
                         item.active_input.model_copy(deep=True)
                     )
@@ -944,23 +940,6 @@ class ActiveRuntimeSession:
                 raise ActiveBudgetError(
                     f"provider call {call.trace_id!r} failed; activation cannot commit"
                 )
-            if call.cost is None:
-                raise ActiveBudgetError(
-                    f"provider call {call.trace_id!r} has unobservable cost"
-                )
-            if call.cost > self._config.per_call_budget:
-                raise ActiveBudgetError(
-                    f"provider call {call.trace_id!r} cost {call.cost:.8f} exceeds "
-                    f"per-call budget {self._config.per_call_budget:.8f}"
-                )
-        prospective = self.total_observed_cost + sum(
-            call.cost or 0.0 for call in evidence
-        )
-        if prospective > self._config.per_run_budget:
-            raise ActiveBudgetError(
-                f"observed run cost {prospective:.8f} exceeds per-run budget "
-                f"{self._config.per_run_budget:.8f}"
-            )
 
     def _validate_complete_proposals(
         self,
@@ -1361,24 +1340,6 @@ class ActiveRuntimeSession:
         """Reject activation, checkpoint, or completion after terminal commit."""
         if self._terminal:
             raise RuntimeError("active runtime is already terminal")
-
-    def _require_spend_observable(self) -> None:
-        """Prevent another provider call after unknown or exhausted spend."""
-        if not self.cost_fully_observable:
-            raise ActiveBudgetError(
-                "prior provider spend is unobservable; refusing further activation"
-            )
-        if self.total_observed_cost >= self._config.per_run_budget:
-            raise ActiveBudgetError("per-run budget is exhausted")
-
-    def _require_call_authorization(self) -> None:
-        """Reserve a full call ceiling before dispatching a provider-bound step."""
-        remaining = self._config.per_run_budget - self.total_observed_cost
-        if remaining + 1e-12 < self._config.per_call_budget:
-            raise ActiveBudgetError(
-                f"remaining run authorization {remaining:.8f} cannot fit "
-                f"per-call ceiling {self._config.per_call_budget:.8f}"
-            )
 
     def _ordered_specs(self) -> list[ActiveSystemSpec]:
         """Return canonical defensive active-system declarations."""

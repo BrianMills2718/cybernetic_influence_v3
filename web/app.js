@@ -423,11 +423,17 @@ function renderLifecycleControls(run = current) {
   const status = run?.status || 'ready'
   const paused = status === 'paused'
   const pausing = status === 'pause_requested'
-  $('#resume').hidden = !paused
+  const resumableScenario = ['service_desk', 'coordination_decision'].includes(
+    run?.scenario || $('#scenario')?.value
+  )
+  const retainedCheckpoint = Boolean(run?.continuation?.checkpoint)
+  const resumable = resumableScenario && retainedCheckpoint && ['paused', 'failed'].includes(status)
+  const running = status === 'running' && resumableScenario
+  $('#resume').hidden = !resumable
   $('#resume').disabled = false
-  $('#pause').hidden = true
+  $('#pause').hidden = !running
   $('#pause').disabled = false
-  $('#stop').hidden = true
+  $('#stop').hidden = !running
   $('#stop').disabled = false
   if (paused) {
     $('#run-status').textContent = 'Paused'
@@ -443,7 +449,9 @@ function renderLifecycleControls(run = current) {
     $('#lifecycle-help').textContent = run.stop_message || 'The current causal step is finishing before this run ends.'
   } else if (status === 'failed' || status === 'interrupted') {
     $('#run-status').textContent = status === 'failed' ? 'Failed' : 'Interrupted'
-    $('#lifecycle-help').textContent = run.error || 'This run did not reach a resumable checkpoint.'
+    $('#lifecycle-help').textContent = resumable
+      ? 'The run stopped after a validated causal boundary. Resume continues from the retained step instead of replaying the run.'
+      : run.error || 'This run did not reach a resumable checkpoint.'
   } else if (!run) {
     $('#lifecycle-help').textContent = 'Choose a scenario and condition, then play it to inspect what changed and why.'
   }
@@ -694,7 +702,7 @@ function updateAuthorizationPreview() {
   const modelLabel = $('#model').selectedOptions[0]?.textContent || 'No eligible model'
   const reasoning = $('#reasoning').value || 'medium'
   const narratorReasoning = selectedModelChoice()?.narrator_reasoning_effort || 'low'
-  const authorized = Number($('#max-cost').value || 0)
+  const planned = Number($('#max-cost').value || 0)
   const baseline = (runtimeConfig.cost_baselines || []).find((item) =>
     item.scenario === $('#scenario').value &&
     item.arm === $('#arm').value &&
@@ -706,7 +714,7 @@ function updateAuthorizationPreview() {
     ? `Expected observed spend: about $${Number(baseline.median_cost).toFixed(4)} from ${baseline.sample_count} comparable completed live run${baseline.sample_count === 1 ? '' : 's'} (range $${Number(baseline.minimum_cost).toFixed(4)}–$${Number(baseline.maximum_cost).toFixed(4)}).`
     : 'Expected observed spend: no comparable completed live run is retained yet.'
   $('#cost-details').textContent =
-    `${estimate} Hard authorization: $${authorized.toFixed(2)}; no hidden overage. Each participant call is capped at $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} and each narrator call at $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} (up to ${Number(limits.maximum_narrator_calls || 0)} retained causal moments). Narration starts only when the remaining authorization can reserve every retained moment.`
+    `${estimate} Planning amount: $${planned.toFixed(2)}. A returned valid simulation is not terminated because observed or partially observed cost crosses this amount. Provider requests still carry per-call budgets of $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} for participants and $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} for narration; call-count and causal-step limits bound runtime growth.`
 }
 
 function describeCondition() {
@@ -1863,13 +1871,16 @@ function render(run) {
   renderProjectionControls()
   renderGraph()
   $('#result-status').textContent = `${current.status} · ${String(current.scenario || '').replaceAll('_',' ')} · ${String(current.profile || '').replaceAll('_',' ')} · ${String(current.arm || '').replaceAll('_',' ')}`
-  $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator) · $${Number(current.cost).toFixed(6)} · ${current.run_id}`
+  const costCoverage = current.cost_fully_observable === false
+    ? 'known provider cost; one or more retry charges unavailable'
+    : 'observed provider cost'
+  $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator) · $${Number(current.cost).toFixed(6)} ${costCoverage} · ${current.run_id}`
   const llm = current.llm_configuration
   $('#run-config-readout').innerHTML = llm ? `
     <strong>Effective live configuration</strong>
     <span>${html(llm.model)}</span>
     <span>${html(llm.agent_reasoning_effort)} agent reasoning · ${html(llm.narrator_reasoning_effort)} narrator reasoning</span>
-    <span>$${Number(llm.max_total_cost).toFixed(2)} authorized · $${Number(current.cost).toFixed(6)} observed</span>
+    <span>$${Number(llm.max_total_cost).toFixed(2)} planning amount · $${Number(current.cost).toFixed(6)} ${html(costCoverage)}</span>
     <small>${html(String(llm.selection_basis).replaceAll('_',' '))} · llm_client ${html(llm.llm_client_revision)}</small>
   ` : `
     <strong>Reference execution</strong>
@@ -2026,7 +2037,7 @@ $('#run').onclick = async () => {
   $('#live-evidence').hidden = false
   $('#live-evidence-title').textContent = 'Live run started'
   $('#live-evidence-body').textContent = 'Waiting for the first retained causal update.'
-  const pausable = $('#scenario').value === 'service_desk'
+  const pausable = ['service_desk', 'coordination_decision'].includes($('#scenario').value)
   $('#pause').hidden = !pausable
   $('#stop').hidden = !pausable
   try {

@@ -949,8 +949,8 @@ the scheduler, sources, and exact mechanisms model-free. Structural fake-call
 tests must prove each person receives only private memory, delivered
 observations, reviewed BDM-informed descriptions, and owned interfaces. Do not
 run a paid canary in this packet. Report the maximum participant and narrator
-call topology, model/reasoning options, and hard cost cap, then stop for explicit
-authorization.
+call topology, model/reasoning options, per-call request budgets, and retained
+cost-planning amount, then stop for explicit authorization.
 
 **Acceptance:** all five native people use the existing strict action schema;
 fake calls prove bounded observations and owned interfaces for each position;
@@ -965,7 +965,8 @@ greater than 48/32; and the packet performs no deployment or provider call.
 required.
 
 After 21A3 is committed, report the exact revision, model/reasoning, participant
-and narrator maxima, route-certification state, and hard spend cap. With explicit
+and narrator maxima, route-certification state, per-call request budgets, and
+the retained cost-planning amount. With explicit
 authorization, certify only changed schemas, deploy that exact revision to the
 private Mac, verify the config endpoint, and run one live baseline canary. Use
 DeepSeek V4 Flash `none` unless the operator approves another reviewed option.
@@ -974,11 +975,21 @@ restart, and compare its structure with the zero-cost scripted baseline.
 
 **Acceptance:** one valid live trajectory contains four meeting cycles and 12–28
 meaningful narrated moments; completes through an exact terminal condition;
-reports unique calls/events and provider-observed cost; exposes all three graph
+reports unique calls/events, known provider cost, and whether that price covers
+every retry/fallback attempt; exposes all three graph
 meanings, evidence context, participant traces, and completion reason; and a
 human can explain the arc without raw JSON and dispute one passage through exact
-evidence. On provider/schema failure, retain the trace and stop—do not rerun,
-switch models, or change the scenario without new authorization.
+evidence. On provider/schema failure, retain the trace and stop—do not create a
+replacement run, switch models, or change the scenario without new
+authorization. A separately authorized Resume may continue the same run from
+its newest validated checkpoint; it must not replay the committed prefix.
+
+The total cost field is planning evidence, not a post-response termination
+condition. A valid structured response may commit when a retry charge is not
+yet priced or known cost crosses that amount; the run must preserve the known
+price and mark coverage incomplete. Provider calls still carry explicit
+per-call `max_budget` values, while participant-call and causal-moment limits
+remain the hard runtime-growth bounds.
 
 ### Slice 21A terminal acceptance
 
@@ -1042,7 +1053,8 @@ and Run history. Show exact and evidence-coded sections with provenance labels,
 limitations, invalid/unclear states, and step-down to source evidence. Do not
 create a separate analysis application or store. First pass all UI/API tests
 with retained fixtures and build the frontend. Then report the maximum coder
-calls and hard cap and stop for authorization.
+calls, per-call request budget, and retained planning amount and stop for
+authorization.
 
 After authorization, deploy the exact revision and run one live pressure and
 one live stabilization canary. The valid 21A4 baseline may be reused only when
@@ -1094,7 +1106,8 @@ comparison tests, audit, commit, and stop before UI or paid execution.
 ### Packet 21C1 — Authorized repeated live matrix
 
 Report the exact six-run topology, existing valid canaries eligible for reuse,
-additional calls, route state, revision, and hard spend cap. Obtain explicit
+additional calls, route state, revision, per-call request budgets, and retained
+planning amount. Obtain explicit
 authorization. Deploy the exact revision and collect two valid live trajectories
 per condition with the same model, reasoning, scenario revision, and measurement
 spec. Do not automatically replace an invalid run: retain it, report its cost

@@ -49,7 +49,7 @@ class _StrictModel(BaseModel):
 
 
 class ActiveRuntimeConfig(_StrictModel):
-    """Fail-loud execution and growth limits for one active run."""
+    """Execution accounting plus fail-loud growth limits for one active run."""
 
     per_call_budget: float = Field(gt=0.0)
     per_run_budget: float = Field(gt=0.0)
@@ -423,6 +423,10 @@ class ModelCallEvidence(_StrictModel):
     structured_output: dict[str, JsonValue] | None = None
     cost: float | None = Field(default=None, ge=0.0)
     cost_source: str = Field(min_length=1)
+    cost_covers_all_attempts: bool | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
     error_type: str | None = None
     error_message: str | None = None
 
@@ -445,8 +449,8 @@ class ModelCallEvidence(_StrictModel):
 
     @property
     def cost_observable(self) -> bool:
-        """Report whether this provider-bound call has a trustworthy price."""
-        return self.cost is not None
+        """Report whether the retained price covers every provider attempt."""
+        return self.cost is not None and self.cost_covers_all_attempts is not False
 
 
 class ActiveStepResult(_StrictModel):
@@ -597,8 +601,6 @@ class ActivationAttemptRecord(_StrictModel):
                 raise ValueError("committed activation requires post-core binding")
             if self.error_type is not None or self.error_message is not None:
                 raise ValueError("committed activation cannot contain an error")
-            if not self.cost_fully_observable:
-                raise ValueError("unpriced activation may not commit")
         else:
             if self.committed_activation_index is not None:
                 raise ValueError("failed activation cannot have a commit index")
@@ -746,10 +748,6 @@ class ActiveRuntimeCheckpoint(_StrictModel):
             cost_fully_observable=self.cost_fully_observable,
         )
         _validate_consumed_observations(self.states, self.core_checkpoint.state)
-        if self.total_observed_cost > self.config.per_run_budget:
-            # A provider can cross a post-hoc cap; the failure remains forensic.
-            if not self.attempts or self.attempts[-1].status != "failed":
-                raise ValueError("over-budget checkpoint lacks failed-attempt evidence")
         if self.record_digest != canonical_record_digest(
             self.model_dump(mode="json", exclude={"record_digest"})
         ):
