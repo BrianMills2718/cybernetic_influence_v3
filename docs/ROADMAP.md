@@ -42,8 +42,8 @@ world effects.
 
 [Mac development operations](operations/mac-mini.md) owns dated deployment and
 route evidence. On 2026-07-29 the private Mac was freshly observed running
-canonical simulator `1aeea13d6f00170948405b87b556be2727b59943` with shared
-client `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`; its config exposes only
+canonical simulator `8f59c28f5b96792d459ff60f42f879659aa68fd6` with shared
+client `68949c9427ae4e2249aa2d6bc51949739385c275`; its config exposes only
 DeepSeek V4 Flash `none` for live Coordination.
 
 Slice 20 is technically complete: Service Desk `run_20d2d0000004` paused,
@@ -73,15 +73,13 @@ does not plainly distinguish terminal conditions, scenario outcome, horizon,
 quiescence, operator stop, and safety limits.
 
 [Slice 21: coordination-environment assay](plans/021-coordination-environment-assay.md)
-is active at Packet 21A4 and supplies the first naturally multi-episode research
-scenario, grounded in
+is at Packet 21A4 human readout and supplies the first naturally multi-episode
+research scenario, grounded in
 [Waltzman's coordination framework](research/001-from-minds-to-coordination.md).
-Its latest baseline reached the fourth meeting before the deployed simulator
-treated a valid DeepSeek retry with incomplete price coverage as a terminal
-budget error and retained the prior checkpoint. The verified candidate repair
-keeps known retry cost, marks incomplete coverage, makes aggregate cost
-advisory, extends the provider deadline, and resumes failed Coordination runs
-from their newest validated prefix. It is not canonical or deployed yet.
+Live baseline `run_21a48f59c28f` completed four meetings, 28 narratives, and an
+exact `deploy_on_time` outcome after the deployed repair preserved a valid
+retry across incomplete price coverage. Its technical run/restart/browser gate
+passes; operator narrative judgment remains.
 [Slice 22: composite-agency perturbation
 assay](plans/022-composite-agency-perturbation-assay.md) is separately gated by
 Slice 21C and operationalizes the later Levin-style question on that same
@@ -778,27 +776,23 @@ requires them to answer an analyst question that current contracts cannot.
 - **Last accepted integrated proof:** Service Desk `run_20d2d0000004`, with
   pause/resume, exact completion, and all 25 simulator-grounded narratives.
 - **Current canonical revision:**
-  `1aeea13d6f00170948405b87b556be2727b59943`; the shared UI contains the
+  `8f59c28f5b96792d459ff60f42f879659aa68fd6`; the shared UI contains the
   scripted Coordination scenario and a certification-gated native-person seam.
-- **Current packet:** 21A4 route certification, deployment, live baseline, and
-  human readout. Generic participant and narrator observations plus all five
-  exact Coordination person-schema observations are retained against shared
-  client `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`; an independent replay of
-  the configured set returns DeepSeek V4 Flash from both the global catalog
-  and the scenario-specific live gate.
-- **Observed live boundary:** DeepSeek V4 Flash `none` baseline
-  `run_21a41aeea130` reached the fourth meeting with 32 retained calls and
-  `$0.0090656792` retained cost. Its next coordinator call timed out once and
-  returned valid structure on retry. The deployed simulator treated the
-  unpriced first attempt as a terminal budget error, dropped the known retry
-  price, and retained the prior committed checkpoint.
-- **Current limiting cause:** the locally verified candidate repairs partial
-  retry accounting, monotonic failed-checkpoint retention, Coordination
-  pause/failure resume, and the 60-second provider deadline. It passes the full
-  simulator suite against shared-client `68949c9`, but remains a candidate
-  until landed and deployed. The operator authorized that deployment and one
-  replacement DeepSeek V4 Flash `none` baseline; no second replacement is
-  authorized.
+- **Current packet:** 21A4 human readout. The deployed simulator and all seven
+  route observations are bound to shared client
+  `68949c9427ae4e2249aa2d6bc51949739385c275`; the scenario-specific gate
+  returns DeepSeek V4 Flash `none`.
+- **Observed live proof:** `run_21a48f59c28f` completed four meeting cycles,
+  338 unique events, 28 narrated moments, and exact terminal outcome
+  `deploy_on_time` through 65 validated DeepSeek calls. Known cost is
+  `$0.0215453528`; one timed-out attempt is unpriced, so coverage is explicitly
+  incomplete. Restart/reopen produced no new call or cost, and rendered readback
+  preserved every primary UI surface.
+- **Current limiting cause:** technical 21A4 acceptance is supported. The
+  operator must judge whether the retained story is understandable and can be
+  disputed through exact evidence. Detailed prose still contains some internal
+  labels and one potentially confusing terminal-gate description. No second
+  replacement baseline is authorized.
 
 ## Explicit MVP Deferrals
 

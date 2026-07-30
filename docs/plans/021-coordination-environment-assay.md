@@ -991,6 +991,19 @@ price and mark coverage incomplete. Provider calls still carry explicit
 per-call `max_budget` values, while participant-call and causal-moment limits
 remain the hard runtime-growth bounds.
 
+**Observed technical evidence (2026-07-29):** deployed baseline
+`run_21a48f59c28f` completed four meetings through exact condition
+`decision_deploy_on_time`, retaining 338 unique events, 28 narrated moments, 37
+participant calls, 28 narrator calls, and `$0.0215453528` known cost. All 65
+logical calls selected a validated DeepSeek V4 Flash `none` response. Nine
+strict-schema repairs and one 180-second timeout recovered on one retry; the
+unknown timeout price is represented as incomplete cost coverage without
+discarding the valid retry or trajectory. Restart/reopen preserved the exact
+run file and call ledger with no new provider call. The three maps, analytical
+scale, initial situation, story, outcome, and participant/group accounts render
+without browser errors. Human narrative readout remains the only 21A4 boundary;
+do not create another baseline without authorization.
+
 ### Slice 21A terminal acceptance
 
 **Done when:**

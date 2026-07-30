@@ -130,54 +130,47 @@ restarting completed work.
   UI rather than a scenario-specific page.
 - **Canonical implementation and deployment:** canonical `main` and the private
   Mac were freshly observed on 2026-07-29 at simulator
-  `1aeea13d6f00170948405b87b556be2727b59943`; the deployed shared client is
-  `c46405838ffc8d30a17a2353b7d55a3ae1f3516b`. The service is running and its
+  `8f59c28f5b96792d459ff60f42f879659aa68fd6`; the deployed shared client is
+  `68949c9427ae4e2249aa2d6bc51949739385c275`. The service is running and its
   config exposes only DeepSeek V4 Flash `none` for live Coordination.
-- **Current increment:** Packet 21A4 remains active. Five Coordination people
+- **Current increment:** Packet 21A4 technical execution is complete and its
+  human readout remains active. Five Coordination people
   use scenario-specific native-LLM schemas while sources, the meeting clock,
   analytical composites, and exact mechanisms remain non-provider executors.
   The UI and API derive Coordination live availability from the complete
   per-scenario certification set rather than falling back.
 - **Observed certification evidence:** DeepSeek V4 Flash `none` now has current
   parseable observations for generic `LlmDecision`
-  (`routeobs1_642ea0a3d2f0d5c643913b5a`), `CausalMomentNarration`
-  (`routeobs1_fccd6216c6e0b7ba73d8f6a7`), and all five Coordination person
+  (`routeobs1_b23c1d902f7d49429598d6f3`), `CausalMomentNarration`
+  (`routeobs1_b83c1bf9cefc179a7e0b5650`), and all five Coordination person
   schemas: `MissionCoordinatorLlmDecision`
-  (`routeobs1_b93a2b195341f17f0ba933d1`), `TechnicalLeadLlmDecision`
-  (`routeobs1_224f0038fc3c41d9d0639931`),
+  (`routeobs1_6d235df74a36c6671a22dc39`), `TechnicalLeadLlmDecision`
+  (`routeobs1_2d2414497529629f729fd51e`),
   `PolicyRepresentativeLlmDecision`
-  (`routeobs1_bc287a4ba1e8d746b605485b`), `LocalLiaisonLlmDecision`
-  (`routeobs1_c4f23d5fc55f91758348ff64`), and
+  (`routeobs1_ea79cbe005b46de152adbd7e`), `LocalLiaisonLlmDecision`
+  (`routeobs1_dfbc17c844d3f8d10c3c350e`), and
   `PartnerRepresentativeLlmDecision`
-  (`routeobs1_8b6c1697c9dddad1d6dd474a`). Every observation is bound to
-  shared-client revision `c46405838ffc8d30a17a2353b7d55a3ae1f3516b` and
+  (`routeobs1_7edc2427624c701b47e63eec`). Every observation is bound to
+  shared-client revision `68949c9427ae4e2249aa2d6bc51949739385c275` and
   replays against the current exact schema digest.
-- **Observed live boundary:** replacement baseline `run_21a41aeea130` reached
-  the fourth meeting with 32 retained completed participant calls and
-  `$0.0090656792` retained known cost. The next coordinator logical call timed
-  out once, then returned valid structured output on retry with known retry
-  cost `$0.00045962`; the deployed simulator discarded that known price because
-  the timed-out attempt was not yet priced and failed with `ActiveBudgetError`.
-  Its terminal writer also regressed to the previous committed checkpoint, so
-  the retained document incorrectly omits the failed activation and reports
-  full cost coverage. This is accounting/checkpoint policy debt, not evidence
-  that DeepSeek returned invalid structure.
-- **Candidate repair:** `feature/live-coordination` preserves known retry price
-  with an explicit incomplete-coverage flag, treats aggregate cost as planning
-  evidence rather than a post-response stop, extends participant/narrator
-  deadlines from 60 to 180 seconds, and resumes both Service Desk and
-  Coordination from paused or failed validated checkpoints. A real failed
-  coordination activation now resumes without replay or duplicate events. The
-  complete simulator suite passes against shared-client `68949c9`; strict
-  typing, production UI build, and deployment-template checks also pass. This
-  candidate is not canonical or deployed yet.
-- **Resume event:** the operator has authorized landing and deploying the
-  verified repair plus one replacement DeepSeek V4 Flash `none` baseline. Use
-  the existing explicit per-call request budgets and 48-participant/32-narrator
-  growth bounds; retain `$0.74` as a planning amount. Then inspect every call,
-  full trace, price-coverage flag, restart/reopen behavior, and request the
-  21A4 human readout. Do not create a second replacement run without new
-  authorization.
+- **Observed live proof:** baseline `run_21a48f59c28f` completed all four
+  meetings through `decision_deploy_on_time`, with 338 unique events, 28
+  narrated moments, 37 participant calls, 28 narrator calls, and
+  `$0.0215453528` known cost. All 65 calls selected a validated DeepSeek
+  response. Nine schema repairs and one 180-second timeout recovered on one
+  retry; the unknown timeout price is retained honestly as incomplete cost
+  coverage rather than terminating the trajectory.
+- **Restart and rendered readback:** after restart, the retained file hash,
+  65-call ledger, cost, outcome, events, and narratives were unchanged and no
+  provider call occurred. The exact deep link renders all three maps,
+  analytical scale, initial situation, story, outcome, and participant/group
+  accounts without a console or network error.
+- **Resume event:** the operator opens the retained run and decides whether its
+  story explains the four-meeting arc without raw JSON and whether one disputed
+  sentence can be traced to exact evidence. Technical acceptance is supported;
+  narrative polish remains a judgment because detailed prose still exposes
+  some internal labels and one final account is potentially confusing. Do not
+  create a second replacement baseline without new authorization.
 
 ## Done
 

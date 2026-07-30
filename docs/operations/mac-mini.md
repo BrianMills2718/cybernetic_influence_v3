@@ -23,27 +23,41 @@ stored in the repository or LaunchAgent plist.
 
 Current V3 deployment observed 2026-07-29:
 
-- simulator revision `5803e1b0e1744592862bcf559bf5eb27573776c8` and shared
-  client `c46405838ffc8d30a17a2353b7d55a3ae1f3516b` passed the Mac's strict
-  typing, 173-test, production-build, and LaunchAgent-template gates before
-  restart;
+- simulator revision `8f59c28f5b96792d459ff60f42f879659aa68fd6` and shared
+  client `68949c9427ae4e2249aa2d6bc51949739385c275` (`llm-client` 0.7.1)
+  passed the Mac's strict typing, 178-test, production-build, and
+  LaunchAgent-template gates before restart;
 - its private config exposes the Coordination decision scenario and permits
-  only `openrouter/deepseek/deepseek-v4-flash` at `none` reasoning. The
-  LaunchAgent binds the generic participant/narrator pair and all five exact
-  Coordination person-schema observations separately;
-- authorized baseline `run_21a45803e1b0` retained 29 completed DeepSeek
-  participant calls with provider-observed `$0.008249917` cost. Every call was
-  structurally completed and costed; narration never began because the exact
-  runtime failed earlier;
-- the terminal action correctly selected `deployment_proposal_copy`, but
-  `terminal_decision_gate` created its derived terminal-decision representation
-  without naming that source as a parent. The causal core therefore failed
-  closed with `MechanismContractError: terminal_decision_gate: copied
-  representation must name the triggering token as a parent`;
-- do not rerun this paid baseline or switch models automatically. A local
-  repair now propagates the required parent lineage and aligns the scripted
-  terminal action with the live interface, but it requires a separately
-  authorized deployment and replacement canary.
+  only `openrouter/deepseek/deepseek-v4-flash` at `none` reasoning for the
+  live Coordination scenario. The current generic participant/narrator route
+  observations are `routeobs1_b23c1d902f7d49429598d6f3` and
+  `routeobs1_b83c1bf9cefc179a7e0b5650`; the five person-schema observations are
+  `routeobs1_6d235df74a36c6671a22dc39`,
+  `routeobs1_2d2414497529629f729fd51e`,
+  `routeobs1_ea79cbe005b46de152adbd7e`,
+  `routeobs1_dfbc17c844d3f8d10c3c350e`, and
+  `routeobs1_7edc2427624c701b47e63eec`;
+- the one authorized replacement baseline, `run_21a48f59c28f`, completed four
+  meeting cycles through exact terminal condition `decision_deploy_on_time`.
+  It retained 338 unique events, 28 unique narrated moments, 37 participant
+  calls, 28 narrator calls, and `$0.0215453528` known provider cost;
+- all 65 logical calls selected a validated DeepSeek response with no fallback
+  or terminal call error. Ten calls recovered on one retry: nine repaired a
+  strict-schema validation failure and one recovered from a 180-second
+  transport timeout. The timeout attempt has no known price, so the run
+  correctly retains `cost_fully_observable: false` while preserving the known
+  successful-attempt price and completed trajectory;
+- after LaunchAgent restart, the run reopened with the same retained-file
+  SHA-256 `b6d47e3801cc0fef40dc6efa04d628bef5ebf0d969e21174cfa29e2b3a7ad365`,
+  the same 65-call ledger, and no additional cost. A rendered deep-link check
+  showed all three map projections, analytical scale, initial situation,
+  concise/detailed story, outcome, and participant/group accounts with no
+  browser console or network error;
+- the technical 21A4 proof is complete. Human readout remains pending because
+  some detailed prose still exposes internal labels such as `meeting_clock`,
+  and one final account describes an unchanged proposal as denied before the
+  exact terminal gate accepts it. Do not run a second replacement baseline;
+  use the retained run for the operator decision.
 
 Current V3 deployment observed 2026-07-28:
 
