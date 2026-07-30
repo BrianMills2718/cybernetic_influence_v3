@@ -44,7 +44,11 @@ class _DraftMessage(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     message_id: str
     content: str
-    source: Literal["conversation", "direct_person_edit"] = "conversation"
+    source: Literal[
+        "conversation",
+        "direct_person_edit",
+        "direct_coordination_edit",
+    ] = "conversation"
     edit_digest: str | None = None
     model: str | None = None
     reasoning_effort: str | None = None

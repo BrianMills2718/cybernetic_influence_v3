@@ -161,6 +161,14 @@ CoordinationAnalysisId = Literal[
     "waltzman_decision_environment_v1",
     "levin_collective_competence_v1",
 ]
+CoordinationPositionKind = Literal[
+    "coordinator",
+    "technical_reviewer",
+    "policy_reviewer",
+    "local_health_reviewer",
+    "partner_representative",
+]
+CoordinationConcernKind = Literal["technical", "policy", "local"]
 
 
 class CollectiveGoalDraft(_StrictModel):
@@ -245,6 +253,241 @@ class CoordinationDecisionWorkflowDraft(_StrictModel):
         ):
             if len(values) != len(set(values)):
                 raise ValueError(f"{label} must be unique")
+        return self
+
+
+class CoordinationPersonReview(_StrictModel):
+    """Human-facing person description without a compiler-owned entity ID."""
+
+    position_kind: CoordinationPositionKind = Field(
+        description="The one reviewed decision position occupied by this person."
+    )
+    label: str = Field(
+        min_length=1,
+        description="The human-readable name shown for this person.",
+    )
+    position: str = Field(
+        min_length=1,
+        description="A descriptive account of the person's position in the situation.",
+    )
+    disposition: str = Field(
+        min_length=1,
+        description="Stable tendencies relevant to how this person may decide.",
+    )
+    memories: list[str] = Field(
+        min_length=1,
+        description="Information or experience this person already remembers.",
+    )
+    behavioral_profile: BehavioralProfileDraft = Field(
+        description="Descriptive behavioral assumptions about this person."
+    )
+
+
+class CoordinationConcernReview(_StrictModel):
+    """One human-facing concern; source, recipient, and route IDs are compiled."""
+
+    concern_kind: CoordinationConcernKind = Field(
+        description="The reviewed semantic kind of outside concern."
+    )
+    source_label: str = Field(
+        min_length=1,
+        description="The human-readable name of the concrete concern source.",
+    )
+    source_description: str = Field(
+        min_length=1,
+        description="What the concrete source is in the modeled situation.",
+    )
+    topic: str = Field(
+        min_length=1,
+        description="A concise human-readable topic for the concern.",
+    )
+    content: str = Field(
+        min_length=1,
+        description="The information delivered by this concern source.",
+    )
+    delivery_minutes: int = Field(
+        ge=1,
+        description="Positive scenario minutes before the concern is delivered.",
+    )
+
+
+class CoordinationPlaceReview(_StrictModel):
+    """Editable descriptions for the reviewed spatial projection."""
+
+    partnership_label: str = Field(
+        min_length=1,
+        description="The human-readable name of the shared decision location.",
+    )
+    partnership_description: str = Field(
+        min_length=1,
+        description="What the shared decision location represents.",
+    )
+    source_site_label: str = Field(
+        min_length=1,
+        description="The human-readable name of the concern-source location.",
+    )
+    source_site_description: str = Field(
+        min_length=1,
+        description="What the concern-source location represents.",
+    )
+    registry_label: str = Field(
+        min_length=1,
+        description="The human-readable name of the external decision destination.",
+    )
+    registry_description: str = Field(
+        min_length=1,
+        description="What the external decision destination represents.",
+    )
+
+
+class CoordinationBoundaryReview(_StrictModel):
+    """Human-facing names for execution-inert analytical group views."""
+
+    partnership_label: str = Field(
+        min_length=1,
+        description="The label for the execution-inert partnership view.",
+    )
+    partnership_description: str = Field(
+        min_length=1,
+        description="What exact members the partnership view groups for analysis.",
+    )
+    source_group_label: str = Field(
+        min_length=1,
+        description="The label for the execution-inert concern-source view.",
+    )
+    source_group_description: str = Field(
+        min_length=1,
+        description="What exact sources the concern-source view groups for analysis.",
+    )
+
+
+class CoordinationGoalReview(_StrictModel):
+    """Human-facing candidate goal without a compiler-owned goal ID."""
+
+    label: str = Field(
+        min_length=1,
+        description="The human-readable name of the candidate collective goal.",
+    )
+    description: str = Field(
+        min_length=1,
+        description="What success would mean for the candidate collective goal.",
+    )
+    acceptable_outcomes: list[CoordinationOutcome] = Field(
+        min_length=1,
+        description="Terminal outcomes that count as satisfying the candidate goal.",
+    )
+    constraints: list[str] = Field(
+        min_length=1,
+        description="Constraints the decision must respect to satisfy the goal.",
+    )
+
+    @model_validator(mode="after")
+    def unique_outcomes(self) -> "CoordinationGoalReview":
+        if len(self.acceptable_outcomes) != len(set(self.acceptable_outcomes)):
+            raise ValueError("acceptable outcomes must be unique")
+        return self
+
+
+class CoordinationScenarioReview(_StrictModel):
+    """Complete semantic review/edit surface for the bounded coordination template."""
+
+    template_id: Literal["coordination_decision_v1"] = Field(
+        description="The reviewed executable coordination template."
+    )
+    title: str = Field(
+        min_length=1,
+        description="A concise human-readable name for the situation.",
+    )
+    description: str = Field(
+        min_length=1,
+        description="A plain-language account of the decision situation.",
+    )
+    condition: CoordinationConditionDraft = Field(
+        description="The reviewed world condition applied to this scenario."
+    )
+    people: list[CoordinationPersonReview] = Field(
+        min_length=5,
+        max_length=5,
+        description="Exactly one concrete person in each reviewed position.",
+    )
+    concerns: list[CoordinationConcernReview] = Field(
+        min_length=3,
+        max_length=3,
+        description="Exactly one technical, policy, and local concern source.",
+    )
+    collective_goal: CoordinationGoalReview = Field(
+        description="The candidate collective goal used only for analysis."
+    )
+    places: CoordinationPlaceReview = Field(
+        description="Human-readable labels for the reviewed spatial projection."
+    )
+    analytical_boundaries: CoordinationBoundaryReview = Field(
+        description="Execution-inert group views used for multiscale analysis."
+    )
+    meeting_days: list[int] = Field(
+        min_length=4,
+        max_length=4,
+        description="The reviewed four-day meeting cadence [0, 3, 6, 9].",
+    )
+    deadline_day: int = Field(
+        ge=1,
+        description="The reviewed terminal decision deadline on day 10.",
+    )
+    analysis_ids: list[CoordinationAnalysisId] = Field(
+        min_length=1,
+        description="One or both per-run analyses to apply after execution.",
+    )
+    assumptions: list[str] = Field(
+        min_length=1,
+        description="Material assumptions needed to interpret the simulation.",
+    )
+    known_omissions: list[str] = Field(
+        min_length=1,
+        description="Material real-world behavior outside this bounded scenario.",
+    )
+    fidelity_questions: list[str] = Field(
+        min_length=1,
+        description="Questions a reviewer should check against the exact trace.",
+    )
+    unresolved_questions: list[str] = Field(
+        default_factory=list,
+        description="Only user choices that would materially change the causal question.",
+    )
+
+    @model_validator(mode="after")
+    def complete_closed_sets(self) -> "CoordinationScenarioReview":
+        position_kinds = [item.position_kind for item in self.people]
+        concern_kinds = [item.concern_kind for item in self.concerns]
+        expected_positions = {
+            "coordinator",
+            "technical_reviewer",
+            "policy_reviewer",
+            "local_health_reviewer",
+            "partner_representative",
+        }
+        expected_concerns = {"technical", "policy", "local"}
+        if set(position_kinds) != expected_positions:
+            raise ValueError(
+                "coordination review requires each of the five reviewed positions"
+            )
+        if len(position_kinds) != len(set(position_kinds)):
+            raise ValueError("coordination review positions must be unique")
+        if set(concern_kinds) != expected_concerns:
+            raise ValueError(
+                "coordination review requires technical, policy, and local concerns"
+            )
+        if len(concern_kinds) != len(set(concern_kinds)):
+            raise ValueError("coordination concern kinds must be unique")
+        for label, values in (
+            ("meeting days", self.meeting_days),
+            ("analysis IDs", self.analysis_ids),
+        ):
+            if len(values) != len(set(values)):
+                raise ValueError(f"{label} must be unique")
+        if self.meeting_days != sorted(self.meeting_days):
+            raise ValueError("meeting days must be in increasing order")
+        if self.deadline_day <= self.meeting_days[-1]:
+            raise ValueError("the deadline must be after the final meeting")
         return self
 
 

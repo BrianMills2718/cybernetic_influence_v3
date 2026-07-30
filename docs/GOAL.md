@@ -106,23 +106,27 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 - The causal runtime, maps, narrative, pause/resume, analytical boundaries, and
   exact evidence inspection are technically observed.
-- Conversational authoring is technically observed for two short,
-  template-backed scenario families.
+- Conversational authoring is technically observed for two short scenario
+  families and the reviewed five-person coordination template. The
+  coordination branch uses semantic fields; compiler-owned runtime identities
+  and implementations are excluded from the model-facing schema.
 - The fixed multinational coordination scenario is technically observed in
   reference and live modes, with accepted baseline, pressure, and stabilization
   trajectories.
-- Waltzman-inspired per-run measurement and readout exist for the fixed
-  scenario.
+- An authored coordination draft can be edited directly, approved, compiled,
+  run in zero-cost reference mode, reopened, and inspected with either or both
+  selected Waltzman- and Levin-informed readouts.
+- The Waltzman- and Levin-informed per-run modules consume one theory-neutral
+  evidence bundle and remain separate from the world execution.
 - Boundary activity and coordination episodes exist as reversible analyst
   projections.
-- The missing product boundary is an approved authored coordination
-  configuration that compiles into the existing runtime and drives a
-  theory-neutral evidence bundle plus both per-run analysis modules.
+- The remaining product boundary is one authorized canonical live
+  author-configure-run-readout proof, complete trace inspection, restart/reopen
+  proof, and operator readout against M1–M8.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
-- The Mac's subscription-backed Terra route most recently returned a usage-limit
-  rejection. That does not block provider-free implementation or reference
-  execution.
+- Route availability and exact structured-schema compatibility must be freshly
+  preflighted before the canonical live proof; Packet 24B made no provider call.
 
 ## Active Plan
 

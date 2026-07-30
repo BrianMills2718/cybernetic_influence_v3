@@ -17,8 +17,13 @@ from cybernetic_influence.authoring.compiler import (
     CompiledScenario,
     compile_scenario,
 )
+from cybernetic_influence.authoring.coordination_review import (
+    coordination_proposal_from_review,
+    coordination_review_from_proposal,
+)
 from cybernetic_influence.authoring.examples import reviewed_coordination_proposal
 from cybernetic_influence.authoring.models import (
+    CoordinationScenarioReview,
     PersonDraft,
     ProfileStatement,
     ScenarioDraftProposal,
@@ -42,6 +47,8 @@ AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "ma
 AUTHORING_MODEL: AuthoringModel = CODEX_LUNA_MODEL
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
+AUTHORING_MAX_TOKENS = 8000
+AUTHORING_PROMPT_VERSION = "scenario_draft.v3"
 
 
 class AuthoringModelOption(TypedDict):
@@ -201,8 +208,8 @@ class _BoundaryConsumer(BaseModel):
     member_refs: list[str]
 
 
-class _ProposalConsumer(BaseModel):
-    """Permissive at the provider boundary; strict proposal validation follows."""
+class _LegacyProposalConsumer(BaseModel):
+    """Permissive read boundary for the two earlier provider schemas."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -226,6 +233,19 @@ class _ProposalConsumer(BaseModel):
     unresolved_questions: list[str]
 
 
+class _ProposalConsumer(BaseModel):
+    """Strict LLM output envelope with one ID-free coordination branch."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    proposal: _LegacyProposalConsumer | CoordinationScenarioReview = Field(
+        description=(
+            "One complete reviewed-template proposal. Coordination proposals use "
+            "semantic fields and never supply compiler-owned runtime identities."
+        )
+    )
+
+
 def _structured_call() -> StructuredCall:
     try:
         from llm_client import call_llm_structured
@@ -234,13 +254,17 @@ def _structured_call() -> StructuredCall:
     return cast(StructuredCall, call_llm_structured)
 
 
+def _prompt_source() -> str:
+    return resources.files("cybernetic_influence.authoring").joinpath(
+        "prompts/scenario_draft.yaml"
+    ).read_text(encoding="utf-8")
+
+
 def _prompt(
     *, message: str, prior: dict[str, object], repair_feedback: str | None,
     candidate: object | None,
 ) -> tuple[str, str]:
-    raw = resources.files("cybernetic_influence.authoring").joinpath(
-        "prompts/scenario_draft.yaml"
-    ).read_text(encoding="utf-8")
+    raw = _prompt_source()
     template = yaml.safe_load(raw)
     if not isinstance(template, dict):
         raise ValueError("authoring prompt must be a mapping")
@@ -253,6 +277,34 @@ def _prompt(
             candidate=candidate,
         ),
     )
+
+
+def authoring_contract() -> dict[str, object]:
+    """Expose the exact structured-call contract without invoking a provider."""
+
+    schema = _ProposalConsumer.model_json_schema()
+    schema_digest = sha256(
+        json.dumps(schema, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return {
+        "task": AUTHORING_TASK,
+        "prompt_version": AUTHORING_PROMPT_VERSION,
+        "prompt_digest": sha256(_prompt_source().encode("utf-8")).hexdigest(),
+        "schema_name": _ProposalConsumer.__name__,
+        "schema_digest": schema_digest,
+        "maximum_attempts_per_message": AUTHORING_MAX_ATTEMPTS,
+        "maximum_output_tokens_per_attempt": AUTHORING_MAX_TOKENS,
+        "maximum_cost_per_attempt": AUTHORING_MAX_BUDGET,
+        "maximum_usage_based_cost_per_message": round(
+            AUTHORING_MAX_ATTEMPTS * AUTHORING_MAX_BUDGET,
+            2,
+        ),
+        "model_options": list(AUTHORING_MODEL_OPTIONS),
+        "repair_behavior": (
+            "A rejected typed candidate may be repaired within the same bounded "
+            "message sequence; the prior accepted revision remains retained."
+        ),
+    }
 
 
 class DraftAuthoringService:
@@ -326,7 +378,9 @@ class DraftAuthoringService:
             meta: object | None = None
             trace_id = f"{draft_id}/revision/{expected_revision + 1}/attempt/{attempt_number}"
             system, user = _prompt(
-                message=message, prior=current, repair_feedback=repair_feedback,
+                message=message,
+                prior=_provider_prior(current),
+                repair_feedback=repair_feedback,
                 candidate=candidate,
             )
             try:
@@ -338,7 +392,7 @@ class DraftAuthoringService:
                         task=AUTHORING_TASK,
                         trace_id=trace_id,
                         max_budget=AUTHORING_MAX_BUDGET,
-                        max_tokens=4000,
+                        max_tokens=AUTHORING_MAX_TOKENS,
                         model_justification=(
                             "Select and populate one reviewed executable scenario template "
                             "from a bounded natural-language situation."
@@ -350,10 +404,21 @@ class DraftAuthoringService:
                     proposal = parsed
                     candidate = _provider_candidate_from_proposal(parsed)
                 else:
-                    consumer = _ProposalConsumer.model_validate(
-                        parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
+                    raw_parsed = (
+                        parsed.model_dump(mode="json")
+                        if isinstance(parsed, BaseModel)
+                        else parsed
                     )
-                    candidate = consumer.model_dump(mode="json")
+                    try:
+                        consumer = _ProposalConsumer.model_validate(raw_parsed)
+                    except ValueError:
+                        # Fake calls and pre-v3 retained candidates may still
+                        # return the proposal without the new envelope. The
+                        # actual provider schema always requires the envelope.
+                        consumer = _ProposalConsumer.model_validate(
+                            {"proposal": raw_parsed}
+                        )
+                    candidate = consumer.proposal.model_dump(mode="json")
                     proposal = _proposal_from_consumer(consumer)
                 diagnostics = _diagnostics(proposal)
                 if not diagnostics:
@@ -553,6 +618,82 @@ class DraftAuthoringService:
             document=updated,
         )
 
+    def edit_coordination_configuration(
+        self,
+        draft_id: str,
+        *,
+        expected_revision: int,
+        edit_id: str,
+        configuration: CoordinationScenarioReview,
+    ) -> dict[str, object]:
+        """Persist semantic coordination edits without a model call."""
+
+        current = self.store.get(draft_id)
+        messages = current["messages"]
+        assert isinstance(messages, list)
+        edit_digest = sha256(
+            configuration.model_dump_json(exclude_none=False).encode("utf-8")
+        ).hexdigest()
+        existing = next(
+            (item for item in messages if item.get("message_id") == edit_id),
+            None,
+        )
+        if existing is not None:
+            if (
+                existing.get("source") != "direct_coordination_edit"
+                or existing.get("edit_digest") != edit_digest
+            ):
+                raise DraftConflictError(
+                    "edit ID was already used with different coordination content"
+                )
+            return current
+        if current["revision"] != expected_revision:
+            raise DraftConflictError("draft revision has changed; reload before editing")
+        raw_proposal = current.get("proposal")
+        if not isinstance(raw_proposal, dict):
+            raise AuthoringCompilationError("draft has no valid proposal")
+        previous = ScenarioDraftProposal.model_validate(raw_proposal)
+        if previous.workflow.template_id != "coordination_decision_v1":
+            raise ValueError(
+                "direct coordination editing requires a coordination decision draft"
+            )
+        proposal = coordination_proposal_from_review(configuration)
+        diagnostics = _diagnostics(proposal)
+        if any(item["severity"] == "error" for item in diagnostics):
+            raise AuthoringCompilationError(_diagnostic_feedback(diagnostics))
+        status = "needs_input" if diagnostics else "ready_for_review"
+        summary = (
+            f"Saved direct edits to {proposal.title}. "
+            "No authoring model call was made."
+        )
+        updated = {
+            **current,
+            "revision": expected_revision + 1,
+            "status": status,
+            "messages": [
+                *messages,
+                {
+                    "message_id": edit_id,
+                    "content": "Edited the coordination scenario directly.",
+                    "source": "direct_coordination_edit",
+                    "edit_digest": edit_digest,
+                    "assistant_summary": summary,
+                    "result_status": status,
+                    "trace_ids": [],
+                },
+            ],
+            "authoring_summary": summary,
+            "proposal": proposal.model_dump(mode="json"),
+            "diagnostics": diagnostics,
+            "approval": None,
+            "updated_at": now_iso(),
+        }
+        return self.store.replace(
+            draft_id,
+            expected_revision=expected_revision,
+            document=updated,
+        )
+
     def compile(self, document: dict[str, object]) -> CompiledScenario:
         raw = document.get("proposal")
         if not isinstance(raw, dict):
@@ -606,7 +747,9 @@ def _diagnostics(proposal: ScenarioDraftProposal) -> list[dict[str, str]]:
 
 
 def _proposal_from_consumer(consumer: _ProposalConsumer) -> ScenarioDraftProposal:
-    payload = consumer.model_dump(mode="json")
+    if isinstance(consumer.proposal, CoordinationScenarioReview):
+        return coordination_proposal_from_review(consumer.proposal)
+    payload = consumer.proposal.model_dump(mode="json")
     raw_placements = payload["placements"]
     assert isinstance(raw_placements, list)
     placements = {
@@ -621,6 +764,8 @@ def _proposal_from_consumer(consumer: _ProposalConsumer) -> ScenarioDraftProposa
 
 
 def _provider_candidate_from_proposal(proposal: ScenarioDraftProposal) -> dict[str, object]:
+    if proposal.workflow.template_id == "coordination_decision_v1":
+        return coordination_review_from_proposal(proposal).model_dump(mode="json")
     payload = proposal.model_dump(mode="json")
     placements = payload["placements"]
     assert isinstance(placements, dict)
@@ -629,6 +774,34 @@ def _provider_candidate_from_proposal(proposal: ScenarioDraftProposal) -> dict[s
         for entity_id, place_id in placements.items()
     ]
     return payload
+
+
+def _provider_prior(current: dict[str, object]) -> dict[str, object]:
+    """Retain conversation without exposing coordination runtime identities."""
+
+    raw_messages = current.get("messages")
+    messages = (
+        [
+            {
+                "content": item.get("content"),
+                "assistant_summary": item.get("assistant_summary"),
+            }
+            for item in raw_messages
+            if isinstance(item, dict)
+        ]
+        if isinstance(raw_messages, list)
+        else []
+    )
+    result: dict[str, object] = {
+        "revision": current.get("revision"),
+        "status": current.get("status"),
+        "messages": messages,
+    }
+    raw_proposal = current.get("proposal")
+    if isinstance(raw_proposal, dict):
+        proposal = ScenarioDraftProposal.model_validate(raw_proposal)
+        result["proposal"] = _provider_candidate_from_proposal(proposal)
+    return result
 
 
 def _diagnostic_feedback(diagnostics: list[dict[str, str]]) -> str:

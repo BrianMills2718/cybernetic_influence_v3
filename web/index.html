@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=theory-readout-v1">
+  <link rel="stylesheet" href="/assets/styles.css?v=coordination-authoring-v1">
   <link rel="stylesheet" href="/assets/graph-canvas.css?v=readable-run-v2">
 </head>
 <body>
@@ -89,6 +89,15 @@
           <p id="authoring-attempts" class="muted"></p>
         </details>
         <article id="authoring-summary" class="assumption-panel"></article>
+        <section id="authoring-configuration-section" class="authoring-configuration-section" hidden>
+          <div class="heading-help"><h2>Scenario configuration</h2><button class="help-button" type="button" data-help="authoring-configuration-help" aria-expanded="false" aria-controls="authoring-configuration-help">?</button></div>
+          <p id="authoring-configuration-help" class="inline-help" hidden>These fields change the situation being simulated. Saving creates a new typed revision, removes any earlier approval, and makes no model call. Compiler-owned IDs, routes, and mechanisms are deliberately absent.</p>
+          <p class="muted">Review or directly change the decision, incoming concerns, places, group views, and post-run analyses. People are edited separately below.</p>
+          <details class="coordination-editor-details">
+            <summary>Review or edit the complete coordination configuration</summary>
+            <div id="authoring-coordination-editor"></div>
+          </details>
+        </section>
         <section id="authoring-people-section" class="authoring-people-section" hidden>
           <div class="heading-help"><h2>People in this scenario</h2><button class="help-button" type="button" data-help="authoring-people-help" aria-expanded="false" aria-controls="authoring-people-help">?</button></div>
           <p id="authoring-people-help" class="inline-help" hidden>These are editable scenario assumptions, not hidden instructions or measured psychological facts. A perceived norm may be wrong, and a described capability does not grant an interface, credential, permission, or successful effect.</p>
@@ -344,6 +353,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=spatial-scale-v1"></script>
-  <script src="/assets/app.js?v=theory-readout-v1"></script>
+  <script src="/assets/app.js?v=coordination-authoring-v1"></script>
 </body>
 </html>

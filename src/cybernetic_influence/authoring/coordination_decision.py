@@ -47,7 +47,7 @@ _REQUIRED_TERMINAL_OUTCOMES = {
     "partner_disengaged",
     "no_decision_by_horizon",
 }
-_REQUIRED_ANALYSES = {
+_ALLOWED_ANALYSES = {
     "waltzman_decision_environment_v1",
     "levin_collective_competence_v1",
 }
@@ -212,8 +212,8 @@ def validate_coordination_proposal(proposal: ScenarioDraftProposal) -> None:
         raise ValueError("source boundary is missing a concrete source")
 
     analysis = workflow.analysis
-    if set(analysis.analysis_ids) != _REQUIRED_ANALYSES:
-        raise ValueError("the MVP configuration must select both analysis modules")
+    if not set(analysis.analysis_ids) <= _ALLOWED_ANALYSES:
+        raise ValueError("coordination analysis selection is unsupported")
     if analysis.candidate_boundary_ref not in boundaries:
         raise ValueError("analysis refers to a boundary outside the configuration")
     if analysis.candidate_boundary_ref != PARTNERSHIP_BOUNDARY_ID:

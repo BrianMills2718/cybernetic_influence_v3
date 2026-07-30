@@ -21,15 +21,18 @@ This is the active implementation plan for
 
 ## Current progress
 
-Packets 24A0 and 24A1 are implemented and provider-free verified. The strict
+Packets 24A0, 24A1, and 24B are implemented and provider-free verified. The strict
 reviewed coordination configuration compiles onto the existing runtime, one
 scripted trajectory produces `RunEvidenceBundleV1`, and separate Waltzman and
 Levin reference readouts validate against that common evidence. The existing
 Author scenario flow can load the reviewed configuration without a provider
 call, distinguish scenario inputs, run controls, and selected analyses, then
 approve, run, reopen, and inspect both readouts alongside the retained maps,
-narrative, and participant/group accounts. Packet 24B is next; conversational
-generation of this template has not yet been added.
+narrative, and participant/group accounts. Its structured authoring contract
+can now generate the coordination template without provider-owned runtime IDs,
+the full semantic configuration can be edited directly, and selected analyses
+also project over a completed live trajectory. Packet 24C is next; no provider
+call, route certification, or deployment was performed in 24B.
 
 ## Current-to-target Delta
 
@@ -289,6 +292,8 @@ inspection. Do not modify prompts, certify, deploy, or make a live model call.
 
 **Classification:** representative vertical.
 
+**Status:** complete.
+
 Extend the existing structured authoring prompt and repair loop to produce the
 new template without inventing system IDs or executable implementations.
 Expose direct editing for all decision-relevant configuration and analysis
@@ -308,6 +313,32 @@ collapsed by default.
 Use fake structured calls for deterministic tests. Then report the exact
 authoring and analysis call topology, schema digests, route, reasoning, and
 maximum exposure. Stop before provider calls or deployment.
+
+Provider-free evidence:
+
+- authoring uses task `cybernetic_influence_v3_scenario_draft`, prompt
+  `scenario_draft.v3`, prompt digest
+  `889fa1392b2229421efbe100fa015763f3ff692057bac34f21f0e280c327a5b3`,
+  and schema digest
+  `538c97c19570d26d847b67c3b513e2bafc8b4a6354ff86add7a081ca3be663a9`;
+- each authoring message uses the operator-selected Luna, Terra, or Sol route
+  and thinking level, with Luna medium as the default, at most three structured
+  attempts of at most 8,000 output tokens, and a `$0.10` per-attempt request
+  ceiling (`$0.30` maximum usage-based exposure per message);
+- selected MVP analyses make zero model calls and use no route or reasoning
+  level. `RunEvidenceBundleV1` has schema digest
+  `75e70ba826efcf9f19e7cd2e52ed09c502d6e69eec5568079634e2ce74df5a96`;
+  `FrameworkReadoutV1` has schema digest
+  `dbd92a6e695096f3d0f580442bc7f23b31ddfceb8e131a2bc208970f45c510d1`;
+- the existing live-run contract permits at most 150 participant calls at
+  `$0.05` per request and 57 narrator calls at `$0.025` per request. Therefore
+  one 24C run plus one usage-based authoring message has at most 210 external
+  calls and `$9.225` in summed per-request ceilings. The retained `$0.74` run
+  amount is a planning control, not a promise that the runtime terminates at
+  that observed cost; and
+- focused authoring, analysis, API, resume-regression, and presentation tests,
+  strict mypy, production frontend build, positive and negative rendered
+  desktop checks, source/API reopen checks, and `git diff --check` passed.
 
 ### Packet 24C — authorized canonical live proof and MVP readout
 

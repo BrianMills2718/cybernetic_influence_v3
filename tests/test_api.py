@@ -238,6 +238,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="authoring-reasoning"' in page.text
     assert 'id="authoring-people"' in page.text
     assert 'id="authoring-load-coordination"' in page.text
+    assert 'id="authoring-configuration-section"' in page.text
+    assert 'id="authoring-coordination-editor"' in page.text
     assert "editable scenario assumptions" in page.text
     assert "Copy saved draft link" in page.text
     assert 'id="authoring-spatial-layout"' in page.text
@@ -299,10 +301,17 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function loadScenarioPreview" in app_script.content
     assert b"/api/authoring/drafts" in app_script.content
     assert b"/api/authoring/reviewed-coordination-drafts" in app_script.content
+    assert b"/coordination-configuration" in app_script.content
     assert b"renderTheoryAnalysis" in app_script.content
     assert b"function renderAuthoring" in app_script.content
     assert b"function renderAuthoringChat" in app_script.content
     assert b"function renderAuthoringPeople" in app_script.content
+    assert b"function renderAuthoringConfiguration" in app_script.content
+    assert b"Questions one run cannot answer" in app_script.content
+    assert (
+        b"compiler-owned ids, routes, and mechanisms are deliberately absent"
+        in page.content.lower()
+    )
     assert b"/people/${encodeURIComponent(person.entity_id)}" in app_script.content
     assert b"reasoning_effort:$('#authoring-reasoning').value" in app_script.content
     assert b"function configureAuthoringReasoningChoices" in app_script.content

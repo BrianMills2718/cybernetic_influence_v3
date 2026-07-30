@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict
 from cybernetic_influence.authoring.compiler import AuthoringCompilationError
 from cybernetic_influence.authoring.models import (
     CoordinationDecisionWorkflowDraft,
+    CoordinationScenarioReview,
     PersonDraft,
 )
 from cybernetic_influence.authoring.service import (
@@ -31,6 +32,7 @@ from cybernetic_influence.authoring.service import (
     AuthoringReasoningEffort,
     DraftAuthoringService,
     StructuredCall,
+    authoring_contract,
 )
 from cybernetic_influence.authoring.store import (
     AuthoringDraftStore,
@@ -59,8 +61,10 @@ from cybernetic_influence.analysis.coordination_readout import (
     coordination_measurement_readout,
 )
 from cybernetic_influence.analysis.theory_retention import (
+    build_live_theory_analysis,
     build_reference_theory_analysis,
     project_retained_theory_analysis,
+    theory_analysis_contract,
 )
 from cybernetic_influence.causal_core.models import AnalyticalBoundary, CausalState
 from cybernetic_influence.presentation import (
@@ -193,6 +197,15 @@ class DraftPersonEditRequest(BaseModel):
     expected_revision: int
     edit_id: str
     person: PersonDraft
+
+
+class DraftCoordinationEditRequest(BaseModel):
+    """One idempotent semantic edit to a coordination proposal."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    expected_revision: int
+    edit_id: str
+    configuration: CoordinationScenarioReview
 
 
 class AuthoredRunRequest(BaseModel):
@@ -856,7 +869,9 @@ def create_app(
                     "coordination_decision_v1",
                 ],
                 "reviewed_coordination_example": True,
+                "structured_contract": authoring_contract(),
             },
+            "theory_analysis": theory_analysis_contract(),
             "cost_baselines": runs.cost_baselines(),
         }
 
@@ -968,6 +983,30 @@ def create_app(
                     edit_id=body.edit_id,
                     person_id=person_id,
                     person=body.person,
+                )
+            except DraftConflictError as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
+            except DraftNotFoundError as error:
+                raise HTTPException(
+                    status_code=404, detail="authoring draft not found"
+                ) from error
+            except (ValueError, AuthoringCompilationError) as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.put("/api/authoring/drafts/{draft_id}/coordination-configuration")
+    def edit_draft_coordination_configuration(
+        draft_id: str,
+        body: DraftCoordinationEditRequest,
+        request: Request,
+    ) -> dict[str, object]:
+        _require_access(request)
+        with authoring_lock:
+            try:
+                return authoring.edit_coordination_configuration(
+                    draft_id,
+                    expected_revision=body.expected_revision,
+                    edit_id=body.edit_id,
+                    configuration=body.configuration,
                 )
             except DraftConflictError as error:
                 raise HTTPException(status_code=409, detail=str(error)) from error
@@ -1151,10 +1190,20 @@ def create_app(
                     summary=summary,
                     include_boundary_activity=True,
                 )
-                if not live:
-                    document["theory_analysis"] = (
-                        build_reference_theory_analysis(compiled, result)
+                document["theory_analysis"] = (
+                    build_live_theory_analysis(
+                        compiled,
+                        result,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
+                        per_call_budget=(
+                            effective_llm.participant_per_call_ceiling
+                        ),
+                        per_run_budget=effective_llm.max_total_cost,
                     )
+                    if effective_llm is not None
+                    else build_reference_theory_analysis(compiled, result)
+                )
                 document["run_control"] = coordination_run_control_plan(
                     compiled.fixture
                 ).model_dump(mode="json")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
+from typing import Any, cast
 
 from fastapi.testclient import TestClient
 from llm_client import LLMCapabilityError, LLMQuotaExhaustedError
@@ -18,8 +19,19 @@ from cybernetic_influence.active_runtime import (
     ModelCallEvidence,
 )
 from cybernetic_influence.api import create_app
-from cybernetic_influence.authoring.compiler import CompiledScenario
-from cybernetic_influence.authoring.models import ResourceRequestWorkflowDraft
+from cybernetic_influence.analysis.theory_retention import (
+    build_live_theory_analysis,
+    theory_analysis_contract,
+)
+from cybernetic_influence.authoring.compiler import CompiledScenario, compile_scenario
+from cybernetic_influence.authoring.coordination_review import (
+    coordination_review_from_proposal,
+)
+from cybernetic_influence.authoring.examples import reviewed_coordination_proposal
+from cybernetic_influence.authoring.models import (
+    ResourceRequestWorkflowDraft,
+    ScenarioDraftProposal,
+)
 from cybernetic_influence.authoring.service import (
     _prompt,
     _ProposalConsumer,
@@ -167,6 +179,313 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
         ]
         == "invalid"
     )
+
+
+def test_semantic_coordination_authoring_compiles_without_provider_owned_ids(
+    tmp_path: Path,
+) -> None:
+    calls: list[tuple[object, list[dict[str, str]], object]] = []
+    semantic = coordination_review_from_proposal(reviewed_coordination_proposal())
+
+    # mock-ok: Packet 24B requires provider-free structured-output coverage.
+    def semantic_proposer(*args: object, **kwargs: object) -> tuple[object, object]:
+        raw_messages = args[1]
+        assert isinstance(raw_messages, list)
+        calls.append((args[0], raw_messages, kwargs["response_model"]))
+        candidate = semantic.model_copy(
+            update={
+                "description": (
+                    "Five people review a shared early-warning deployment "
+                    f"(revision {len(calls)})."
+                )
+            }
+        )
+        return {"proposal": candidate.model_dump(mode="json")}, _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=semantic_proposer,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    first = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "m1",
+            "message": "Model a five-person early-warning deployment decision.",
+        },
+    )
+    assert first.status_code == 200, first.text
+    assert first.json()["status"] == "ready_for_review"
+    assert first.json()["proposal"]["workflow"]["template_id"] == (
+        "coordination_decision_v1"
+    )
+    assert first.json()["proposal"]["people"][0]["entity_id"] == (
+        "mission_coordinator"
+    )
+
+    second = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": first.json()["revision"],
+            "message_id": "m2",
+            "message": "Make the decision description more explicit.",
+        },
+    )
+    assert second.status_code == 200, second.text
+    assert len(calls) == 2
+    assert all(item[2] is _ProposalConsumer for item in calls)
+    second_user_prompt = calls[1][1][-1]["content"]
+    assert "mission_coordinator" not in second_user_prompt
+    assert "technical_source_route" not in second_user_prompt
+    assert '"position_kind": "coordinator"' in second_user_prompt
+
+
+def test_semantic_coordination_candidate_is_repaired_against_compiler_feedback(
+    tmp_path: Path,
+) -> None:
+    calls = 0
+    repair_prompt = ""
+    semantic = coordination_review_from_proposal(reviewed_coordination_proposal())
+
+    # mock-ok: This isolates the real repair loop around the typed provider seam.
+    def repairable(*args: object, **_kwargs: object) -> tuple[object, object]:
+        nonlocal calls, repair_prompt
+        calls += 1
+        if calls == 1:
+            invalid = semantic.model_copy(update={"meeting_days": [0, 2, 6, 9]})
+            return {"proposal": invalid.model_dump(mode="json")}, _Meta()
+        messages = args[1]
+        assert isinstance(messages, list)
+        repair_prompt = str(messages[-1]["content"])
+        return {"proposal": semantic.model_dump(mode="json")}, _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=repairable,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    drafted = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "m1",
+            "message": "Model a five-person coordination decision.",
+        },
+    )
+    assert drafted.status_code == 200, drafted.text
+    assert [item["status"] for item in drafted.json()["attempts"]] == [
+        "repair",
+        "accepted",
+    ]
+    assert "currently supports meeting days [0, 3, 6, 9]" in repair_prompt
+    assert "mission_coordinator" not in repair_prompt
+
+
+def test_direct_coordination_edit_selects_analysis_without_an_llm_call(
+    tmp_path: Path,
+) -> None:
+    provider_calls = 0
+
+    # mock-ok: The assertion is that a direct semantic edit never reaches this seam.
+    def counted(*_args: object, **_kwargs: object) -> tuple[object, object]:
+        nonlocal provider_calls
+        provider_calls += 1
+        return _proposal(), _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=counted,
+        )
+    )
+    draft = api.post("/api/authoring/reviewed-coordination-drafts").json()
+    configuration = coordination_review_from_proposal(
+        ScenarioDraftProposal.model_validate(draft["proposal"])
+    ).model_dump(mode="json")
+    configuration["title"] = "Regional early-warning deployment review"
+    configuration["condition"] = "heterogeneous_pressure"
+    configuration["analysis_ids"] = ["levin_collective_competence_v1"]
+    concerns = configuration["concerns"]
+    assert isinstance(concerns, list)
+    concerns[0]["content"] = "Independent sensitivity estimates remain uncertain."
+    edited = api.put(
+        f"/api/authoring/drafts/{draft['draft_id']}/coordination-configuration",
+        json={
+            "expected_revision": draft["revision"],
+            "edit_id": "coordination-edit-1",
+            "configuration": configuration,
+        },
+    )
+    assert edited.status_code == 200, edited.text
+    body = edited.json()
+    assert provider_calls == 0
+    assert body["revision"] == 2
+    assert body["status"] == "ready_for_review"
+    assert body["approval"] is None
+    assert body["messages"][-1]["source"] == "direct_coordination_edit"
+    assert body["messages"][-1]["trace_ids"] == []
+    assert body["proposal"]["title"] == "Regional early-warning deployment review"
+    assert body["proposal"]["workflow"]["stabilizing_resources"] == []
+    assert body["proposal"]["workflow"]["analysis"]["analysis_ids"] == [
+        "levin_collective_competence_v1"
+    ]
+    assert api.get(
+        f"/api/authoring/drafts/{draft['draft_id']}/preview"
+    ).status_code == 200
+
+    duplicate = api.put(
+        f"/api/authoring/drafts/{draft['draft_id']}/coordination-configuration",
+        json={
+            "expected_revision": draft["revision"],
+            "edit_id": "coordination-edit-1",
+            "configuration": configuration,
+        },
+    )
+    assert duplicate.status_code == 200
+    assert duplicate.json()["revision"] == body["revision"]
+    assert provider_calls == 0
+
+    approved = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/approve",
+        json={"expected_revision": body["revision"]},
+    )
+    assert approved.status_code == 200
+    run = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/runs",
+        json={"execution": "scripted"},
+    )
+    assert run.status_code == 200, run.text
+    modules = run.json()["theory_analysis"]["modules"]
+    assert modules["decision_environment"]["status"] == "not_selected"
+    assert modules["collective_competence"]["status"] == "available"
+
+
+def test_live_theory_projection_retains_selection_without_analysis_calls() -> None:
+    proposal = reviewed_coordination_proposal()
+    workflow = proposal.workflow
+    assert workflow.template_id == "coordination_decision_v1"
+    proposal = proposal.model_copy(
+        update={
+            "workflow": workflow.model_copy(
+                update={
+                    "analysis": workflow.analysis.model_copy(
+                        update={
+                            "analysis_ids": [
+                                "levin_collective_competence_v1"
+                            ]
+                        }
+                    )
+                }
+            )
+        }
+    )
+    compiled = compile_scenario(proposal)
+    result = compiled.run_scripted(run_id="live_theory_projection")
+    theory = build_live_theory_analysis(
+        compiled,
+        result,
+        model="openrouter/openai/gpt-5.6-terra",
+        reasoning_effort="medium",
+        per_call_budget=0.05,
+        per_run_budget=0.20,
+    )
+
+    bundle = cast(dict[str, Any], theory["bundle"])
+    modules = cast(dict[str, dict[str, object]], theory["modules"])
+    assert bundle["run_spec"]["execution_mode"] == "live"
+    assert modules["decision_environment"]["status"] == "not_selected"
+    assert modules["collective_competence"]["status"] == "available"
+    assert theory_analysis_contract()["maximum_model_calls_per_run"] == 0
+
+
+def test_authoring_and_theory_call_contracts_are_exact_and_provider_free(
+    tmp_path: Path,
+) -> None:
+    config = _client(tmp_path).get("/api/config").json()
+    authoring = config["authoring"]["structured_contract"]
+    assert authoring["task"] == "cybernetic_influence_v3_scenario_draft"
+    assert authoring["prompt_version"] == "scenario_draft.v3"
+    assert len(authoring["prompt_digest"]) == 64
+    assert len(authoring["schema_digest"]) == 64
+    assert authoring["maximum_attempts_per_message"] == 3
+    assert authoring["maximum_output_tokens_per_attempt"] == 8000
+    assert authoring["maximum_cost_per_attempt"] == 0.10
+    assert authoring["maximum_usage_based_cost_per_message"] == 0.30
+    assert {
+        item["model"] for item in authoring["model_options"]
+    } == {
+        "codex/gpt-5.6-luna",
+        "openrouter/openai/gpt-5.6-terra",
+        "openrouter/openai/gpt-5.6-sol",
+    }
+
+    analysis = config["theory_analysis"]
+    assert analysis["maximum_model_calls_per_run"] == 0
+    assert analysis["route"] is None
+    assert analysis["reasoning_effort"] is None
+    assert len(analysis["schemas"]["run_evidence_bundle_v1"]) == 64
+    assert len(analysis["schemas"]["framework_readout_v1"]) == 64
+    assert {
+        item["analysis_id"] for item in analysis["modules"]
+    } == {
+        "waltzman_decision_environment_v1",
+        "levin_collective_competence_v1",
+    }
+
+
+def test_direct_coordination_edit_rejects_invalid_cadence_and_stale_revision(
+    tmp_path: Path,
+) -> None:
+    api = _client(tmp_path)
+    draft = api.post("/api/authoring/reviewed-coordination-drafts").json()
+    configuration = coordination_review_from_proposal(
+        ScenarioDraftProposal.model_validate(draft["proposal"])
+    ).model_dump(mode="json")
+    invalid = json.loads(json.dumps(configuration))
+    invalid["meeting_days"] = [0, 2, 6, 9]
+    rejected = api.put(
+        f"/api/authoring/drafts/{draft['draft_id']}/coordination-configuration",
+        json={
+            "expected_revision": draft["revision"],
+            "edit_id": "invalid-cadence",
+            "configuration": invalid,
+        },
+    )
+    assert rejected.status_code == 422
+    assert "currently supports meeting days [0, 3, 6, 9]" in rejected.text
+    assert api.get(
+        f"/api/authoring/drafts/{draft['draft_id']}"
+    ).json()["revision"] == draft["revision"]
+
+    saved = api.put(
+        f"/api/authoring/drafts/{draft['draft_id']}/coordination-configuration",
+        json={
+            "expected_revision": draft["revision"],
+            "edit_id": "valid-edit",
+            "configuration": configuration,
+        },
+    )
+    assert saved.status_code == 200
+    stale = api.put(
+        f"/api/authoring/drafts/{draft['draft_id']}/coordination-configuration",
+        json={
+            "expected_revision": draft["revision"],
+            "edit_id": "stale-edit",
+            "configuration": configuration,
+        },
+    )
+    assert stale.status_code == 409
 
 
 def test_authored_live_run_requires_authorization_and_live_options(
@@ -596,10 +915,33 @@ def test_provider_schema_exposes_nested_template_fields() -> None:
     assert {"requester_id", "resource_id", "request_delivery_minutes"} <= set(workflow)
     assert {"source_id", "claim_information_id", "publication_delivery_minutes"} <= set(campaign)
     assert {"entity_id", "place_id"} <= set(placement)
-    assert schema["properties"]["placements"]["type"] == "array"
+    legacy = schema["$defs"]["_LegacyProposalConsumer"]
+    assert legacy["properties"]["placements"]["type"] == "array"
     assert "template_id" in schema["$defs"]["_WorkflowConsumer"]["required"]
     assert "template_id" in schema["$defs"]["_InformationCampaignWorkflowConsumer"]["required"]
-    assert schema["properties"]["workflow"]["discriminator"]["propertyName"] == "template_id"
+    assert legacy["properties"]["workflow"]["discriminator"]["propertyName"] == "template_id"
+    assert schema["additionalProperties"] is False
+    assert schema["required"] == ["proposal"]
+    coordination = schema["$defs"]["CoordinationScenarioReview"]
+    assert {
+        "template_id",
+        "people",
+        "concerns",
+        "collective_goal",
+        "places",
+        "analytical_boundaries",
+        "analysis_ids",
+    } <= set(coordination["properties"])
+    serialized_coordination = json.dumps(coordination)
+    for compiler_owned_field in (
+        "entity_id",
+        "goal_id",
+        "information_id",
+        "route_id",
+        "mechanism_id",
+        "implementation_id",
+    ):
+        assert compiler_owned_field not in serialized_coordination
 
 
 def test_authoring_prompt_keeps_compiler_owned_details_out_of_user_questions() -> None:
@@ -617,6 +959,9 @@ def test_authoring_prompt_keeps_compiler_owned_details_out_of_user_questions() -
     assert "never creates or removes an interface" in system
     assert "describe the in-world human" in system
     assert "current_state is only current emotion" in system
+    assert "use each position_kind exactly once" in system
+    assert "do not supply entity IDs" in system
+    assert "analytical views, never minds or executors" in system
 
 
 def test_direct_person_edit_is_revisioned_idempotent_and_makes_no_llm_call(

@@ -44,6 +44,7 @@ const buttonTooltips = {
   'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
   'authoring-run': 'Run the approved draft with fixed zero-cost reference actions. This checks the compiled routes and exact mechanisms, not the reviewed personalities.',
   'authoring-live-run': 'Run the approved draft with each concrete person driven by an LLM from their reviewed profile, private memory, delivered observations, and exposed interfaces.',
+  'authoring-save-configuration': 'Validate these semantic fields and save a new draft revision without calling an LLM. Compiler-owned routes, mechanisms, and IDs remain unchanged.',
   'authoring-spatial-layout': 'Show the proposed places, occupants, and physical links. This does not grant access or permission.',
   'authoring-causal-layout': 'Show the proposed configured interaction pathways. A pathway does not itself grant authority.',
   'authoring-trajectory-layout': 'A realized causal graph becomes available only after the approved scenario runs.',
@@ -128,19 +129,25 @@ function authoringSummary(proposal) {
           <h4>Who and what is being modeled</h4>
           <p><strong>${html((proposal.people || []).length)} people</strong> review one shared decision while ${html((proposal.information || []).length)} concrete concerns arrive through configured routes.</p>
           <p><strong>Candidate goal:</strong> ${html(goal.description || goal.label || 'No goal supplied')}</p>
-          <small>${html(people)} · meetings on days ${html((workflow.meeting_days || []).join(', '))} · ${html(workflow.condition?.replaceAll('_', ' '))} condition</small>
+          <small>${html(people)} · ${html(workflow.condition?.replaceAll('_', ' '))} condition · meetings on days ${html((workflow.meeting_days || []).join(', '))}, with a day ${html(workflow.deadline_day)} deadline</small>
         </section>
         <section>
           <span class="eyebrow">Run controls</span>
-          <h4>How this reference run ends</h4>
-          <p>Fixed zero-call participant policies run until a reviewed terminal outcome occurs or the day ${html(workflow.deadline_day)} horizon is reached.</p>
-          <small>${html((workflow.terminal_outcomes || []).map((item) => item.replaceAll('_', ' ')).join(' · '))}</small>
+          <h4>What changes only this execution</h4>
+          <p>Choose a zero-cost reference run or, when authorized, live LLM-driven people. Model, thinking level, and spending limit belong to the run—not to the scenario.</p>
+          <small>The scenario’s goal, people, concerns, routes, places, and decision deadline stay unchanged.</small>
         </section>
         <section>
           <span class="eyebrow">Selected per-run analyses</span>
           <h4>What will be calculated afterward</h4>
           <p>${analyses.has('waltzman_decision_environment_v1') ? '<strong>Decision environment</strong> examines information, risk, verification, commitments, and timing. ' : ''}${analyses.has('levin_collective_competence_v1') ? '<strong>Collective competence</strong> examines the configured boundary relative to its candidate goal.' : ''}</p>
-          <small>These analyses read retained evidence and cannot act in the simulation.</small>
+          <small>These analyses read retained evidence, make zero additional model calls in this MVP, and cannot act in the simulation.</small>
+        </section>
+        <section>
+          <span class="eyebrow">After this MVP</span>
+          <h4>Questions one run cannot answer</h4>
+          <p>Repeated comparisons, controlled perturbations, member replacement, recovery from shock, and claims about causal influence remain separate future experiments.</p>
+          <small>This run reports only what occurred in its retained trajectory.</small>
         </section>
       </div>`
   }
@@ -172,6 +179,285 @@ function statementLines(values) {
 
 function readStatementLines(value) {
   return String(value || '').split('\n').map((item) => item.trim()).filter(Boolean)
+}
+
+const coordinationPositionBindings = [
+  ['coordinator', 'mission_coordinator'],
+  ['technical_reviewer', 'technical_validation_lead'],
+  ['policy_reviewer', 'sovereignty_policy_representative'],
+  ['local_health_reviewer', 'local_public_health_liaison'],
+  ['partner_representative', 'partner_representative'],
+]
+const coordinationConcernBindings = [
+  ['technical', 'technical_pressure_source', 'technical_concern', 'technical_pressure_message'],
+  ['policy', 'policy_pressure_source', 'policy_concern', 'policy_pressure_message'],
+  ['local', 'local_pressure_source', 'local_concern', 'local_pressure_message'],
+]
+const coordinationOutcomes = [
+  ['deploy_on_time', 'Full deployment on time'],
+  ['scope_reduced', 'Smaller deployment'],
+  ['delayed', 'Delayed decision'],
+  ['partner_disengaged', 'Partner disengages'],
+  ['no_decision_by_horizon', 'No decision by deadline'],
+]
+const coordinationAnalyses = [
+  ['waltzman_decision_environment_v1', 'Decision environment'],
+  ['levin_collective_competence_v1', 'Collective competence'],
+]
+
+function coordinationConfigurationFromProposal(proposal) {
+  const workflow = proposal.workflow || {}
+  const people = new Map((proposal.people || []).map((item) => [item.entity_id, item]))
+  const objects = new Map((proposal.objects || []).map((item) => [item.entity_id, item]))
+  const information = new Map((proposal.information || []).map((item) => [item.information_id, item]))
+  const messages = new Map((workflow.messages || []).map((item) => [item.message_id, item]))
+  const places = new Map((proposal.places || []).map((item) => [item.place_id, item]))
+  const boundaries = new Map((proposal.analytical_boundaries || []).map((item) => [item.boundary_id, item]))
+  return {
+    template_id:'coordination_decision_v1',
+    title:proposal.title,
+    description:proposal.description,
+    condition:workflow.condition,
+    people:coordinationPositionBindings.map(([positionKind, entityId]) => {
+      const person = people.get(entityId)
+      return {
+        position_kind:positionKind,
+        label:person.label,
+        position:person.position,
+        disposition:person.disposition,
+        memories:person.memories,
+        behavioral_profile:person.behavioral_profile,
+      }
+    }),
+    concerns:coordinationConcernBindings.map(([concernKind, sourceId, informationId, messageId]) => ({
+      concern_kind:concernKind,
+      source_label:objects.get(sourceId).label,
+      source_description:objects.get(sourceId).description,
+      topic:information.get(informationId).label,
+      content:information.get(informationId).content,
+      delivery_minutes:messages.get(messageId).delivery_minutes,
+    })),
+    collective_goal:{
+      label:workflow.collective_goal.label,
+      description:workflow.collective_goal.description,
+      acceptable_outcomes:workflow.collective_goal.acceptable_outcomes,
+      constraints:workflow.collective_goal.constraints,
+    },
+    places:{
+      partnership_label:places.get('partnership_hub').label,
+      partnership_description:places.get('partnership_hub').description,
+      source_site_label:places.get('source_operations_site').label,
+      source_site_description:places.get('source_operations_site').description,
+      registry_label:places.get('external_registry_site').label,
+      registry_description:places.get('external_registry_site').description,
+    },
+    analytical_boundaries:{
+      partnership_label:boundaries.get('deployment_partnership').label,
+      partnership_description:boundaries.get('deployment_partnership').description,
+      source_group_label:boundaries.get('pressure_source_ensemble').label,
+      source_group_description:boundaries.get('pressure_source_ensemble').description,
+    },
+    meeting_days:workflow.meeting_days,
+    deadline_day:workflow.deadline_day,
+    analysis_ids:workflow.analysis.analysis_ids,
+    assumptions:workflow.assumptions,
+    known_omissions:workflow.known_omissions,
+    fidelity_questions:proposal.fidelity_questions,
+    unresolved_questions:proposal.unresolved_questions || [],
+  }
+}
+
+function coordinationEditor(configuration) {
+  const concernCards = configuration.concerns.map((concern) => `
+    <section class="coordination-editor-group coordination-concern" data-concern-kind="${html(concern.concern_kind)}">
+      <h4>${html(concern.concern_kind[0].toUpperCase() + concern.concern_kind.slice(1))} concern</h4>
+      <label>Source shown to the user
+        <input data-concern-field="source_label" value="${html(concern.source_label)}">
+      </label>
+      <label>What that source is
+        <textarea data-concern-field="source_description" rows="2">${html(concern.source_description)}</textarea>
+      </label>
+      <label>Concern topic
+        <input data-concern-field="topic" value="${html(concern.topic)}">
+      </label>
+      <label>Information delivered
+        <textarea data-concern-field="content" rows="3">${html(concern.content)}</textarea>
+      </label>
+      <label>Delivery delay in scenario minutes
+        <input data-concern-field="delivery_minutes" type="number" min="1" step="1" value="${html(concern.delivery_minutes)}">
+      </label>
+    </section>`).join('')
+  const checkedOutcomes = new Set(configuration.collective_goal.acceptable_outcomes)
+  const selectedAnalyses = new Set(configuration.analysis_ids)
+  return `
+    <div class="coordination-editor">
+      <div class="coordination-editor-grid">
+        <section class="coordination-editor-group">
+          <h3>Decision situation</h3>
+          <label>Scenario title
+            <input data-config-field="title" value="${html(configuration.title)}">
+          </label>
+          <label>What is happening
+            <textarea data-config-field="description" rows="3">${html(configuration.description)}</textarea>
+          </label>
+          <label>Scenario condition
+            <select data-config-field="condition">
+              ${[
+                ['baseline', 'Baseline — no new outside concerns'],
+                ['heterogeneous_pressure', 'Heterogeneous pressure — concerns arrive without stabilizers'],
+                ['stabilization', 'Stabilization — concerns arrive with verification and feedback'],
+              ].map(([value, label]) => `<option value="${value}"${configuration.condition === value ? ' selected' : ''}>${html(label)}</option>`).join('')}
+            </select>
+          </label>
+          <p class="coordination-fixed-cadence">This reviewed runtime currently uses meetings on days ${html(configuration.meeting_days.join(', '))} and a day ${html(configuration.deadline_day)} deadline. The cadence is visible but fixed by this bounded template.</p>
+        </section>
+        <section class="coordination-editor-group">
+          <h3>Candidate collective goal</h3>
+          <label>Goal name
+            <input data-goal-field="label" value="${html(configuration.collective_goal.label)}">
+          </label>
+          <label>What success means
+            <textarea data-goal-field="description" rows="3">${html(configuration.collective_goal.description)}</textarea>
+          </label>
+          <fieldset>
+            <legend>Outcomes that count as acceptable</legend>
+            <div class="coordination-checks">${coordinationOutcomes.map(([value, label]) => `<label><input type="checkbox" data-goal-outcome="${value}"${checkedOutcomes.has(value) ? ' checked' : ''}> ${html(label)}</label>`).join('')}</div>
+          </fieldset>
+          <label>Constraints, one per line
+            <textarea data-goal-field="constraints" rows="4">${html(statementLines(configuration.collective_goal.constraints))}</textarea>
+          </label>
+        </section>
+      </div>
+      <div class="coordination-editor-grid">${concernCards}</div>
+      <div class="coordination-editor-grid">
+        <section class="coordination-editor-group">
+          <h3>Spatial context</h3>
+          <label>Partnership place name<input data-place-field="partnership_label" value="${html(configuration.places.partnership_label)}"></label>
+          <label>Partnership place description<textarea data-place-field="partnership_description" rows="2">${html(configuration.places.partnership_description)}</textarea></label>
+          <label>Concern-source place name<input data-place-field="source_site_label" value="${html(configuration.places.source_site_label)}"></label>
+          <label>Concern-source place description<textarea data-place-field="source_site_description" rows="2">${html(configuration.places.source_site_description)}</textarea></label>
+          <label>Decision-registry place name<input data-place-field="registry_label" value="${html(configuration.places.registry_label)}"></label>
+          <label>Decision-registry place description<textarea data-place-field="registry_description" rows="2">${html(configuration.places.registry_description)}</textarea></label>
+        </section>
+        <section class="coordination-editor-group">
+          <h3>Analytical group views</h3>
+          <p class="muted">These views group lower-level activity for analysis. They do not add a mind or an actor.</p>
+          <label>Partnership view name<input data-boundary-field="partnership_label" value="${html(configuration.analytical_boundaries.partnership_label)}"></label>
+          <label>What the partnership view includes<textarea data-boundary-field="partnership_description" rows="2">${html(configuration.analytical_boundaries.partnership_description)}</textarea></label>
+          <label>Source-group view name<input data-boundary-field="source_group_label" value="${html(configuration.analytical_boundaries.source_group_label)}"></label>
+          <label>What the source-group view includes<textarea data-boundary-field="source_group_description" rows="2">${html(configuration.analytical_boundaries.source_group_description)}</textarea></label>
+        </section>
+      </div>
+      <div class="coordination-editor-grid">
+        <section class="coordination-editor-group">
+          <h3>Post-run analyses</h3>
+          <p class="muted">Select at least one. These inspect retained evidence after the simulation and cannot alter the run.</p>
+          <div class="coordination-checks">${coordinationAnalyses.map(([value, label]) => `<label><input type="checkbox" data-analysis-id="${value}"${selectedAnalyses.has(value) ? ' checked' : ''}> ${html(label)}</label>`).join('')}</div>
+        </section>
+        <section class="coordination-editor-group">
+          <h3>Fidelity review</h3>
+          <label>Assumptions, one per line<textarea data-list-field="assumptions" rows="4">${html(statementLines(configuration.assumptions))}</textarea></label>
+          <label>Known omissions, one per line<textarea data-list-field="known_omissions" rows="4">${html(statementLines(configuration.known_omissions))}</textarea></label>
+          <label>Questions to check in the trace, one per line<textarea data-list-field="fidelity_questions" rows="4">${html(statementLines(configuration.fidelity_questions))}</textarea></label>
+        </section>
+      </div>
+      <div class="coordination-edit-actions">
+        <button id="authoring-save-configuration" type="button">Save configuration revision</button>
+        <span class="coordination-edit-status" aria-live="polite"></span>
+      </div>
+    </div>`
+}
+
+function coordinationConfigurationFromEditor(editor, original) {
+  const value = (selector) => editor.querySelector(selector).value.trim()
+  const fieldMap = (attribute, keys) => Object.fromEntries(
+    keys.map((key) => [key, value(`[${attribute}="${key}"]`)]),
+  )
+  const concerns = [...editor.querySelectorAll('.coordination-concern')].map((card) => ({
+    concern_kind:card.dataset.concernKind,
+    source_label:card.querySelector('[data-concern-field="source_label"]').value.trim(),
+    source_description:card.querySelector('[data-concern-field="source_description"]').value.trim(),
+    topic:card.querySelector('[data-concern-field="topic"]').value.trim(),
+    content:card.querySelector('[data-concern-field="content"]').value.trim(),
+    delivery_minutes:Number(card.querySelector('[data-concern-field="delivery_minutes"]').value),
+  }))
+  return {
+    ...original,
+    title:value('[data-config-field="title"]'),
+    description:value('[data-config-field="description"]'),
+    condition:value('[data-config-field="condition"]'),
+    concerns,
+    collective_goal:{
+      label:value('[data-goal-field="label"]'),
+      description:value('[data-goal-field="description"]'),
+      acceptable_outcomes:[...editor.querySelectorAll('[data-goal-outcome]:checked')].map((input) => input.dataset.goalOutcome),
+      constraints:readStatementLines(value('[data-goal-field="constraints"]')),
+    },
+    places:fieldMap('data-place-field', [
+      'partnership_label', 'partnership_description', 'source_site_label',
+      'source_site_description', 'registry_label', 'registry_description',
+    ]),
+    analytical_boundaries:fieldMap('data-boundary-field', [
+      'partnership_label', 'partnership_description',
+      'source_group_label', 'source_group_description',
+    ]),
+    analysis_ids:[...editor.querySelectorAll('[data-analysis-id]:checked')].map((input) => input.dataset.analysisId),
+    assumptions:readStatementLines(value('[data-list-field="assumptions"]')),
+    known_omissions:readStatementLines(value('[data-list-field="known_omissions"]')),
+    fidelity_questions:readStatementLines(value('[data-list-field="fidelity_questions"]')),
+  }
+}
+
+function renderAuthoringConfiguration(draft) {
+  const section = $('#authoring-configuration-section')
+  const coordination = draft?.proposal?.workflow?.template_id === 'coordination_decision_v1'
+  section.hidden = !coordination
+  if (!coordination) {
+    $('#authoring-coordination-editor').innerHTML = ''
+    return
+  }
+  const configuration = coordinationConfigurationFromProposal(draft.proposal)
+  const editor = $('#authoring-coordination-editor')
+  editor.innerHTML = coordinationEditor(configuration)
+  const button = $('#authoring-save-configuration')
+  const status = editor.querySelector('.coordination-edit-status')
+  button.onclick = async () => {
+    const edited = coordinationConfigurationFromEditor(editor, configuration)
+    if (!edited.title || !edited.description || !edited.collective_goal.label ||
+        !edited.collective_goal.description || !edited.collective_goal.constraints.length ||
+        !edited.collective_goal.acceptable_outcomes.length || !edited.analysis_ids.length ||
+        !edited.assumptions.length || !edited.known_omissions.length ||
+        !edited.fidelity_questions.length ||
+        edited.concerns.some((item) => !item.source_label || !item.source_description ||
+          !item.topic || !item.content || !Number.isInteger(item.delivery_minutes) ||
+          item.delivery_minutes < 1)) {
+      status.textContent = 'Complete every field, select at least one acceptable outcome and analysis, and use positive whole-minute delivery delays.'
+      return
+    }
+    button.disabled = true
+    status.textContent = 'Saving this typed revision…'
+    try {
+      authoringDraft = await request(
+        `/api/authoring/drafts/${encodeURIComponent(draft.draft_id)}/coordination-configuration`,
+        {
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            expected_revision:draft.revision,
+            edit_id:`coordination_edit_${crypto.randomUUID()}`,
+            configuration:edited,
+          }),
+        },
+      )
+      await loadAuthoringPreview()
+      renderAuthoring()
+      syncAuthoringUrl()
+    } catch (error) {
+      status.textContent = error.message
+      button.disabled = false
+    }
+  }
+  applyButtonTooltips(section)
 }
 
 function personCard(person) {
@@ -288,7 +574,7 @@ function renderAuthoringChat(draft) {
       <p>Describe the bounded situation you want to model. After I produce a draft, tell me what to change and I will generate the next saved revision.</p>
     </article>`
   const conversation = messages.map((message, index) => {
-    const directEdit = message.source === 'direct_person_edit'
+    const directEdit = ['direct_person_edit', 'direct_coordination_edit'].includes(message.source)
     const model = authoringModelLabel(message.model)
     const reasoning = message.reasoning_effort
       ? `${String(message.reasoning_effort).replaceAll('_', ' ')} thinking`
@@ -342,13 +628,18 @@ function renderAuthoring() {
   $('#authoring-summary').innerHTML = draft.proposal
     ? authoringSummary(draft.proposal)
     : '<span class="eyebrow">Draft needs correction</span><h3>No executable proposal yet</h3><p>The provider response was retained only as a validation diagnostic. Send a follow-up after correcting the shown schema issue; the earlier draft remains intact.</p>'
+  renderAuthoringConfiguration(draft)
   renderAuthoringPeople(draft)
   const approvable = !!draft.proposal && diagnostics.length === 0 && draft.status === 'ready_for_review'
   $('#authoring-approve').hidden = !approvable
   $('#authoring-run').hidden = draft.status !== 'approved'
   const authoredLiveAvailable = runtimeConfig.live_authorized &&
     ((runtimeConfig.live_options?.models || []).length > 0) &&
-    draft.proposal?.workflow?.template_id !== 'coordination_decision_v1'
+    (
+      draft.proposal?.workflow?.template_id !== 'coordination_decision_v1' ||
+      (runtimeConfig.scenarios?.coordination_decision?.live_model_ids || []).length > 0
+    )
+  configureAuthoringLiveModels()
   $('#authoring-live-run').hidden = draft.status !== 'approved' || !authoredLiveAvailable
   $('#authoring-live-settings').hidden = draft.status !== 'approved' || !authoredLiveAvailable
   renderAuthoringProjectionControls()
@@ -411,7 +702,6 @@ async function openAuthoringDraft(draftId) {
 async function loadAuthoringPreview() {
   if (!authoringDraft?.proposal) return
   authoringPreview = await request(`/api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/preview`)
-  selectedAuthoringGraphView = 'causal'
 }
 
 function modeledElapsedTime(event) {
@@ -539,12 +829,9 @@ async function loadConfig() {
     liveOptions.defaults?.agent_reasoning_effort || config.reasoning_effort
   )
   $('#max-cost').value = Number(liveOptions.defaults?.max_total_cost || config.maximum_live_cost).toFixed(2)
-  $('#authoring-live-model').innerHTML = choices.map((choice) =>
-    `<option value="${html(choice.model)}">${html(choice.label)}</option>`
-  ).join('')
-  $('#authoring-live-model').value = liveOptions.defaults?.model || config.model
-  configureAuthoringLiveReasoning(
-    liveOptions.defaults?.agent_reasoning_effort || config.reasoning_effort
+  configureAuthoringLiveModels(
+    liveOptions.defaults?.model || config.model,
+    liveOptions.defaults?.agent_reasoning_effort || config.reasoning_effort,
   )
   $('#authoring-live-cost').value = Number(
     liveOptions.defaults?.max_total_cost || config.maximum_live_cost
@@ -695,11 +982,12 @@ function updateAuthoringRuntime() {
     return
   }
   const attempts = authoring.maximum_attempts_per_message || 1
+  const contract = authoring.structured_contract || {}
   const accounting = choice.billing_mode === 'subscription_included'
     ? 'It is included with the signed-in ChatGPT Codex subscription; Codex usage limits apply.'
-    : `Each attempt has a $${Number(authoring.maximum_cost_per_attempt || 0).toFixed(2)} request ceiling.`
+    : `Each attempt has a $${Number(authoring.maximum_cost_per_attempt || 0).toFixed(2)} request ceiling, so one message exposes at most $${Number(contract.maximum_usage_based_cost_per_message || attempts * Number(authoring.maximum_cost_per_attempt || 0)).toFixed(2)} across all attempts.`
   $('#authoring-runtime').textContent =
-    `Your selected model and thinking level apply only to the next message. One message may make up to ${attempts} structured attempt(s). ${accounting} The saved conversation records the selection, trace, and observed cost for every revision.`
+    `Your selected model and thinking level apply only to the next message. One message may make up to ${attempts} structured attempt(s). ${accounting} The saved conversation records the selection, trace, and observed cost for every revision. Contract ${contract.prompt_version || 'version unavailable'} · schema ${String(contract.schema_digest || 'digest unavailable').slice(0, 12)}.`
 }
 
 function configureAuthoringReasoningChoices(preferred = null) {
@@ -729,6 +1017,25 @@ function configureReasoningChoices(preferred = null) {
     ? preferred
     : choice?.default_agent_reasoning_effort || efforts[0]
   updateReasoningHelp()
+}
+
+function configureAuthoringLiveModels(preferredModel = null, preferredReasoning = null) {
+  const allChoices = runtimeConfig.live_options?.models || []
+  const coordination = authoringDraft?.proposal?.workflow?.template_id === 'coordination_decision_v1'
+  const allowed = coordination
+    ? new Set(runtimeConfig.scenarios?.coordination_decision?.live_model_ids || [])
+    : null
+  const choices = allowed
+    ? allChoices.filter((item) => allowed.has(item.model))
+    : allChoices
+  const prior = preferredModel || $('#authoring-live-model').value
+  $('#authoring-live-model').innerHTML = choices.map((choice) =>
+    `<option value="${html(choice.model)}">${html(choice.label)}</option>`
+  ).join('')
+  $('#authoring-live-model').value = choices.some((choice) => choice.model === prior)
+    ? prior
+    : choices.find((choice) => choice.default)?.model || choices[0]?.model || ''
+  configureAuthoringLiveReasoning(preferredReasoning)
 }
 
 function configureAuthoringLiveReasoning(preferred = null) {
@@ -2062,6 +2369,10 @@ function theoryFindingCard(finding, compact = false) {
 function renderTheoryModule(moduleId, selector, headlineIds) {
   const module = current.theory_analysis?.modules?.[moduleId]
   const container = $(selector)
+  if (module?.status === 'not_selected') {
+    container.innerHTML = '<article class="measurement-state"><strong>Not selected for this run</strong><p>This analysis was not part of the approved scenario configuration. The completed simulation and any other selected analysis remain available.</p></article>'
+    return
+  }
   if (!module || module.status !== 'available') {
     container.innerHTML = `<article class="measurement-state invalid"><strong>Analysis unavailable</strong><p>The completed simulation, narrative, maps, and other analysis remain valid. ${module?.error_type ? `This module failed retained validation (${html(module.error_type)}).` : 'No retained readout is available.'}</p></article>`
     return
