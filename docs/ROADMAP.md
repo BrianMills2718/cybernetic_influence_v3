@@ -48,9 +48,9 @@ world effects.
 
 [Mac development operations](operations/mac-mini.md) owns dated deployment and
 route evidence. On 2026-07-29 the private Mac was freshly observed running
-canonical simulator `8f59c28f5b96792d459ff60f42f879659aa68fd6` with shared
-client `68949c9427ae4e2249aa2d6bc51949739385c275`; its config exposes only
-DeepSeek V4 Flash `none` for live Coordination.
+canonical simulator `fa2da28ad50d1fe77428d424af7276855bc0d25d` with shared
+client `144d118658ee1c99275576e7e212475021613930`; its config exposes
+subscription-backed Luna at medium reasoning as the default live route.
 
 Slice 20 is technically complete: Service Desk `run_20d2d0000004` paused,
 resumed its retained checkpoint, completed all 25 compact-context narratives,
@@ -79,13 +79,16 @@ does not plainly distinguish terminal conditions, scenario outcome, horizon,
 quiescence, operator stop, and safety limits.
 
 [Slice 21: coordination-environment assay](plans/021-coordination-environment-assay.md)
-is at Packet 21A4 human readout and supplies the first naturally multi-episode
+has completed Slice 21A and supplies the first naturally multi-episode
 research scenario, grounded in
 [Waltzman's coordination framework](research/001-from-minds-to-coordination.md).
 Live baseline `run_21a48f59c28f` completed four meetings, 28 narratives, and an
 exact `deploy_on_time` outcome after the deployed repair preserved a valid
 retry across incomplete price coverage. Its technical run/restart/browser gate
-passes; operator narrative judgment remains.
+passes. The operator confirmed that its four-meeting story is understandable
+without raw evidence and that a disputed passage can step down to understandable
+exact evidence. Packet 21B0 now freezes the versioned measurement contract and
+both-sign controls; Packet 21B1 is the next implementation boundary.
 [Slice 22: composite-agency perturbation
 assay](plans/022-composite-agency-perturbation-assay.md) is separately gated by
 Slice 21C and operationalizes the later Levin-style question on that same
@@ -782,24 +785,21 @@ requires them to answer an analyst question that current contracts cannot.
 - **Last accepted integrated proof:** Service Desk `run_20d2d0000004`, with
   pause/resume, exact completion, and all 25 simulator-grounded narratives.
 - **Current deployed behavior revision:**
-  `8f59c28f5b96792d459ff60f42f879659aa68fd6`; canonical `main` contains this
-  behavior plus its retained evidence updates. The shared UI contains the
+  `fa2da28ad50d1fe77428d424af7276855bc0d25d`; the deployed shared client is
+  `144d118658ee1c99275576e7e212475021613930`. The shared UI contains the
   scripted Coordination scenario and a certification-gated native-person seam.
-- **Current packet:** 21A4 human readout. The deployed simulator and all seven
-  route observations are bound to shared client
-  `68949c9427ae4e2249aa2d6bc51949739385c275`; the scenario-specific gate
-  returns DeepSeek V4 Flash `none`.
+- **Current packet:** 21B0 is complete. It freezes all 21 version-1 measures,
+  separates exact values from model coding and simulator-owned evidence IDs,
+  and retains nine positive and negative control fixtures. Packet 21B1 is next.
 - **Observed live proof:** `run_21a48f59c28f` completed four meeting cycles,
   338 unique events, 28 narrated moments, and exact terminal outcome
   `deploy_on_time` through 65 validated DeepSeek calls. Known cost is
   `$0.0215453528`; one timed-out attempt is unpriced, so coverage is explicitly
   incomplete. Restart/reopen produced no new call or cost, and rendered readback
   preserved every primary UI surface.
-- **Current limiting cause:** technical 21A4 acceptance is supported. The
-  operator must judge whether the retained story is understandable and can be
-  disputed through exact evidence. Detailed prose still contains some internal
-  labels and one potentially confusing terminal-gate description. No second
-  replacement baseline is authorized.
+- **Current limiting cause:** no technical blocker is known. The next bounded
+  outcome is the zero-spend 21B1 calculator and fake-coder seam; live
+  measurement canaries remain separately gated at 21B2.
 
 ## Explicit MVP Deferrals
 

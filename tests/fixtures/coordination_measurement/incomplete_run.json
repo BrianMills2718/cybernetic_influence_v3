@@ -1,0 +1,21 @@
+{
+  "control": "incomplete_run",
+  "evidence_bundle": {
+    "run_id": "run_incomplete",
+    "run_status": "running",
+    "scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected_scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "measurement_spec_version": 1,
+    "measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "expected_measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "visible_events": [
+      {
+        "event_id": "event_000010",
+        "run_id": "run_incomplete",
+        "event_kind": "action_attempted",
+        "summary": "The run has not completed.",
+        "trace_ids": ["trace_incomplete"]
+      }
+    ]
+  }
+}

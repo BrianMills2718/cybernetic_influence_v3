@@ -1,9 +1,9 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: planned_after_slice_20
+status: in_progress_21b0_complete
 created: 2026-07-25
-updated: 2026-07-28
+updated: 2026-07-29
 ---
 
 # Slice 21: Coordination-environment assay
@@ -1001,8 +1001,13 @@ unknown timeout price is represented as incomplete cost coverage without
 discarding the valid retry or trajectory. Restart/reopen preserved the exact
 run file and call ledger with no new provider call. The three maps, analytical
 scale, initial situation, story, outcome, and participant/group accounts render
-without browser errors. Human narrative readout remains the only 21A4 boundary;
-do not create another baseline without authorization.
+without browser errors.
+
+**Observed human readout (2026-07-29):** the operator confirmed that the
+four-meeting arc is understandable without raw evidence and that a selected
+narrative passage can be traced to understandable exact evidence. Packet 21A4
+and Slice 21A are accepted. Do not create another baseline; proceed through the
+measurement packets using the retained run.
 
 ### Slice 21A terminal acceptance
 
@@ -1040,6 +1045,16 @@ system-assigned IDs are absent from the LLM schema; exact values cannot be
 accepted from coder output; `unclear` is valid; invalid/cross-run event IDs,
 wrong spec revision, incomplete run, and mismatched scenario fingerprint fail
 visibly. Run focused model/fixture tests and mypy, audit, commit, and stop.
+
+**Observed implementation evidence (2026-07-29):** the version-1 specification
+enumerates all 21 frozen exact, evidence-coded, and derived measures with stable
+IDs, provenance, units, limitations, and required event kinds. Strict producer
+and tolerant consumer models separate exact values, model coding, and
+simulator-owned evidence attachments. Nine frozen JSON controls cover positive,
+negative, legitimate environmental event, corrupt/cross-run evidence,
+incomplete run, and scenario/spec revision/fingerprint mismatch cases. Thirteen
+focused tests (14) and analysis-package mypy pass. No UI, provider call, deployment,
+or world-execution path changed.
 
 ### Packet 21B1 — Exact calculator and evidence-coder seam
 

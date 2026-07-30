@@ -1,0 +1,21 @@
+{
+  "control": "spec_revision_mismatch",
+  "evidence_bundle": {
+    "run_id": "run_spec",
+    "run_status": "completed",
+    "scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected_scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "measurement_spec_version": 2,
+    "measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "expected_measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "visible_events": [
+      {
+        "event_id": "event_000010",
+        "run_id": "run_spec",
+        "event_kind": "run_completed",
+        "summary": "The run was supplied to the wrong measurement revision.",
+        "trace_ids": ["trace_spec"]
+      }
+    ]
+  }
+}

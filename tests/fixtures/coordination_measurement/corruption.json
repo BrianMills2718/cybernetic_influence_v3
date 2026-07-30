@@ -1,0 +1,45 @@
+{
+  "control": "corruption",
+  "evidence_bundle": {
+    "run_id": "run_corruption",
+    "run_status": "completed",
+    "scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected_scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "measurement_spec_version": 1,
+    "measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "expected_measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "visible_events": [
+      {
+        "event_id": "event_000010",
+        "run_id": "run_corruption",
+        "event_kind": "action_attempted",
+        "summary": "The participant requested validation.",
+        "trace_ids": ["trace_corruption"]
+      }
+    ]
+  },
+  "coder_output": {
+    "coded_indicators": [
+      {
+        "indicator_id": "conditional_trust_episode",
+        "direction": "increase",
+        "explanation": "The participant conditioned acceptance on validation."
+      },
+      {
+        "indicator_id": "precautionary_hedging_episode",
+        "direction": "no_change",
+        "explanation": "No separate hedging language was retained."
+      },
+      {
+        "indicator_id": "relevance_classification",
+        "direction": "unclear",
+        "explanation": "The evidence does not establish relevance."
+      }
+    ]
+  },
+  "evidence_context": [
+    {"indicator_id": "conditional_trust_episode", "source_event_ids": ["event_999999"], "source_trace_ids": ["trace_corruption"]},
+    {"indicator_id": "precautionary_hedging_episode", "source_event_ids": ["event_000010"], "source_trace_ids": ["trace_corruption"]},
+    {"indicator_id": "relevance_classification", "source_event_ids": ["event_000010"], "source_trace_ids": ["trace_corruption"]}
+  ]
+}

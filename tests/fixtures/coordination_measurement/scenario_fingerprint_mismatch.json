@@ -1,0 +1,21 @@
+{
+  "control": "scenario_fingerprint_mismatch",
+  "evidence_bundle": {
+    "run_id": "run_fingerprint",
+    "run_status": "completed",
+    "scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected_scenario_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "measurement_spec_version": 1,
+    "measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "expected_measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "visible_events": [
+      {
+        "event_id": "event_000010",
+        "run_id": "run_fingerprint",
+        "event_kind": "run_completed",
+        "summary": "The run completed under a different scenario fingerprint.",
+        "trace_ids": ["trace_fingerprint"]
+      }
+    ]
+  }
+}

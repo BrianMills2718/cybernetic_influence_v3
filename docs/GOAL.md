@@ -130,11 +130,11 @@ restarting completed work.
   UI rather than a scenario-specific page.
 - **Canonical implementation and deployment:** canonical `main` contains the
   behavior deployed and freshly observed on the private Mac on 2026-07-29 at
-  simulator `8f59c28f5b96792d459ff60f42f879659aa68fd6`; the deployed shared client is
-  `68949c9427ae4e2249aa2d6bc51949739385c275`. The service is running and its
-  config exposes only DeepSeek V4 Flash `none` for live Coordination.
-- **Current increment:** Packet 21A4 technical execution is complete and its
-  human readout remains active. Five Coordination people
+  simulator `fa2da28ad50d1fe77428d424af7276855bc0d25d`; the deployed shared
+  client is `144d118658ee1c99275576e7e212475021613930`. The service is running
+  with Luna/medium as its subscription-backed default.
+- **Current increment:** Packet 21B0 is complete after the operator accepted
+  the 21A4 narrative and evidence readout. Five Coordination people
   use scenario-specific native-LLM schemas while sources, the meeting clock,
   analytical composites, and exact mechanisms remain non-provider executors.
   The UI and API derive Coordination live availability from the complete
@@ -165,12 +165,14 @@ restarting completed work.
   provider call occurred. The exact deep link renders all three maps,
   analytical scale, initial situation, story, outcome, and participant/group
   accounts without a console or network error.
-- **Resume event:** the operator opens the retained run and decides whether its
-  story explains the four-meeting arc without raw JSON and whether one disputed
-  sentence can be traced to exact evidence. Technical acceptance is supported;
-  narrative polish remains a judgment because detailed prose still exposes
-  some internal labels and one final account is potentially confusing. Do not
-  create a second replacement baseline without new authorization.
+- **Measurement contract:** all 21 version-1 measures now have frozen IDs,
+  provenance classes, units, limitations, and required event kinds. Strict
+  producer and tolerant consumer models keep exact values, model coding, and
+  simulator-owned evidence attachments structurally separate. Nine frozen
+  controls cover both signs and all named invalid-input classes.
+- **Resume event:** implement Packet 21B1 using only frozen traces and fake
+  coder responses. Do not deploy or make a provider call; live measurement
+  canaries remain gated at Packet 21B2.
 
 ## Done
 

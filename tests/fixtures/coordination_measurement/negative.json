@@ -1,0 +1,45 @@
+{
+  "control": "negative",
+  "evidence_bundle": {
+    "run_id": "run_negative",
+    "run_status": "completed",
+    "scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected_scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "measurement_spec_version": 1,
+    "measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "expected_measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "visible_events": [
+      {
+        "event_id": "event_000010",
+        "run_id": "run_negative",
+        "event_kind": "effect_routed",
+        "summary": "A concerning source message was delivered, followed by no verification, risk, commitment, or decision change.",
+        "trace_ids": ["trace_negative"]
+      }
+    ]
+  },
+  "coder_output": {
+    "coded_indicators": [
+      {
+        "indicator_id": "conditional_trust_episode",
+        "direction": "no_change",
+        "explanation": "No acceptance was conditioned on further validation."
+      },
+      {
+        "indicator_id": "precautionary_hedging_episode",
+        "direction": "no_change",
+        "explanation": "No retained decision language favored caution or delay."
+      },
+      {
+        "indicator_id": "relevance_classification",
+        "direction": "no_change",
+        "explanation": "Delivery alone supplies no retained evidence of a directional system effect."
+      }
+    ]
+  },
+  "evidence_context": [
+    {"indicator_id": "conditional_trust_episode", "source_event_ids": ["event_000010"], "source_trace_ids": ["trace_negative"]},
+    {"indicator_id": "precautionary_hedging_episode", "source_event_ids": ["event_000010"], "source_trace_ids": ["trace_negative"]},
+    {"indicator_id": "relevance_classification", "source_event_ids": ["event_000010"], "source_trace_ids": ["trace_negative"]}
+  ]
+}

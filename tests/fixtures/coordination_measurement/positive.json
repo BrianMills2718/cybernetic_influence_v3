@@ -1,0 +1,52 @@
+{
+  "control": "positive",
+  "evidence_bundle": {
+    "run_id": "run_positive",
+    "run_status": "completed",
+    "scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected_scenario_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "measurement_spec_version": 1,
+    "measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "expected_measurement_spec_fingerprint": "7ff538faa64cf540dc513361c8b4b0ef33b1a2b223a48a73881736b3f7bd9433",
+    "visible_events": [
+      {
+        "event_id": "event_000010",
+        "run_id": "run_positive",
+        "event_kind": "action_attempted",
+        "summary": "The validation lead requested independent calibration evidence before accepting deployment.",
+        "trace_ids": ["trace_positive"]
+      },
+      {
+        "event_id": "event_000020",
+        "run_id": "run_positive",
+        "event_kind": "state_committed",
+        "summary": "A resolved issue was reopened and retained as blocking.",
+        "trace_ids": ["trace_positive"]
+      }
+    ]
+  },
+  "coder_output": {
+    "coded_indicators": [
+      {
+        "indicator_id": "conditional_trust_episode",
+        "direction": "increase",
+        "explanation": "Acceptance was explicitly conditioned on additional validation."
+      },
+      {
+        "indicator_id": "precautionary_hedging_episode",
+        "direction": "increase",
+        "explanation": "The request and reopened blocking issue retained caution under uncertainty."
+      },
+      {
+        "indicator_id": "relevance_classification",
+        "direction": "unclear",
+        "explanation": "The retained evidence establishes a blocking concern but not its underlying truth."
+      }
+    ]
+  },
+  "evidence_context": [
+    {"indicator_id": "conditional_trust_episode", "source_event_ids": ["event_000010"], "source_trace_ids": ["trace_positive"]},
+    {"indicator_id": "precautionary_hedging_episode", "source_event_ids": ["event_000010", "event_000020"], "source_trace_ids": ["trace_positive"]},
+    {"indicator_id": "relevance_classification", "source_event_ids": ["event_000020"], "source_trace_ids": ["trace_positive"]}
+  ]
+}
