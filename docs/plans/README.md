@@ -37,8 +37,11 @@ canaries are accepted on behavior-compatible deployed revisions; the later
 pressure revision changed only the previously inactive participant guard. That
 run terminated at its exact deadline condition under the operator-approved
 150-decision run-length guard. Packet 21C0's strict comparison contract and
-provider-free six-run matrix are complete; Packet 21C1's live repeated matrix
-is the next authorization boundary, and later evasion extensions remain gated.
+provider-free six-run matrix are complete. Packet 21C1's exact deployment is
+complete, but its authorized second-baseline attempt retained a zero-cost
+Codex subscription capacity rejection before any world event. The next boundary
+is restored capacity plus explicit authorization for one replacement baseline;
+later evasion extensions remain gated.
 [Slice 22: Composite-agency perturbation
 assay](022-composite-agency-perturbation-assay.md) is a separate gate after
 Slice 21C; it reuses the same scenario to test goal preservation, correction,

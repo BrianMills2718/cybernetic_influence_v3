@@ -792,7 +792,7 @@ requires them to answer an analyst question that current contracts cannot.
 - **Last accepted integrated proof:** Service Desk `run_20d2d0000004`, with
   pause/resume, exact completion, and all 25 simulator-grounded narratives.
 - **Current deployed behavior revision:**
-  `fd85ead3565b3f42f9e47b02aa516fb421a457da`; the deployed shared client is
+  `b2f0655e8a613cbc109467332dcbe0cadff5b93a`; the deployed shared client is
   `7501811bee49fe4c20af2d2a50e4040a596b328b`. The shared UI contains the
   Coordination scenario, measurement readout, and certification-gated
   native-person seam. Coordination's 150-participant-decision limit is an
@@ -823,11 +823,14 @@ requires them to answer an analyst question that current contracts cannot.
   ranges, invalid and missing dispositions, coded disagreement, and exact
   actor-level source-reliance disagreement without a composite score. Thirty-
   eight comparison/measurement tests, mypy, lint, and diff checks pass.
-- **Current limiting causes:** Packet 21C1 requires explicit authorization
-  before deployment or three additional subscription-backed live runs. Existing
-  accepted baseline, pressure, and stabilization canaries are eligible as the
-  first replicate of each condition because their per-condition scenario and
-  measurement fingerprints remain current.
+- **Current limiting cause:** Packet 21C1's exact deployment is complete, but
+  authorized second-baseline attempt `run_71a55a23f247` failed before its first
+  response when the Codex CLI reported the account usage limit. It retained
+  one failed lifecycle and `$0` observed cost. No replacement or further
+  condition run was launched. Existing accepted baseline, pressure, and
+  stabilization canaries remain eligible as the first replicate of each
+  condition; resume requires restored route capacity and explicit authorization
+  for one replacement baseline.
 
 ## Explicit MVP Deferrals
 

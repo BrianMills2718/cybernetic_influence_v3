@@ -14,11 +14,33 @@ The service binds only to `127.0.0.1:8620`. Tailscale Serve adds the
 tailnet-only HTTPS listener. Do not use Funnel for this port, and do not reset
 the machine's Serve configuration because its other listeners are unrelated.
 
+Packet 21C1 deployment and capacity boundary observed 2026-07-30:
+
+- simulator `b2f0655e8a613cbc109467332dcbe0cadff5b93a` and unchanged shared
+  client `7501811bee49fe4c20af2d2a50e4040a596b328b` are running behind the
+  private URL. The exact candidate passed the production frontend build,
+  strict Python typing, and all 230 Mac tests before restart;
+- the restarted config retains the certified `codex/gpt-5.6-terra` medium
+  route, 150-participant, 57-narrator, and one-coder guards. Both retained run
+  readback and the new config returned successfully after restart;
+- authorized second-baseline attempt `run_71a55a23f247` failed before its first
+  participant response because the Codex CLI reported the account usage limit,
+  with reset at 2026-08-05 00:09 local time unless credits are added. The
+  retained record contains one failed Terra/medium participant lifecycle, no
+  world event, no narrator or coder call, and `$0` observed marginal cost. Its
+  retained-file SHA-256 is
+  `99c5f57a6e49453b22e0552db7449ff7d538a2292b584630570847d634d2b979`;
+- no replacement was launched, and the separately authorized pressure and
+  stabilization replicates were not launched into the known capacity
+  rejection. Packet 21C1 therefore remains incomplete. Resume only after the
+  subscription route has capacity and the operator explicitly authorizes one
+  replacement baseline.
+
 Packet 21B2 deployment and three-condition canary gate observed 2026-07-30:
 
 - simulator `fd85ead3565b3f42f9e47b02aa516fb421a457da` and shared client
-  `7501811bee49fe4c20af2d2a50e4040a596b328b` are running behind the private
-  URL. The config defaults to `codex/gpt-5.6-terra` at medium reasoning and
+  `7501811bee49fe4c20af2d2a50e4040a596b328b` supplied the accepted canary
+  evidence. The config defaulted to `codex/gpt-5.6-terra` at medium reasoning and
   separately advertises certified Luna/medium. Coordination permits at most
   150 participant decisions as an emergency run-length guard, not a simulated
   pressure setting or target, plus 57 narrator and one post-run coder call;

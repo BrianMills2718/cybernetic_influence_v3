@@ -1219,6 +1219,18 @@ spec. Do not automatically replace an invalid run: retain it, report its cost
 and cause, and request authorization for any replacement. Inspect full traces
 and freeze the resulting batch.
 
+**Observed partial execution (2026-07-30):** exact candidate
+`b2f0655e8a613cbc109467332dcbe0cadff5b93a` passed the production build,
+strict typing, and all 230 Mac tests and is deployed with unchanged shared
+client `7501811bee49fe4c20af2d2a50e4040a596b328b` and certified
+Terra/medium bindings. Authorized second-baseline attempt
+`run_71a55a23f247` failed before its first participant response because the
+Codex CLI reported the account usage limit. It retained one failed call
+lifecycle, no world event, no narrator/coder call, and `$0` observed marginal
+cost. No automatic replacement or knowingly doomed pressure/stabilization call
+was launched. Packet 21C1 remains incomplete pending restored capacity and
+explicit replacement authorization.
+
 ### Packet 21C2 — Comparison readout, sign-off, and MVP closeout
 
 Add the comparison to existing Run history with condition summaries,

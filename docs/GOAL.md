@@ -130,7 +130,7 @@ restarting completed work.
   UI rather than a scenario-specific page.
 - **Canonical implementation and deployment:** canonical `main` contains the
   behavior deployed on the private Mac as simulator
-  `fd85ead3565b3f42f9e47b02aa516fb421a457da`, with shared client
+  `b2f0655e8a613cbc109467332dcbe0cadff5b93a`, with shared client
   `7501811bee49fe4c20af2d2a50e4040a596b328b`.
   The service defaults to subscription-backed `codex/gpt-5.6-terra` at medium
   reasoning and separately advertises certified Luna/medium without fallback.
@@ -212,10 +212,18 @@ restarting completed work.
   event on the existing map/timeline. A failed or interrupted assay cannot
   rewrite a completed world run. The normal story, maps, participant/group
   accounts, pause/resume controls, and Advanced evidence remain present.
-- **Resume event:** Packet 21C0 is complete. Before Packet 21C1, report the
-  reusable live canaries and exact additional three-run topology, then obtain
-  explicit deployment and subscription-run authorization. Do not launch or
-  automatically replace a run without that authorization.
+- **Packet 21C1 observed boundary:** the authorized exact deployment passed the
+  production build, strict typing, and all 230 Mac tests. Authorized second-
+  baseline attempt `run_71a55a23f247` then retained one failed Terra/medium
+  participant lifecycle, no world event, no narration or coding, and `$0`
+  observed marginal cost because the Codex CLI reported the account usage
+  limit. The pressure and stabilization replicates were not launched into that
+  known rejection, and the failed baseline was not replaced.
+- **Resume event:** restore capacity on the existing Codex Terra/medium route
+  and explicitly authorize one replacement baseline. The already authorized
+  pressure and stabilization replicates may then run on the same route. Do not
+  switch provider/model, mix comparison identities, or replace the failed run
+  without that authorization.
 
 ## Done
 
