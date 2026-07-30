@@ -164,15 +164,26 @@ class RunStore:
                 document = self._read(path)
             except (OSError, UnicodeError, json.JSONDecodeError, ValueError, TypeError):
                 continue
-            if document.get("status") != "running":
-                continue
-            document["status"] = "interrupted"
-            document["error"] = "The server stopped before this run produced a final record."
-            continuation = document.get("continuation")
-            if isinstance(continuation, dict):
-                continuation["lifecycle"] = "interrupted"
-            self.save(document)
-            changed += 1
+            if document.get("status") == "running":
+                document["status"] = "interrupted"
+                document["error"] = (
+                    "The server stopped before this run produced a final record."
+                )
+                continuation = document.get("continuation")
+                if isinstance(continuation, dict):
+                    continuation["lifecycle"] = "interrupted"
+                self.save(document)
+                changed += 1
+            elif document.get("coordination_measurement_status") == "running":
+                # The completed world run remains authoritative. Only its
+                # downstream analysis was interrupted by the prior process.
+                document["coordination_measurement_status"] = "invalid"
+                document["coordination_measurement_failure"] = {
+                    "status": "invalid",
+                    "error_type": "InterruptedMeasurement",
+                }
+                self.save(document)
+                changed += 1
         return changed
 
     def _path(self, run_id: str) -> Path:
@@ -201,6 +212,23 @@ class RunStore:
     def _summary(document: Mapping[str, object]) -> dict[str, object]:
         story = document.get("story")
         headline = story.get("headline") if isinstance(story, dict) else None
+        measurement_status: str | None = None
+        if document.get("scenario") == "coordination_decision":
+            retained_status = document.get("coordination_measurement_status")
+            measurement_status = (
+                "measuring"
+                if retained_status == "running"
+                else (
+                    "invalid"
+                    if retained_status == "invalid"
+                    or document.get("coordination_measurement_failure") is not None
+                    else (
+                        "needs_validation"
+                        if document.get("coordination_measurement") is not None
+                        else "not_measured"
+                    )
+                )
+            )
         return {
             "run_id": document.get("run_id"),
             "created_at": document.get("created_at"),
@@ -213,6 +241,7 @@ class RunStore:
             "model_calls": document.get("model_calls", 0),
             "cost": document.get("cost", 0.0),
             "headline": headline,
+            "coordination_measurement_status": measurement_status,
         }
 
     @staticmethod

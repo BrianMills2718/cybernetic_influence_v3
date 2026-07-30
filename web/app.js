@@ -68,6 +68,7 @@ function explainButton(button) {
   }
   if (!explanation && button.classList.contains('open-run')) explanation = 'Open this retained run for inspection.'
   if (!explanation && button.classList.contains('trash-run')) explanation = 'Move this retained run to recoverable server trash.'
+  if (!explanation && button.classList.contains('measurement-evidence-button')) explanation = 'Select the cited exact event on the simulation map and in Advanced evidence.'
   if (!explanation && button.classList.contains('turn-narrative')) explanation = 'Select this causal step and inspect its grounded evidence.'
   if (!explanation && button.classList.contains('timeline-marker')) explanation = 'Select this causal step.'
   if (!explanation && button.classList.contains('story-event')) explanation = 'Inspect the exact event behind this outcome step.'
@@ -734,6 +735,10 @@ function updateAuthorizationPreview() {
   const narratorReasoning = selectedModelChoice()?.narrator_reasoning_effort || 'low'
   const planned = Number($('#max-cost').value || 0)
   const subscriptionIncluded = isSubscriptionModel()
+  const measuresCoordination = $('#scenario').value === 'coordination_decision'
+  const measurementPolicy = runtimeConfig.coordination_measurement || {}
+  const coderCalls = measuresCoordination ? Number(measurementPolicy.maximum_coder_calls || 0) : 0
+  const coderCeiling = measuresCoordination ? Number(measurementPolicy.coder_per_call_ceiling || 0) : 0
   $('#max-cost-field').hidden = subscriptionIncluded
   const baseline = (runtimeConfig.cost_baselines || []).find((item) =>
     item.scenario === $('#scenario').value &&
@@ -746,8 +751,8 @@ function updateAuthorizationPreview() {
     ? `Expected observed spend: about $${Number(baseline.median_cost).toFixed(4)} from ${baseline.sample_count} comparable completed live run${baseline.sample_count === 1 ? '' : 's'} (range $${Number(baseline.minimum_cost).toFixed(4)}–$${Number(baseline.maximum_cost).toFixed(4)}).`
     : 'Expected observed spend: no comparable completed live run is retained yet.'
   $('#cost-details').textContent = subscriptionIncluded
-    ? `${modelLabel} is included with the signed-in ChatGPT Codex subscription; marginal provider cost is recorded as $0. Codex usage limits still apply. This run allows at most ${Number(limits.maximum_participant_calls || 0)} participant calls and ${Number(limits.maximum_narrator_calls || 0)} narrator calls.`
-    : `${estimate} Planning amount: $${planned.toFixed(2)}. A returned valid simulation is not terminated because observed or partially observed cost crosses this amount. Provider requests still carry per-call budgets of $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} for participants and $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} for narration; call-count and causal-step limits bound runtime growth.`
+    ? `${modelLabel} is included with the signed-in ChatGPT Codex subscription; marginal provider cost is recorded as $0. Codex usage limits still apply. This run allows at most ${Number(limits.maximum_participant_calls || 0)} participant calls, ${Number(limits.maximum_narrator_calls || 0)} narrator calls${coderCalls ? `, and ${coderCalls} post-run evidence-coder call` : ''}.`
+    : `${estimate} Retained planning amount: $${(planned + coderCeiling * coderCalls).toFixed(2)}${coderCalls ? `, including ${coderCalls} post-run coder request capped at $${coderCeiling.toFixed(2)}` : ''}. A returned valid simulation is not terminated because observed or partially observed cost crosses this amount. Provider requests still carry per-call budgets of $${Number(limits.participant_per_call_ceiling || 0).toFixed(2)} for participants and $${Number(limits.narrator_per_call_ceiling || 0).toFixed(2)} for narration; call-count and causal-step limits bound runtime growth.`
 }
 
 function describeCondition() {
@@ -773,6 +778,7 @@ async function loadHistory() {
         <span>${html(run.scenario?.replaceAll('_',' '))} · ${html(run.arm?.replaceAll('_',' '))}</span>
         <small>${html(run.status)} · ${html(new Date(run.created_at).toLocaleString())}</small>
         <small class="history-run-id">Run ID · ${html(run.run_id)}</small>
+        ${run.scenario === 'coordination_decision' ? `<small class="measurement-history-status ${html(run.coordination_measurement_status || 'not_measured')}">${html({available:'Assay available',measuring:'Assay running',invalid:'Assay needs attention',not_measured:'Not measured'}[run.coordination_measurement_status] || 'Not measured')}</small>` : ''}
       </button>
       <button class="trash-run" data-run-id="${run.run_id}" aria-label="Move ${run.run_id} to trash">×</button>
     </article>
@@ -1524,7 +1530,8 @@ async function pollLiveRun(runId) {
         liveProgressSequence = record.sequence
         applyLiveProgress(record)
       }
-      if (!['running', 'pause_requested', 'stop_requested', 'narrating'].includes(update.status)) {
+      const measurementRunning = update.status === 'completed' && update.coordination_measurement_status === 'running'
+      if (!measurementRunning && !['running', 'pause_requested', 'stop_requested', 'narrating'].includes(update.status)) {
         const finalRun = await request(`/api/runs/${encodeURIComponent(runId)}`)
         liveActivity = null
         liveProjection = null
@@ -1833,6 +1840,101 @@ function renderInitialSituation(run) {
   `
 }
 
+function readableMeasureValue(value) {
+  if (value === null || value === undefined) return 'No retained value'
+  if (typeof value === 'string') return value.replaceAll('_', ' ')
+  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toFixed(2)
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (Array.isArray(value)) return `${value.length} retained item${value.length === 1 ? '' : 's'}`
+  if (typeof value !== 'object') return String(value)
+  if (Number.isFinite(value.count) && Number.isFinite(value.proportion)) {
+    return `${value.count} (${Math.round(value.proportion * 100)}%)`
+  }
+  if (Number.isFinite(value.scenario_days)) return `${Number(value.scenario_days).toFixed(1)} scenario days`
+  if (Number.isFinite(value.scenario_minutes)) return `${value.scenario_minutes} scenario minutes`
+  const preferred = ['total', 'count', 'distinct_risks', 'final_open_count', 'message_count', 'meeting_cycles', 'external_action_attempts', 'edge_count', 'final_threshold']
+  const parts = preferred
+    .filter((key) => value[key] !== undefined)
+    .map((key) => `${key.replaceAll('_', ' ')}: ${readableMeasureValue(value[key])}`)
+  return parts.length ? parts.join(' · ') : `${Object.keys(value).filter((key) => !key.includes('event_id')).length} retained fields`
+}
+
+function measurementEvidenceButtons(eventIds = [], evidenceLabel = 'Review supplied evidence') {
+  const unique = [...new Set(eventIds)]
+  if (!unique.length) return '<p class="muted">No single event citation is retained for this value; its required event types remain in the exact trace.</p>'
+  return `<details class="measurement-evidence"><summary>${html(evidenceLabel)} · ${unique.length} exact event${unique.length === 1 ? '' : 's'}</summary><div>${unique.slice(0, 12).map((eventId) => {
+    const event = exactEvent(eventId)
+    const label = event?.summary || event?.kind?.replaceAll('_', ' ') || eventId
+    return `<button type="button" class="measurement-evidence-button" data-measure-event-id="${html(eventId)}">Show on map · ${html(label)}</button>`
+  }).join('')}${unique.length > 12 ? `<small>${unique.length - 12} more cited exact events remain available in Advanced evidence.</small>` : ''}</div></details>`
+}
+
+function codedIndicatorQuestion(indicatorId, fallback) {
+  return {
+    conditional_trust_episode: 'Did trust become conditional?',
+    precautionary_hedging_episode: 'Did participants hedge against risk?',
+    relevance_classification: 'How directly did the concern matter?',
+  }[indicatorId] || fallback
+}
+
+function exactMeasureCard(measure, compact = false) {
+  return `<article class="exact-measure-card${compact ? ' compact' : ''}">
+    <span class="provenance-badge exact">Recorded by the simulator</span>
+    <h4>${html(measure.label)}</h4>
+    <p class="measure-value">${html(readableMeasureValue(measure.value))}</p>
+    ${compact ? '' : `<small>${html(measure.construct_name.replaceAll('_', ' '))} · ${html(measure.unit.replaceAll('_', ' '))}</small>
+      ${measurementEvidenceButtons(measure.source_event_ids, measure.evidence_basis === 'embedded_citation' ? 'Review cited evidence' : 'Review exact events of the required types')}
+      <details><summary>Retained value and limitation</summary><pre>${html(JSON.stringify(measure.value, null, 2))}</pre><p>${html((measure.limitations || []).join(' '))}</p></details>`}
+  </article>`
+}
+
+function renderCoordinationMeasurement(run) {
+  const section = $('#coordination-measurement-section')
+  const readout = run.coordination_measurement_readout
+  section.hidden = run.scenario !== 'coordination_decision'
+  if (section.hidden) return
+  const status = readout?.status || 'not_measured'
+  $('#coordination-measurement-headline').textContent = readout?.headline || 'This run has not been measured'
+  $('#coordination-measurement-explanation').textContent = readout?.explanation || 'No retained assay is available.'
+  $('#coordination-measurement-content').hidden = status !== 'available'
+  $('#coordination-measurement-status').innerHTML = status === 'invalid'
+    ? `<article class="measurement-state invalid"><strong>Analysis needs attention</strong><p>The completed simulation and its outcome are unchanged. ${html(readout?.error_type ? `Failure class: ${readout.error_type}.` : '')}</p></article>`
+    : status === 'measuring'
+      ? '<article class="measurement-state"><strong>Post-run analysis is finishing</strong><p>The simulation outcome is fixed. One model call is classifying only its retained evidence.</p></article>'
+      : status === 'not_measured'
+      ? '<article class="measurement-state"><strong>No post-run model call was made</strong><p>This is expected for a reference run. Its exact story, maps, outcome, and participant accounts remain available.</p></article>'
+      : ''
+  if (status !== 'available') return
+  const exact = readout.exact_measures || []
+  const exactById = new Map(exact.map((item) => [item.measure_id, item]))
+  const snapshotIds = ['final_deployment_status', 'final_approved_scope', 'partners_retained', 'unresolved_risk_load', 'decision_latency']
+  $('#measurement-snapshot').innerHTML = snapshotIds.map((measureId) => exactById.get(measureId)).filter(Boolean).map((item) => exactMeasureCard(item, true)).join('')
+  $('#exact-measure-count').textContent = `· ${exact.length} exact trace values`
+  $('#exact-measures').innerHTML = exact.map((item) => exactMeasureCard(item)).join('')
+  $('#coded-indicators').innerHTML = (readout.coded_indicators || []).map((item) => `
+    <article class="coded-indicator ${html(item.direction)}">
+      <div><span class="provenance-badge coded">Model interpretation</span><span class="direction-badge">${html(item.direction.replaceAll('_', ' '))}</span></div>
+      <h4>${html(codedIndicatorQuestion(item.indicator_id, item.label))}</h4>
+      <p>${html(item.explanation)}</p>
+      ${measurementEvidenceButtons(item.source_event_ids)}
+      <details><summary>Interpretation limits and trace references</summary><p><strong>Formal measure:</strong> ${html(item.label)}</p><p>${html((item.limitations || []).join(' '))}</p><small>${html((item.source_trace_ids || []).join(' · '))}</small></details>
+    </article>`).join('')
+  $('#measurement-limitations').innerHTML = (readout.limitations || []).map((item) => `<li>${html(item)}</li>`).join('')
+  const provenance = readout.coder_provenance
+  $('#measurement-call-provenance').innerHTML = provenance ? `
+    <strong>Model interpretation call</strong>
+    <span>${html(provenance.model)} · ${html(provenance.reasoning_effort)} reasoning</span>
+    <span>Per-call request budget $${Number(provenance.max_budget).toFixed(2)} · observed ${provenance.observed_cost === null ? 'cost unavailable' : `$${Number(provenance.observed_cost).toFixed(6)}`}</span>
+    <small>${html(provenance.task)} · ${html(provenance.prompt_version)} · ${html(provenance.trace_id)}${provenance.cost_covers_all_attempts ? '' : ' · cost coverage incomplete'}</small>` : ''
+  section.querySelectorAll('.measurement-evidence-button').forEach((button) => {
+    button.onclick = () => {
+      const index = current.timeline.findIndex((event) => event.event_id === button.dataset.measureEventId)
+      if (index >= 0) selectEvent(index)
+    }
+  })
+  applyButtonTooltips(section)
+}
+
 function setNarrativeDetail(detail) {
   selectedNarrativeDetail = detail
   const concise = detail === 'concise'
@@ -1907,14 +2009,14 @@ function render(run) {
   const costCoverage = current.cost_fully_observable === false
     ? 'known provider cost; one or more retry charges unavailable'
     : 'observed provider cost'
-  $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator) · $${Number(current.cost).toFixed(6)} ${costCoverage} · ${current.run_id}`
+  $('#result-cost').textContent = `${current.model_calls} model calls (${current.agent_model_calls ?? current.model_calls} agent, ${current.narration_model_calls ?? 0} narrator, ${current.measurement_model_calls ?? 0} evidence coder) · $${Number(current.cost).toFixed(6)} ${costCoverage} · ${current.run_id}`
   const llm = current.llm_configuration
   const retainedBilling = retainedBillingMode(current, llm)
   $('#run-config-readout').innerHTML = llm ? `
     <strong>Effective live configuration</strong>
     <span>${html(llm.model)}</span>
     <span>${html(llm.agent_reasoning_effort)} agent reasoning · ${html(llm.narrator_reasoning_effort)} narrator reasoning</span>
-    <span>${retainedBilling === 'subscription_included' ? 'ChatGPT Codex subscription included' : `$${Number(llm.max_total_cost).toFixed(2)} planning amount`} · $${Number(current.cost).toFixed(6)} ${html(costCoverage)}</span>
+    <span>${retainedBilling === 'subscription_included' ? 'ChatGPT Codex subscription included' : `$${(Number(llm.max_total_cost) + (current.scenario === 'coordination_decision' ? Number(runtimeConfig.coordination_measurement?.coder_per_call_ceiling || 0) : 0)).toFixed(2)} retained planning amount`} · $${Number(current.cost).toFixed(6)} ${html(costCoverage)}</span>
     <small>${html(String(llm.selection_basis).replaceAll('_',' '))} · llm_client ${html(llm.llm_client_revision)}</small>
   ` : `
     <strong>Reference execution</strong>
@@ -1932,6 +2034,7 @@ function render(run) {
   renderScaleControls()
   renderInitialSituation(current)
   renderTurnNarratives()
+  renderCoordinationMeasurement(current)
   setNarrativeDetail(selectedNarrativeDetail)
   const people = [...new Set(current.traces.map((entry) => entry.person))]
   const participantTabs = people.map((person) => {

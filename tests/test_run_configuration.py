@@ -254,7 +254,7 @@ def test_stale_route_observations_do_not_advertise(
     assert model_catalog() == []
 
 
-def test_coordination_requires_every_current_person_schema_observation(
+def test_coordination_requires_every_current_execution_and_analysis_schema(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
@@ -266,6 +266,9 @@ def test_coordination_requires_every_current_person_schema_observation(
         _coordination_observation(schema_class, observed_at=now)
         for schema_class in (_current_coordination_schema_digests(MODEL) or {})
     ]
+    assert "CoderOutput" in {
+        item.schema_class.rsplit(".", maxsplit=1)[-1] for item in coordination
+    }
     for observation in [participant, narrator, *coordination]:
         store.append(observation)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")

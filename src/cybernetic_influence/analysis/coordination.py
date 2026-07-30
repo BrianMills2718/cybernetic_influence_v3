@@ -47,6 +47,7 @@ CODER_SCHEMA_REVISION: Literal[1] = 1
 CODER_MAX_TOKENS = 900
 # Match the existing structured-call tolerance while retaining one visible call.
 CODER_TIMEOUT_SECONDS = 180
+CODER_MAX_BUDGET = 0.10
 
 StructuredCall = Callable[..., tuple[Any, Any]]
 ExactValues = dict[ExactMeasureId, JsonValue]

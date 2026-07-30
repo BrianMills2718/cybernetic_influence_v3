@@ -789,11 +789,13 @@ requires them to answer an analyst question that current contracts cannot.
   `fa2da28ad50d1fe77428d424af7276855bc0d25d`; the deployed shared client is
   `144d118658ee1c99275576e7e212475021613930`. The shared UI contains the
   scripted Coordination scenario and a certification-gated native-person seam.
-- **Current packet:** 21B1 is complete. It calculates all 15 exact values from
-  typed completed results, makes the three coded indicators one strict
-  injectable shared-client call, binds the raw output to simulator-owned
-  evidence, and idempotently retains the artifact in the existing run store.
-  Packet 21B2 is next.
+- **Current packet:** Packet 21B2's fixture-backed API/UI portion is complete.
+  It retains at most one evidence-coder call after a completed live
+  Coordination run; projects exact and coded evidence separately in the
+  existing Simulation and Run history surfaces; preserves invalid, unclear,
+  and interrupted-analysis states without changing the world outcome; and
+  steps every coded claim down to retained exact events. Deployment and live
+  canaries remain at the explicit authorization boundary.
 - **Observed live proof:** `run_21a48f59c28f` completed four meeting cycles,
   338 unique events, 28 narrated moments, and exact terminal outcome
   `deploy_on_time` through 65 validated DeepSeek calls. Known cost is
@@ -801,9 +803,10 @@ requires them to answer an analyst question that current contracts cannot.
   incomplete. Restart/reopen produced no new call or cost, and rendered readback
   preserved every primary UI surface.
 - **Current limiting cause:** no technical blocker is known. The next bounded
-  outcome is the fixture-backed Packet 21B2 API/UI readout. It must pass without
-  spending, then stop for explicit authorization before deployment or live
-  measurement canaries.
+  outcome requires explicit authorization: certify the added coder schema,
+  deploy the exact Packet 21B2 revision, and collect a new baseline plus one
+  pressure and one stabilization measurement canary. The older live baseline
+  is not fingerprint-compatible with this measurement revision.
 
 ## Explicit MVP Deferrals
 

@@ -258,7 +258,7 @@ def _validated_coordination_certification_basis(
     model: str,
     configured: str,
 ) -> str | None:
-    """Replay every exact person schema used by live coordination."""
+    """Replay every exact participant and post-run schema used by coordination."""
     return _validated_schema_group_basis(
         model,
         configured,
@@ -377,6 +377,9 @@ def _current_coordination_schema_digests(
             route_schema_sha256,
         )
 
+        from cybernetic_influence.analysis.coordination_measurement import (
+            CoderOutput,
+        )
         from cybernetic_influence.scenarios.coordination_decision import (
             COORDINATION_PERSON_DECISION_MODELS,
         )
@@ -386,6 +389,7 @@ def _current_coordination_schema_digests(
         schema.__name__: schema
         for schema in COORDINATION_PERSON_DECISION_MODELS.values()
     }
+    schemas[CoderOutput.__name__] = CoderOutput
     projector = (
         codex_native_provider_schema
         if is_codex_subscription_model(model)

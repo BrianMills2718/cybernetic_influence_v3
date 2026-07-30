@@ -46,6 +46,15 @@ from cybernetic_influence.active_runtime.run_control import (
     RunControlSelection,
     resolve_run_control,
 )
+from cybernetic_influence.analysis.coordination import (
+    CODER_MAX_BUDGET,
+    StructuredCall as MeasurementStructuredCall,
+    analyze_coordination_run,
+    retain_coordination_measurement,
+)
+from cybernetic_influence.analysis.coordination_readout import (
+    coordination_measurement_readout,
+)
 from cybernetic_influence.causal_core.models import AnalyticalBoundary, CausalState
 from cybernetic_influence.presentation import (
     BoundaryActivityProjection,
@@ -536,6 +545,7 @@ def create_app(
     *,
     authoring_root: Path | None = None,
     authoring_call: StructuredCall | None = None,
+    measurement_call: MeasurementStructuredCall | None = None,
 ) -> FastAPI:
     """Create the visibility-safe API without any legacy workbench."""
     app = FastAPI(title="Cybernetic Influence Simulator", version=__version__)
@@ -615,6 +625,67 @@ def create_app(
             copied["live_progress"] = progress
             copied["progress_sequence"] = len(progress)
             return copied
+
+    def retain_live_coordination_measurement(
+        document: dict[str, object],
+        result: ActiveRuntimeResult,
+        effective_llm: EffectiveRunLlmConfiguration,
+    ) -> dict[str, object]:
+        """Retain one post-run analysis without changing simulation validity."""
+
+        stored = runs.save(
+            {**document, "coordination_measurement_status": "running"}
+        )
+        trace_id = f"{result.run_id}/measurement/v1"
+        try:
+            measurement = analyze_coordination_run(
+                result,
+                expected_scenario_fingerprint=result.scenario_fingerprint,
+                model=effective_llm.model,
+                reasoning_effort=effective_llm.agent_reasoning_effort,
+                trace_id=trace_id,
+                max_budget=CODER_MAX_BUDGET,
+                structured_call=measurement_call,
+            )
+            measured = retain_coordination_measurement(runs, measurement)
+            observed = measurement.coder_call.observed_cost
+            known_cost = float(cast(float, measured.get("cost", 0.0)))
+            return runs.save(
+                {
+                    **measured,
+                    "coordination_measurement_status": "completed",
+                    "measurement_model_calls": 1,
+                    "model_calls": int(cast(int, measured.get("model_calls", 0)))
+                    + 1,
+                    "cost": known_cost + (observed or 0.0),
+                    "cost_fully_observable": bool(
+                        measured.get("cost_fully_observable", True)
+                        and observed is not None
+                        and measurement.coder_call.cost_covers_all_attempts
+                    ),
+                }
+            )
+        except Exception as error:
+            # Analysis is downstream of the completed world run. A failed or
+            # invalid coding must remain visible without rewriting its outcome.
+            return runs.save(
+                {
+                    **stored,
+                    "coordination_measurement_status": "invalid",
+                    # A failed shared-client boundary may have reached the
+                    # provider before raising without returning priced call
+                    # metadata. Never present the prior run cost as complete.
+                    "cost_fully_observable": False,
+                    "coordination_measurement_failure": {
+                        "status": "invalid",
+                        "error_type": type(error).__name__,
+                        "trace_id": trace_id,
+                        "model": effective_llm.model,
+                        "reasoning_effort": effective_llm.agent_reasoning_effort,
+                        "max_budget": CODER_MAX_BUDGET,
+                    },
+                }
+            )
 
     @app.middleware("http")
     async def security_headers(
@@ -758,6 +829,11 @@ def create_app(
             "scripted_cost": 0.0,
             "maximum_live_calls": 48,
             "maximum_live_cost": 0.74,
+            "coordination_measurement": {
+                "maximum_coder_calls": 1,
+                "coder_per_call_ceiling": CODER_MAX_BUDGET,
+                "applies_to": "completed live coordination runs",
+            },
             "live_options": live_options,
             "authoring": {
                 "model": AUTHORING_MODEL,
@@ -775,6 +851,16 @@ def create_app(
     def history(request: Request) -> dict[str, object]:
         _require_access(request)
         retained, corrupt = runs.list_runs()
+        for summary in retained:
+            run_id = summary.get("run_id")
+            if (
+                isinstance(run_id, str)
+                and summary.get("coordination_measurement_status")
+                == "needs_validation"
+            ):
+                summary["coordination_measurement_status"] = (
+                    coordination_measurement_readout(runs.get(run_id)).status
+                )
         return {"runs": retained, "corrupt_files": corrupt}
 
     @app.post("/api/authoring/drafts")
@@ -1214,6 +1300,11 @@ def create_app(
                 # presentation without rewriting their authoritative record.
                 document = deepcopy(document)
                 document["narration"] = _coordination_reference_narration(document)
+            else:
+                document = deepcopy(document)
+            document["coordination_measurement_readout"] = (
+                coordination_measurement_readout(document).model_dump(mode="json")
+            )
             return document
         except InvalidRunIdError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
@@ -1272,6 +1363,9 @@ def create_app(
             "model_calls": document.get("model_calls", 0),
             "cost": document.get("cost", 0.0),
             "completion": document.get("completion"),
+            "coordination_measurement_status": document.get(
+                "coordination_measurement_status"
+            ),
             "error": document.get("error"),
         }
 
@@ -1689,7 +1783,16 @@ def create_app(
             )
             if scenario == "coordination_decision" and not live:
                 narrated["narration"] = _coordination_reference_narration(narrated)
-            return runs.save(retain_progress_history(narrated, run_id))
+            narrated = retain_progress_history(narrated, run_id)
+            if scenario == "coordination_decision" and live:
+                if effective_llm is None:  # pragma: no cover - validated above
+                    raise AssertionError("live coordination resume lacks LLM config")
+                return retain_live_coordination_measurement(
+                    narrated,
+                    resumed,
+                    effective_llm,
+                )
+            return runs.save(narrated)
         except (RuntimePaused, CoordinationRuntimePaused) as paused_error:
             paused_document = {
                 **paused,
@@ -2231,6 +2334,14 @@ def create_app(
             narrated = retain_progress_history(narrated, run_id)
             narrated["llm_configuration"] = initial["llm_configuration"]
             narrated["model_call_summaries"] = _result_call_summaries(result)
+            if coordination_fixture is not None and live:
+                if effective_llm is None:  # pragma: no cover - validated above
+                    raise AssertionError("live coordination run lacks LLM config")
+                return retain_live_coordination_measurement(
+                    narrated,
+                    result,
+                    effective_llm,
+                )
             return runs.save(narrated)
         except (RuntimePaused, CoordinationRuntimePaused) as paused_error:
             paused_document = {**initial, "status": "paused", "pause_message": "Paused after a completed causal step.", **_checkpoint_progress_projection(paused_error.checkpoint), "continuation": _checkpoint_continuation(paused_error.checkpoint, lifecycle="paused")}

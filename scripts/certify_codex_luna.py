@@ -15,6 +15,7 @@ from llm_client.route_certification import RouteCertificationStore
 from pydantic import BaseModel
 
 from cybernetic_influence.active_runtime.llm import LlmDecision
+from cybernetic_influence.analysis.coordination_measurement import CoderOutput
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
     structured_backend_options,
@@ -31,6 +32,13 @@ def _messages(schema: type[BaseModel]) -> list[dict[str, str]]:
         request = (
             "Return a concise account and one detailed paragraph stating that "
             "this schema-certification probe retained no scenario claim."
+        )
+    elif schema is CoderOutput:
+        request = (
+            "Classify conditional_trust_episode, "
+            "precautionary_hedging_episode, and relevance_classification as "
+            "unclear. Give each a concise explanation that this is only a "
+            "schema-certification probe with no scenario evidence."
         )
     else:
         request = (
@@ -113,6 +121,10 @@ def main() -> None:
         )
         for schema in (LlmDecision, CausalMomentNarration)
     ]
+    coordination_schemas: tuple[type[BaseModel], ...] = (
+        *COORDINATION_PERSON_DECISION_MODELS.values(),
+        CoderOutput,
+    )
     coordination_ids = [
         _certify(
             schema,
@@ -124,7 +136,7 @@ def main() -> None:
             evidence_root=observability_db,
             llm_client_revision_value=revision,
         )
-        for schema in COORDINATION_PERSON_DECISION_MODELS.values()
+        for schema in coordination_schemas
     ]
     print(f"CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA={','.join(global_ids)}")
     print(

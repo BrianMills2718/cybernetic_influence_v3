@@ -39,6 +39,9 @@ from cybernetic_influence.analysis.coordination_measurement import (
     RunMeasurementConsumer,
     validate_coder_output,
 )
+from cybernetic_influence.analysis.coordination_readout import (
+    coordination_measurement_readout,
+)
 from cybernetic_influence.run_store import RunStore
 from cybernetic_influence.scenarios.coordination_decision import (
     baseline_coordination_fixture,
@@ -579,3 +582,100 @@ def test_retry_warning_keeps_coder_cost_coverage_incomplete() -> None:
 
     assert call.observed_cost == 0.01
     assert call.cost_covers_all_attempts is False
+
+
+def test_readout_keeps_exact_and_coded_provenance_visibly_separate() -> None:
+    result = _scripted_result("heterogeneous_pressure")
+    measurement = analyze_coordination_run(
+        result,
+        expected_scenario_fingerprint=result.scenario_fingerprint,
+        model="fixture-model",
+        reasoning_effort="medium",
+        trace_id=f"{result.run_id}/measurement/v1",
+        max_budget=0.1,
+        structured_call=lambda *_args, **kwargs: (
+            kwargs["response_model"].model_validate(
+                _fixture("positive")["coder_output"]
+            ),
+            SimpleNamespace(
+                cost=0.0,
+                cost_source="fixture",
+                cost_covers_all_attempts=True,
+            ),
+        ),
+    )
+    document = {
+        "run_id": result.run_id,
+        "scenario": "coordination_decision",
+        "events": [
+            event.model_dump(mode="json") for event in result.core_result.events
+        ],
+        "coordination_measurement": measurement.model_dump(mode="json"),
+    }
+
+    readout = coordination_measurement_readout(document)
+
+    assert readout.status == "available"
+    assert len(readout.exact_measures) == 15
+    assert len(readout.coded_indicators) == 3
+    assert all(item.source_event_ids for item in readout.exact_measures)
+    assert all(item.source_event_ids for item in readout.coded_indicators)
+    assert {item.evidence_basis for item in readout.exact_measures} == {
+        "embedded_citation",
+        "required_event_kind",
+    }
+    assert readout.coder_provenance is not None
+    assert readout.coder_provenance.label == "Model interpretation"
+    assert readout.coder_provenance.trace_id == f"{result.run_id}/measurement/v1"
+    coded = next(
+        item
+        for item in readout.coded_indicators
+        if item.indicator_id == "conditional_trust_episode"
+    )
+    assert coded.source_event_ids
+    exact = next(
+        item
+        for item in readout.exact_measures
+        if item.measure_id == "issue_reopening"
+    )
+    assert exact.source_event_ids
+
+
+def test_readout_marks_only_analysis_invalid_when_evidence_is_corrupt() -> None:
+    result = _scripted_result("heterogeneous_pressure")
+    measurement = analyze_coordination_run(
+        result,
+        expected_scenario_fingerprint=result.scenario_fingerprint,
+        model="fixture-model",
+        reasoning_effort="medium",
+        trace_id=f"{result.run_id}/measurement/v1",
+        max_budget=0.1,
+        structured_call=lambda *_args, **kwargs: (
+            kwargs["response_model"].model_validate(
+                _fixture("positive")["coder_output"]
+            ),
+            SimpleNamespace(
+                cost=0.0,
+                cost_source="fixture",
+                cost_covers_all_attempts=True,
+            ),
+        ),
+    )
+    payload = measurement.model_dump(mode="json")
+    payload["coded_indicators"][0]["source_event_ids"] = ["event_999999"]
+    document = {
+        "run_id": result.run_id,
+        "status": "completed",
+        "scenario": "coordination_decision",
+        "events": [
+            event.model_dump(mode="json") for event in result.core_result.events
+        ],
+        "coordination_measurement": payload,
+    }
+
+    readout = coordination_measurement_readout(document)
+
+    assert document["status"] == "completed"
+    assert readout.status == "invalid"
+    assert readout.exact_measures == []
+    assert readout.coded_indicators == []

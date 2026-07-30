@@ -82,3 +82,48 @@ def test_cost_baselines_only_use_comparable_observed_live_runs(tmp_path: Path) -
             "maximum_cost": 0.006,
         }
     ]
+
+
+def test_restart_invalidates_only_interrupted_post_run_measurement(
+    tmp_path: Path,
+) -> None:
+    store = RunStore(tmp_path)
+    store.save(
+        {
+            "run_id": "run_dddddddddddd",
+            "status": "completed",
+            "scenario": "coordination_decision",
+            "story": {"headline": "World outcome retained"},
+            "coordination_measurement_status": "running",
+        }
+    )
+
+    changed = store.mark_incomplete_interrupted()
+    retained = store.get("run_dddddddddddd")
+
+    assert changed == 1
+    assert retained["status"] == "completed"
+    assert retained["story"] == {"headline": "World outcome retained"}
+    assert retained["coordination_measurement_status"] == "invalid"
+    assert retained["coordination_measurement_failure"]["error_type"] == (
+        "InterruptedMeasurement"
+    )
+
+
+def test_run_summary_marks_only_measurements_that_need_validation(
+    tmp_path: Path,
+) -> None:
+    store = RunStore(tmp_path)
+    store.save(
+        {
+            "run_id": "run_eeeeeeeeeeee",
+            "status": "completed",
+            "scenario": "coordination_decision",
+            "coordination_measurement": {"retained": "artifact"},
+        }
+    )
+
+    summaries, corrupt = store.list_runs()
+
+    assert corrupt == []
+    assert summaries[0]["coordination_measurement_status"] == "needs_validation"

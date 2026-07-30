@@ -1104,15 +1104,29 @@ narrator, and coder traces. A human must confirm that exact and coded measures
 cannot be mistaken for each other and that one coded claim can be disputed from
 its supplied evidence.
 
-**Owned paths:** create a narrow
-`src/cybernetic_influence/analysis/coordination.py` module and typed
-`src/cybernetic_influence/analysis/models.py`; integrate retained artifacts
+**Owned paths:** keep execution in the narrow
+`src/cybernetic_influence/analysis/coordination.py` module, frozen contracts in
+`analysis/coordination_measurement.py`, and the operator projection in
+`analysis/coordination_readout.py`; integrate retained artifacts
 through the existing run store/API rather than a second run database; add the
-measurement prompt under the active-runtime prompt conventions; extend `web/`
-only through the generated frontend build after adding the
-provenance-labeled readout and exact-evidence step-down in `frontend/src/`; and
-create
+measurement prompt under the active-runtime prompt conventions; add the
+provenance-labeled readout and exact-evidence step-down to the existing `web/`
+shell that owns Simulation and Run history; preserve `frontend/src/` as the
+shared graph-canvas owner and rebuild its generated `web/graph-canvas.*`
+assets; and create
 `tests/test_coordination_measurement.py`.
+
+**Observed zero-spend implementation evidence (2026-07-30):** the run API
+validates one retained measurement into a typed operator readout, while Run
+history exposes its availability from the same run store. The Simulation result
+shows five decision-summary values, three visibly model-interpreted questions,
+all 15 exact values, global/per-measure limits, retained coder provenance, and
+clickable evidence step-down. `not_measured`, `measuring`, `invalid`, `unclear`,
+and `available` states are explicit. The completed world record is saved before
+coding; coder failure or restart invalidates only analysis. Fixture-backed API
+tests, the frontend build, and a 1440x1000 Chromium pass preserve the maps,
+story, outcome, participants/groups, and Run history with no console, request,
+or page error. No provider call or deployment occurred.
 
 **Slice 21B is done when:**
 

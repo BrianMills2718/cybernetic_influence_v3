@@ -212,6 +212,37 @@
         </footer>
       </section>
 
+      <section id="coordination-measurement-section" class="measurement-section" hidden>
+        <span class="eyebrow">Coordination assay</span>
+        <h2 id="coordination-measurement-headline">How coordination changed</h2>
+        <p id="coordination-measurement-explanation" class="muted"></p>
+        <div id="coordination-measurement-status"></div>
+        <div id="coordination-measurement-content" hidden>
+          <div class="provenance-key" aria-label="Measurement provenance">
+            <span class="provenance-badge exact">Recorded by the simulator</span>
+            <span class="provenance-badge coded">Model interpretation</span>
+          </div>
+          <section aria-labelledby="measurement-snapshot-heading">
+            <h3 id="measurement-snapshot-heading">Decision snapshot</h3>
+            <div id="measurement-snapshot" class="measurement-snapshot"></div>
+          </section>
+          <section aria-labelledby="coded-indicators-heading">
+            <h3 id="coded-indicators-heading">Interpretations to review</h3>
+            <p class="muted">Direction means change relative to this run’s starting state. These judgments describe only the supplied synthetic evidence; they do not establish truth, intent, or an organization-level mind.</p>
+            <div id="coded-indicators" class="coded-indicators"></div>
+          </section>
+          <details class="exact-measure-details">
+            <summary>All recorded measures <span id="exact-measure-count" class="summary-help"></span></summary>
+            <div id="exact-measures" class="exact-measures"></div>
+          </details>
+          <details class="measurement-limitations">
+            <summary>Limits and model-call provenance</summary>
+            <ul id="measurement-limitations"></ul>
+            <div id="measurement-call-provenance" class="run-config-readout"></div>
+          </details>
+        </div>
+      </section>
+
       <section id="participant-section">
         <span class="eyebrow">People and groups</span>
         <h2>Follow a participant or view the team as a whole</h2>
@@ -284,6 +315,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=spatial-scale-v1"></script>
-  <script src="/assets/app.js?v=participant-accounts-v1"></script>
+  <script src="/assets/app.js?v=coordination-measurement-v1"></script>
 </body>
 </html>

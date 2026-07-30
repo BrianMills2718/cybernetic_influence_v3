@@ -4,6 +4,7 @@ import time
 from copy import deepcopy
 from pathlib import Path
 from threading import Event, Thread
+from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import patch
 
@@ -20,6 +21,7 @@ from cybernetic_influence.active_runtime import (
     ScriptedActiveSystem,
 )
 from cybernetic_influence.api import create_app
+from cybernetic_influence.analysis.coordination_measurement import CoderOutput
 from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 from cybernetic_influence.run_store import RunStore
 from cybernetic_influence.scenarios.coordination_decision import (
@@ -48,8 +50,51 @@ ROOT = Path(__file__).resolve().parents[1]
 CLIENT_REVISION = installed_llm_client_revision()
 
 
-def client(run_root: Path) -> TestClient:
-    return TestClient(create_app(ROOT / "web", run_root))
+def _fixture_measurement_call(
+    *_args: Any,
+    **kwargs: Any,
+) -> tuple[CoderOutput, object]:
+    # mock-ok: API tests must exercise the retained analysis seam without spend.
+    output = kwargs["response_model"].model_validate(
+        {
+            "coded_indicators": [
+                {
+                    "indicator_id": "conditional_trust_episode",
+                    "direction": "no_change",
+                    "explanation": "The fixture does not infer conditional trust.",
+                },
+                {
+                    "indicator_id": "precautionary_hedging_episode",
+                    "direction": "no_change",
+                    "explanation": "The fixture does not infer precautionary hedging.",
+                },
+                {
+                    "indicator_id": "relevance_classification",
+                    "direction": "unclear",
+                    "explanation": "The fixture leaves relevance unclear.",
+                },
+            ]
+        }
+    )
+    return output, SimpleNamespace(
+        cost=0.0,
+        cost_source="fixture",
+        cost_covers_all_attempts=True,
+    )
+
+
+def client(
+    run_root: Path,
+    *,
+    measurement_call: Any = _fixture_measurement_call,
+) -> TestClient:
+    return TestClient(
+        create_app(
+            ROOT / "web",
+            run_root,
+            measurement_call=measurement_call,
+        )
+    )
 
 
 def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
@@ -127,6 +172,11 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "A customer cannot log in after resetting a password."
     )
     assert config.json()["cost_baselines"] == []
+    assert config.json()["coordination_measurement"] == {
+        "maximum_coder_calls": 1,
+        "coder_per_call_ceiling": 0.1,
+        "applies_to": "completed live coordination runs",
+    }
     assert "No authored spatial topology is present." not in config.json()["scenarios"]["service_desk"]["known_omissions"]
     assert "authored topology" in config.json()["scenarios"]["service_desk"]["known_omissions"][0]
     page = api.get("/")
@@ -159,6 +209,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="detailed-narrative"' in page.text
     assert "People and groups" in page.text
     assert "Follow a participant or view the team as a whole" in page.text
+    assert 'id="coordination-measurement-section"' in page.text
+    assert "Recorded by the simulator" in page.text
+    assert "Model interpretation" in page.text
+    assert "Interpretations to review" in page.text
     assert "analytical composites did" not in page.text
     assert "Play simulation" in page.text
     assert 'id="lifecycle-help"' in page.text
@@ -215,6 +269,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"not proof of entailment" in app_script.content
     assert b"Configured interaction pathways show scenario-configured" in app_script.content
     assert b"function renderLifecycleControls" in app_script.content
+    assert b"function renderCoordinationMeasurement" in app_script.content
+    assert b"coordination_measurement_readout" in app_script.content
     assert b"Resume from retained step" in page.content
     assert b"['service_desk', 'coordination_decision'].includes" in app_script.content
     assert b"known provider cost; one or more retry charges unavailable" in app_script.content
@@ -1793,6 +1849,42 @@ def test_coordination_live_execution_requires_explicit_spend_authorization(
     assert "CYBERNETIC_INFLUENCE_LIVE=1" in response.json()["detail"]
 
 
+def test_invalid_measurement_does_not_invalidate_completed_world_run(
+    tmp_path: Path,
+) -> None:
+    run_id = "run_badca55a9001"
+    RunStore(tmp_path).save(
+        {
+            "run_id": run_id,
+            "created_at": "2026-07-30T00:00:00+00:00",
+            "status": "completed",
+            "scenario": "coordination_decision",
+            "profile": "position_context",
+            "arm": "heterogeneous_pressure",
+            "execution": "live",
+            "model_calls": 1,
+            "cost": 0.0,
+            "events": [],
+            "story": {
+                "headline": "Decision retained",
+                "summary": "The exact world run completed.",
+                "steps": [],
+            },
+            "coordination_measurement": {"schema_version": "corrupt"},
+        }
+    )
+    api = client(tmp_path)
+
+    response = api.get(f"/api/runs/{run_id}")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "completed"
+    assert response.json()["story"]["headline"] == "Decision retained"
+    assert response.json()["coordination_measurement_readout"]["status"] == "invalid"
+    history = api.get("/api/runs").json()["runs"]
+    assert history[0]["coordination_measurement_status"] == "invalid"
+
+
 def test_coordination_live_execution_requires_scenario_schema_certification(
     tmp_path: Path,
 ) -> None:
@@ -1900,7 +1992,13 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
         retained: dict[str, object] | None = None
         for _ in range(200):
             candidate = api.get(f"/api/runs/{run_id}").json()
-            if candidate["status"] in {"completed", "failed"}:
+            if candidate["status"] == "failed" or (
+                candidate["status"] == "completed"
+                and candidate.get("coordination_measurement_readout", {}).get(
+                    "status"
+                )
+                != "measuring"
+            ):
                 retained = candidate
                 break
             time.sleep(0.01)
@@ -1908,6 +2006,15 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
     assert retained is not None
     assert retained["status"] == "completed"
     assert retained["execution"] == "live"
+    assert retained["coordination_measurement_readout"]["status"] == "available", (
+        retained.get("coordination_measurement_failure")
+    )
+    assert retained["measurement_model_calls"] == 1
+    assert len(retained["coordination_measurement_readout"]["exact_measures"]) == 15
+    assert len(retained["coordination_measurement_readout"]["coded_indicators"]) == 3
+    history = api.get("/api/runs").json()["runs"]
+    retained_summary = next(item for item in history if item["run_id"] == run_id)
+    assert retained_summary["coordination_measurement_status"] == "available"
     assert captured == [
         {
             "provider_people": set(PERSON_IDS),
@@ -1915,3 +2022,82 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
             "per_run_budget": 0.20,
         }
     ]
+
+
+def test_live_measurement_failure_preserves_completed_coordination_run(
+    tmp_path: Path,
+) -> None:
+    def capture_run(*_args: Any, **kwargs: Any) -> Any:
+        return run_scripted_coordination(
+            coordination_runtime_fixture(baseline_coordination_fixture()),
+            run_id=kwargs["run_id"],
+        )
+
+    def fail_measurement(*_args: Any, **_kwargs: Any) -> Any:
+        raise RuntimeError("fixture coder unavailable")
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OPENROUTER_API_KEY": "test-key",
+                "CYBERNETIC_INFLUENCE_LIVE": "1",
+                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
+                "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH": "test-coordination-canary",
+                "LLM_CLIENT_REVISION": CLIENT_REVISION,
+            },
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+        patch(
+            "cybernetic_influence.run_configuration._validated_coordination_certification_basis",
+            side_effect=lambda _model, configured: configured or None,
+        ),
+        patch("cybernetic_influence.api.run_coordination", side_effect=capture_run),
+        patch(
+            "cybernetic_influence.api.narrate_live_moments",
+            return_value={
+                "status": "completed",
+                "model_calls": 0,
+                "cost": 0.0,
+                "moments": [],
+                "calls": [],
+            },
+        ),
+    ):
+        api = client(tmp_path, measurement_call=fail_measurement)
+        started = api.post(
+            "/api/runs",
+            json={
+                "scenario": "coordination_decision",
+                "arm_id": "baseline",
+                "execution": "live",
+                "llm_options": {
+                    "model": "openrouter/deepseek/deepseek-v4-flash",
+                    "agent_reasoning_effort": "none",
+                    "max_total_cost": 0.20,
+                },
+            },
+        )
+        assert started.status_code == 202, started.text
+        run_id = started.json()["run_id"]
+        retained = None
+        for _ in range(200):
+            candidate = api.get(f"/api/runs/{run_id}").json()
+            if candidate.get("coordination_measurement_readout", {}).get(
+                "status"
+            ) == "invalid":
+                retained = candidate
+                break
+            time.sleep(0.01)
+
+    assert retained is not None
+    assert retained["status"] == "completed"
+    assert retained["story"]["headline"]
+    assert retained["coordination_measurement_readout"]["status"] == "invalid"
+    assert retained["cost_fully_observable"] is False
+    assert retained["coordination_measurement_failure"]["error_type"] == (
+        "RuntimeError"
+    )

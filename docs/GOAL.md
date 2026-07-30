@@ -133,7 +133,8 @@ restarting completed work.
   simulator `fa2da28ad50d1fe77428d424af7276855bc0d25d`; the deployed shared
   client is `144d118658ee1c99275576e7e212475021613930`. The service is running
   with Luna/medium as its subscription-backed default.
-- **Current increment:** Packet 21B1 is complete after the operator accepted
+- **Current increment:** Packet 21B2's zero-spend implementation is complete
+  after the operator accepted
   the 21A4 narrative and evidence readout. Five Coordination people
   use scenario-specific native-LLM schemas while sources, the meeting clock,
   analytical composites, and exact mechanisms remain non-provider executors.
@@ -175,9 +176,18 @@ restarting completed work.
   output and complete call contract, while simulator-owned evidence IDs remain
   outside the model prompt and output. The resulting artifact is idempotently
   retained in the existing run document and reopens without a model call.
-- **Resume event:** implement the fixture-backed API and UI portion of Packet
-  21B2, run its frontend/API gates, and then stop with an exact live-canary
-  authorization request. Do not deploy or make a provider call before that
+- **Measurement readout:** the existing run API, Simulation result, and Run
+  history now project the same retained artifact. Exact trace values and model
+  interpretations have different labels and visual treatment; unclear and
+  invalid states remain visible; cited evidence selects the corresponding exact
+  event on the existing map/timeline. A failed or interrupted assay cannot
+  rewrite a completed world run. The normal story, maps, participant/group
+  accounts, pause/resume controls, and Advanced evidence remain present.
+- **Resume event:** obtain explicit authorization to certify the added
+  `CoderOutput` route schema, deploy the exact Packet 21B2 revision, and run one
+  new baseline, one heterogeneous-pressure, and one stabilization live canary.
+  The 21A4 baseline cannot be reused because it predates the measurement spec
+  and executable revision. Do not deploy or make a provider call before that
   authorization.
 
 ## Done

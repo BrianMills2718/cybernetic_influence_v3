@@ -312,9 +312,9 @@ LLM_CLIENT_TIMEOUT_POLICY=allow
 CYBERNETIC_INFLUENCE_CERT_TERRA=<participant observation>,<narrator observation>
 CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA=<participant observation>,<narrator observation>
 CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH=<participant observation>,<narrator observation>
-CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA=<all exact Coordination person-schema observations, or empty>
-CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA=<all exact Coordination person-schema observations, or empty>
-CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH=<all exact Coordination person-schema observations, or empty>
+CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA=<all exact Coordination person-schema and CoderOutput observations, or empty>
+CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA=<all exact Coordination person-schema and CoderOutput observations, or empty>
+CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH=<all exact Coordination person-schema and CoderOutput observations, or empty>
 ```
 
 An observation is accepted only when its requested model, exact provider-schema
@@ -323,7 +323,9 @@ freshness all replay successfully. Registry membership or a configured key is
 not enough. The global pair makes a route available to scenarios using the
 generic person schema. Coordination remains reference-only unless its separate
 scenario group contains one current observation for each of the five exact
-person schemas.
+person schemas and the post-run `CoderOutput` schema. Adding or changing the
+measurement schema therefore makes Coordination reference-only until that exact
+route observation is retained; catalog availability alone is insufficient.
 
 OpenRouter's generation metadata endpoint is eventually consistent. A
 successful model call may be followed by repeated
