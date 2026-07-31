@@ -20,12 +20,16 @@ are retained separately in the [July 2026 runtime history](../archive/operations
 they do not authorize a new run or establish present model availability.
 
 Last verified 2026-07-30: simulator commit
-`92a310cfc93128d46acd97c4b21e5c1acc47a4a3` served corrected approved
-draft `draft_6fbb279df69b` and zero-call reference run
-`run_eded0f70b15f`. The run ended `scope_reduced`, retained both Waltzman and
-Levin readouts, reopened with unchanged evidence and analysis digests, and
-passed the deployed desktop flow without browser, request, or current-service
-log errors. Historical live draft `draft_019c16228a62` and run
+`9daadbb5349fefc317cca2bd2f1a166b33474b2d` served corrected approved draft
+`draft_6fbb279df69b` and zero-call reference run `run_eded0f70b15f`. The
+desktop flow passed with non-overlapping launch controls, a reviewed
+initial-situation account, human-centered concise and detailed stories,
+separate person/process/group accounts, full-run and selected-moment group
+scope, all three graph projections, both analytical composites, and
+pause/resume. The run ended `scope_reduced`, retained both Waltzman and Levin
+readouts, and reopened with unchanged evidence and analysis digests. The
+current service started cleanly and reported the same build commit; no browser
+or request error occurred. Historical live draft `draft_019c16228a62` and run
 `run_e1a91d0a47e1` remain immutable Packet 24C evidence; they do not authorize
 another live call.
 
