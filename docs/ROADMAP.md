@@ -122,12 +122,17 @@ cross-run comparisons. It is explicitly outside the current MVP.
 
 ### Outcome progress
 
-- The canonical configurable Waltzman–Levin workflow is **not yet observed**.
+- The canonical configurable Waltzman–Levin workflow is technically observed
+  through conversational authoring, approval, live execution, dual analysis,
+  restart, and reopen.
 - Closed scenario playback, conversational authoring for two short templates,
   and the fixed multi-episode coordination scenario are technically observed.
 - The operator has repeatedly reviewed the private UI and accepted the current
   maps, live causal animation, authoring conversation, and multi-episode
   narrative as useful foundations.
+- The last MVP boundary is stakeholder review of the retained canonical run:
+  can the user explain the situation, trajectory, two theoretical readouts, and
+  their evidence/limitations without opening raw JSON?
 
 ### Enabling progress
 
@@ -144,6 +149,10 @@ cross-run comparisons. It is explicitly outside the current MVP.
   remain retained evidence; see [Mac operations](operations/mac-mini.md).
 - Comparison schema version 2 and its zero-cost six-run fixture remain working
   post-MVP infrastructure.
+- Authored draft `draft_019c16228a62` and live run
+  `run_e1a91d0a47e1` provide the canonical Packet 24C evidence. The live run
+  retained 46 participant calls, 45 narrator calls, the exact outcome
+  `no_decision_by_horizon`, and separate Waltzman and Levin readouts.
 
 ### Process progress
 
@@ -157,29 +166,28 @@ cross-run comparisons. It is explicitly outside the current MVP.
 | ID | Capability | Dependency | State | Satisfaction gate |
 |---|---|---|---|---|
 | `MVP-C0` | Existing causal execution, evidence, maps, narrative, pause/resume | hard | satisfied | Preserve regression behavior |
-| `MVP-C1` | Conversational multi-episode coordination `ScenarioSpec` | hard | missing | One reviewed draft compiles to the existing coordination runtime without hand-editing Python |
-| `MVP-C2` | Explicit `RunSpec` and `AnalysisSpec` snapshot bound to the approved scenario | hard | partial | Preview and retained run expose all three identities and digests |
-| `MVP-C3` | Theory-neutral `RunEvidenceBundle` | hard | partial | Bundle includes configuration, state/events, information lineage, participant evidence, boundary activity, and completion evidence with reference validation |
-| `MVP-C4` | Waltzman per-run module over the evidence bundle | hard | partial | Existing exact/coded measures consume the common bundle and render with method/provenance |
-| `MVP-C5` | Levin per-run module over the evidence bundle | hard | missing | Candidate goal/boundary, glue, activity, correction, persistence, adaptation, and limits render without an aggregate executor or scalar |
-| `MVP-C6` | One integrated private review flow | evidence | missing | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
+| `MVP-C1` | Conversational multi-episode coordination `ScenarioSpec` | hard | satisfied | One reviewed draft compiles to the existing coordination runtime without hand-editing Python |
+| `MVP-C2` | Explicit `RunSpec` and `AnalysisSpec` snapshot bound to the approved scenario | hard | satisfied | Preview and retained run expose all three identities and digests |
+| `MVP-C3` | Theory-neutral `RunEvidenceBundle` | hard | satisfied | Bundle includes configuration, state/events, information lineage, participant evidence, boundary activity, and completion evidence with reference validation |
+| `MVP-C4` | Waltzman per-run module over the evidence bundle | hard | satisfied | Existing exact/coded measures consume the common bundle and render with method/provenance |
+| `MVP-C5` | Levin per-run module over the evidence bundle | hard | satisfied | Candidate goal/boundary, glue, activity, correction, persistence, adaptation, and limits render without an aggregate executor or scalar |
+| `MVP-C6` | One integrated private review flow | evidence | technical pass; stakeholder judgment pending | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
 | `POST-C1` | `ExperimentSpec` and repeated comparison | optional | deferred | Explicit post-MVP selection |
 | `POST-C2` | Perturbation, robustness, and persuadability assays | optional | deferred | Explicit post-MVP selection after the per-run workflow is observed |
 
-The first missing boundary is `MVP-C1`. The existing authoring compiler chooses
-only two short workflow templates; the coordination scenario remains
-scenario-specific Python.
+The first and only open boundary is the stakeholder judgment portion of
+`MVP-C6`. No further implementation is required to make that decision.
 
 ## Shortest Critical Path
 
-1. **Scenario-to-runtime seam — direct blocker.** Add one reviewed
-   `coordination_decision_v1` authoring contract that configures the existing
-   coordination runtime rather than creating arbitrary mechanism code.
-2. **Common evidence and dual readout — representative vertical.** Retain one
-   reference run through a theory-neutral bundle and render both analysis
-   modules in the existing result surface.
-3. **Integrated live proof — canonical exemplar.** Author, approve, run, reopen,
-   and review one live configuration on the private simulator.
+1. **Stakeholder readout — current boundary.** Review the retained canonical
+   run in the private simulator and decide whether its situation, trajectory,
+   Waltzman readout, Levin readout, evidence, and limitations are
+   understandable without raw JSON.
+2. **MVP closeout — conditional next step.** If accepted, mark M7 and the goal
+   complete and select a post-MVP direction. If rejected, convert the concrete
+   usability failure into one bounded correction rather than reopening the
+   simulator architecture.
 
 Detailed implementation authority:
 [Slice 24](plans/024-configurable-theory-analysis-mvp.md).
@@ -216,11 +224,9 @@ remain evidence. They do not own current direction.
 
 ## Planning Frontier
 
-- `MVP-C1` through `MVP-C5` are fully specifiable now in the bounded Slice 24
-  plan.
-- The exact quality of LLM-authored configurations and LLM-coded findings is
-  exploration-required; use structural checks plus inspection of complete
-  representative traces rather than inventing a score.
+- `MVP-C1` through `MVP-C5` are satisfied on the canonical retained example.
+- Stakeholder comprehensibility is the only remaining MVP uncertainty. Use the
+  retained review surface and exact evidence rather than another provider run.
 - Provider-backed execution is operationally conditional on a certified route
   with available capacity. Reference execution remains available and meaningful.
 - `ExperimentSpec`, perturbation, comparison, robustness, evasion, attribution,
@@ -229,13 +235,15 @@ remain evidence. They do not own current direction.
 
 ## Continue, Reset, Scale, Stop
 
-- **Decision:** reset direction and replace the former active goal.
-- **Continue:** execute Slice 24 one packet at a time.
+- **Decision:** retain the current direction; the technical vertical is
+  complete.
+- **Continue:** obtain the M7 stakeholder readout on the canonical retained
+  run.
 - **Reset:** after two substantive increments or four hours without a new
   user-visible part of the canonical flow, or if configuration requires
   arbitrary generated mechanism code/a second runtime.
-- **Scale:** only after the operator can configure, run, and understand the
-  canonical example with both readouts.
+- **Scale:** only after the stakeholder accepts the canonical example with both
+  readouts.
 - **Stop:** if the resulting analysis cannot distinguish scenario inputs from
   derived findings, or aggregate findings cannot step down to retained evidence.
 

@@ -21,7 +21,7 @@ This is the active implementation plan for
 
 ## Current progress
 
-Packets 24A0, 24A1, and 24B are implemented and provider-free verified. The strict
+Packets 24A0, 24A1, 24B, and the technical portion of 24C are implemented. The strict
 reviewed coordination configuration compiles onto the existing runtime, one
 scripted trajectory produces `RunEvidenceBundleV1`, and separate Waltzman and
 Levin reference readouts validate against that common evidence. The existing
@@ -31,8 +31,13 @@ approve, run, reopen, and inspect both readouts alongside the retained maps,
 narrative, and participant/group accounts. Its structured authoring contract
 can now generate the coordination template without provider-owned runtime IDs,
 the full semantic configuration can be edited directly, and selected analyses
-also project over a completed live trajectory. Packet 24C is next; no provider
-call, route certification, or deployment was performed in 24B.
+also project over a completed live trajectory.
+
+The canonical Packet 24C draft is `draft_019c16228a62`; its approved revision 2
+compiled to live run `run_e1a91d0a47e1`. The run, complete traces, narration
+recovery, restart/reopen behavior, and rendered UI have been inspected. M1–M6
+and M8 are technically demonstrated. M7 awaits the stakeholder's usefulness
+and comprehensibility judgment.
 
 ## Current-to-target Delta
 
@@ -346,6 +351,8 @@ Provider-free evidence:
 
 **Classification:** canonical outcome exemplar.
 
+**Status:** technical execution complete; stakeholder readout pending.
+
 After explicit route/deployment/live authorization:
 
 1. preflight the exact authoring, participant, narrator, and analysis schemas;
@@ -363,6 +370,51 @@ authoring or world execution merely because one analysis module failed.
 
 The exact external-call budget is measured and reported at the end of 24B. Do
 not invent it in this plan or inherit the former comparison batch's topology.
+
+Retained evidence:
+
+- OpenRouter-backed Terra medium produced the approved authored draft in one
+  structured attempt.
+- The live world completed 46 participant calls, 537 events, 57 participant
+  activations, and four meetings. Its exact outcome was
+  `no_decision_by_horizon`, with no deployment scope approved.
+- The original 66-moment narrator projection exceeded the configured 57-call
+  preflight. The repaired projection coalesced exact-work-only moments to 45
+  narratable moments while preserving every moment event reference and exact
+  work reference. Narration-only resume made 45 low-reasoning narrator calls
+  and explicitly retained `world_replayed: false`.
+- Total observed usage was 91 completed calls and `$0.4935855`: 46 participant
+  calls costing `$0.19576035` and 45 narrator calls costing `$0.29782515`.
+  One narrator logical call required a visible structured-output retry; no
+  fallback or hidden replay occurred.
+- Restart/reopen preserved the approved proposal digest, exact world and
+  evidence digests, theory bundle digest, calls, and cost. Reopening made no
+  provider call.
+- Focused changed-boundary tests passed (51 tests); two default-route isolation
+  regressions passed; strict typing passed over all 43 source files; the
+  production frontend build and graph build passed. Repository-wide test typing
+  still reports 18 pre-existing errors isolated to
+  `tests/test_configurable_theory_analysis.py`.
+- Rendered desktop review passed the initial-situation, maps,
+  collapse/expand, concise/detailed narrative, participant/composite,
+  Waltzman, Levin, exact-outcome, fresh-browser, and restart/reopen checks.
+  One detailed terminal exact-mechanism sentence says a terminal decision was
+  accepted without naming `no_decision_by_horizon`; the concise account and
+  exact outcome state the result correctly. Treat this as a presentation
+  limitation, not evidence of a different world outcome.
+
+Acceptance disposition:
+
+| Criterion | Status | Packet 24C evidence |
+|---|---|---|
+| M1 | pass | Conversational draft, revision, approval, compile, and live run retained |
+| M2 | pass | Reviewed people, information, mechanisms, places, boundary, goal, termination, and assumptions shown before Play |
+| M3 | pass | Reference and live paths, retained exact runtime, maps, narratives, evidence, and non-replaying resume verified |
+| M4 | pass | Validated theory-neutral bundle reopened with unchanged digest |
+| M5 | pass | Sixteen provenance-labeled Waltzman findings rendered |
+| M6 | pass | Seven provenance-labeled Levin findings rendered; four perturbational dimensions correctly remain `not_tested` |
+| M7 | pending stakeholder judgment | Technical UI inspection passed; stakeholder must confirm the result is understandable and useful without raw JSON |
+| M8 | pass | Canonical documents and rendered UI separate scenario, run, analysis, and post-MVP experiment concerns |
 
 ## Review and Reset
 

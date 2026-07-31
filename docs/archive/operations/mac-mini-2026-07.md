@@ -445,3 +445,41 @@ complete. Before advertising live execution, make one bounded provider-backed
 run, verify its retained model-call evidence and cost, and confirm that the
 missing-credential and unauthorized-live controls fail closed. Delete
 transferred bundles after the update; they are only transport.
+
+## Packet 24C canonical live proof
+
+Observed 2026-07-30 on simulator
+`88fff4b55b4f261cd0bde236908061fe2dfa1948` with shared client
+`28dfa9928750baefe131e25ecc97c04ede81c174`:
+
+- approved authored coordination draft `draft_019c16228a62`, revision 2,
+  retained proposal digest
+  `0b53bb2de7f81461d11a91b3dcec9b2dfa117817c42b502caa5d7a0d6338b4ff`;
+- live run `run_e1a91d0a47e1` used OpenRouter-backed
+  `openai/gpt-5.6-terra`, medium participant reasoning, and low narrator
+  reasoning;
+- exact world execution completed 46 participant calls, 537 events, 57
+  participant activations, and four meetings at `$0.19576035` observed cost;
+- exact terminal status was `no_decision_by_horizon`, with no deployment scope
+  approved and two risks still open at the deadline;
+- narration-only recovery coalesced 66 retained causal moments to 45 narration
+  moments without dropping any of the 535 narrated event references or 41
+  exact-work references. It made 45 narrator calls at `$0.29782515`, retained
+  `world_replayed: false`, and brought total observed usage to 91 calls and
+  `$0.4935855`;
+- one narrator logical call visibly retried after invalid structured JSON and
+  then completed; no route fallback or hidden world replay occurred;
+- Waltzman produced 16 per-run findings, including five retained partners, two
+  final open risks, four meetings, and no decision by the horizon. Levin
+  produced seven findings, including six incoming and one outgoing boundary
+  crossing, one completed coordination episode, three error signals, one
+  observed correction, and four explicitly `not_tested` perturbational
+  dimensions;
+- restart and fresh-browser reopen preserved the draft revision and digest,
+  exact world, theory-bundle digest, 91 calls, and total cost without making a
+  new provider call; and
+- rendered desktop inspection passed with no console, network, or backend
+  error. The concise account and exact outcome are correct. One detailed
+  terminal exact-mechanism sentence ambiguously says a terminal decision was
+  accepted without naming `no_decision_by_horizon`; retain this as a known
+  presentation limitation.

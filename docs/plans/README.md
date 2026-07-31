@@ -13,9 +13,9 @@ updated: 2026-07-30
 ## Active execution
 
 [Slice 24: Configurable theory-informed simulation MVP](024-configurable-theory-analysis-mvp.md)
-is the sole executable continuation plan. Work one packet at a time, beginning
-with 24A0. Its provider-free configured vertical must work before conversational
-or live-provider proof is attempted.
+is the sole executable continuation plan. Packets 24A0–24C are technically
+complete. The only active boundary is the M7 stakeholder readout of the
+retained canonical run; do not launch another provider run to satisfy it.
 
 ## Deferred candidate
 

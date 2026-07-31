@@ -107,32 +107,45 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 - The causal runtime, maps, narrative, pause/resume, analytical boundaries, and
   exact evidence inspection are technically observed.
 - Conversational authoring is technically observed for two short scenario
-  families and the reviewed five-person coordination template. The
-  coordination branch uses semantic fields; compiler-owned runtime identities
-  and implementations are excluded from the model-facing schema.
+  families and the reviewed five-person coordination template. The canonical
+  live draft, `draft_019c16228a62`, was generated in one structured Terra
+  medium attempt, approved as revision 2, and compiled without exposing
+  compiler-owned runtime identities or implementations to the model.
 - The fixed multinational coordination scenario is technically observed in
   reference and live modes, with accepted baseline, pressure, and stabilization
   trajectories.
 - An authored coordination draft can be edited directly, approved, compiled,
-  run in zero-cost reference mode, reopened, and inspected with either or both
+  run in reference or live mode, reopened, and inspected with either or both
   selected Waltzman- and Levin-informed readouts.
 - The Waltzman- and Levin-informed per-run modules consume one theory-neutral
   evidence bundle and remain separate from the world execution.
 - Boundary activity and coordination episodes exist as reversible analyst
   projections.
-- The remaining product boundary is one authorized canonical live
-  author-configure-run-readout proof, complete trace inspection, restart/reopen
-  proof, and operator readout against M1–M8.
+- Canonical live run `run_e1a91d0a47e1` completed through the existing causal
+  runtime with 46 participant calls and exact
+  `no_decision_by_horizon`. Narration-only recovery added 45 narrator calls
+  without replaying the world; all 535 narrated event references and all 41
+  exact-work references were retained.
+- The retained draft and run reopened after a service restart with unchanged
+  proposal, world, evidence-bundle, and analysis identities. The rendered
+  desktop surface showed the initial situation, concise and detailed
+  narratives, all three graph meanings, participant and composite accounts,
+  exact outcome, and both theory readouts without browser or backend errors.
+- M1–M6 and M8 have implementation and retained evidence. M7 remains the only
+  open boundary: the stakeholder must judge whether the canonical result is
+  understandable and useful without raw JSON. The detailed exact-mechanism
+  narration also has one known wording ambiguity at the terminal deadline; the
+  concise narrative and exact outcome remain correct.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
-- Route availability and exact structured-schema compatibility must be freshly
-  preflighted before the canonical live proof; Packet 24B made no provider call.
+- Route availability remains mutable and must be freshly certified before any
+  later live run; the retained Packet 24C proof does not authorize another.
 
 ## Active Plan
 
 Follow [Slice 24: Configurable theory-informed simulation
-MVP](plans/024-configurable-theory-analysis-mvp.md). Its packets replace the
-former 21C1–21C2 continuation sequence.
+MVP](plans/024-configurable-theory-analysis-mvp.md). Packets 24A0–24C are
+implemented; only the M7 stakeholder readout remains before MVP closeout.
 
 Execute one packet at a time from a clean linked worktree. For each packet:
 

@@ -19,6 +19,13 @@ certifications, model capacity incidents, run identifiers, and canary results
 are retained separately in the [July 2026 runtime history](../archive/operations/mac-mini-2026-07.md);
 they do not authorize a new run or establish present model availability.
 
+Last verified 2026-07-30: simulator commit
+`88fff4b55b4f261cd0bde236908061fe2dfa1948` served approved draft
+`draft_019c16228a62` and completed run `run_e1a91d0a47e1` after a service
+restart without changing their retained identities, calls, costs, world
+evidence, or analysis bundle. This is historical proof for the current MVP
+readout, not authorization for another live call.
+
 ## Inspect
 
 ```bash
