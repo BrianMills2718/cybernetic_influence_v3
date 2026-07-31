@@ -1,12 +1,19 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: active
+status: paused
 created: 2026-07-31
 updated: 2026-07-31
 ---
 
 # Slice 25: Typed component composition
+
+> **Planning reset (2026-07-31):** Packets 25A–25C remain completed evidence,
+> but further expansion is paused. [Slice 26](026-concordia-foundation-research.md)
+> must first decide whether composition belongs inside the current runtime,
+> Concordia, a layered integration, or an independent adapter architecture.
+> Nothing in this plan establishes that the current runtime should remain the
+> generalized product foundation.
 
 ## Outcome
 
@@ -117,8 +124,9 @@ No model call may invent components or executable behavior.
 
 ### 25D — Component-family expansion
 
-**State:** deliberately deferred until a second materially different analyst
-scenario exposes a real missing primitive.
+**State:** paused behind Slice 26. A second materially different analyst
+scenario is no longer sufficient authorization by itself; the selected
+foundation decision must first retain or replace this packet.
 
 Add a component family only when it supports a selected scenario that cannot be
 represented with the registry. Candidate families include physical traversal,

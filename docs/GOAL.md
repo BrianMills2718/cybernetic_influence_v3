@@ -155,9 +155,16 @@ Follow [Slice 24: Configurable theory-informed simulation
 MVP](plans/024-configurable-theory-analysis-mvp.md) for MVP acceptance. Packets
 24A0–24D are technically complete; M7 remains the stakeholder review of the
 corrected retained run. The operator has separately selected
-[Slice 25: Typed component composition](plans/025-typed-component-composition.md)
-as the active architecture implementation path. It broadens reusable reviewed
-composition without changing the MVP acceptance criteria or its non-claims.
+[Slice 26: Foundation decision for a generalized cybernetic
+simulator](plans/026-concordia-foundation-research.md) as the active architecture
+research path. Capability equivalence is the premise: Concordia and Cybernetic
+Influence can both combine language with typed state. Source-level research
+must decide which foundation gives the product the clearest state authority,
+least duplicated machinery, fewest compromised guarantees, and best reuse.
+[Slice 25](plans/025-typed-component-composition.md) Packets 25A–25C remain
+completed evidence; 25D and further simulator construction are paused until
+Slice 26 records an architecture decision and replacement implementation
+handoff. This reset does not change the MVP criteria or close M7.
 
 The operator separately selected and completed Packet 22A0's contract
 foundation, Packet 22A1's five provider-free scripted trajectories, and Packet

@@ -25,12 +25,13 @@ Delivery maturity is a private functional PoC. Capability ambition is an
 advanced but bounded multiscale social simulator, not a production platform.
 
 The MVP acceptance contract remains
-[Configurable Waltzman–Levin Research MVP Goal](GOAL.md). The operator has also
-selected the next architecture outcome: reusable typed composition of reviewed
-people, mechanisms, information carriers, places, and routes, with retained
-compiler/runtime diagnostics. That work is owned by
-[Slice 25](plans/025-typed-component-composition.md); it must preserve the
-MVP's evidence and non-claim boundaries rather than replace them.
+[Configurable Waltzman–Levin Research MVP Goal](GOAL.md). The operator has reset
+the next architecture outcome to an evidence-backed foundation decision. That
+work is owned by [Slice 26](plans/026-concordia-foundation-research.md).
+[Slice 25](plans/025-typed-component-composition.md) Packets 25A–25C are
+retained evidence, but further expansion is paused until the foundation is
+selected. Neither architecture research nor later implementation may weaken
+the MVP's evidence and non-claim boundaries.
 
 ## Canonical Outcome Probe
 
@@ -192,16 +193,22 @@ The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
 
 ## Shortest Critical Path
 
-1. **Stakeholder readout — current boundary.** Review corrected run
-   `run_eded0f70b15f` and decide whether its
-   situation, trajectory, Waltzman readout, Levin readout, evidence, and
-   limitations are understandable without raw JSON.
-2. **MVP closeout — conditional next step.** If accepted, mark M7 and the goal
-   complete and select a post-MVP direction. If rejected, convert the concrete
-   usability failure into one bounded correction rather than reopening the
-   simulator architecture.
+There are two explicit tracks rather than one blended implementation queue:
 
-Detailed implementation authority:
+1. **Product-architecture research — selected engineering frontier.** Execute
+   [Slice 26](plans/026-concordia-foundation-research.md). Compare Concordia,
+   the current runtime, layered integration, and an independent adapter design
+   from source and the same three cases. Do not expand Slice 25 first.
+2. **Architecture decision — next engineering boundary.** Record which system
+   owns cognition, world state, scheduling, adjudication, evidence, authoring,
+   and analysis; then issue one bounded implementation handoff.
+3. **Stakeholder readout — separate MVP boundary.** Review corrected run
+   `run_eded0f70b15f` and decide whether its situation, trajectory, Waltzman
+   readout, Levin readout, evidence, and limitations are understandable without
+   raw JSON. This judgment can close M7 but does not decide the generalized
+   product architecture.
+
+Detailed MVP implementation authority:
 [Slice 24](plans/024-configurable-theory-analysis-mvp.md).
 
 In parallel, the operator separately authorized the provider-free execution
@@ -221,7 +228,9 @@ claims.
 | [Slice 17](archive/plans/017-conversational-scenario-authoring.md) | reuse unchanged | Completed authoring foundation |
 | [Slice 21](archive/plans/021-coordination-environment-assay.md) | completed foundation; 21C post-MVP | Runtime and per-run Waltzman work are reused; paid comparison is not active |
 | [Slice 22](plans/022-composite-agency-perturbation-assay.md) | Packets 22A0–22A2 technically complete; stakeholder readout pending | Five zero-cost scripted rows, retained exact readouts, and one comparison/step-down UI are verified; live repetitions remain unauthorized |
-| [Slice 24](plans/024-configurable-theory-analysis-mvp.md) | active bounded design | Owns the new execution frontier |
+| [Slice 24](plans/024-configurable-theory-analysis-mvp.md) | active MVP authority | Owns the separate MVP acceptance contract and M7 boundary |
+| [Slice 25](plans/025-typed-component-composition.md) | 25A–25C retained; 25D paused | Useful local composition evidence, but not authority for choosing the generalized product foundation |
+| [Slice 26](plans/026-concordia-foundation-research.md) | selected research frontier | Decides the foundation before further simulator construction |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |
 | [Waltzman source note](research/001-from-minds-to-coordination.md) | amend | Separates scenario inputs, per-run measurements, and experiments |
@@ -254,13 +263,20 @@ remain evidence. They do not own current direction.
   satisfied. Stakeholder comprehension is unobserved; live repetitions,
   robustness claims, evasion, attribution, calibration, and prediction remain
   deferred.
+- Slice 25 Packets 25A–25C prove a bounded local registry, composition receipt,
+  mixed scenario, and authoring path. They do not prove that the current
+  runtime is the optimal generalized foundation.
+- Slice 26 begins from the fact that Concordia and Cybernetic Influence can
+  both host prose and typed causal state. It decides architecture from authority
+  boundaries, concrete implementation paths, reuse, evidence, and maintenance
+  rather than representation labels or defaults.
 
 ## Continue, Reset, Scale, Stop
 
-- **Decision:** retain the current direction; repair the audited truthfulness
-  defects without reopening the simulator architecture.
-- **Continue:** obtain the M7 stakeholder readout on corrected run
-  `run_eded0f70b15f`.
+- **Decision:** pause further simulator construction and research the product
+  foundation before expanding composition.
+- **Continue:** execute Slice 26A–26D, then obtain the product owner's adoption
+  of the architecture decision. The independent M7 readout remains open.
 - **Reset:** after two substantive increments or four hours without a new
   user-visible part of the canonical flow, or if configuration requires
   arbitrary generated mechanism code/a second runtime.

@@ -1,0 +1,142 @@
+{
+  "schema_version": "1.1",
+  "record_type": "roadmap_goal_handoff",
+  "handoff_id": "roadmap-goal:cybernetic-influence-v3:foundation-decision-026:e7faf25e21abb8950a18955600bbbf7a36b76104",
+  "project_id": "cybernetic-influence-v3",
+  "goal_id": "foundation-decision-026",
+  "project_roadmap_ref": {
+    "path": "docs/ROADMAP.md",
+    "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+    "concern": "initiative direction and selected research frontier"
+  },
+  "objective": "Determine which foundation architecture—Concordia, Cybernetic Influence, a layered hybrid, or an independent adapter-based product—best supports a generalized cybernetic multiscale agency simulator, using source-level evidence and three representative world-modeling cases, then record an implementation decision and revised roadmap before any further composition expansion.",
+  "objective_sha256": "94e9ba23ad489eed8bf82be73dc70276bd515edc84d3ccbd1de634b076e832f8",
+  "audience_or_actor": "the product owner and the next implementation agent",
+  "current_state_ref": {
+    "path": "docs/plans/025-typed-component-composition.md",
+    "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+    "concern": "completed local composition slices and deferred component-family expansion"
+  },
+  "desired_outcome": "An evidence-backed architecture decision names one authoritative execution design, fairly disposes of the alternatives and existing code, and supplies the next bounded implementation handoff.",
+  "success_or_readout": "Slices 26A through 26D satisfy R1–R8 in docs/plans/026-concordia-foundation-research.md; no production integration is required unless a separately bounded disposable spike is triggered by a named decision-changing unknown.",
+  "evidence_target": {
+    "claim": "The selected foundation preserves the fixed cybernetic product invariants with less replacement, duplicated authority, and maintenance burden than the strongest rejected alternative across all three canonical cases.",
+    "evidence_class": "observed"
+  },
+  "owner_or_owner_decision": {
+    "kind": "owner",
+    "owner_role": "implementing research agent"
+  },
+  "recommended_design_profile": "standard",
+  "recommended_overlays": [
+    "exploratory",
+    "runtime_state",
+    "migration",
+    "repository_governance"
+  ],
+  "selection_purpose": "execution_frontier",
+  "selected_at": "2026-07-31T16:41:02-07:00",
+  "applicable_decision_refs": [
+    {
+      "path": "docs/adr/006-boundaries-are-derived-coarse-grainings.md",
+      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+      "concern": "organizations as analytical boundaries rather than executors"
+    },
+    {
+      "path": "docs/adr/008-separate-spatial-topology-from-routing-and-permission.md",
+      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+      "concern": "separation of location, communication, capability, and authorization"
+    },
+    {
+      "path": "docs/adr/010-autonomous-multirate-process-time.md",
+      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+      "concern": "autonomous multirate process scheduling"
+    },
+    {
+      "path": "docs/adr/011-declared-representation-depth.md",
+      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+      "concern": "question-relative representation depth"
+    },
+    {
+      "path": "docs/adr/012-decision-environment-measures-are-derived.md",
+      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+      "concern": "measurements as derived analytical views"
+    }
+  ],
+  "applicable_policy_refs": [],
+  "required_capability_refs": [
+    {
+      "path": "docs/GOAL.md",
+      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+      "concern": "canonical analyst outcome and preserved causal-runtime capabilities"
+    },
+    {
+      "path": "docs/plans/026-concordia-foundation-research.md",
+      "revision": "plan-revision-2026-07-31",
+      "concern": "invariants, representative cases, evidence rules, and acceptance contract"
+    }
+  ],
+  "typed_dependencies": [
+    {
+      "dependency_type": "informs",
+      "target_ref": {
+        "path": "https://github.com/google-deepmind/concordia",
+        "revision": "bdb449ab384adf203b09004049184b9176be808f",
+        "concern": "candidate framework source and public extension seams"
+      },
+      "condition": "Concordia engine, entity, component, game-master, state, scheduling, checkpoint, and evidence paths are traced at the pinned revision."
+    },
+    {
+      "dependency_type": "informs",
+      "target_ref": {
+        "path": "../active/data-contracts",
+        "revision": "d845be0c5813ab26e9bf2f1eaf4473a262ac541b",
+        "concern": "shared composition contracts and explicit runtime boundary"
+      },
+      "condition": "Research distinguishes compile-time validation supplied by data_contracts from implementation discovery and runtime execution left to the consumer."
+    },
+    {
+      "dependency_type": "blocked_by",
+      "target_ref": {
+        "path": "docs/plans/026-concordia-foundation-research.md",
+        "revision": "plan-revision-2026-07-31",
+        "concern": "architecture selection and implementation frontier"
+      },
+      "condition": "Further Slice 25 component-family expansion remains paused until 26D records an adopted decision and replacement implementation handoff."
+    }
+  ],
+  "material_unknowns": [
+    {
+      "unknown_id": "concordia-authority-seam",
+      "question": "Can Concordia remain the foundation while one typed causal environment owns state, scheduling, adjudication, replay, and evidence without replacing the engine or creating dual authority?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "reuse-value",
+      "question": "Which Concordia, Generative Agents, or AgentVille capabilities are separable and materially reduce product work under the fixed invariants?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "composition-boundary",
+      "question": "Should data_contracts.composition own the reviewed compile-time seam, and which runtime contracts must remain in the selected environment?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "product-tradeoff",
+      "question": "If candidates optimize materially different product goals rather than implementation details, which tradeoff should the product owner select?",
+      "treatment": "human_decision"
+    }
+  ],
+  "non_goals": [
+    "Implement or migrate to Concordia during the research slice.",
+    "Expand the component registry or add another scenario family.",
+    "Run live LLM simulations or compare model quality and cost.",
+    "Complete the separate MVP stakeholder-comprehension judgment."
+  ],
+  "non_claims": [
+    "Concordia or Cybernetic Influence has a unique theoretical ability to represent typed state or natural language.",
+    "Framework defaults alone determine the correct architecture.",
+    "The selected product will be empirically predictive or universally faithful.",
+    "data_contracts.composition supplies runtime discovery or execution."
+  ]
+}
