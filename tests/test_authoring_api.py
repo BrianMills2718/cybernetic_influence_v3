@@ -588,7 +588,7 @@ def test_authoring_and_theory_call_contracts_are_exact_and_provider_free(
     config = _client(tmp_path).get("/api/config").json()
     authoring = config["authoring"]["structured_contract"]
     assert authoring["task"] == "cybernetic_influence_v3_scenario_draft"
-    assert authoring["prompt_version"] == "scenario_draft.v3"
+    assert authoring["prompt_version"] == "scenario_draft.v4"
     assert len(authoring["prompt_digest"]) == 64
     assert len(authoring["schema_digest"]) == 64
     assert authoring["maximum_attempts_per_message"] == 3

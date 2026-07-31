@@ -330,7 +330,6 @@ def reviewed_component_composition_proposal() -> ScenarioDraftProposal:
             "field_coordinator": "field_site",
             "review_officer": "review_office",
             "secure_review_channel": "field_site",
-            "field_safety_report": "field_site",
         },
         "timing_assumptions": [
             {

@@ -96,13 +96,19 @@ people, information, a record, at least one place/route, a terminal condition,
 and an analytical boundary. Reference execution, pause/resume, reopen,
 narrative, three maps, and evidence-bundle creation must all work.
 
-**Acceptance:** the scenario is authorable and directly editable without
-Python, compiles and reopens through the one runtime, and one human can inspect
+**Acceptance:** the scenario is directly editable without Python, compiles and
+reopens through the one runtime, and one human can inspect
 why each action/effect occurred through receipt-to-event step-down.
 
 ### 25C — Generic authoring and review surface
 
-**State:** conditional on the 25B human-readable proof.
+**Status:** technically complete. The provider-facing schema accepts the
+registered component workflow, the prompt selects it only for the bounded
+delivery-and-recording use case, and the preserved compiler rejects invalid
+seams. A real provider call remains deliberately deferred until a certified
+live route is available; no authoring spend was made to claim this status.
+Browser visual verification remains part of the next integrated UI pass because
+this environment has no headless browser executable.
 
 Teach the authoring conversation to choose only registered component kinds and
 their typed fields. The UI presents a concise scenario description and a

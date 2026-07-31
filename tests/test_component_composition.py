@@ -12,6 +12,11 @@ from cybernetic_influence.authoring import AuthoringCompilationError, compile_sc
 from cybernetic_influence.authoring.examples import reviewed_component_composition_proposal
 from cybernetic_influence.authoring.models import ScenarioDraftProposal
 from cybernetic_influence.causal_core.replay import replay_committed_trajectory
+from cybernetic_influence.authoring.service import (
+    _ProposalConsumer,
+    _prompt,
+    _provider_candidate_from_proposal,
+)
 
 
 def test_mixed_component_composition_compiles_runs_and_replays() -> None:
@@ -88,3 +93,40 @@ def test_component_example_can_be_created_previewed_approved_and_run(tmp_path: P
     )
     assert run.status_code == 200
     assert run.json()["outcome"]["status"] == "assessed_contested"
+
+
+def test_structured_authoring_accepts_a_registered_component_composition(
+    tmp_path: Path,
+) -> None:
+    typed_proposal = reviewed_component_composition_proposal()
+    provider_payload = _provider_candidate_from_proposal(typed_proposal)
+    consumer = _ProposalConsumer.model_validate({"proposal": provider_payload})
+
+    def proposer(*_args: object, **_kwargs: object) -> tuple[object, object]:
+        return consumer, type("Meta", (), {"cost": 0.0})()
+
+    api = TestClient(
+        create_app(
+            web_root=Path("web"),
+            run_root=tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=proposer,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    drafted = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "component_authoring",
+            "message": "Model a field report delivered for documented review.",
+        },
+    )
+
+    assert drafted.status_code == 200
+    assert drafted.json()["proposal"]["workflow"]["template_id"] == (
+        "component_composition_v1"
+    )
+    assert consumer.proposal is not None
+    system, _ = _prompt(message="x", prior={}, repair_feedback=None, candidate=None)
+    assert "component_composition_v1" in system
