@@ -751,10 +751,23 @@ function renderLifecycleControls(run = current) {
     run?.scenario || $('#scenario')?.value
   )
   const retainedCheckpoint = Boolean(run?.continuation?.checkpoint)
-  const resumable = resumableScenario && retainedCheckpoint && ['paused', 'failed'].includes(status)
+  const narrationResumable = status === 'completed'
+    && run?.execution === 'live'
+    && run?.narration?.status === 'unavailable'
+    && run?.narration?.failure_boundary?.kind === 'call_limit_preflight'
+    && Number(run?.narration?.model_calls || 0) === 0
+  const resumable = narrationResumable
+    || (resumableScenario && retainedCheckpoint && ['paused', 'failed'].includes(status))
   const running = status === 'running' && resumableScenario
   $('#resume').hidden = !resumable
   $('#resume').disabled = false
+  $('#resume').textContent = narrationResumable
+    ? 'Finish missing narrative'
+    : 'Resume from retained step'
+  $('#resume').title = narrationResumable
+    ? 'Generate only the missing narrative from the completed retained trace. The simulated world and participant calls are not replayed.'
+    : buttonTooltips.resume
+  $('#resume').setAttribute('aria-label', $('#resume').title)
   $('#pause').hidden = !running
   $('#pause').disabled = false
   $('#stop').hidden = !running
@@ -767,7 +780,12 @@ function renderLifecycleControls(run = current) {
     $('#lifecycle-help').textContent = run.pause_message || 'The current causal step is finishing before the checkpoint is retained.'
   } else if (status === 'completed') {
     $('#run-status').textContent = 'Completed'
-    $('#lifecycle-help').textContent = run.completion?.public_summary || 'This run is complete. Choose another condition or open a saved run from Run history.'
+    $('#lifecycle-help').textContent = narrationResumable
+      ? 'The simulation completed, but its narrative was not generated. Finish only that missing presentation phase without replaying the run.'
+      : run.completion?.public_summary || 'This run is complete. Choose another condition or open a saved run from Run history.'
+  } else if (status === 'narrating') {
+    $('#run-status').textContent = 'Writing narrative'
+    $('#lifecycle-help').textContent = 'The world run is complete. The narrator is now turning its retained causal moments into a readable account.'
   } else if (status === 'stop_requested') {
     $('#run-status').textContent = 'Stop requested'
     $('#lifecycle-help').textContent = run.stop_message || 'The current causal step is finishing before this run ends.'
@@ -2773,7 +2791,7 @@ $('#resume').onclick = async () => {
   $('#run-status').textContent = 'Resuming…'
   try {
     const body = await request(`/api/runs/${current.run_id}/resume`, {method:'POST'})
-    if (body.status === 'running' && current.execution === 'live') {
+    if (['running', 'narrating'].includes(body.status) && current.execution === 'live') {
       activeRunId = body.run_id
       liveProgressSequence = Number.isInteger(body.progress_sequence) ? body.progress_sequence : 0
       liveProjection = null
@@ -2782,10 +2800,17 @@ $('#resume').onclick = async () => {
       $('#result').hidden = false
       $('#narrative-section').hidden = true
       $('#live-evidence').hidden = false
-      $('#live-evidence-title').textContent = 'Live run resumed'
-      $('#live-evidence-body').textContent = 'Waiting for the next retained causal update.'
-      $('#result-status').textContent = `running · ${String(body.scenario || '').replaceAll('_', ' ')}`
-      $('#result-cost').textContent = 'Waiting for the next retained causal update…'
+      const narrationOnly = body.status === 'narrating'
+      $('#live-evidence-title').textContent = narrationOnly
+        ? 'Writing the missing narrative'
+        : 'Live run resumed'
+      $('#live-evidence-body').textContent = narrationOnly
+        ? 'The completed causal trace is unchanged; waiting for its readable account.'
+        : 'Waiting for the next retained causal update.'
+      $('#result-status').textContent = `${body.status} · ${String(body.scenario || '').replaceAll('_', ' ')}`
+      $('#result-cost').textContent = narrationOnly
+        ? 'Participant execution is complete; narrator calls are in progress…'
+        : 'Waiting for the next retained causal update…'
       renderLifecycleControls(body)
       void pollLiveRun(body.run_id)
     } else {

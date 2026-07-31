@@ -111,6 +111,37 @@ def test_restart_invalidates_only_interrupted_post_run_measurement(
     assert failure["error_type"] == "InterruptedMeasurement"
 
 
+def test_restart_preserves_world_when_narration_resume_is_interrupted(
+    tmp_path: Path,
+) -> None:
+    store = RunStore(tmp_path)
+    store.save(
+        {
+            "run_id": "run_ffffffffffff",
+            "status": "narrating",
+            "story": {"headline": "World outcome retained"},
+            "cost_fully_observable": True,
+            "narration_resume": {
+                "status": "running",
+                "world_replayed": False,
+            },
+        }
+    )
+
+    changed = store.mark_incomplete_interrupted()
+    retained = store.get("run_ffffffffffff")
+
+    assert changed == 1
+    assert retained["status"] == "completed"
+    assert retained["story"] == {"headline": "World outcome retained"}
+    assert retained["cost_fully_observable"] is False
+    assert retained["narration"]["failure_boundary"]["kind"] == (
+        "interrupted_narration_resume"
+    )
+    assert retained["narration_resume"]["status"] == "failed"
+    assert retained["narration_resume"]["world_replayed"] is False
+
+
 def test_run_summary_marks_only_measurements_that_need_validation(
     tmp_path: Path,
 ) -> None:

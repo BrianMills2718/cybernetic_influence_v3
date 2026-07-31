@@ -288,6 +288,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function renderCoordinationMeasurement" in app_script.content
     assert b"coordination_measurement_readout" in app_script.content
     assert b"Resume from retained step" in page.content
+    assert b"Finish missing narrative" in app_script.content
+    assert b"world and participant calls are not replayed" in app_script.content
+    assert b"['running', 'narrating'].includes(body.status)" in app_script.content
     assert b"['service_desk', 'coordination_decision'].includes" in app_script.content
     assert b"known provider cost; one or more retry charges unavailable" in app_script.content
     assert b"LLM-driven participant decisions" in app_script.content
@@ -796,6 +799,7 @@ def test_live_worker_retains_pending_activation_before_commit(tmp_path: Path) ->
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
+                "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary-terra",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
             },
         ),
@@ -1654,6 +1658,7 @@ def test_invalid_live_run_id_does_not_leave_the_live_lock_held(tmp_path: Path) -
                 "CYBERNETIC_INFLUENCE_LIVE": "1",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
+                "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary-terra",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
             },
         ),

@@ -77,6 +77,7 @@ from cybernetic_influence.presentation import (
     build_analyst_document,
     build_service_desk_analyst_document,
     clip_boundary_activity_projection,
+    coalesce_retained_exact_work_moments,
     event_driven_service_desk_outcome,
     validate_retained_boundary_activities,
 )
@@ -646,6 +647,56 @@ def create_app(
             copied["live_progress"] = progress
             copied["progress_sequence"] = len(progress)
             return copied
+
+    def retained_live_configuration(
+        document: dict[str, object],
+        *,
+        description: str,
+    ) -> EffectiveRunLlmConfiguration:
+        """Revalidate the exact retained route before spending on a later phase."""
+        if os.getenv("CYBERNETIC_INFLUENCE_LIVE") != "1":
+            raise HTTPException(
+                status_code=403,
+                detail="live execution requires CYBERNETIC_INFLUENCE_LIVE=1",
+            )
+        try:
+            retained = EffectiveRunLlmConfiguration.model_validate(
+                document["llm_configuration"]
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{description} has invalid LLM configuration",
+            ) from error
+        if retained.llm_client_revision != llm_client_revision():
+            raise HTTPException(
+                status_code=409,
+                detail=f"{description} requires its original shared-client revision",
+            )
+        try:
+            current = resolve_live_configuration(
+                RunLlmOptions(
+                    model=retained.model,
+                    agent_reasoning_effort=retained.agent_reasoning_effort,
+                    max_total_cost=retained.max_total_cost,
+                )
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=409,
+                detail=f"{description} route is not currently certified",
+            ) from error
+        if (
+            current.model != retained.model
+            or current.agent_reasoning_effort != retained.agent_reasoning_effort
+            or current.narrator_reasoning_effort
+            != retained.narrator_reasoning_effort
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail=f"{description} requires its original model policy",
+            )
+        return retained
 
     def retain_live_coordination_measurement(
         document: dict[str, object],
@@ -1582,6 +1633,163 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(error)) from error
         except RunNotFoundError as error:
             raise HTTPException(status_code=404, detail="run not found") from error
+        narration = paused.get("narration")
+        narration_resume = paused.get("narration_resume")
+        if (
+            paused.get("status") == "completed"
+            and isinstance(narration, dict)
+            and narration.get("status") == "completed"
+            and isinstance(narration_resume, dict)
+            and narration_resume.get("status") == "completed"
+        ):
+            return paused
+        failure_boundary = (
+            narration.get("failure_boundary")
+            if isinstance(narration, dict)
+            else None
+        )
+        narration_only_resume = (
+            paused.get("status") == "completed"
+            and paused.get("scenario")
+            in {"coordination_decision", "coordination_decision_v1"}
+            and paused.get("execution") == "live"
+            and isinstance(narration, dict)
+            and narration.get("status") == "unavailable"
+            and _nonnegative_int(narration.get("model_calls")) == 0
+            and isinstance(failure_boundary, dict)
+            and failure_boundary.get("kind") == "call_limit_preflight"
+        )
+        if narration_only_resume:
+            effective_narrator = retained_live_configuration(
+                paused,
+                description="completed live run",
+            )
+            if not live_lock.acquire(blocking=False):
+                raise HTTPException(
+                    status_code=409,
+                    detail="another live run is already active",
+                )
+            try:
+                raw_moments = paused.get("moments")
+                if not isinstance(raw_moments, list) or not all(
+                    isinstance(item, dict) for item in raw_moments
+                ):
+                    raise HTTPException(
+                        status_code=422,
+                        detail="retained causal moments are invalid",
+                    )
+                coalesced = coalesce_retained_exact_work_moments(
+                    cast(list[dict[str, object]], raw_moments)
+                )
+                if len(coalesced) > effective_narrator.maximum_narrator_calls:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=(
+                            "retained causal moments still exceed the original "
+                            "narrator call limit after coordination coalescing"
+                        ),
+                    )
+                pending = {
+                    **paused,
+                    "status": "narrating",
+                    "moments": coalesced,
+                    "narration": {
+                        "status": "running",
+                        "reason": (
+                            "The completed world run is unchanged; its missing "
+                            "causal-moment narrative is now being generated."
+                        ),
+                        "model_calls": 0,
+                        "cost": 0.0,
+                        "moments": [],
+                        "calls": [],
+                    },
+                    "narration_resume": {
+                        "status": "running",
+                        "started_at": now_iso(),
+                        "world_replayed": False,
+                        "previous_failure_boundary": deepcopy(
+                            failure_boundary
+                        ),
+                    },
+                }
+                pending = runs.save(pending)
+            except Exception:
+                live_lock.release()
+                raise
+
+            def execute_narration_resume_worker() -> None:
+                try:
+                    current = runs.get(run_id)
+                    narrated = _attach_narration(
+                        current,
+                        live=True,
+                        run_id=run_id,
+                        effective_llm=effective_narrator,
+                    )
+                    resumed_narration = narrated.get("narration")
+                    completed = (
+                        isinstance(resumed_narration, dict)
+                        and resumed_narration.get("status") == "completed"
+                    )
+                    runs.save(
+                        {
+                            **narrated,
+                            "status": "completed",
+                            "narration_resume": {
+                                **cast(
+                                    dict[str, object],
+                                    current["narration_resume"],
+                                ),
+                                "status": "completed" if completed else "failed",
+                                "completed_at": now_iso(),
+                                "world_replayed": False,
+                            },
+                        }
+                    )
+                except Exception as error:
+                    latest = runs.get(run_id)
+                    runs.save(
+                        {
+                            **latest,
+                            "status": "completed",
+                            "cost_fully_observable": False,
+                            "narration": {
+                                "status": "unavailable",
+                                "reason": (
+                                    "The narration-only resume failed; the "
+                                    "completed world run remains available."
+                                ),
+                                "failure_boundary": {
+                                    "kind": "narration_resume_error",
+                                    "error_type": type(error).__name__,
+                                    "error_message": str(error),
+                                },
+                                "model_calls": 0,
+                                "cost": 0.0,
+                                "moments": [],
+                                "calls": [],
+                            },
+                            "narration_resume": {
+                                **cast(
+                                    dict[str, object],
+                                    latest["narration_resume"],
+                                ),
+                                "status": "failed",
+                                "completed_at": now_iso(),
+                                "world_replayed": False,
+                            },
+                        }
+                    )
+                finally:
+                    live_lock.release()
+
+            Thread(
+                target=execute_narration_resume_worker,
+                name=f"cybernetic-narration-resume-{run_id}",
+                daemon=True,
+            ).start()
+            return JSONResponse(status_code=202, content=pending)
         scenario = paused.get("scenario")
         if (
             (
@@ -1633,41 +1841,10 @@ def create_app(
         live = paused.get("execution") == "live"
         effective_llm: EffectiveRunLlmConfiguration | None = None
         if live:
-            if os.getenv("CYBERNETIC_INFLUENCE_LIVE") != "1":
-                raise HTTPException(
-                    status_code=403,
-                    detail="live execution requires CYBERNETIC_INFLUENCE_LIVE=1",
-                )
-            try:
-                effective_llm = EffectiveRunLlmConfiguration.model_validate(paused["llm_configuration"])
-            except (KeyError, TypeError, ValueError) as error:
-                raise HTTPException(status_code=422, detail="paused live run has invalid LLM configuration") from error
-            if effective_llm.llm_client_revision != llm_client_revision():
-                raise HTTPException(status_code=409, detail="paused live run requires its original shared-client revision")
-            try:
-                current_llm = resolve_live_configuration(
-                    RunLlmOptions(
-                        model=effective_llm.model,
-                        agent_reasoning_effort=effective_llm.agent_reasoning_effort,
-                        max_total_cost=effective_llm.max_total_cost,
-                    )
-                )
-            except ValueError as error:
-                raise HTTPException(
-                    status_code=409,
-                    detail="paused live run route is not currently certified",
-                ) from error
-            if (
-                current_llm.model != effective_llm.model
-                or current_llm.agent_reasoning_effort
-                != effective_llm.agent_reasoning_effort
-                or current_llm.narrator_reasoning_effort
-                != effective_llm.narrator_reasoning_effort
-            ):
-                raise HTTPException(
-                    status_code=409,
-                    detail="paused live run requires its original model policy",
-                )
+            effective_llm = retained_live_configuration(
+                paused,
+                description="paused live run",
+            )
             if not worker_execution and not live_lock.acquire(blocking=False):
                 raise HTTPException(status_code=409, detail="another live run is already active")
         if live and not worker_execution:
@@ -2586,8 +2763,12 @@ def _attach_narration(
         if live and effective_llm is not None
         else reference_narration()
     )
-    agent_calls = _nonnegative_int(narrated.get("model_calls"))
-    agent_cost = _nonnegative_float(narrated.get("cost"))
+    agent_calls = _nonnegative_int(
+        narrated.get("agent_model_calls", narrated.get("model_calls"))
+    )
+    agent_cost = _nonnegative_float(
+        narrated.get("agent_cost", narrated.get("cost"))
+    )
     narration_calls = _nonnegative_int(narration.get("model_calls"))
     narration_cost = _nonnegative_float(narration.get("cost"))
     narrated["agent_model_calls"] = agent_calls

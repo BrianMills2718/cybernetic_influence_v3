@@ -26,6 +26,10 @@ AnalystAnimationKind = Literal[
     "effect_dissipated",
 ]
 
+COORDINATION_SCENARIO_IDS = frozenset(
+    {"coordination_decision", "coordination_decision_v1"}
+)
+
 
 class AnalystAnimationCue(BaseModel):
     """One analyst-safe visual cue derived from a retained causal event."""
@@ -722,7 +726,7 @@ def build_analyst_document(
     moments = analyst_moments(
         result,
         timeline,
-        coalesce_exact_work=scenario == "coordination_decision",
+        coalesce_exact_work=scenario in COORDINATION_SCENARIO_IDS,
     )
     boundaries = analyst_boundaries(
         analytical_boundaries,
@@ -919,6 +923,54 @@ def analyst_moments(
     for moment_number, moment in enumerate(moments, start=1):
         moment["moment"] = moment_number
     return moments
+
+
+def coalesce_retained_exact_work_moments(
+    moments: Sequence[Mapping[str, object]],
+) -> list[dict[str, object]]:
+    """Apply the coordination projection to an already retained moment list.
+
+    This is intentionally limited to adjacent exact-only records. Participant
+    activations remain one-for-one, and no event or exact-work identifier is
+    discarded. It lets a completed run resume a missing presentation phase
+    without replaying the simulated world.
+    """
+    coalesced: list[dict[str, object]] = []
+    for raw_moment in moments:
+        moment = deepcopy(dict(raw_moment))
+        if (
+            coalesced
+            and moment.get("participants") == ["exact_mechanisms"]
+            and coalesced[-1].get("participants") == ["exact_mechanisms"]
+        ):
+            previous = coalesced[-1]
+            previous["logical_time"] = moment.get("logical_time")
+            previous["causal_time"] = moment.get("causal_time")
+            previous["causal_timestamp"] = moment.get("causal_timestamp")
+            previous["representative_event_index"] = moment.get(
+                "representative_event_index"
+            )
+            previous_event_ids = previous.get("event_ids")
+            current_event_ids = moment.get("event_ids")
+            if not isinstance(previous_event_ids, list) or not isinstance(
+                current_event_ids, list
+            ):
+                raise ValueError("retained exact-work moment has invalid event IDs")
+            previous_event_ids.extend(deepcopy(current_event_ids))
+            previous_exact_work_ids = previous.get("exact_work_ids")
+            current_exact_work_ids = moment.get("exact_work_ids")
+            if not isinstance(previous_exact_work_ids, list) or not isinstance(
+                current_exact_work_ids, list
+            ):
+                raise ValueError(
+                    "retained exact-work moment has invalid exact-work IDs"
+                )
+            previous_exact_work_ids.extend(deepcopy(current_exact_work_ids))
+            continue
+        coalesced.append(moment)
+    for moment_number, moment in enumerate(coalesced, start=1):
+        moment["moment"] = moment_number
+    return coalesced
 
 
 def analyst_snapshots(

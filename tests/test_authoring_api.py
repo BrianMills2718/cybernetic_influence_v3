@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import time
+from copy import deepcopy
 from pathlib import Path
+from threading import Event
 from typing import Any, cast
 
 from fastapi.testclient import TestClient
@@ -38,6 +40,7 @@ from cybernetic_influence.authoring.service import (
     _provider_candidate_from_proposal,
 )
 from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
+from cybernetic_influence.run_store import RunStore
 
 
 class _Meta:
@@ -143,6 +146,16 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
     assert retained["timeline"]
     assert retained["narration"]["status"] == "completed"
     assert retained["boundaries"]
+    assert len(retained["moments"]) <= 57
+    assert not any(
+        left["participants"] == ["exact_mechanisms"]
+        and right["participants"] == ["exact_mechanisms"]
+        for left, right in zip(
+            retained["moments"],
+            retained["moments"][1:],
+            strict=False,
+        )
+    )
     modules = retained["theory_analysis"]["modules"]
     assert modules["decision_environment"]["status"] == "available"
     assert modules["collective_competence"]["status"] == "available"
@@ -179,6 +192,163 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
         ]
         == "invalid"
     )
+
+
+def test_completed_authored_run_resumes_only_missing_narration(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    api = _client(tmp_path)
+    completed: dict[str, Any] = {
+        "run_id": "run_123456789abc",
+        "created_at": "2026-07-30T00:00:00+00:00",
+        "status": "completed",
+        "scenario": "coordination_decision_v1",
+        "profile": "authored_typed_scenario",
+        "arm": "stabilization",
+        "execution": "scripted",
+        "story": {"headline": "World outcome retained", "summary": "Retained."},
+        "outcome": {"final_status": "no_decision_by_horizon"},
+        "events": [
+            {"event_id": "event_000001"},
+            {"event_id": "event_000002"},
+        ],
+        "timeline": [],
+        "boundaries": [],
+        "moments": [
+            {
+                "activation": "exact_work_000001",
+                "causal_time": 1,
+                "causal_timestamp": "c1",
+                "logical_time": 1,
+                "participants": ["exact_mechanisms"],
+                "event_ids": ["event_000001"],
+                "exact_work_ids": ["exact_work_000001"],
+                "representative_event_index": 0,
+                "moment": 1,
+            },
+            {
+                "activation": "exact_work_000002",
+                "causal_time": 2,
+                "causal_timestamp": "c2",
+                "logical_time": 2,
+                "participants": ["exact_mechanisms"],
+                "event_ids": ["event_000002"],
+                "exact_work_ids": ["exact_work_000002"],
+                "representative_event_index": 1,
+                "moment": 2,
+            },
+        ],
+    }
+    original_event_ids = [
+        event["event_id"] for event in completed["events"]
+    ]
+    original_final_status = completed["outcome"]["final_status"]
+
+    # Recreate the exact pre-fix retained shape: adjacent exact-only moments
+    # made the narration preflight exceed its configured limit.
+    moments = deepcopy(completed["moments"])
+
+    revision = api_module.llm_client_revision()
+    effective = EffectiveRunLlmConfiguration(
+        model="openrouter/openai/gpt-5.6-terra",
+        agent_reasoning_effort="medium",
+        narrator_reasoning_effort="low",
+        max_total_cost=0.74,
+        maximum_narrator_calls=57,
+        selection_basis="operator_selected",
+        llm_client_revision=revision,
+    )
+    retained = {
+        **completed,
+        "execution": "live",
+        "moments": moments,
+        "agent_model_calls": 5,
+        "model_calls": 5,
+        "agent_cost": 0.12,
+        "cost": 0.12,
+        "llm_configuration": effective.model_dump(mode="json"),
+        "narration": {
+            "status": "unavailable",
+            "reason": "preflight",
+            "failure_boundary": {
+                "kind": "call_limit_preflight",
+                "required_calls": 66,
+                "configured_max_calls": 57,
+            },
+            "model_calls": 0,
+            "cost": 0.0,
+            "moments": [],
+            "calls": [],
+        },
+    }
+    RunStore(tmp_path / "runs").save(retained)
+
+    narrated = Event()
+    observed_moments: list[list[dict[str, object]]] = []
+
+    def fake_narration(
+        document: dict[str, object],
+        **_kwargs: object,
+    ) -> dict[str, object]:
+        projected = cast(list[dict[str, object]], document["moments"])
+        observed_moments.append(deepcopy(projected))
+        narrated.set()
+        return {
+            "status": "completed",
+            "model_calls": 2,
+            "cost": 0.03,
+            "cost_fully_observable": True,
+            "moments": [],
+            "calls": [],
+        }
+
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    monkeypatch.setattr(
+        api_module,
+        "resolve_live_configuration",
+        lambda _options: effective,
+    )
+    monkeypatch.setattr(api_module, "narrate_live_moments", fake_narration)
+
+    started = api.post(f"/api/runs/{completed['run_id']}/resume")
+    assert started.status_code == 202, started.text
+    assert started.json()["status"] == "narrating"
+    assert started.json()["narration_resume"]["world_replayed"] is False
+    assert narrated.wait(timeout=5)
+
+    for _ in range(200):
+        reopened = api.get(f"/api/runs/{completed['run_id']}").json()
+        if reopened["status"] == "completed":
+            break
+        time.sleep(0.01)
+    else:
+        raise AssertionError("narration-only resume did not complete")
+
+    assert len(observed_moments) == 1
+    assert not any(
+        left["participants"] == ["exact_mechanisms"]
+        and right["participants"] == ["exact_mechanisms"]
+        for left, right in zip(
+            observed_moments[0],
+            observed_moments[0][1:],
+            strict=False,
+        )
+    )
+    assert reopened["narration_resume"]["status"] == "completed"
+    assert reopened["narration_resume"]["world_replayed"] is False
+    assert reopened["agent_model_calls"] == 5
+    assert reopened["narration_model_calls"] == 2
+    assert reopened["model_calls"] == 7
+    assert reopened["agent_cost"] == 0.12
+    assert reopened["narration_cost"] == 0.03
+    assert reopened["cost"] == 0.15
+    assert [event["event_id"] for event in reopened["events"]] == original_event_ids
+    assert reopened["outcome"]["final_status"] == original_final_status
+
+    idempotent = api.post(f"/api/runs/{completed['run_id']}/resume")
+    assert idempotent.status_code == 200
+    assert len(observed_moments) == 1
 
 
 def test_semantic_coordination_authoring_compiles_without_provider_owned_ids(

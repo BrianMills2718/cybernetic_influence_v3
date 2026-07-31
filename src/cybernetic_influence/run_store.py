@@ -174,6 +174,37 @@ class RunStore:
                     continuation["lifecycle"] = "interrupted"
                 self.save(document)
                 changed += 1
+            elif document.get("status") == "narrating":
+                # World execution was already complete. Preserve that outcome
+                # and classify only the derived presentation phase as missing.
+                document["status"] = "completed"
+                document["cost_fully_observable"] = False
+                document["narration"] = {
+                    "status": "unavailable",
+                    "reason": (
+                        "The server stopped while the completed run's narrative "
+                        "was being generated."
+                    ),
+                    "failure_boundary": {
+                        "kind": "interrupted_narration_resume",
+                    },
+                    "model_calls": 0,
+                    "cost": 0.0,
+                    "moments": [],
+                    "calls": [],
+                }
+                narration_resume = document.get("narration_resume")
+                document["narration_resume"] = {
+                    **(
+                        narration_resume
+                        if isinstance(narration_resume, dict)
+                        else {}
+                    ),
+                    "status": "failed",
+                    "world_replayed": False,
+                }
+                self.save(document)
+                changed += 1
             elif document.get("coordination_measurement_status") == "running":
                 # The completed world run remains authoritative. Only its
                 # downstream analysis was interrupted by the prior process.
