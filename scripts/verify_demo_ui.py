@@ -280,10 +280,13 @@ def main() -> None:
         page.locator("#analytical-scale-toggle").click()
         page.locator(".cy-graph-bar strong", has_text="Expanded exact network").wait_for()
         page.locator("#analytical-boundary").select_option("pressure_source_ensemble")
+        selected_boundary_label = page.locator(
+            "#analytical-boundary option:checked"
+        ).inner_text()
         page.locator("#analytical-scale-toggle").click()
         page.locator(".cy-graph-bar strong", has_text="Collapsed composite").wait_for()
         assert page.locator(".cy-flow-node--analytical_boundary").count() == 1
-        assert "Pressure-source ensemble" in page.locator(
+        assert selected_boundary_label in page.locator(
             "#analytical-scale-toggle"
         ).inner_text()
 

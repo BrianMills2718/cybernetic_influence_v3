@@ -40,8 +40,9 @@ and M8 were initially reported as technically demonstrated. A subsequent
 audit found that the canonical draft classified every terminal outcome as
 goal-satisfying, so its Levin goal finding could not discriminate success from
 mere termination. The same audit found omitted configured-graph relationships
-and ambiguous terminal narration. Packet 24D repairs those contracts; M6 and
-M7 require a corrected canonical readout afterward.
+and ambiguous terminal narration. Packet 24D repaired those contracts and
+retained a corrected reference readout. M6 is now technically satisfied; M7
+remains the operator's comprehension judgment.
 
 ## Current-to-target Delta
 
@@ -361,7 +362,8 @@ Provider-free evidence:
 
 **Classification:** canonical outcome exemplar.
 
-**Status:** technical execution complete; stakeholder readout pending.
+**Status:** historical technical evidence; superseded for M6 goal evaluation by
+Packet 24D.
 
 After explicit route/deployment/live authorization:
 
@@ -422,15 +424,15 @@ Acceptance disposition:
 | M3 | pass | Reference and live paths, retained exact runtime, maps, narratives, evidence, and non-replaying resume verified |
 | M4 | pass | Validated theory-neutral bundle reopened with unchanged digest |
 | M5 | pass | Sixteen provenance-labeled Waltzman findings rendered |
-| M6 | repair required | Seven findings rendered, but the retained canonical draft incorrectly counted all terminal outcomes as goal-satisfying |
-| M7 | repair and stakeholder judgment pending | Graph relationships and terminal wording require correction before stakeholder review |
+| M6 | pass | Corrected retained reference run renders seven findings from a discriminating goal configuration and preserved evidence bundle |
+| M7 | stakeholder judgment pending | Technical browser flow passes on the corrected run; operator comprehension remains unobserved |
 | M8 | pass | Canonical documents and rendered UI separate scenario, run, analysis, and post-MVP experiment concerns |
 
 ### Packet 24D — truthful configured graph, goal result, and terminal account
 
 **Classification:** direct MVP truthfulness repair.
 
-**Status:** implementation complete; corrected canonical readout pending.
+**Status:** technically complete; stakeholder readout pending.
 
 1. Project declared mechanism reads, writes, substrates, observation targets,
    and representation relationships onto analyst-visible configured nodes.
@@ -447,8 +449,27 @@ Acceptance disposition:
 
 The historical Packet 24C run remains immutable evidence of its exact world
 trajectory. It is not silently reinterpreted as valid goal-satisfaction
-evidence. M6 and M7 require a newly approved corrected configuration and
-readout, while M1–M5 and M8 retain their independent evidence.
+evidence. Corrected draft `draft_6fbb279df69b` was separately approved and
+compiled on private Mac build
+`92a310cfc93128d46acd97c4b21e5c1acc47a4a3`. Reference run
+`run_eded0f70b15f` ended `scope_reduced` with zero model calls and zero cost;
+both theory modules are available, and reopen preserved the evidence-bundle
+and Levin-readout digests. Its Levin goal finding is `calculated`, cites the
+reviewed scenario, exact terminal state, and completion record, and reports
+that `scope_reduced` satisfies the configured goal.
+
+The corrected preview classifies 51 nodes as causal and 3 as analytical-only,
+with no unexplained-isolation warning. A deployed negative control that marked
+all terminal outcomes goal-satisfying returned the declared 422 rejection and
+left the approved revision unchanged. The desktop browser flow passed deep
+link, three graph projections, both analytical composites, spatial
+containment, pause/resume, narrative, and theory-card checks with no console,
+request, or current-service log errors. The harness now derives authored
+boundary labels from the selector rather than assuming fixture labels.
+
+M6 is technically satisfied. M7 remains the operator's judgment of whether the
+corrected situation, trajectory, two theoretical readouts, evidence, and
+limitations are understandable without raw JSON.
 
 ## Review and Reset
 

@@ -131,13 +131,19 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   desktop surface showed the initial situation, concise and detailed
   narratives, all three graph meanings, participant and composite accounts,
   exact outcome, and both theory readouts without browser or backend errors.
-- M1–M5 and M8 retain implementation and evidence. An audit reopened M6 because
-  the canonical draft counted every terminal result—including
-  `no_decision_by_horizon`—as satisfying the candidate goal. Packet 24D now
-  rejects that configuration, completes the configured-relationship
-  projection, lints only unexplained isolation, and makes terminal narration
-  name the exact result. M6 needs a corrected retained readout; M7 then needs
-  stakeholder judgment on that corrected surface.
+- Corrected reference draft `draft_6fbb279df69b` and run
+  `run_eded0f70b15f` are retained on the private Mac surface. The approved
+  goal distinguishes three satisfying outcomes from partner disengagement and
+  no decision; the run ended `scope_reduced`, used zero model calls, reopened
+  with unchanged evidence and analysis digests, and rendered separate
+  Waltzman and Levin readouts. The Levin goal finding is calculated from the
+  reviewed configuration, exact terminal state, and completion record.
+- M1–M6 and M8 now have technical evidence. Packet 24D also completes the
+  configured-relationship projection, reports zero unexplained isolated nodes
+  in the corrected preview, rejects the all-terminal-outcomes negative control
+  without changing the approved draft, and passes the deployed desktop browser
+  flow without console or request errors. M7 remains the operator's
+  comprehensibility judgment on this corrected surface.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any
@@ -146,9 +152,10 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 ## Active Plan
 
 Follow [Slice 24: Configurable theory-informed simulation
-MVP](plans/024-configurable-theory-analysis-mvp.md). Packets 24A0–24C are
-implemented and Packet 24D owns the audited truthfulness repair. A corrected
-canonical readout for M6 must precede the M7 stakeholder review.
+MVP](plans/024-configurable-theory-analysis-mvp.md). Packets 24A0–24D are
+technically complete. The active boundary is the M7 stakeholder review of the
+corrected retained run; do not add another implementation packet before that
+judgment.
 
 Execute one packet at a time from a clean linked worktree. For each packet:
 

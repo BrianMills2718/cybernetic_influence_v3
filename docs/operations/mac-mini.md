@@ -20,11 +20,14 @@ are retained separately in the [July 2026 runtime history](../archive/operations
 they do not authorize a new run or establish present model availability.
 
 Last verified 2026-07-30: simulator commit
-`88fff4b55b4f261cd0bde236908061fe2dfa1948` served approved draft
-`draft_019c16228a62` and completed run `run_e1a91d0a47e1` after a service
-restart without changing their retained identities, calls, costs, world
-evidence, or analysis bundle. This is historical proof for the current MVP
-readout, not authorization for another live call.
+`92a310cfc93128d46acd97c4b21e5c1acc47a4a3` served corrected approved
+draft `draft_6fbb279df69b` and zero-call reference run
+`run_eded0f70b15f`. The run ended `scope_reduced`, retained both Waltzman and
+Levin readouts, reopened with unchanged evidence and analysis digests, and
+passed the deployed desktop flow without browser, request, or current-service
+log errors. Historical live draft `draft_019c16228a62` and run
+`run_e1a91d0a47e1` remain immutable Packet 24C evidence; they do not authorize
+another live call.
 
 ## Inspect
 
