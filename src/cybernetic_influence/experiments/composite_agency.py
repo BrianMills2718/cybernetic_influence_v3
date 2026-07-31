@@ -146,6 +146,7 @@ class CompositeExperimentFixture:
 class CompositeAssayExecution:
     """Validated five-row result retained through the ordinary run store."""
 
+    assay_id: str
     setup: CompositeAssaySetup
     run_refs: tuple[CompositeAssayRunRef, ...]
     readouts: tuple[CompositeControlReadout, ...]
@@ -159,6 +160,15 @@ def run_scripted_composite_assay(
     """Execute, calculate, validate, and retain the five provider-free rows."""
 
     perturbations = reviewed_perturbation_specs()
+    store = RunStore(store_root)
+    existing_assay_ids = {
+        str(metadata.get("assay_id"))
+        for summary in store.list_runs()[0]
+        if isinstance((metadata := summary.get("composite_assay")), Mapping)
+    }
+    assay_id = f"assay_{token_hex(6)}"
+    while assay_id in existing_assay_ids:
+        assay_id = f"assay_{token_hex(6)}"
     rows: list[tuple[PerturbationRowId, PerturbationSpec | None]] = [
         (CONTROL_ID, None),
         *[
@@ -227,14 +237,13 @@ def run_scripted_composite_assay(
         capability,
         perturbations,
     )
-    store = RunStore(store_root)
     run_refs: list[CompositeAssayRunRef] = []
     readouts: list[CompositeControlReadout] = []
     evidence_by_run: dict[str, CompositeAssayRunEvidence] = {}
     retained_run_ids: list[str] = []
     documents: list[dict[str, object]] = []
 
-    for row_id, perturbation in rows:
+    for row_index, (row_id, perturbation) in enumerate(rows):
         fixture = fixtures[row_id]
         run_id = f"run_{token_hex(6)}"
         while (store_root / f"{run_id}.json").exists():
@@ -286,6 +295,9 @@ def run_scripted_composite_assay(
             evidence=evidence,
             readout=readout,
             configuration_diff=diff_reports[row_id],
+            assay_id=assay_id,
+            row_index=row_index,
+            row_count=len(rows),
         )
         documents.append(document)
         retained_run_ids.append(run_id)
@@ -299,6 +311,7 @@ def run_scripted_composite_assay(
     for document in documents:
         store.save(document)
     return CompositeAssayExecution(
+        assay_id=assay_id,
         setup=setup,
         run_refs=tuple(run_refs),
         readouts=tuple(readouts),
@@ -1440,6 +1453,9 @@ def _retained_document(
     evidence: CompositeAssayRunEvidence,
     readout: CompositeControlReadout,
     configuration_diff: Mapping[str, JsonValue],
+    assay_id: str,
+    row_index: int,
+    row_count: int,
 ) -> dict[str, object]:
     retained_result = result
     terminal = readout.exact_values["terminal_outcome"]
@@ -1468,6 +1484,13 @@ def _retained_document(
     document["composite_assay_evidence"] = evidence.model_dump(mode="json")
     document["composite_control_readout"] = readout.model_dump(mode="json")
     document["configuration_diff"] = dict(configuration_diff)
+    document["composite_assay"] = {
+        "schema_version": 1,
+        "assay_id": assay_id,
+        "row_index": row_index,
+        "row_count": row_count,
+        "provider_calls": 0,
+    }
     return document
 
 

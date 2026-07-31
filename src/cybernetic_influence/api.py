@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Awaitable, Callable, Sequence
 from copy import deepcopy
 from pathlib import Path
@@ -13,7 +14,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, JsonValue
 
 from cybernetic_influence.authoring.compiler import AuthoringCompilationError
 from cybernetic_influence.authoring.models import (
@@ -60,6 +61,9 @@ from cybernetic_influence.analysis.coordination import (
 from cybernetic_influence.analysis.coordination_readout import (
     coordination_measurement_readout,
 )
+from cybernetic_influence.analysis.composite_agency import (
+    CompositeControlReadoutConsumer,
+)
 from cybernetic_influence.analysis.theory_retention import (
     build_live_theory_analysis,
     build_reference_theory_analysis,
@@ -102,6 +106,10 @@ from cybernetic_influence.run_configuration import (
     live_options_contract,
     llm_client_revision,
     resolve_live_configuration,
+)
+from cybernetic_influence.experiments.composite_agency import (
+    PerturbationRowId,
+    run_scripted_composite_assay,
 )
 from cybernetic_influence.scenarios.service_desk import (
     RuntimePaused,
@@ -214,6 +222,40 @@ class AuthoredRunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     execution: Literal["scripted", "live"] = "scripted"
     llm_options: RunLlmOptions | None = None
+
+
+class CompositeAssayRowResponse(BaseModel):
+    """One retained comparison row projected for the analyst UI."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    run_id: str
+    created_at: str
+    status: Literal["completed"]
+    row_id: PerturbationRowId
+    readout: CompositeControlReadoutConsumer
+    boundary_activity: BoundaryActivityProjection
+    configuration_diff: dict[str, JsonValue]
+
+
+class CompositeAssayResponse(BaseModel):
+    """The exact five-row comparison envelope."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    schema_version: Literal[1] = 1
+    assay_id: str
+    status: Literal["completed"] = "completed"
+    execution: Literal["scripted_reference"] = "scripted_reference"
+    provider_calls: Literal[0] = 0
+    rows: list[CompositeAssayRowResponse]
+
+
+class CompositeAssayTrashResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    assay_id: str
+    trashed_run_count: Literal[5]
 
 
 def _coordination_contract(condition: str) -> CoordinationDecisionFixture:
@@ -607,6 +649,93 @@ def create_app(
     stop_requests: dict[str, Event] = {}
     pause_lock = Lock()
     progress_lock = Lock()
+    composite_assay_lock = Lock()
+
+    def composite_assay_readout(assay_id: str) -> CompositeAssayResponse:
+        """Project one retained five-row assay without rerunning its simulations."""
+
+        if re.fullmatch(r"assay_[0-9a-f]{12}", assay_id) is None:
+            raise HTTPException(status_code=422, detail="invalid composite assay ID")
+        summaries, _ = runs.list_runs()
+        matching: list[dict[str, object]] = []
+        for item in summaries:
+            item_metadata = item.get("composite_assay")
+            if (
+                isinstance(item_metadata, dict)
+                and item_metadata.get("assay_id") == assay_id
+            ):
+                matching.append(item)
+        if not matching:
+            raise HTTPException(status_code=404, detail="composite assay not found")
+        documents = [runs.get(cast(str, item["run_id"])) for item in matching]
+        indexed_documents: list[tuple[int, dict[str, object]]] = []
+        for document in documents:
+            raw_metadata = document.get("composite_assay")
+            if not isinstance(raw_metadata, dict):
+                raise HTTPException(
+                    status_code=409,
+                    detail="retained composite assay metadata is malformed",
+                )
+            row_index = raw_metadata.get("row_index")
+            if (
+                not isinstance(row_index, int)
+                or isinstance(row_index, bool)
+                or row_index < 0
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="retained composite assay row order is malformed",
+                )
+            indexed_documents.append((row_index, document))
+        indexed_documents.sort(key=lambda item: item[0])
+        if [item[0] for item in indexed_documents] != list(range(5)):
+            raise HTTPException(
+                status_code=409,
+                detail="retained composite assay row order is incomplete",
+            )
+        documents = [item[1] for item in indexed_documents]
+        metadata = cast(dict[str, object], documents[0]["composite_assay"])
+        expected_count = metadata.get("row_count")
+        if expected_count != 5 or len(documents) != expected_count:
+            raise HTTPException(
+                status_code=409,
+                detail="retained composite assay is incomplete",
+            )
+        rows: list[CompositeAssayRowResponse] = []
+        for document in documents:
+            row_metadata = document.get("composite_assay")
+            readout = document.get("composite_control_readout")
+            evidence = document.get("composite_assay_evidence")
+            configuration_diff = document.get("configuration_diff")
+            if not all(
+                isinstance(value, dict)
+                for value in (row_metadata, readout, evidence, configuration_diff)
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="retained composite assay evidence is malformed",
+                )
+            if cast(dict[str, object], row_metadata).get("assay_id") != assay_id:
+                raise HTTPException(
+                    status_code=409,
+                    detail="retained composite assay identity is inconsistent",
+                )
+            rows.append(
+                CompositeAssayRowResponse.model_validate(
+                    {
+                        "run_id": document["run_id"],
+                        "created_at": document["created_at"],
+                        "status": document["status"],
+                        "row_id": document["arm"],
+                        "readout": readout,
+                        "boundary_activity": cast(dict[str, object], evidence)[
+                            "boundary_activity"
+                        ],
+                        "configuration_diff": configuration_diff,
+                    }
+                )
+            )
+        return CompositeAssayResponse(assay_id=assay_id, rows=rows)
 
     def retain_progress(
         run_id: str,
@@ -959,6 +1088,47 @@ def create_app(
                     coordination_measurement_readout(runs.get(run_id)).status
                 )
         return {"runs": retained, "corrupt_files": corrupt}
+
+    @app.post("/api/composite-assays")
+    def create_composite_assay(request: Request) -> CompositeAssayResponse:
+        """Run the reviewed five-row scripted assay without a provider call."""
+
+        _require_access(request)
+        if not composite_assay_lock.acquire(blocking=False):
+            raise HTTPException(
+                status_code=409,
+                detail="a composite assay is already running",
+            )
+        try:
+            execution = run_scripted_composite_assay(runs.root)
+            return composite_assay_readout(execution.assay_id)
+        finally:
+            composite_assay_lock.release()
+
+    @app.get("/api/composite-assays/{assay_id}")
+    def retained_composite_assay(
+        assay_id: str,
+        request: Request,
+    ) -> CompositeAssayResponse:
+        """Reopen one retained assay without executing or calling a provider."""
+
+        _require_access(request)
+        return composite_assay_readout(assay_id)
+
+    @app.delete("/api/composite-assays/{assay_id}")
+    def trash_composite_assay(
+        assay_id: str,
+        request: Request,
+    ) -> CompositeAssayTrashResponse:
+        """Move all five retained rows to recoverable server trash."""
+
+        _require_access(request)
+        assay = composite_assay_readout(assay_id)
+        runs.trash_many([row.run_id for row in assay.rows])
+        return CompositeAssayTrashResponse(
+            assay_id=assay_id,
+            trashed_run_count=5,
+        )
 
     @app.post("/api/authoring/drafts")
     def create_draft(request: Request) -> dict[str, object]:

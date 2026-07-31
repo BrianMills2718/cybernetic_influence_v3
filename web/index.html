@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=coordination-authoring-v1">
+  <link rel="stylesheet" href="/assets/styles.css?v=composite-assay-v1">
   <link rel="stylesheet" href="/assets/graph-canvas.css?v=readable-run-v2">
 </head>
 <body>
@@ -337,6 +337,17 @@
       <span class="eyebrow">Saved simulations</span>
       <h2>Run history</h2>
       <p class="muted">Open an earlier run for inspection or move it to recoverable server trash. Each entry includes its exact run ID.</p>
+      <section class="assay-launch" aria-labelledby="assay-launch-title">
+        <div>
+          <span class="eyebrow">Collective capability stress test</span>
+          <h3 id="assay-launch-title">Compare five matched conditions</h3>
+          <p>See whether the same five-person partnership still reaches a valid decision after replacing one member, interrupting a route, removing verification feedback, or introducing a legitimate external risk.</p>
+          <small>This reviewed comparison uses fixed reference behavior, makes no model calls, and tests the simulation instrument—not a real organization.</small>
+        </div>
+        <button id="run-composite-assay" type="button">Run five-condition comparison</button>
+      </section>
+      <p id="assay-status" class="muted" aria-live="polite"></p>
+      <div id="composite-assays" class="composite-assays"></div>
       <p id="history-empty" class="muted">No retained runs yet.</p>
       <div id="history" class="history"></div>
       <p id="storage-warning" class="warning" hidden></p>
@@ -355,6 +366,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=spatial-scale-v1"></script>
-  <script src="/assets/app.js?v=coordination-authoring-v1"></script>
+  <script src="/assets/app.js?v=composite-assay-v1"></script>
 </body>
 </html>

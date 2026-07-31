@@ -33,6 +33,7 @@ let selectedNarrativeDetail = 'concise'
 let selectedBoundaryActivities = null
 let selectedBoundaryScope = 'full'
 let boundaryActivityRequestSerial = 0
+const compositeAssayCache = new Map()
 
 const buttonTooltips = {
   'simulation-tab': 'Choose and run a configured simulation.',
@@ -61,6 +62,7 @@ const buttonTooltips = {
   'next-event': 'Select the next causal step.',
   'narrative-concise': 'Read the one-sentence account for each causal step.',
   'narrative-detailed': 'Read how each participant action changed the world, with exact evidence available on demand.',
+  'run-composite-assay': 'Run the reviewed five-condition scripted comparison. It makes no model calls and retains five independently inspectable runs.',
 }
 
 function explainButton(button) {
@@ -70,7 +72,11 @@ function explainButton(button) {
     explanation = `Show or hide help for ${button.getAttribute('aria-controls')?.replaceAll('-', ' ') || 'this control'}.`
   }
   if (!explanation && button.classList.contains('open-run')) explanation = 'Open this retained run for inspection.'
+  if (!explanation && button.classList.contains('assay-row-select')) explanation = 'Compare this condition and show what crossed the group boundary.'
+  if (!explanation && button.classList.contains('open-assay-group')) explanation = 'Open the retained run with the partnership group account selected.'
+  if (!explanation && button.classList.contains('open-assay-run')) explanation = 'Open the full retained run, including its maps, story, people, measures, and exact evidence.'
   if (!explanation && button.classList.contains('trash-run')) explanation = 'Move this retained run to recoverable server trash.'
+  if (!explanation && button.classList.contains('trash-assay')) explanation = 'Move all five retained rows in this comparison to recoverable server trash.'
   if (!explanation && button.classList.contains('measurement-evidence-button')) explanation = 'Select the cited exact event on the simulation map and in Advanced evidence.'
   if (!explanation && button.classList.contains('turn-narrative')) explanation = 'Select this causal step and inspect its grounded evidence.'
   if (!explanation && button.classList.contains('timeline-marker')) explanation = 'Select this causal step.'
@@ -93,6 +99,12 @@ function applyButtonTooltips(root = document) {
 }
 
 function setWorkspaceView(view) {
+  const priorView = [
+    ['simulation', '#simulation-view'],
+    ['authoring', '#authoring-view'],
+    ['history', '#history-view'],
+    ['readme', '#readme-view'],
+  ].find(([, selector]) => !$(selector).hidden)?.[0]
   const simulation = view === 'simulation'
   const authoring = view === 'authoring'
   const history = view === 'history'
@@ -110,6 +122,7 @@ function setWorkspaceView(view) {
     $(tab).classList.toggle('active', active)
     $(tab).setAttribute('aria-pressed', String(active))
   }
+  if (priorView && priorView !== view) window.scrollTo({top:0, left:0, behavior:'auto'})
 }
 
 function authoringSummary(proposal) {
@@ -1132,14 +1145,210 @@ function describeCondition() {
   $('#arm-help').textContent = `${arm?.description || 'Choose the concrete condition you want the simulation to test.'} ${question}`
 }
 
+const compositeRowPresentation = {
+  matched_control: {
+    label:'Matched control',
+    change:'No perturbation; the original people, routes, and feedback remain in place.',
+  },
+  member_replacement: {
+    label:'Member replaced',
+    change:'A different person occupies the technical-validation position while its interfaces and responsibilities stay fixed.',
+  },
+  route_interruption: {
+    label:'Decision route interrupted',
+    change:'The direct final-proposal path becomes unavailable on day 4; a configured alternate path remains.',
+  },
+  feedback_interruption: {
+    label:'Verification feedback lost',
+    change:'Verification responses stop reaching the five decision makers after day 4.',
+  },
+  external_risk: {
+    label:'Legitimate external risk',
+    change:'A concrete outside source delivers relevant risk information to the validation position on day 4.',
+  },
+}
+
+function compositeOutcomeLabel(value) {
+  return {
+    deploy_on_time:'Full deployment approved',
+    scope_reduced:'Reduced scope approved',
+    delayed:'Decision delayed',
+    partner_disengaged:'Partner disengaged',
+    no_decision_by_horizon:'No decision by the deadline',
+  }[value] || String(value || 'No retained outcome').replaceAll('_', ' ')
+}
+
+function compositeRecoveryLabel(value, rowId) {
+  if (rowId === 'matched_control') return 'Not tested'
+  if (value === 'not_observed') return 'No recovery observed'
+  if (value && typeof value === 'object') {
+    return `Recovered after ${Number(value.scenario_minutes).toLocaleString()} modeled minutes`
+  }
+  return 'No recovery claim'
+}
+
+function compositeCorrectionLabel(values) {
+  const count = Array.isArray(values) ? values.length : 0
+  return count ? `${count} issue correction${count === 1 ? '' : 's'}` : 'No correction episode'
+}
+
+function compositeRouteLabel(values, rowId) {
+  if (Array.isArray(values) && values.length) return 'Alternate path used'
+  if (rowId === 'feedback_interruption') return 'Verification delivery blocked'
+  if (rowId === 'external_risk') return 'Outside input delivered'
+  return rowId === 'route_interruption' ? 'No alternate path used' : 'Original paths used'
+}
+
+function compositeMemberLabel(values) {
+  if (!Array.isArray(values) || !values.length) return 'Original five people'
+  return 'Technical position reoccupied'
+}
+
+function compositeFlowSummary(row) {
+  const activity = row.boundary_activity || {crossings:[], episodes:[]}
+  const crossings = activity.crossings || []
+  const incoming = crossings.filter((item) => item.direction === 'incoming')
+  const outgoing = crossings.filter((item) => item.direction === 'outgoing')
+  const episodes = activity.episodes || []
+  const completed = episodes.filter((item) => item.status === 'completed')
+  const external = row.readout?.external_result_event_ids || []
+  const crossingLine = (crossing) => `${refLabel(crossing.source_ref)} → ${refLabel(crossing.target_ref)}`
+  return `
+    <div class="assay-flow-grid">
+      <article><span class="eyebrow">What reached the group</span><strong>${incoming.length ? `${incoming.length} incoming flow${incoming.length === 1 ? '' : 's'}` : 'No outside input'}</strong><p>${incoming.length ? incoming.map(crossingLine).join('; ') : 'This condition began and remained within the configured partnership boundary.'}</p></article>
+      <article><span class="eyebrow">What the group sent out</span><strong>${outgoing.length ? `${outgoing.length} outward result${outgoing.length === 1 ? '' : 's'}` : 'No outward result'}</strong><p>${outgoing.length ? outgoing.map(crossingLine).join('; ') : 'No result crossed from the partnership to the external decision registry.'}</p></article>
+      <article><span class="eyebrow">How work connected</span><strong>${completed.length} completed group episode${completed.length === 1 ? '' : 's'}</strong><p>${episodes.length - completed.length ? `${episodes.length - completed.length} incoming thread is retained separately because it did not itself produce a boundary output.` : 'Every retained group episode with an output completed.'}</p></article>
+      <article><span class="eyebrow">What happened outside</span><strong>${external.length ? `${external.length} external result event${external.length === 1 ? '' : 's'}` : 'No external result'}</strong><p>External acceptance is kept separate from the group’s attempted and routed output.</p></article>
+    </div>`
+}
+
+function renderCompositeAssaySelection(assayId, rowId, updateUrl = true) {
+  const assay = compositeAssayCache.get(assayId)
+  const row = assay?.rows?.find((item) => item.row_id === rowId)
+  if (!row) return
+  if (updateUrl) {
+    const url = new URL(window.location)
+    url.searchParams.delete('run')
+    url.searchParams.delete('draft')
+    url.searchParams.set('assay', assayId)
+    window.history.replaceState({}, '', url)
+  }
+  const presentation = compositeRowPresentation[rowId] || {label:rowId.replaceAll('_',' '), change:'Reviewed condition.'}
+  const exact = row.readout.exact_values || {}
+  const pattern = row.readout.coded_patterns?.[0]
+  const changed = [
+    ...(row.configuration_diff.initial_configuration_changed_refs || []),
+    ...(row.configuration_diff.scheduled_configuration_changed_refs || []),
+    ...(row.configuration_diff.created_refs || []),
+  ]
+  const selection = document.querySelector(`[data-assay-selection="${assayId}"]`)
+  if (!selection) return
+  document.querySelectorAll(`[data-assay-id="${assayId}"] .assay-row-select`).forEach((button) => {
+    const selected = button.dataset.rowId === rowId
+    button.closest('tr').classList.toggle('selected', selected)
+    button.setAttribute('aria-pressed', String(selected))
+  })
+  selection.innerHTML = `
+    <span class="eyebrow">Selected condition · ${html(presentation.label)}</span>
+    <h4>${html(compositeOutcomeLabel(exact.terminal_outcome))}</h4>
+    <p>${html(presentation.change)}</p>
+    ${compositeFlowSummary(row)}
+    <div class="assay-interpretation">
+      <strong>${html(rowId === 'matched_control' ? 'Comparison reference' : pattern?.pattern_id === 'rational_caution' ? 'Observed response: rational caution' : pattern?.pattern_id?.replaceAll('_',' ') || 'No pattern claim')}</strong>
+      <p>${html(pattern?.explanation || 'The matched control is the comparison reference and makes no perturbation-pattern claim.')}</p>
+      <small>This is a coded reference pattern over retained evidence, not an organization-level thought or a causal attribution.</small>
+    </div>
+    <div class="assay-selection-actions">
+      <button class="open-assay-group" data-run-id="${html(row.run_id)}">View this group in the simulation</button>
+      <button class="open-assay-run" data-run-id="${html(row.run_id)}">Open the exact run</button>
+    </div>
+    <details class="assay-evidence-details"><summary>Changed components and exact evidence</summary>
+      <p><strong>Changed configuration:</strong> ${changed.length ? changed.map((item) => html(refLabel(item))).join(' · ') : 'None; this is the matched control.'}</p>
+      <p><strong>Boundary inputs:</strong> ${html(row.readout.input_crossing_ids.join(' · ') || 'none')}</p>
+      <p><strong>Coordination episodes:</strong> ${html(row.readout.coordination_episode_ids.join(' · ') || 'none')}</p>
+      <p><strong>Boundary outputs:</strong> ${html(row.readout.output_crossing_ids.join(' · ') || 'none')}</p>
+      <p><strong>External results:</strong> ${html(row.readout.external_result_event_ids.join(' · ') || 'none')}</p>
+      <div class="assay-evidence-buttons">${(pattern?.source_event_ids || []).map((eventId) => `<button data-assay-event="${html(eventId)}" data-run-id="${html(row.run_id)}">Inspect ${html(eventId)}</button>`).join('')}</div>
+    </details>`
+  selection.querySelector('.open-assay-group').onclick = async (event) => {
+    await openRetained(event.target.dataset.runId)
+    selectedPerson = 'deployment_partnership'
+    showTraceInPlace(selectedPerson)
+    showBoundary(selectedPerson)
+  }
+  selection.querySelector('.open-assay-run').onclick = (event) => openRetained(event.target.dataset.runId)
+  selection.querySelectorAll('[data-assay-event]').forEach((button) => {
+    button.onclick = async () => {
+      await openRetained(button.dataset.runId)
+      const index = current.timeline.findIndex((item) => item.event_id === button.dataset.assayEvent)
+      if (index >= 0) selectEvent(index)
+    }
+  })
+  applyButtonTooltips(selection)
+}
+
+function renderCompositeAssay(assay) {
+  if (assay.error) return `<section class="composite-assay assay-unavailable" data-assay-id="${html(assay.assay_id)}"><span class="eyebrow">Retained comparison unavailable</span><h3>${html(assay.error)}</h3><p>The rest of Run history remains available. Restore the missing retained rows or move the incomplete files aside before reopening this comparison.</p></section>`
+  const rows = assay.rows || []
+  return `<section class="composite-assay" data-assay-id="${html(assay.assay_id)}">
+    <header><div><span class="eyebrow">Retained five-condition comparison</span><h3>Can the partnership preserve a valid collective decision?</h3></div><div class="assay-header-actions"><small>${html(new Date(rows[0]?.created_at).toLocaleString())} · 0 model calls</small><button class="trash-assay" data-trash-assay-id="${html(assay.assay_id)}">Move comparison to trash</button></div></header>
+    <p class="assay-question">Compare concrete changes to people, routes, feedback, and relevant outside information. A slower or different decision is not automatically a loss of collective capability.</p>
+    <div class="assay-table-wrap"><table class="assay-table"><thead><tr><th>Condition</th><th>Goal and rules</th><th>Correction</th><th>Recovery</th><th>Routing</th><th>Members</th><th>Outcome</th></tr></thead><tbody>
+      ${rows.map((row) => {
+        const exact = row.readout.exact_values || {}
+        const presentation = compositeRowPresentation[row.row_id] || {label:row.row_id.replaceAll('_',' ')}
+        return `<tr><td><button class="assay-row-select" data-row-id="${html(row.row_id)}" aria-pressed="false">${html(presentation.label)}</button></td>
+          <td><strong>${exact.capability_satisfied ? 'Preserved' : 'Not preserved'}</strong><small>${exact.all_constraints_satisfied ? 'All reviewed rules met' : `Failed: ${(exact.failed_constraint_ids || []).map((item) => item.replaceAll('_',' ')).join(', ')}`}</small></td>
+          <td>${html(compositeCorrectionLabel(exact.correction_event_pairs))}</td>
+          <td>${html(compositeRecoveryLabel(exact.recovery, row.row_id))}</td>
+          <td>${html(compositeRouteLabel(exact.alternate_routes_used, row.row_id))}</td>
+          <td>${html(compositeMemberLabel(exact.member_replacements))}</td>
+          <td>${html(compositeOutcomeLabel(exact.terminal_outcome))}</td></tr>`
+      }).join('')}
+    </tbody></table></div>
+    <article class="assay-selection" data-assay-selection="${html(assay.assay_id)}"></article>
+  </section>`
+}
+
 async function loadHistory() {
   const result = await request('/api/runs')
-  $('#history-empty').hidden = result.runs.length > 0
+  const assayIds = [...new Set(result.runs.map((run) => run.composite_assay?.assay_id).filter(Boolean))]
+  const assays = await Promise.all(assayIds.map(async (assayId) => {
+    try {
+      if (!compositeAssayCache.has(assayId)) {
+        compositeAssayCache.set(assayId, await request(`/api/composite-assays/${assayId}`))
+      }
+      return compositeAssayCache.get(assayId)
+    } catch (error) {
+      return {assay_id:assayId, error:error.message}
+    }
+  }))
+  $('#composite-assays').innerHTML = assays.map(renderCompositeAssay).join('')
+  assays.filter((assay) => !assay.error).forEach((assay) => {
+    document.querySelectorAll(`[data-assay-id="${assay.assay_id}"] .assay-row-select`).forEach((button) => {
+      button.onclick = () => renderCompositeAssaySelection(assay.assay_id, button.dataset.rowId)
+    })
+    renderCompositeAssaySelection(assay.assay_id, assay.rows[0].row_id, false)
+  })
+  document.querySelectorAll('.trash-assay').forEach((button) => {
+    button.onclick = async () => {
+      if (!confirm('Move all five retained rows in this comparison to recoverable server trash?')) return
+      try {
+        await request(`/api/composite-assays/${button.dataset.trashAssayId}`, {method:'DELETE'})
+        compositeAssayCache.delete(button.dataset.trashAssayId)
+        await loadHistory()
+      } catch (error) {
+        $('#assay-status').textContent = error.message
+      }
+    }
+  })
+  const ordinaryRuns = result.runs.filter((run) => !run.composite_assay)
+  $('#history-empty').hidden = ordinaryRuns.length > 0 || assays.length > 0
   $('#storage-warning').hidden = result.corrupt_files.length === 0
   $('#storage-warning').textContent = result.corrupt_files.length
     ? `${result.corrupt_files.length} unreadable retained run file(s) require operator attention.`
     : ''
-  $('#history').innerHTML = result.runs.map((run) => `
+  $('#history').innerHTML = ordinaryRuns.map((run) => `
     <article class="history-item">
       <button class="open-run" data-run-id="${run.run_id}">
         <strong>${html(run.headline || run.status)}</strong>
@@ -1186,6 +1395,7 @@ async function openRetained(runId) {
   render(await request(`/api/runs/${runId}`))
   setWorkspaceView('simulation')
   const url = new URL(window.location)
+  url.searchParams.delete('assay')
   url.searchParams.set('run', runId)
   window.history.replaceState({}, '', url)
 }
@@ -2665,6 +2875,11 @@ function render(run) {
     $('#scenario-title').textContent = current.authoring.title || 'Authored scenario'
     $('#scenario-description').textContent = current.authoring.description || ''
     $('#arm-help').textContent = 'This is the concrete condition retained by the approved authored scenario.'
+  } else if (current.composite_assay) {
+    $('#scenario-title').textContent = 'Collective capability stress test'
+    $('#scenario-description').textContent = 'Five people must reach a valid deployment decision while concrete changes test member continuity, rerouting, feedback, and response to relevant outside information.'
+    $('#arm').innerHTML = `<option value="${html(current.arm)}">${html(compositeRowPresentation[current.arm]?.label || String(current.arm).replaceAll('_', ' '))}</option>`
+    $('#arm-help').textContent = compositeRowPresentation[current.arm]?.change || 'This is one retained row in the reviewed five-condition comparison.'
   }
   $('#result').hidden = false
   $('#result-summary-status').textContent = current.status === 'completed'
@@ -2770,6 +2985,22 @@ $('#narrative-concise').onclick = () => setNarrativeDetail('concise')
 $('#narrative-detailed').onclick = () => setNarrativeDetail('detailed')
 $('#history-tab').onclick = () => setWorkspaceView('history')
 $('#readme-tab').onclick = () => setWorkspaceView('readme')
+$('#run-composite-assay').onclick = async () => {
+  const button = $('#run-composite-assay')
+  button.disabled = true
+  $('#assay-status').textContent = 'Running five fixed reference conditions and retaining their exact evidence…'
+  try {
+    const assay = await request('/api/composite-assays', {method:'POST'})
+    compositeAssayCache.set(assay.assay_id, assay)
+    await loadHistory()
+    $('#assay-status').textContent = 'Comparison complete. Select a row to see what changed and step down to its exact run.'
+    renderCompositeAssaySelection(assay.assay_id, assay.rows[0].row_id)
+  } catch (error) {
+    $('#assay-status').textContent = error.message
+  } finally {
+    button.disabled = false
+  }
+}
 $('#authoring-spatial-layout').onclick = () => {
   if (!authoringPreview?.world) return
   selectedAuthoringGraphView = 'world'
@@ -3138,8 +3369,13 @@ Promise.all([loadConfig(), loadHistory()])
     const search = new URLSearchParams(window.location.search)
     const retainedId = search.get('run')
     const draftId = search.get('draft')
+    const assayId = search.get('assay')
     if (retainedId) await openRetained(retainedId)
     else if (draftId) await openAuthoringDraft(draftId)
+    else if (assayId && compositeAssayCache.has(assayId)) {
+      setWorkspaceView('history')
+      renderCompositeAssaySelection(assayId, compositeAssayCache.get(assayId).rows[0].row_id)
+    }
     else await loadScenarioPreview()
   })
   .catch((error) => { $('#run-status').textContent = error.message })

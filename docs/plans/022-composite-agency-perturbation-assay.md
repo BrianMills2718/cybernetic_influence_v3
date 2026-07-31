@@ -1,7 +1,7 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: packet_22a1_complete
+status: packet_22a2_technical_complete
 created: 2026-07-27
 updated: 2026-07-31
 ---
@@ -24,8 +24,9 @@ general causal-attribution framework, or generalized perturbation DSL.
 
 On 2026-07-30 the operator explicitly selected the implementation foundation,
 then on 2026-07-31 separately authorized Packet 22A1's provider-free scripted
-vertical. Packets 22A0–22A1 are complete. Packets 22A2 and 22B remain unstarted
-and require a later instruction. This selection does not mark the Slice-24 M7
+vertical and Packet 22A2's analyst UI. Packets 22A0–22A2 are technically
+complete. The Packet-22A2 stakeholder readout and Packet 22B remain open; 22B
+requires a later instruction. This selection does not mark the Slice-24 M7
 stakeholder readout complete or redefine the MVP.
 
 ## Analyst outcome
@@ -431,6 +432,8 @@ Observed evidence (2026-07-31):
 
 ### Packet 22A2 — analyst comparison and readout
 
+**Status:** technical execution complete; stakeholder readout pending.
+
 Add the matched-condition table to the existing comparison/run-history UI,
 with step-down to the selected run, analytical boundary, graph moment,
 narrative, exact measures, and coded reference pattern. Do not build a separate
@@ -451,9 +454,35 @@ The human readout asks:
 3. Does the presentation avoid equating speed, deployment, or disagreement
    with agency?
 
+Observed technical evidence (2026-07-31):
+
+- Run history groups the five retained rows into one matched-condition table
+  while keeping each row independently reopenable through the ordinary run API;
+- selecting a condition separates boundary inputs, derived coordination
+  episodes, boundary outputs, and external results, with changed references and
+  exact event citations behind deliberate evidence step-down;
+- the feedback-loss row visibly reports a failed reviewed capability and no
+  observed recovery, while the relevant-risk row reports retained rational
+  caution without construing it as hostile influence;
+- the selected row opens the unchanged Simulation surface with its spatial,
+  configured, and realized graphs, analytical scale, narratives, partnership
+  account, exact participants, and Waltzman/Levin readouts;
+- creating and reopening the comparison are typed API operations; generation
+  uses fixed scripted behavior, five retained runs, zero model calls, and no
+  provider; grouped deletion is recoverable and rolls back a partial file move;
+- the real desktop browser flow passed from a fresh assay deep link with a clean
+  console, no failed requests, clean server logs, and an inspected 1440×1100
+  rendering; mobile remains outside this PoC;
+- all 282 repository tests, focused mypy, the frontend production build,
+  JavaScript/Python and deploy-script syntax, and diff hygiene pass; and
+- repository-wide mypy retains the same 18 pre-existing errors in
+  `tests/test_configurable_theory_analysis.py` documented after Packet 22A1;
+  no changed Packet-22A2 file has a type error.
+
 ### 22A stopping rule
 
-After the human readout, stop and update this plan. Do not define numeric
+The technical readout is complete. After the human readout, stop and update
+this plan. Do not define numeric
 agency thresholds or begin live repetitions. Continue only if the scripted
 instrument differentiates at least two concrete perturbation pathways and all
 aggregate claims remain reversible.
@@ -492,8 +521,8 @@ replay, API/presentation, and affected UI checks; run mypy, the frontend build,
 and `git diff --check`. Terminal 22A acceptance requires `make check`, retained
 reopening, browser console/network inspection, and an isolated code-diff audit.
 
-Commit and report each packet separately. A later agent may proceed to 22A2
-only when 22A1 is clean, committed, and its acceptance evidence is recorded in
-this plan. Any required aggregate executor, global
-agency state, arbitrary perturbation code, or non-reversible claim is an exact
-stop condition.
+Commit and report each packet separately. Packet 22A2 is ready for the human
+readout recorded above; do not proceed to 22B until that readout is retained
+and the operator separately selects it. Any required aggregate executor,
+global agency state, arbitrary perturbation code, or non-reversible claim is an
+exact stop condition.

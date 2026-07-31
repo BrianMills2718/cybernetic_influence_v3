@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from statistics import median
@@ -156,6 +156,37 @@ class RunStore:
         self._sync_directory(self.trash_root)
         return destination
 
+    def trash_many(self, run_ids: Sequence[str]) -> list[Path]:
+        """Move a validated run group together, rolling back a partial move."""
+
+        if not run_ids or len(run_ids) != len(set(run_ids)):
+            raise InvalidRunIdError("run group must contain unique run IDs")
+        sources = [self._path(run_id) for run_id in run_ids]
+        missing = [path.stem for path in sources if not path.is_file()]
+        if missing:
+            raise RunNotFoundError(",".join(missing))
+        self.trash_root.mkdir(parents=True, exist_ok=True)
+        self.trash_root.chmod(0o700)
+        destinations = [
+            self.trash_root / f"{run_id}.{uuid4().hex}.json"
+            for run_id in run_ids
+        ]
+        moved: list[tuple[Path, Path]] = []
+        try:
+            for source, destination in zip(sources, destinations, strict=True):
+                os.replace(source, destination)
+                destination.chmod(0o600)
+                moved.append((source, destination))
+        except OSError:
+            for source, destination in reversed(moved):
+                os.replace(destination, source)
+            self._sync_directory(self.root)
+            self._sync_directory(self.trash_root)
+            raise
+        self._sync_directory(self.root)
+        self._sync_directory(self.trash_root)
+        return destinations
+
     def mark_incomplete_interrupted(self) -> int:
         """Classify run records left in progress by an earlier app instance."""
         changed = 0
@@ -260,6 +291,7 @@ class RunStore:
                     )
                 )
             )
+        composite_assay = document.get("composite_assay")
         return {
             "run_id": document.get("run_id"),
             "created_at": document.get("created_at"),
@@ -273,6 +305,11 @@ class RunStore:
             "cost": document.get("cost", 0.0),
             "headline": headline,
             "coordination_measurement_status": measurement_status,
+            "composite_assay": (
+                dict(composite_assay)
+                if isinstance(composite_assay, Mapping)
+                else None
+            ),
         }
 
     @staticmethod

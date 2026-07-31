@@ -18,10 +18,11 @@ active boundary is the M7 stakeholder readout of the retained canonical run;
 do not launch another provider run to satisfy it.
 
 [Slice 22: Composite-agency perturbation assay](022-composite-agency-perturbation-assay.md)
-has two completed provider-free packets: 22A0 implements strict contracts and
-22A1 compiles, executes, calculates, validates, and retains five zero-call
-scripted rows. Packet 22A2 analyst UI and 22B live repetitions remain separate,
-unauthorized continuations.
+has three technically completed provider-free packets: 22A0 implements strict
+contracts, 22A1 compiles and retains five zero-call scripted rows, and 22A2
+groups them into one analyst comparison with exact run and boundary step-down.
+Its stakeholder readout is pending. Packet 22B live repetitions remain a
+separate, unauthorized continuation.
 
 ## Historical foundations
 

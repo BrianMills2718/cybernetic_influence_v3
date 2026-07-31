@@ -41,8 +41,9 @@ def test_five_rows_are_zero_cost_retained_and_reopenable(
         "external_risk",
     ]
     assert len(execution.readouts) == len(execution.retained_run_ids) == 5
+    assert execution.assay_id.startswith("assay_")
     store = RunStore(root)
-    for run_id in execution.retained_run_ids:
+    for row_index, run_id in enumerate(execution.retained_run_ids):
         first = cast(dict[str, Any], store.get(run_id))
         second = cast(dict[str, Any], store.get(run_id))
         assert first == second
@@ -52,6 +53,13 @@ def test_five_rows_are_zero_cost_retained_and_reopenable(
         assert first["configuration_diff"]["unexpected_refs"] == []
         assert "composite_control_readout" in first
         assert "theory_analysis" in first
+        assert first["composite_assay"] == {
+            "schema_version": 1,
+            "assay_id": execution.assay_id,
+            "row_index": row_index,
+            "row_count": 5,
+            "provider_calls": 0,
+        }
 
 
 def test_rows_exercise_distinct_concrete_paths(

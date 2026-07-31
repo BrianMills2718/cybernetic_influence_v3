@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Mapping
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -23,6 +25,38 @@ def test_store_uses_private_modes_and_recoverable_private_trash(tmp_path: Path) 
     trashed = store.trash("run_aaaaaaaaaaaa")
     assert trashed.parent.stat().st_mode & 0o777 == 0o700
     assert trashed.stat().st_mode & 0o777 == 0o600
+
+
+def test_group_trash_rolls_back_a_partial_move(tmp_path: Path) -> None:
+    store = RunStore(tmp_path)
+    run_ids = ["run_aaaaaaaaaaaa", "run_bbbbbbbbbbbb"]
+    for run_id in run_ids:
+        store.save({"run_id": run_id, "status": "completed"})
+    real_replace = os.replace
+    trash_moves = 0
+
+    def fail_second_trash_move(source: Path, destination: Path) -> None:
+        nonlocal trash_moves
+        if destination.parent == store.trash_root:
+            trash_moves += 1
+            if trash_moves == 2:
+                raise OSError("fixture group move failure")
+        real_replace(source, destination)
+
+    with (
+        patch(
+            "cybernetic_influence.run_store.os.replace",
+            side_effect=fail_second_trash_move,
+        ),
+        pytest.raises(OSError, match="fixture group move failure"),
+    ):
+        store.trash_many(run_ids)
+
+    assert [store.get(run_id)["status"] for run_id in run_ids] == [
+        "completed",
+        "completed",
+    ]
+    assert list(store.trash_root.glob("*.json")) == []
 
 
 def test_filename_and_document_identity_must_match(tmp_path: Path) -> None:

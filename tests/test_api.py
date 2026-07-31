@@ -232,6 +232,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="lifecycle-help"' in page.text
     assert "Run history" in page.text
     assert "Each entry includes its exact run ID." in page.text
+    assert "Compare five matched conditions" in page.text
+    assert 'id="run-composite-assay"' in page.text
     assert "Read me" in page.text
     assert "Author scenario" in page.text
     assert "Describe what you want" in page.text
@@ -310,6 +312,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"/api/authoring/reviewed-coordination-drafts" in app_script.content
     assert b"/coordination-configuration" in app_script.content
     assert b"renderTheoryAnalysis" in app_script.content
+    assert b"/api/composite-assays" in app_script.content
+    assert b"function renderCompositeAssaySelection" in app_script.content
+    assert b"What reached the group" in app_script.content
+    assert b"What the group sent out" in app_script.content
     assert b"function renderAuthoring" in app_script.content
     assert b"function renderAuthoringChat" in app_script.content
     assert b"function renderAuthoringPeople" in app_script.content
@@ -376,6 +382,44 @@ def test_scenario_preview_exposes_the_initial_map_without_creating_a_run(tmp_pat
     assert preview["world"]["snapshots"][str(preview["initial_revision"])]["placements"]
     assert preview["nodes"]
     assert any(edge["enabled"] is False for edge in preview["edges"])
+    assert api.get("/api/runs").json()["runs"] == []
+
+
+def test_scripted_composite_assay_is_grouped_reopenable_and_zero_provider(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+
+    created = api.post("/api/composite-assays")
+
+    assert created.status_code == 200, created.text
+    assay = created.json()
+    assert assay["assay_id"].startswith("assay_")
+    assert assay["provider_calls"] == 0
+    assert [row["row_id"] for row in assay["rows"]] == [
+        "matched_control",
+        "member_replacement",
+        "route_interruption",
+        "feedback_interruption",
+        "external_risk",
+    ]
+    assert all(row["status"] == "completed" for row in assay["rows"])
+    assert all(row["readout"]["source_run_ids"] == [row["run_id"]] for row in assay["rows"])
+    assert assay["rows"][3]["readout"]["exact_values"]["recovery"] == "not_observed"
+    assert assay["rows"][4]["readout"]["coded_patterns"][0]["pattern_id"] == "rational_caution"
+
+    reopened = api.get(f"/api/composite-assays/{assay['assay_id']}")
+    assert reopened.status_code == 200
+    assert reopened.json() == assay
+    history = api.get("/api/runs").json()["runs"]
+    assert len(history) == 5
+    assert {item["composite_assay"]["assay_id"] for item in history} == {
+        assay["assay_id"]
+    }
+    assert api.get("/api/composite-assays/assay_invalid").status_code == 422
+    trashed = api.delete(f"/api/composite-assays/{assay['assay_id']}")
+    assert trashed.status_code == 200
+    assert trashed.json()["trashed_run_count"] == 5
     assert api.get("/api/runs").json()["runs"] == []
 
 

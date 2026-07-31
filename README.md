@@ -45,7 +45,9 @@ Do not infer current route availability from historical documentation.
 - a pre-run spatial topology and configured interaction-pathway map;
 - a realized causal graph after retained events exist;
 - concise and detailed causal narratives grounded in retained evidence;
-- person, process, and execution-inert composite accounts; and
+- person, process, and execution-inert composite accounts;
+- a retained five-condition composite-capability comparison with exact row,
+  boundary, graph, narrative, measurement, and event step-down; and
 - scenario assumptions, exact mechanisms, and analyst-safe trace step-down.
 
 For a private Mac development host, use the concise
