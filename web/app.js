@@ -31,6 +31,7 @@ let authoringPreview = null
 let selectedAuthoringGraphView = 'causal'
 let selectedNarrativeDetail = 'concise'
 let selectedBoundaryActivities = null
+let selectedBoundaryScope = 'full'
 let boundaryActivityRequestSerial = 0
 
 const buttonTooltips = {
@@ -59,7 +60,7 @@ const buttonTooltips = {
   'previous-event': 'Select the previous causal step.',
   'next-event': 'Select the next causal step.',
   'narrative-concise': 'Read the one-sentence account for each causal step.',
-  'narrative-detailed': 'Read the longer account for each causal step, including evidence-provenance links.',
+  'narrative-detailed': 'Read how each participant action changed the world, with exact evidence available on demand.',
 }
 
 function explainButton(button) {
@@ -75,6 +76,7 @@ function explainButton(button) {
   if (!explanation && button.classList.contains('timeline-marker')) explanation = 'Select this causal step.'
   if (!explanation && button.classList.contains('story-event')) explanation = 'Inspect the exact event behind this outcome step.'
   if (!explanation && button.classList.contains('inspect-boundary-path')) explanation = 'Show the exact recorded events supporting this group response and select its first event.'
+  if (!explanation && button.classList.contains('group-scope-button')) explanation = 'Choose whether this group account covers the completed run or only the selected causal moment.'
   if (!explanation && button.classList.contains('save-person')) explanation = 'Validate and save these person assumptions as a new draft revision without calling an LLM.'
   if (!explanation && button.dataset.eventId) explanation = 'Inspect this exact event in the selected causal step.'
   if (!explanation && button.dataset.person) explanation = 'Show what this participant did or what crossed this group.'
@@ -1541,7 +1543,7 @@ function renderCrossing(crossing) {
   return `${html(refLabel(crossing.source_ref))} → ${html(refLabel(crossing.target_ref))}`
 }
 
-function renderBoundaryActivity(activity, snapshot) {
+function renderBoundaryActivity(activity, snapshot, scope = 'full') {
   if (activity === undefined) {
     return '<p class="muted">This saved run predates group-flow summaries. Its individual participant histories and exact evidence are still available.</p>'
   }
@@ -1586,15 +1588,22 @@ function renderBoundaryActivity(activity, snapshot) {
   const outgoing = (activity.crossings || []).filter((crossing) => crossing.direction === 'outgoing')
   const incomingSources = [...new Set(incoming.map((crossing) => refLabel(crossing.source_ref)))]
   const outgoingTargets = [...new Set(outgoing.map((crossing) => refLabel(crossing.target_ref)))]
+  const contributorIds = [...new Set((activity.episodes || []).flatMap((episode) => episode.contributing_member_ids || []))]
+  const contributorPeople = contributorIds.map((memberId) =>
+    nodesAtSelectedEvent().find((node) => node.id === memberId),
+  ).filter((node) => node?.kind === 'person').map((node) => node.label)
   const received = incoming.length
     ? `The group received ${incoming.length} outside input${incoming.length === 1 ? '' : 's'} from ${incomingSources.join(', ')}.`
     : 'No outside input reached the group.'
+  const responded = contributorPeople.length
+    ? `${contributorPeople.join(', ')} contributed to the response inside the group.`
+    : 'Its configured processes handled the retained activity inside the group.'
   const produced = outgoing.length
     ? `Its members and supporting processes produced ${outgoing.length} outward action${outgoing.length === 1 ? '' : 's'}, sent to ${outgoingTargets.join(', ')}.`
     : 'No action or message has left the group yet.'
   return `<section class="group-flow-summary">
-      <h4>What the group did by this point</h4>
-      <p>${html(received)} ${html(produced)}</p>
+      <h4>${scope === 'full' ? 'What the group did in this run' : 'What the group had done by the selected moment'}</h4>
+      <p>${html(received)} ${html(responded)} ${html(produced)}</p>
     </section>
     <details class="group-activity-details">
       <summary>Show how this group activity was derived</summary>
@@ -1604,7 +1613,7 @@ function renderBoundaryActivity(activity, snapshot) {
 
 async function refreshBoundaryActivitiesAtSelection() {
   const boundarySelected = (current?.boundaries || []).some((item) => item.id === selectedPerson)
-  if (!boundarySelected || !current?.run_id || !current?.timeline?.length) return
+  if (selectedBoundaryScope !== 'moment' || !boundarySelected || !current?.run_id || !current?.timeline?.length) return
   const eventId = current.timeline[selectedEventIndex]?.event_id
   if (!eventId) return
   const requestSerial = ++boundaryActivityRequestSerial
@@ -1637,17 +1646,28 @@ function showTrace(person) {
       ? `This view follows ${people.length} people as one group. It shows what reached them, how they responded, and what left. The people and supporting processes make decisions and cause changes; “${boundary.label}” only summarizes their combined activity.`
       : `This view groups ${snapshot?.member_ids?.length || 0} modeled components. It shows what entered or left the group and which components produced those changes; “${boundary.label}” does not make decisions itself.`
     const hasTypedActivity = Object.prototype.hasOwnProperty.call(boundary, 'activity')
-    const activity = selectedBoundaryActivities
-      ? selectedBoundaryActivities[boundary.id]
-      : current?.timeline?.length
-        ? null
-        : (hasTypedActivity ? boundary.activity : undefined)
+    const completedFullRun = current?.status === 'completed' && selectedBoundaryScope === 'full'
+    const activity = completedFullRun
+      ? (hasTypedActivity ? boundary.activity : undefined)
+      : selectedBoundaryActivities
+        ? selectedBoundaryActivities[boundary.id]
+        : selectedBoundaryScope === 'moment' && current?.timeline?.length
+          ? null
+          : (hasTypedActivity ? boundary.activity : undefined)
+    const scopeExplanation = selectedBoundaryScope === 'full'
+      ? 'Showing all retained activity in this completed run.'
+      : 'Showing only activity retained through the selected causal moment.'
     $('#trace').innerHTML = `
       <article class="trace-step composite-account">
         <span class="eyebrow">Group view</span>
         <h3>${html(boundary.label)}</h3>
         <p>${html(groupExplanation)}</p>
-        <div class="boundary-activity">${renderBoundaryActivity(activity, snapshot)}</div>
+        <div class="group-scope" role="group" aria-label="Group account time scope">
+          <button type="button" class="group-scope-button" data-boundary-scope="full" aria-pressed="${selectedBoundaryScope === 'full'}">Full run</button>
+          <button type="button" class="group-scope-button" data-boundary-scope="moment" aria-pressed="${selectedBoundaryScope === 'moment'}">Selected moment</button>
+        </div>
+        <small class="muted">${html(scopeExplanation)}</small>
+        <div class="boundary-activity">${renderBoundaryActivity(activity, snapshot, selectedBoundaryScope)}</div>
         <button id="inspect-composite">Highlight this group on the map</button>
         <details class="participant-technical">
           <summary>Technical details</summary>
@@ -1661,6 +1681,14 @@ function showTrace(person) {
         </details>
       </article>`
     $('#inspect-composite').onclick = () => showBoundary(boundary.id)
+    document.querySelectorAll('.group-scope-button').forEach((button) => {
+      button.onclick = () => {
+        selectedBoundaryScope = button.dataset.boundaryScope
+        selectedBoundaryActivities = null
+        boundaryActivityRequestSerial += 1
+        showTrace(selectedPerson)
+      }
+    })
     document.querySelectorAll('.inspect-boundary-path').forEach((button) => {
       button.onclick = () => {
         const details = document.querySelector(`.boundary-evidence[data-episode-index="${button.dataset.episodeIndex}"]`)
@@ -1676,7 +1704,7 @@ function showTrace(person) {
         if (index >= 0) selectEvent(index)
       }
     })
-    if (current?.timeline?.length && !selectedBoundaryActivities) {
+    if (selectedBoundaryScope === 'moment' && current?.timeline?.length && !selectedBoundaryActivities) {
       void refreshBoundaryActivitiesAtSelection()
     }
     applyButtonTooltips($('#trace'))
@@ -1689,11 +1717,22 @@ function showTrace(person) {
   const totalActions = entries.reduce((count, entry) => count + (entry.actions?.length || 0), 0)
   const totalObservations = entries.reduce((count, entry) => count + (entry.observations?.length || 0), 0)
   const label = refLabel(person)
+  const participantKind = entries[0]?.participant_kind
+  const accountType = participantKind === 'person'
+    ? 'Person history'
+    : participantKind === 'source_process'
+      ? 'Information source history'
+      : 'Process history'
+  const accountSummary = participantKind === 'person'
+    ? `${label} took part in ${entries.length} moment${entries.length === 1 ? '' : 's'}, received ${totalObservations} piece${totalObservations === 1 ? '' : 's'} of information, and proposed ${totalActions} action${totalActions === 1 ? '' : 's'}. The moments below show what was available and what happened next.`
+    : participantKind === 'source_process'
+      ? `${label} ran at ${entries.length} configured moment${entries.length === 1 ? '' : 's'} and emitted ${totalActions} output${totalActions === 1 ? '' : 's'}. This is a modeled source process, not a person making a decision.`
+      : `${label} ran at ${entries.length} configured moment${entries.length === 1 ? '' : 's'} and produced ${totalActions} state transition${totalActions === 1 ? '' : 's'}. This is an exact process, not a person making a decision.`
   $('#trace').innerHTML = entries.length ? `
     <article class="trace-summary">
-      <span class="eyebrow">${entries[0].participant_kind === 'state_machine' ? 'Process history' : 'Participant history'}</span>
+      <span class="eyebrow">${html(accountType)}</span>
       <h3>${html(label)}</h3>
-      <p>${html(label)} took part in ${entries.length} moment${entries.length === 1 ? '' : 's'}, received ${totalObservations} piece${totalObservations === 1 ? '' : 's'} of information, and proposed ${totalActions} action${totalActions === 1 ? '' : 's'}. The moments below show what was available and what happened next.</p>
+      <p>${html(accountSummary)}</p>
     </article>` + entries.map((entry, entryIndex) => {
     const matches = selectedEvent?.activation === entry.activation
     const actionSummaries = (entry.actions || []).map((action) => readableActionSummary(action.public_summary)).filter(Boolean)
@@ -1997,8 +2036,10 @@ function selectEvent(index, momentActivation = null) {
   const priorSelectedEventIndex = selectedEventIndex
   selectedEventIndex = Math.max(0, Math.min(index, current.timeline.length - 1))
   if (selectedEventIndex !== priorSelectedEventIndex) {
-    selectedBoundaryActivities = null
-    boundaryActivityRequestSerial += 1
+    if (selectedBoundaryScope === 'moment') {
+      selectedBoundaryActivities = null
+      boundaryActivityRequestSerial += 1
+    }
   }
   const event = current.timeline[selectedEventIndex]
   const moments = causalMoments()
@@ -2068,8 +2109,8 @@ function selectEvent(index, momentActivation = null) {
 
   const selectedIsBoundary = (current?.boundaries || []).some((boundary) => boundary.id === selectedPerson)
   if (selectedIsBoundary) showTraceInPlace(selectedPerson)
-  else if (event.person) showTraceInPlace(event.person)
   else if (selectedPerson) showTraceInPlace(selectedPerson)
+  else if (event.person) showTraceInPlace(event.person)
   if (selectedGraphView === 'trajectory') renderTrajectoryInspector(event)
 }
 
@@ -2080,7 +2121,7 @@ function renderStepAccount(event) {
     ? current.traces.find((entry) => entry.person === event.person && entry.activation === event.activation)
     : null
   const person = event.person?.replaceAll('_', ' ')
-  const exactProcess = trace?.participant_kind === 'state_machine'
+  const exactProcess = trace?.participant_kind && trace.participant_kind !== 'person'
   const title = {
     action_attempted:exactProcess ? 'An exact process emitted an action' : 'A person chose an action',
     mechanism_executed:'An exact mechanism evaluated it',
@@ -2132,27 +2173,57 @@ function renderStepAccount(event) {
   })
 }
 
+function readableNarrative(text) {
+  return String(text || '')
+    .replace(
+      /The exact workflow recorded meeting snapshot delivered\./gi,
+      'The next meeting snapshot was delivered to the team.',
+    )
+    .replace(
+      /The local liaison recorded relied_on for the local source\./gi,
+      'The local liaison recorded that information from the local source influenced the decision.',
+    )
+    .replace(/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/g, (identifier) => identifier.replaceAll('_', ' '))
+}
+
+function narrativeStoryMoments(moments) {
+  const storyMoments = []
+  let leadingMechanisms = []
+  for (const moment of moments) {
+    const isMechanism = (moment.participants || []).includes('exact_mechanisms')
+    if (isMechanism) {
+      if (storyMoments.length) storyMoments.at(-1).consequences.push(moment)
+      else leadingMechanisms.push(moment)
+      continue
+    }
+    storyMoments.push({moment, consequences:leadingMechanisms})
+    leadingMechanisms = []
+  }
+  if (leadingMechanisms.length && storyMoments.length) {
+    storyMoments.at(-1).consequences.push(...leadingMechanisms)
+  }
+  return storyMoments
+}
+
 function renderTurnNarratives() {
   const narration = current.narration || {}
   const container = $('#turn-narratives')
   const detailed = $('#detailed-narrative')
   const moments = narration.moments || narration.turns || []
   if (narration.status === 'completed' && moments.length) {
-    const conciseMoments = moments.filter((moment) => !(moment.participants || []).includes('exact_mechanisms'))
-    const readableMoments = conciseMoments.length ? conciseMoments : moments
-    $('#narrative-count').textContent = readableMoments.length === moments.length
-      ? `${moments.length} story moment${moments.length === 1 ? '' : 's'}`
-      : `${readableMoments.length} people-centered moments · Detailed mode includes ${moments.length - readableMoments.length} exact mechanism update${moments.length - readableMoments.length === 1 ? '' : 's'}.`
-    container.innerHTML = readableMoments.map((moment) => {
+    const storyMoments = narrativeStoryMoments(moments)
+    const readableMoments = storyMoments.length ? storyMoments : moments.map((moment) => ({moment, consequences:[]}))
+    $('#narrative-count').textContent = `${readableMoments.length} story moment${readableMoments.length === 1 ? '' : 's'} · Detailed mode explains what each action changed.`
+    container.innerHTML = readableMoments.map(({moment}) => {
       const momentNumber = moment.moment || moment.turn || moments.indexOf(moment) + 1
       const participants = moment.participants || [moment.person || 'system']
       return `
       <button class="turn-narrative" data-activation="${html(moment.activation)}">
-        <p>${html(moment.concise_narrative || moment.narrative)}</p>
+        <p>${html(readableNarrative(moment.concise_narrative || moment.narrative))}</p>
         <small class="narrative-meta">${html(storyTime(moment, momentNumber))} · ${html(storyParticipants(participants))}</small>
       </button>`
     }).join('')
-    detailed.innerHTML = moments.map((moment, index) => {
+    detailed.innerHTML = readableMoments.map(({moment, consequences}, index) => {
       const momentNumber = moment.moment || moment.turn || index + 1
       const participants = moment.participants || [moment.person || 'system']
       const paragraphs = moment.detailed_paragraphs || []
@@ -2162,14 +2233,18 @@ function renderTurnNarratives() {
       ).join(' · ')
       if (!paragraphs.length) {
         return `<article class="detailed-narrative-moment legacy" data-activation="${html(moment.activation)}">
-          <p>${html(moment.concise_narrative || moment.narrative)}</p>
+          <p>${html(readableNarrative(moment.concise_narrative || moment.narrative))}</p>
           <small class="narrative-meta">${html(storyTime(moment, momentNumber))} · ${html(storyParticipants(participants))}</small>
           <small>Detailed account was not retained for this older run.</small>
         </article>`
       }
-      const exactEventIds = [...new Set(paragraphs.flatMap((paragraph) => paragraph.source_event_ids || []))]
+      const consequenceParagraphs = consequences.flatMap((consequence) => consequence.detailed_paragraphs || [])
+      const exactEventIds = [...new Set([...paragraphs, ...consequenceParagraphs].flatMap((paragraph) => paragraph.source_event_ids || []))]
       return `<article class="detailed-narrative-moment" data-activation="${html(moment.activation)}">
-        ${paragraphs.map((paragraph) => `<p>${html(paragraph.text)}</p>`).join('')}
+        ${paragraphs.map((paragraph) => `<p>${html(readableNarrative(paragraph.text))}</p>`).join('')}
+        ${consequenceParagraphs.length
+          ? `<div class="causal-result"><strong>What changed next</strong>${consequenceParagraphs.map((paragraph) => `<p>${html(readableNarrative(paragraph.text))}</p>`).join('')}</div>`
+          : ''}
         <small class="narrative-meta">${html(storyTime(moment, momentNumber))} · ${html(storyParticipants(participants))}</small>
         ${context
           ? `<details class="narrative-evidence"><summary>Show narrative evidence</summary><button type="button" class="evidence-context-button" data-activation="${html(moment.activation)}">Inspect this causal step</button><small>Current exact events: ${html((context.current_event_ids || []).join(' · '))} · earlier narrated accounts: ${priorNarratives || 'none'} · provenance, not proof of entailment</small></details>`
@@ -2214,18 +2289,61 @@ function renderTurnNarratives() {
   detailed.innerHTML = ''
 }
 
+function publicNodeState(node, key) {
+  const retained = node?.state?.[key]
+  return retained && typeof retained === 'object' && Object.prototype.hasOwnProperty.call(retained, 'value')
+    ? retained.value
+    : retained
+}
+
+function parsedRepresentation(node) {
+  const content = publicNodeState(node, 'content')
+  if (typeof content !== 'string') return null
+  try {
+    return JSON.parse(content)
+  } catch {
+    return null
+  }
+}
+
+function scenarioDefinitionForRun(run) {
+  if (scenarioCatalog[run.scenario]) return scenarioCatalog[run.scenario]
+  const templateId = run.authoring?.template_id
+  if (!templateId) return null
+  const templateKey = templateId.replace(/_v\d+$/, '')
+  return scenarioCatalog[templateKey] || null
+}
+
 function renderInitialSituation(run) {
-  const scenario = scenarioCatalog[run.scenario]
+  const scenario = scenarioDefinitionForRun(run)
   const arm = scenario?.arms?.find((item) => item.id === run.arm)
   const summary = scenario?.representation_summary || run.authoring?.description || run.authoring?.title
     || 'The retained run did not include a readable initial-situation summary.'
+  const people = (run.nodes || []).filter((node) => node.kind === 'person')
+  const roles = people.map((person) => ({
+    label:person.label,
+    description:String(person.description || '').replace(/\.$/, ''),
+  }))
+  const goal = (run.nodes || []).find((node) => node.kind === 'goal_record')
+  const proposal = (run.nodes || []).map(parsedRepresentation).find((item) => item?.document_kind === 'deployment_proposal')
+  const concerns = (run.nodes || []).map(parsedRepresentation).filter((item) => item?.document_kind === 'source_message' && item.claim)
+  const decision = [
+    proposal?.scope ? `The starting proposal is a ${String(proposal.scope).replaceAll('_', ' ')} deployment.` : '',
+    goal?.description || '',
+  ].filter(Boolean).join(' ')
   const condition = arm?.description
-    ? ` The starting condition is ${arm.label || run.arm}: ${arm.description}`
-    : ''
+    ? `${arm.label || run.arm}: ${arm.description}`
+    : run.arm
+      ? `${String(run.arm).replaceAll('_', ' ')} condition`
+      : ''
   $('#initial-situation').innerHTML = `
     <span class="eyebrow">Initial situation</span>
     <h3>The situation</h3>
-    <p>${html(summary)}${html(condition)}</p>
+    <p>${html(summary)}</p>
+    ${decision ? `<p><strong>The decision:</strong> ${html(decision)}</p>` : ''}
+    ${roles.length ? `<div class="initial-people"><strong>The people:</strong><ul>${roles.map((role) => `<li><strong>${html(role.label)}</strong> — ${html(role.description)}</li>`).join('')}</ul></div>` : ''}
+    ${concerns.length ? `<p><strong>What may change the decision:</strong> ${html(concerns.map((item) => item.claim).join(' '))}</p>` : ''}
+    ${condition ? `<p><strong>Starting condition:</strong> ${html(condition)}</p>` : ''}
   `
 }
 
@@ -2516,6 +2634,7 @@ function render(run) {
   selectedMomentIndex = 0
   selectedPerson = null
   selectedBoundaryActivities = null
+  selectedBoundaryScope = 'full'
   boundaryActivityRequestSerial += 1
   selectedScale = 'exact'
   selectedGraphView = current.world && current.scenario !== 'purchase_payment'
@@ -2588,21 +2707,36 @@ function render(run) {
   renderCoordinationMeasurement(current)
   renderTheoryAnalysis(current)
   setNarrativeDetail(selectedNarrativeDetail)
-  const people = [...new Set(current.traces.map((entry) => entry.person))]
-  const participantTabs = people.map((person) => {
-    const kind = current.traces.find((entry) => entry.person === person)?.participant_kind
-    const suffix = kind === 'state_machine' ? ' · exact process' : ''
-    return `<button data-person="${html(person)}">${html(refLabel(person))}${html(suffix === ' · exact process' ? ' · process' : '')}</button>`
-  })
+  const participants = [...new Set(current.traces.map((entry) => entry.person))].map((person) => ({
+    person,
+    kind:current.traces.find((entry) => entry.person === person)?.participant_kind,
+  }))
+  const people = participants.filter((participant) => participant.kind === 'person')
+  const processes = participants.filter((participant) => participant.kind !== 'person')
+  const participantButton = ({person}) => `<button data-person="${html(person)}">${html(refLabel(person))}</button>`
   const compositeTabs = (current.boundaries || []).map((boundary) =>
-    `<button data-person="${html(boundary.id)}" title="Show what entered, happened inside, and left this group">${html(boundary.label)} · group view</button>`
+    `<button data-person="${html(boundary.id)}" title="Show what entered, happened inside, and left this group">${html(boundary.label)}</button>`
   )
-  $('#trace-tabs').innerHTML = [...participantTabs, ...compositeTabs].join('')
+  const traceGroups = [
+    ['People', people.map(participantButton)],
+    ['Processes and sources', processes.map(participantButton)],
+    ['Group views', compositeTabs],
+  ].filter(([, buttons]) => buttons.length)
+  $('#trace-tabs').innerHTML = traceGroups.map(([label, buttons]) => `
+    <section class="trace-tab-group">
+      <strong>${html(label)}</strong>
+      <div class="tabs">${buttons.join('')}</div>
+    </section>
+  `).join('')
   $('#trace').style.minHeight = ''
   document.querySelectorAll('#trace-tabs button').forEach((button) => {
     button.onclick = () => showTraceInPlace(button.dataset.person)
   })
-  if (people.length) showTrace(people[0])
+  const defaultParticipant = people.find(({person}) => person === 'mission_coordinator')?.person
+    || people[0]?.person
+    || (current.boundaries || [])[0]?.id
+    || processes[0]?.person
+  if (defaultParticipant) showTrace(defaultParticipant)
   else $('#trace').innerHTML = '<p class="muted">No completed participant traces were retained.</p>'
   renderTimeline(current)
   $('#raw').textContent = JSON.stringify(current, null, 2)

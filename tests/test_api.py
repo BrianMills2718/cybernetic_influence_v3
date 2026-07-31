@@ -219,6 +219,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="detailed-narrative"' in page.text
     assert "People and groups" in page.text
     assert "Follow a participant or view the team as a whole" in page.text
+    assert 'class="run-introduction"' in page.text
+    assert 'class="scenario-field"' in page.text
+    assert 'class="condition-field"' in page.text
+    assert 'class="run-actions"' in page.text
     assert 'id="coordination-measurement-section"' in page.text
     assert "Recorded by the simulator" in page.text
     assert "Model interpretation" in page.text
@@ -337,6 +341,11 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"after_sequence=${liveProgressSequence}" in app_script.content
     assert b"function applyLiveProgress" in app_script.content
     assert b"function renderBoundaryActivity" in app_script.content
+    assert b"function narrativeStoryMoments" in app_script.content
+    assert b"function scenarioDefinitionForRun" in app_script.content
+    assert b"selectedBoundaryScope = 'full'" in app_script.content
+    assert b"Showing all retained activity in this completed run." in app_script.content
+    assert b"Processes and sources" in app_script.content
     assert b"Show supporting events" in app_script.content
     assert b"What reached the group" in app_script.content
     assert b"Technical details" in app_script.content

@@ -118,23 +118,25 @@
 
     <div id="simulation-view" class="app-view">
       <section class="run-card">
-        <div>
+        <div class="run-introduction">
           <span class="eyebrow">Choose and play</span>
           <h2 id="scenario-title">Service desk</h2>
           <p id="scenario-description">A bounded incident workflow with an authored service-operations center, a remote customer site, and one login incident.</p>
         </div>
-        <label>Scenario
+        <label class="scenario-field">Scenario
           <select id="scenario"></select>
         </label>
-        <label>Scenario condition
+        <label class="condition-field">Scenario condition
           <select id="arm"></select>
           <small id="arm-help">Choose the condition you want to test.</small>
         </label>
         <label class="live"><input id="live" type="checkbox"> Use live LLM agents <small id="live-help">People reason from their own memory, position, and delivered observations.</small></label>
-        <button id="run">Play simulation</button>
-        <button id="pause" hidden>Pause after this causal step</button>
-        <button id="stop" hidden>Stop after this causal step</button>
-        <button id="resume" hidden>Resume from retained step</button>
+        <div class="run-actions">
+          <button id="run">Play simulation</button>
+          <button id="pause" hidden>Pause after this causal step</button>
+          <button id="stop" hidden>Stop after this causal step</button>
+          <button id="resume" hidden>Resume from retained step</button>
+        </div>
         <p id="lifecycle-help" class="muted" aria-live="polite"></p>
         <details id="run-settings">
           <summary>Model and simulation assumptions</summary>
@@ -210,7 +212,7 @@
       <section id="narrative-section" class="turn-narratives">
         <span class="eyebrow">Story</span>
         <h2>What happened</h2>
-        <p class="muted">Start with the situation, then follow the decisions and events that changed the outcome. Detailed mode adds the exact mechanisms and evidence trail.</p>
+        <p class="muted">Start with the situation, then follow the decisions and events that changed the outcome. Detailed mode explains what each action changed; exact technical evidence remains available on demand.</p>
         <article id="initial-situation" class="initial-situation" aria-label="Initial situation"></article>
         <div class="narrative-mode" role="group" aria-label="Narrative detail">
           <button id="narrative-concise" type="button" aria-pressed="true">Concise story</button>
@@ -284,8 +286,8 @@
       <section id="participant-section">
         <span class="eyebrow">People and groups</span>
         <h2>Follow a participant or view the team as a whole</h2>
-        <p class="muted">Choose a person or process to see what it received, decided, and did. Choose a group view to see what reached the group, how its members responded, and what left.</p>
-        <div id="trace-tabs" class="tabs"></div>
+        <p class="muted">Choose a person to follow their decisions, a process or source to see what it produced, or a group to understand how outside inputs became a collective result.</p>
+        <div id="trace-tabs" class="trace-tab-groups"></div>
         <div id="trace"></div>
       </section>
 
@@ -348,7 +350,7 @@
         <article><h3>Choose and play</h3><p>Select a scenario and condition, then run it. Live runs let LLM-modeled people act from their retained memory, position, observations, and interfaces. Reference runs use fixed zero-cost policies.</p></article>
         <article><h3>Read the map</h3><p><strong>Spatial topology</strong> shows authored places, occupants, and physical links. <strong>Configured interaction pathways</strong> show relationships that may support information or action when exact mechanisms permit them; they do not grant authority. <strong>Realized causal graph</strong> shows what happened in the selected run.</p></article>
         <article><h3>Change analytical scale</h3><p>The graph’s analytical-scale control collapses or expands an execution-inert composite such as the service desk. It changes what is summarized, not what exists or acts in the simulation.</p></article>
-        <article><h3>Follow the account</h3><p>The concise story follows the people and other active participants. Detailed mode adds exact mechanism updates; Advanced lets you inspect individual retained events and state.</p></article>
+        <article><h3>Follow the account</h3><p>The concise story follows the people and other active participants. Detailed mode explains what their actions changed; Advanced lets you inspect individual retained events, mechanisms, and state.</p></article>
       </div>
     </section>
   </main>

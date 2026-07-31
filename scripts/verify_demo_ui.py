@@ -41,6 +41,37 @@ def assert_spatial_containment(page: object) -> None:
     assert violations == [], violations
 
 
+def assert_launch_controls_do_not_overlap(page: object) -> None:
+    """The primary desktop controls must occupy distinct visible rectangles."""
+    overlaps = page.evaluate(
+        """() => {
+          const selectors = [
+            '.run-introduction',
+            '.scenario-field',
+            '.condition-field',
+            '.run-card > .live',
+            '.run-actions',
+          ]
+          const items = selectors.map((selector) => {
+            const element = document.querySelector(selector)
+            return [selector, element?.getBoundingClientRect()]
+          }).filter(([, rectangle]) => rectangle && rectangle.width && rectangle.height)
+          const collisions = []
+          for (let leftIndex = 0; leftIndex < items.length; leftIndex += 1) {
+            for (let rightIndex = leftIndex + 1; rightIndex < items.length; rightIndex += 1) {
+              const [leftSelector, left] = items[leftIndex]
+              const [rightSelector, right] = items[rightIndex]
+              const width = Math.max(0, Math.min(left.right, right.right) - Math.max(left.left, right.left))
+              const height = Math.max(0, Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top))
+              if (width * height > 1) collisions.push([leftSelector, rightSelector, width * height])
+            }
+          }
+          return collisions
+        }"""
+    )
+    assert overlaps == [], overlaps
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://127.0.0.1:8620")
@@ -112,6 +143,7 @@ def main() -> None:
         )
         page.goto(f"{base_url}/?run={run_id}", wait_until="networkidle")
         page.locator("#graph .cy-graph-shell").wait_for(state="visible")
+        assert_launch_controls_do_not_overlap(page)
         assert page.locator("#map-section").is_visible()
         assert page.locator("#narrative-section").is_visible()
         assert page.locator("#analytical-scale-control").is_visible()
@@ -137,6 +169,10 @@ def main() -> None:
             assert page.locator("#live").is_disabled()
 
         first_story = page.locator("#turn-narratives .turn-narrative").first
+        initial_situation = page.locator("#initial-situation")
+        assert "The decision:" in initial_situation.inner_text()
+        assert "The people:" in initial_situation.inner_text()
+        assert "What may change the decision:" in initial_situation.inner_text()
         assert first_story.locator("p").is_visible()
         assert first_story.locator("p").inner_text().startswith("The schedule opened")
         first_metadata = first_story.locator(".narrative-meta").inner_text()
@@ -148,15 +184,22 @@ def main() -> None:
         detailed_story.wait_for(state="visible")
         detailed_prose = " ".join(detailed_story.locator("p").all_inner_texts())
         for internal_phrase in (
+            "Exact mechanisms",
             "through connection",
             "Committed mechanism",
             "state revision",
             '{"',
+            "relied_on",
         ):
             assert internal_phrase not in detailed_prose
         assert (
             "The coordinator's request for explicit review reached 4 team members."
             in detailed_prose
+        )
+        assert "The independent verification result was recorded." in detailed_prose
+        assert detailed_story.locator(".causal-result").count() > 0
+        assert detailed_story.locator(".detailed-narrative-moment").count() == (
+            page.locator("#turn-narratives .turn-narrative").count()
         )
         assert detailed_story.locator(".detailed-narrative-moment").first.evaluate(
             "card => card.querySelector('p').compareDocumentPosition(card.querySelector('.narrative-meta')) & Node.DOCUMENT_POSITION_FOLLOWING"
@@ -166,18 +209,24 @@ def main() -> None:
         group_tab = page.locator(
             '#trace-tabs button[data-person="deployment_partnership"]'
         )
-        assert group_tab.inner_text() == "Deployment partnership · group view"
+        assert group_tab.inner_text() == "Deployment partnership"
         assert page.locator(
             '#trace-tabs button[data-person="mission_coordinator"]'
         ).inner_text() == "Mission Coordinator"
+        assert page.locator(
+            '#trace-tabs button[data-person="mission_coordinator"]'
+        ).get_attribute("class") == "active"
+        assert page.locator(".trace-tab-group").count() == 3
         group_tab.click()
         group_account = page.locator("#trace .composite-account")
         group_account.wait_for(state="visible")
-        page.wait_for_function(
-            """() => !document.querySelector('#trace .boundary-activity')?.textContent.includes('Loading')"""
-        )
         assert group_account.locator(".eyebrow").first.inner_text() == "GROUP VIEW"
         assert "This view follows 5 people as one group." in group_account.inner_text()
+        assert "Showing all retained activity in this completed run." in group_account.inner_text()
+        assert "produced 1 outward action" in group_account.inner_text()
+        assert group_account.locator(
+            'button[data-boundary-scope="full"]'
+        ).get_attribute("aria-pressed") == "true"
         for internal_phrase in (
             "Execution-inert",
             "Analytical composite",
@@ -191,11 +240,13 @@ def main() -> None:
         assert group_account.locator("#inspect-composite").inner_text() == (
             "Highlight this group on the map"
         )
-        page.locator(".timeline-marker").last.evaluate("element => element.click()")
+        group_account.locator('button[data-boundary-scope="moment"]').click()
         page.wait_for_function(
             """() => !document.querySelector('#trace .boundary-activity')?.textContent.includes('Loading')"""
         )
-        assert "What the group did by this point" in group_account.inner_text()
+        assert "Showing only activity retained through the selected causal moment." in group_account.inner_text()
+        assert "Nothing has entered or left this group yet." in group_account.inner_text()
+        group_account.locator('button[data-boundary-scope="full"]').click()
         assert "produced 1 outward action" in group_account.inner_text()
         assert not group_account.locator(".boundary-episode").first.is_visible()
         assert not group_account.locator(".group-activity-details").get_attribute("open")
