@@ -65,7 +65,7 @@ class ComponentSelectionV1(_StrictModel):
 
     component_id: str = Field(pattern=_ID_PATTERN)
     component_kind: str = Field(pattern=_ID_PATTERN)
-    version: int = Field(ge=1)
+    version: int = Field(default=1, ge=1)
 
 
 class CompositionReceiptV1(_StrictModel):

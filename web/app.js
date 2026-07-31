@@ -448,11 +448,71 @@ function coordinationConfigurationFromEditor(editor, original) {
 function renderAuthoringConfiguration(draft) {
   const section = $('#authoring-configuration-section')
   const coordination = draft?.proposal?.workflow?.template_id === 'coordination_decision_v1'
-  section.hidden = !coordination
-  if (!coordination) {
+  const composition = draft?.proposal?.workflow?.template_id === 'component_composition_v1'
+  section.hidden = !coordination && !composition
+  if (!coordination && !composition) {
     $('#authoring-coordination-editor').innerHTML = ''
     return
   }
+  if (composition) {
+    const workflow = draft.proposal.workflow
+    const people = draft.proposal.people || []
+    const information = draft.proposal.information || []
+    const objects = draft.proposal.objects || []
+    const options = (items, selected) => items.map((item) =>
+      `<option value="${html(item.entity_id || item.information_id)}"${(item.entity_id || item.information_id) === selected ? ' selected' : ''}>${html(item.label)}</option>`
+    ).join('')
+    $('#authoring-configuration-heading').textContent = 'Component configuration'
+    $('#authoring-configuration-introduction').textContent = 'Change the people, report, channel, or timing this reviewed composition binds. The compiler rebuilds the routes and exact mechanisms; component implementations remain fixed.'
+    $('#authoring-configuration-summary').textContent = 'Review or edit the component bindings and timing'
+    const editor = $('#authoring-coordination-editor')
+    editor.innerHTML = `<div class="coordination-editor-grid">
+      <label>Title<input data-component-field="title" value="${html(draft.proposal.title)}"></label>
+      <label>Description<textarea data-component-field="description" rows="3">${html(draft.proposal.description)}</textarea></label>
+      <label>Source person<select data-component-field="source_id">${options(people, workflow.source_id)}</select></label>
+      <label>Review person<select data-component-field="recipient_id">${options(people, workflow.recipient_id)}</select></label>
+      <label>Retained report<select data-component-field="information_id">${options(information, workflow.information_id)}</select></label>
+      <label>Delivery channel<select data-component-field="channel_object_id">${options(objects, workflow.channel_object_id)}</select></label>
+      <label>Delivery delay (minutes)<input data-component-field="delivery_minutes" type="number" min="1" step="1" value="${html(workflow.delivery_minutes)}"></label>
+      <label>Recording delay (minutes)<input data-component-field="recording_minutes" type="number" min="1" step="1" value="${html(workflow.recording_minutes)}"></label>
+      <label class="checkbox-label"><input data-component-field="delivery_enabled" type="checkbox"${workflow.delivery_enabled ? ' checked' : ''}> Delivery route is enabled</label>
+      <p class="coordination-edit-status muted" aria-live="polite"></p>
+    </div>`
+    const button = $('#authoring-save-configuration')
+    const status = editor.querySelector('.coordination-edit-status')
+    button.onclick = async () => {
+      const value = (field) => editor.querySelector(`[data-component-field="${field}"]`).value
+      const edited = {
+        title:value('title').trim(), description:value('description').trim(),
+        source_id:value('source_id'), recipient_id:value('recipient_id'),
+        information_id:value('information_id'), channel_object_id:value('channel_object_id'),
+        delivery_enabled:editor.querySelector('[data-component-field="delivery_enabled"]').checked,
+        delivery_minutes:Number(value('delivery_minutes')),
+        recording_minutes:Number(value('recording_minutes')),
+      }
+      if (!edited.title || !edited.description || edited.source_id === edited.recipient_id || !Number.isInteger(edited.delivery_minutes) || edited.delivery_minutes < 1 || !Number.isInteger(edited.recording_minutes) || edited.recording_minutes < 1) {
+        status.textContent = 'Use a title and description, choose distinct people, and enter positive whole-minute delays.'
+        return
+      }
+      button.disabled = true
+      status.textContent = 'Saving this typed revision…'
+      try {
+        authoringDraft = await request(`/api/authoring/drafts/${encodeURIComponent(draft.draft_id)}/component-composition-configuration`, {
+          method:'PUT', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({expected_revision:draft.revision, edit_id:`component_edit_${crypto.randomUUID()}`, configuration:edited}),
+        })
+        await loadAuthoringPreview()
+        renderAuthoring()
+        syncAuthoringUrl()
+      } catch (error) {
+        status.textContent = error.message
+      } finally { button.disabled = false }
+    }
+    return
+  }
+  $('#authoring-configuration-heading').textContent = 'Scenario configuration'
+  $('#authoring-configuration-introduction').textContent = 'Review or directly change the decision, incoming concerns, places, group views, and post-run analyses. People are edited separately below.'
+  $('#authoring-configuration-summary').textContent = 'Review or edit the complete coordination configuration'
   const configuration = coordinationConfigurationFromProposal(draft.proposal)
   const editor = $('#authoring-coordination-editor')
   editor.innerHTML = coordinationEditor(configuration)

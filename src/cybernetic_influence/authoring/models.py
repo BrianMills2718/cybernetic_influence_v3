@@ -169,6 +169,20 @@ class ComponentCompositionWorkflowDraft(_StrictModel):
         return self
 
 
+class ComponentCompositionConfigurationReview(_StrictModel):
+    """Human-editable semantic bindings for the first reviewed composition."""
+
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    source_id: str = Field(pattern=_ID_PATTERN)
+    recipient_id: str = Field(pattern=_ID_PATTERN)
+    information_id: str = Field(pattern=_ID_PATTERN)
+    channel_object_id: str = Field(pattern=_ID_PATTERN)
+    delivery_enabled: bool
+    delivery_minutes: int = Field(ge=1)
+    recording_minutes: int = Field(ge=1)
+
+
 CoordinationOutcome = Literal[
     "deploy_on_time",
     "delayed",

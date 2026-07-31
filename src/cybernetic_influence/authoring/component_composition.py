@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from cybernetic_influence.authoring.composition import resolve_component_selections
+from cybernetic_influence.authoring.composition import (
+    ComponentSelectionV1,
+    resolve_component_selections,
+)
 from cybernetic_influence.authoring.information_campaign import (
     InformationCampaignFixture,
     information_campaign_fixture,
 )
 from cybernetic_influence.authoring.models import (
     ComponentCompositionWorkflowDraft,
+    ComponentCompositionConfigurationReview,
     ScenarioDraftProposal,
 )
 
@@ -75,3 +79,91 @@ def _validate(
             "composition must select exactly the reviewed source, recipient, channel, "
             "information, two routes, and two exact mechanisms"
         )
+
+
+def component_configuration_from_proposal(
+    proposal: ScenarioDraftProposal,
+) -> ComponentCompositionConfigurationReview:
+    """Project only semantic fields that a human may revise directly."""
+
+    workflow = proposal.workflow
+    if not isinstance(workflow, ComponentCompositionWorkflowDraft):
+        raise ValueError("proposal is not a component composition")
+    return ComponentCompositionConfigurationReview(
+        title=proposal.title,
+        description=proposal.description,
+        source_id=workflow.source_id,
+        recipient_id=workflow.recipient_id,
+        information_id=workflow.information_id,
+        channel_object_id=workflow.channel_object_id,
+        delivery_enabled=workflow.delivery_enabled,
+        delivery_minutes=workflow.delivery_minutes,
+        recording_minutes=workflow.recording_minutes,
+    )
+
+
+def apply_component_configuration(
+    proposal: ScenarioDraftProposal,
+    configuration: ComponentCompositionConfigurationReview,
+) -> ScenarioDraftProposal:
+    """Apply editable semantics while rebuilding compiler-owned selections."""
+
+    workflow = proposal.workflow
+    if not isinstance(workflow, ComponentCompositionWorkflowDraft):
+        raise ValueError("proposal is not a component composition")
+    payload = proposal.model_dump(mode="json")
+    payload["title"] = configuration.title
+    payload["description"] = configuration.description
+    payload["workflow"] = {
+        **workflow.model_dump(mode="json"),
+        "components": _reviewed_components(configuration),
+        "source_id": configuration.source_id,
+        "recipient_id": configuration.recipient_id,
+        "information_id": configuration.information_id,
+        "channel_object_id": configuration.channel_object_id,
+        "delivery_enabled": configuration.delivery_enabled,
+        "delivery_minutes": configuration.delivery_minutes,
+        "recording_minutes": configuration.recording_minutes,
+    }
+    return ScenarioDraftProposal.model_validate(payload)
+
+
+def _reviewed_components(
+    configuration: ComponentCompositionConfigurationReview,
+) -> list[dict[str, object]]:
+    """Keep the initial composition's executable seams compiler-owned."""
+
+    return [
+        ComponentSelectionV1(
+            component_id=configuration.source_id,
+            component_kind="person_participant",
+        ).model_dump(mode="json"),
+        ComponentSelectionV1(
+            component_id=configuration.recipient_id,
+            component_kind="person_participant",
+        ).model_dump(mode="json"),
+        ComponentSelectionV1(
+            component_id=configuration.channel_object_id,
+            component_kind="stateful_object",
+        ).model_dump(mode="json"),
+        ComponentSelectionV1(
+            component_id=configuration.information_id,
+            component_kind="information_carrier",
+        ).model_dump(mode="json"),
+        ComponentSelectionV1(
+            component_id="publication_route",
+            component_kind="directed_connection",
+        ).model_dump(mode="json"),
+        ComponentSelectionV1(
+            component_id="assessment_route",
+            component_kind="directed_connection",
+        ).model_dump(mode="json"),
+        ComponentSelectionV1(
+            component_id="publication_delivery",
+            component_kind="exact_mechanism",
+        ).model_dump(mode="json"),
+        ComponentSelectionV1(
+            component_id="assessment_recording",
+            component_kind="exact_mechanism",
+        ).model_dump(mode="json"),
+    ]

@@ -59,8 +59,28 @@ def test_component_example_can_be_created_previewed_approved_and_run(tmp_path: P
     assert preview.json()["composition_receipt"]["workflow_template_id"] == (
         "component_composition_v1"
     )
+    edited = api.put(
+        f"/api/authoring/drafts/{draft_id}/component-composition-configuration",
+        json={
+            "expected_revision": 1,
+            "edit_id": "component_timing_edit",
+            "configuration": {
+                "title": "Field report review with delayed delivery",
+                "description": "A delayed field report is delivered and assessed.",
+                "source_id": "field_coordinator",
+                "recipient_id": "review_officer",
+                "information_id": "field_safety_report",
+                "channel_object_id": "secure_review_channel",
+                "delivery_enabled": True,
+                "delivery_minutes": 45,
+                "recording_minutes": 20,
+            },
+        },
+    )
+    assert edited.status_code == 200
+    assert edited.json()["revision"] == 2
     approved = api.post(
-        f"/api/authoring/drafts/{draft_id}/approve", json={"expected_revision": 1}
+        f"/api/authoring/drafts/{draft_id}/approve", json={"expected_revision": 2}
     )
     assert approved.status_code == 200
     run = api.post(

@@ -17,6 +17,9 @@ from cybernetic_influence.authoring.compiler import (
     CompiledScenario,
     compile_scenario,
 )
+from cybernetic_influence.authoring.component_composition import (
+    apply_component_configuration,
+)
 from cybernetic_influence.authoring.coordination_review import (
     coordination_proposal_from_review,
     coordination_review_from_proposal,
@@ -26,6 +29,7 @@ from cybernetic_influence.authoring.examples import (
     reviewed_coordination_proposal,
 )
 from cybernetic_influence.authoring.models import (
+    ComponentCompositionConfigurationReview,
     ComponentCompositionWorkflowDraft,
     CoordinationScenarioReview,
     PersonDraft,
@@ -739,6 +743,78 @@ class DraftAuthoringService:
                     "message_id": edit_id,
                     "content": "Edited the coordination scenario directly.",
                     "source": "direct_coordination_edit",
+                    "edit_digest": edit_digest,
+                    "assistant_summary": summary,
+                    "result_status": status,
+                    "trace_ids": [],
+                },
+            ],
+            "authoring_summary": summary,
+            "proposal": proposal.model_dump(mode="json"),
+            "diagnostics": diagnostics,
+            "approval": None,
+            "updated_at": now_iso(),
+        }
+        return self.store.replace(
+            draft_id,
+            expected_revision=expected_revision,
+            document=updated,
+        )
+
+    def edit_component_composition_configuration(
+        self,
+        draft_id: str,
+        *,
+        expected_revision: int,
+        edit_id: str,
+        configuration: ComponentCompositionConfigurationReview,
+    ) -> dict[str, object]:
+        """Persist component bindings and timing without exposing implementations."""
+
+        current = self.store.get(draft_id)
+        messages = current["messages"]
+        assert isinstance(messages, list)
+        edit_digest = sha256(
+            configuration.model_dump_json(exclude_none=False).encode("utf-8")
+        ).hexdigest()
+        existing = next(
+            (item for item in messages if item.get("message_id") == edit_id),
+            None,
+        )
+        if existing is not None:
+            if (
+                existing.get("source") != "direct_component_composition_edit"
+                or existing.get("edit_digest") != edit_digest
+            ):
+                raise DraftConflictError("edit ID was already used with different content")
+            return current
+        if current["revision"] != expected_revision:
+            raise DraftConflictError("draft revision has changed; reload before editing")
+        raw_proposal = current.get("proposal")
+        if not isinstance(raw_proposal, dict):
+            raise AuthoringCompilationError("draft has no valid proposal")
+        previous = ScenarioDraftProposal.model_validate(raw_proposal)
+        proposal = apply_component_configuration(previous, configuration)
+        diagnostics = _diagnostics(proposal)
+        if any(item["severity"] == "error" for item in diagnostics):
+            raise AuthoringCompilationError(
+                "edited component configuration would make the scenario unpreviewable"
+            )
+        status = "needs_input" if diagnostics else "ready_for_review"
+        summary = (
+            "Saved component bindings and timing. The compiler rebuilt the reviewed "
+            "routes and exact mechanisms; no authoring model call was made."
+        )
+        updated = {
+            **current,
+            "revision": expected_revision + 1,
+            "status": status,
+            "messages": [
+                *messages,
+                {
+                    "message_id": edit_id,
+                    "content": "Edited the component composition directly.",
+                    "source": "direct_component_composition_edit",
                     "edit_digest": edit_digest,
                     "assistant_summary": summary,
                     "result_status": status,

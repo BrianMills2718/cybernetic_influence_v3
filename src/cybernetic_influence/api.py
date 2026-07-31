@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, JsonValue
 
 from cybernetic_influence.authoring.compiler import AuthoringCompilationError
 from cybernetic_influence.authoring.models import (
+    ComponentCompositionConfigurationReview,
     CoordinationDecisionWorkflowDraft,
     CoordinationScenarioReview,
     PersonDraft,
@@ -216,6 +217,15 @@ class DraftCoordinationEditRequest(BaseModel):
     expected_revision: int
     edit_id: str
     configuration: CoordinationScenarioReview
+
+
+class DraftComponentCompositionEditRequest(BaseModel):
+    """One idempotent semantic edit to the reviewed component composition."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    expected_revision: int
+    edit_id: str
+    configuration: ComponentCompositionConfigurationReview
 
 
 class AuthoredRunRequest(BaseModel):
@@ -1259,6 +1269,30 @@ def create_app(
         with authoring_lock:
             try:
                 return authoring.edit_coordination_configuration(
+                    draft_id,
+                    expected_revision=body.expected_revision,
+                    edit_id=body.edit_id,
+                    configuration=body.configuration,
+                )
+            except DraftConflictError as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
+            except DraftNotFoundError as error:
+                raise HTTPException(
+                    status_code=404, detail="authoring draft not found"
+                ) from error
+            except (ValueError, AuthoringCompilationError) as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.put("/api/authoring/drafts/{draft_id}/component-composition-configuration")
+    def edit_draft_component_composition_configuration(
+        draft_id: str,
+        body: DraftComponentCompositionEditRequest,
+        request: Request,
+    ) -> dict[str, object]:
+        _require_access(request)
+        with authoring_lock:
+            try:
+                return authoring.edit_component_composition_configuration(
                     draft_id,
                     expected_revision=body.expected_revision,
                     edit_id=body.edit_id,

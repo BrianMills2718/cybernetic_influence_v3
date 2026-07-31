@@ -84,10 +84,11 @@ loudly and retain the diagnostic. Existing run/replay tests remain green.
 
 ### 25B — First mixed-component scenario
 
-**Status:** in progress. The provider-free field-report composition now selects
-two people, information, a channel, two routes, and two exact mechanisms and
-executes/replays through the existing runtime. Its semantic direct-edit surface
-and conversational authoring branch remain 25C work.
+**Status:** technically complete. The provider-free field-report composition
+selects two people, information, a channel, two routes, and two exact
+mechanisms; it executes/replays through the existing runtime and exposes a
+semantic direct-edit form for bindings and timing. Conversational authoring of
+registered composition choices remains 25C work.
 
 Add one authored `component_composition_v1` scenario that combines reviewed
 communication, recording, scheduling, and exact-gate components. It must have
