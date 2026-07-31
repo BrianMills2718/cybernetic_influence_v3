@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from cybernetic_influence.api import create_app
+from cybernetic_influence.api import _coordination_reference_narration
 from cybernetic_influence import narration as narration_module
 from cybernetic_influence.narration import (
     CausalMomentNarration,
@@ -95,13 +96,13 @@ def test_live_moment_narration_groups_participants_and_retains_simulator_owned_c
     assert narration["cost"] == pytest.approx(0.01 * retained_moment_count)
     moments = narration["moments"]
     assert isinstance(moments, list)
-    assert moments[0]["narrative_version"] == 3
+    assert moments[0]["narrative_version"] == 4
     assert moments[0]["concise_narrative"] == moments[0]["narrative"]
     assert moments[0]["detailed_paragraphs"]
     assert "source_event_ids" not in moments[0]
     first_context = moments[0]["evidence_context"]
     assert first_context["context_version"] == 2
-    assert first_context["prompt_version"] == "causal_moment_narrator/v4"
+    assert first_context["prompt_version"] == "causal_moment_narrator/v5"
     expected_first_event_ids = [
         event["event_id"]
         for event in document["timeline"]
@@ -138,6 +139,98 @@ def test_live_moment_narration_groups_participants_and_retains_simulator_owned_c
     assert isinstance(calls, list)
     assert all(item["reasoning_effort"] == "high" for item in calls)
     assert "source_event_ids" not in prompts[0]
+
+
+def test_terminal_moment_exposes_exact_status_without_leaking_it_earlier() -> None:
+    document = {
+        "run_id": "run_terminal_status",
+        "outcome": {"final_status": "no_decision_by_horizon"},
+        "timeline": [
+            {
+                "event_id": "event_000000",
+                "activation": "activation_000000",
+                "kind": "action_attempted",
+                "summary": "The coordinator requested a review.",
+                "focus_ids": ["mission_coordinator"],
+                "logical_time": 0,
+                "state_revision": 0,
+            },
+            {
+                "event_id": "event_000001",
+                "activation": "work_terminal",
+                "kind": "mechanism_executed",
+                "summary": "The exact terminal outcome was committed.",
+                "focus_ids": ["decision_record", "terminal_decision_gate"],
+                "logical_time": 10,
+                "state_revision": 1,
+            },
+        ],
+        "traces": [],
+        "moments": [
+            {
+                "activation": "activation_000000",
+                "causal_time": 1,
+                "causal_timestamp": "c1",
+                "logical_time": 0,
+                "participants": ["mission_coordinator"],
+                "event_ids": ["event_000000"],
+            },
+            {
+                "activation": "work_terminal",
+                "causal_time": 2,
+                "causal_timestamp": "c2",
+                "logical_time": 10,
+                "participants": ["exact_mechanisms"],
+                "event_ids": ["event_000001"],
+            },
+        ],
+    }
+
+    moments = narration_module._moment_inputs(document)
+
+    assert "exact_terminal_status" not in moments[0]
+    assert moments[1]["exact_terminal_status"] == "no_decision_by_horizon"
+
+
+def test_reference_narration_names_no_decision_instead_of_generic_success() -> None:
+    narration = _coordination_reference_narration(
+        {
+            "outcome": {"final_status": "no_decision_by_horizon"},
+            "timeline": [
+                {
+                    "event_id": "event_000000",
+                    "kind": "mechanism_executed",
+                    "summary": (
+                        "Mechanism terminal_decision_gate produced outcome "
+                        "terminal_decision_accepted."
+                    ),
+                }
+            ],
+            "moments": [
+                {
+                    "activation": "work_terminal",
+                    "participants": ["exact_mechanisms"],
+                    "event_ids": ["event_000000"],
+                    "logical_time": 10,
+                    "causal_time": 1,
+                    "causal_timestamp": "c1",
+                    "silent": False,
+                }
+            ],
+        }
+    )
+    moments = cast(list[dict[str, Any]], narration["moments"])
+    detailed = " ".join(
+        paragraph["text"]
+        for moment in moments
+        for paragraph in cast(
+            list[dict[str, str]],
+            moment["detailed_paragraphs"],
+        )
+    )
+
+    assert "no deployment decision had been approved" in detailed
+    assert "passed the exact support and review gate" not in detailed
 
 
 def test_compacted_v4_validator_preserves_reopen_of_legacy_v3_contexts(

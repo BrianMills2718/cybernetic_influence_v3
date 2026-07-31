@@ -36,8 +36,12 @@ also project over a completed live trajectory.
 The canonical Packet 24C draft is `draft_019c16228a62`; its approved revision 2
 compiled to live run `run_e1a91d0a47e1`. The run, complete traces, narration
 recovery, restart/reopen behavior, and rendered UI have been inspected. M1–M6
-and M8 are technically demonstrated. M7 awaits the stakeholder's usefulness
-and comprehensibility judgment.
+and M8 were initially reported as technically demonstrated. A subsequent
+audit found that the canonical draft classified every terminal outcome as
+goal-satisfying, so its Levin goal finding could not discriminate success from
+mere termination. The same audit found omitted configured-graph relationships
+and ambiguous terminal narration. Packet 24D repairs those contracts; M6 and
+M7 require a corrected canonical readout afterward.
 
 ## Current-to-target Delta
 
@@ -192,6 +196,12 @@ negative.
 - Unknown references, duplicate IDs, invalid timing, incompatible routes,
   missing terminal conditions, missing collective goal, or analysis references
   outside the scenario fail before approval.
+- A candidate collective goal that classifies every terminal outcome as
+  goal-satisfying fails before approval; safe termination and goal satisfaction
+  remain distinct.
+- Configured nodes are classified as causal, analytical-only, spatial-only, or
+  unexplained. Unexplained isolation is a visible lint finding, while an
+  execution-inert analytical member is not mislabeled as dead causal state.
 - A stale approved revision cannot run.
 - A model-generation failure retains the previous valid draft plus diagnostics.
 - A world-run failure remains a failed run; analysis does not start.
@@ -412,9 +422,33 @@ Acceptance disposition:
 | M3 | pass | Reference and live paths, retained exact runtime, maps, narratives, evidence, and non-replaying resume verified |
 | M4 | pass | Validated theory-neutral bundle reopened with unchanged digest |
 | M5 | pass | Sixteen provenance-labeled Waltzman findings rendered |
-| M6 | pass | Seven provenance-labeled Levin findings rendered; four perturbational dimensions correctly remain `not_tested` |
-| M7 | pending stakeholder judgment | Technical UI inspection passed; stakeholder must confirm the result is understandable and useful without raw JSON |
+| M6 | repair required | Seven findings rendered, but the retained canonical draft incorrectly counted all terminal outcomes as goal-satisfying |
+| M7 | repair and stakeholder judgment pending | Graph relationships and terminal wording require correction before stakeholder review |
 | M8 | pass | Canonical documents and rendered UI separate scenario, run, analysis, and post-MVP experiment concerns |
+
+### Packet 24D — truthful configured graph, goal result, and terminal account
+
+**Classification:** direct MVP truthfulness repair.
+
+**Status:** implementation complete; corrected canonical readout pending.
+
+1. Project declared mechanism reads, writes, substrates, observation targets,
+   and representation relationships onto analyst-visible configured nodes.
+2. Classify zero-degree nodes as analytical-only, spatial-only, or unexplained;
+   warn only about unexplained isolation.
+3. Reject a candidate collective goal that counts every terminal outcome as
+   satisfying that goal.
+4. Give the live narrator exact terminal status only at the terminal evidence
+   moment, and make reference narration distinguish an approved decision from
+   `no_decision_by_horizon`.
+5. Verify graph fit, three-view continuity, analytical-scale controls,
+   narrative hierarchy, pause/resume, console, and failed requests in a fresh
+   desktop browser.
+
+The historical Packet 24C run remains immutable evidence of its exact world
+trajectory. It is not silently reinterpreted as valid goal-satisfaction
+evidence. M6 and M7 require a newly approved corrected configuration and
+readout, while M1–M5 and M8 retain their independent evidence.
 
 ## Review and Reset
 

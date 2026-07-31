@@ -15,6 +15,7 @@ from cybernetic_influence.causal_core.models import (
     AnalyticalBoundary,
     CausalEvent,
     CausalState,
+    EntityState,
     FactChange,
     StatePatch,
 )
@@ -22,7 +23,9 @@ from cybernetic_influence.presentation import (
     BoundaryProjectionError,
     _temporal_states,
     _analyst_animation_cues,
+    analyst_edges,
     analyst_event,
+    analyst_graph_diagnostics,
     boundary_activity_event_index,
     clip_boundary_activity_projection,
     project_boundary_activity,
@@ -32,9 +35,22 @@ from cybernetic_influence.scenarios.coordination_decision import (
     PARTNERSHIP_BOUNDARY_ID,
     CoordinationRuntimeFixture,
     baseline_coordination_fixture,
+    coordination_decision_fixtures,
     coordination_runtime_fixture,
     run_scripted_coordination,
     stabilization_coordination_fixture,
+)
+from cybernetic_influence.scenarios.physical_access import (
+    physical_access_arm_configurations,
+    physical_access_fixture,
+)
+from cybernetic_influence.scenarios.purchase_payment import (
+    purchase_payment_arm_configurations,
+    purchase_payment_fixture,
+)
+from cybernetic_influence.scenarios.service_desk import (
+    service_desk_arm_configurations,
+    service_desk_fixture,
 )
 
 
@@ -42,6 +58,102 @@ ROOT = Path(__file__).resolve().parents[1]
 TRIAGER_CANARY = "triager_route_key_17"
 SUPERVISOR_CANARY = "supervisor_close_key_17"
 BADGE_CANARY = "equipment_badge_key_41"
+
+
+def test_configured_graph_explains_active_and_analytical_only_nodes() -> None:
+    scenario = stabilization_coordination_fixture().scenario
+    diagnostics = analyst_graph_diagnostics(
+        scenario.initial_state,
+        scenario.analytical_boundaries,
+    )
+    edge_kinds = {
+        str(edge["kind"]) for edge in analyst_edges(scenario.initial_state)
+    }
+
+    assert diagnostics["warnings"] == []
+    assert diagnostics["counts"] == {
+        "causal": 51,
+        "analytical_only": 3,
+        "spatial_only": 0,
+        "unused": 0,
+    }
+    classifications = diagnostics["node_classification"]
+    assert isinstance(classifications, dict)
+    assert classifications["meeting_schedule"] == "causal"
+    assert classifications["coordination_platform"] == "causal"
+    assert classifications["decision_goal"] == "analytical_only"
+    assert {
+        "mechanism_read",
+        "mechanism_write",
+        "mechanism_substrate",
+        "observation_target",
+    } <= edge_kinds
+
+
+def test_configured_graph_warns_about_only_unexplained_isolation() -> None:
+    scenario = stabilization_coordination_fixture().scenario
+    state = scenario.initial_state.model_copy(
+        update={
+            "entities": {
+                **scenario.initial_state.entities,
+                "unused_rock": EntityState(
+                    entity_id="unused_rock",
+                    entity_kind="physical_object",
+                    description="A deliberately unexplained lint fixture.",
+                ),
+            }
+        }
+    )
+
+    diagnostics = analyst_graph_diagnostics(
+        state,
+        scenario.analytical_boundaries,
+    )
+
+    counts = diagnostics["counts"]
+    assert isinstance(counts, dict)
+    assert counts["unused"] == 1
+    assert diagnostics["warnings"] == [
+        {
+            "code": "unexplained_isolated_node",
+            "node_id": "unused_rock",
+            "message": (
+                "Unused Rock has no configured causal, spatial, or analytical "
+                "relationship."
+            ),
+        }
+    ]
+
+
+def test_every_built_in_scenario_arm_explains_each_configured_node() -> None:
+    scenarios = [
+        *(
+            service_desk_fixture(arm).scenario
+            for arm in service_desk_arm_configurations()
+        ),
+        *(
+            physical_access_fixture(arm).scenario
+            for arm in physical_access_arm_configurations()
+        ),
+        *(
+            purchase_payment_fixture(arm).scenario
+            for arm in purchase_payment_arm_configurations()
+        ),
+        *(fixture.scenario for fixture in coordination_decision_fixtures()),
+    ]
+
+    warnings_by_scenario = {
+        scenario.scenario_id: analyst_graph_diagnostics(
+            scenario.initial_state,
+            scenario.analytical_boundaries,
+        )["warnings"]
+        for scenario in scenarios
+    }
+
+    assert len(scenarios) == 12
+    assert warnings_by_scenario == {
+        scenario.scenario_id: [] for scenario in scenarios
+    }
 
 
 @lru_cache(maxsize=2)

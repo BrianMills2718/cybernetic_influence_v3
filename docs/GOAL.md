@@ -131,11 +131,13 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   desktop surface showed the initial situation, concise and detailed
   narratives, all three graph meanings, participant and composite accounts,
   exact outcome, and both theory readouts without browser or backend errors.
-- M1–M6 and M8 have implementation and retained evidence. M7 remains the only
-  open boundary: the stakeholder must judge whether the canonical result is
-  understandable and useful without raw JSON. The detailed exact-mechanism
-  narration also has one known wording ambiguity at the terminal deadline; the
-  concise narrative and exact outcome remain correct.
+- M1–M5 and M8 retain implementation and evidence. An audit reopened M6 because
+  the canonical draft counted every terminal result—including
+  `no_decision_by_horizon`—as satisfying the candidate goal. Packet 24D now
+  rejects that configuration, completes the configured-relationship
+  projection, lints only unexplained isolation, and makes terminal narration
+  name the exact result. M6 needs a corrected retained readout; M7 then needs
+  stakeholder judgment on that corrected surface.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any
@@ -145,7 +147,8 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 Follow [Slice 24: Configurable theory-informed simulation
 MVP](plans/024-configurable-theory-analysis-mvp.md). Packets 24A0–24C are
-implemented; only the M7 stakeholder readout remains before MVP closeout.
+implemented and Packet 24D owns the audited truthfulness repair. A corrected
+canonical readout for M6 must precede the M7 stakeholder review.
 
 Execute one packet at a time from a clean linked worktree. For each packet:
 

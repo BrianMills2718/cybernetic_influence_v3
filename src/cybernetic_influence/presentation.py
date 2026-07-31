@@ -475,6 +475,10 @@ def analyst_progress_projection(
         "state_revision": state.revision,
         "nodes": analyst_nodes(state),
         "edges": analyst_edges(state),
+        "graph_diagnostics": analyst_graph_diagnostics(
+            state,
+            analytical_boundaries,
+        ),
         "world": world,
         "events": events,
         "animation_cues": cues,
@@ -759,6 +763,10 @@ def build_analyst_document(
         "nodes": nodes,
         "snapshots": snapshots,
         "edges": edges,
+        "graph_diagnostics": analyst_graph_diagnostics(
+            final_state,
+            analytical_boundaries,
+        ),
         "boundaries": boundaries,
         "timeline": timeline,
         "trajectory": trajectory,
@@ -1774,7 +1782,12 @@ def _boundary_member_refs(
 
 
 def analyst_edges(state: CausalState) -> list[dict[str, object]]:
-    """Project concrete connections, bindings, and representation lineage."""
+    """Project configured relationships onto the analyst-visible node set.
+
+    Ports and carriers remain implementation detail in this analyst projection.
+    Their declared relationships are therefore joined onto the visible owners,
+    mechanisms, entities, and representations rather than silently disappearing.
+    """
     edges: list[dict[str, object]] = []
     routes_by_target_port: dict[str, list[str]] = {}
     for connection in state.connections.values():
@@ -1808,6 +1821,139 @@ def analyst_edges(state: CausalState) -> list[dict[str, object]]:
                     "description": (
                         f"Declared input {port_id} binds {owner_ref} to exact "
                         f"mechanism {mechanism.mechanism_id}."
+                    ),
+                }
+            )
+        fact_reads: dict[str, list[str]] = {}
+        fact_writes: dict[str, list[str]] = {}
+        for fact_id in mechanism.read_fact_ids:
+            fact_reads.setdefault(fact_id.split(".", maxsplit=1)[0], []).append(
+                fact_id
+            )
+        for fact_id in mechanism.write_fact_ids:
+            fact_writes.setdefault(fact_id.split(".", maxsplit=1)[0], []).append(
+                fact_id
+            )
+        for entity_id, fact_ids in sorted(fact_reads.items()):
+            if entity_id == mechanism.mechanism_id:
+                continue
+            edges.append(
+                {
+                    "id": f"reads_{entity_id}_to_{mechanism.mechanism_id}",
+                    "kind": "mechanism_read",
+                    "source": entity_id,
+                    "target": mechanism.mechanism_id,
+                    "enabled": True,
+                    "exact_route_ids": [],
+                    "description": (
+                        f"{mechanism.mechanism_id} reads configured state from "
+                        f"{entity_id}: {', '.join(sorted(fact_ids))}."
+                    ),
+                }
+            )
+        for entity_id, fact_ids in sorted(fact_writes.items()):
+            if entity_id == mechanism.mechanism_id:
+                continue
+            edges.append(
+                {
+                    "id": f"writes_{mechanism.mechanism_id}_to_{entity_id}",
+                    "kind": "mechanism_write",
+                    "source": mechanism.mechanism_id,
+                    "target": entity_id,
+                    "enabled": True,
+                    "exact_route_ids": [],
+                    "description": (
+                        f"{mechanism.mechanism_id} can commit configured state "
+                        f"to {entity_id}: {', '.join(sorted(fact_ids))}."
+                    ),
+                }
+            )
+        for representation_id in sorted(set(mechanism.read_representation_ids)):
+            edges.append(
+                {
+                    "id": (
+                        f"reads_{representation_id}_to_"
+                        f"{mechanism.mechanism_id}"
+                    ),
+                    "kind": "mechanism_read",
+                    "source": representation_id,
+                    "target": mechanism.mechanism_id,
+                    "enabled": True,
+                    "exact_route_ids": [],
+                    "description": (
+                        f"{mechanism.mechanism_id} can read the retained "
+                        f"representation {representation_id}."
+                    ),
+                }
+            )
+        substrate_owners: dict[str, list[str]] = {}
+        for substrate_ref in mechanism.substrate_refs:
+            visible_ref = substrate_ref
+            if substrate_ref in state.carriers:
+                visible_ref = state.carriers[substrate_ref].owner_ref
+            substrate_owners.setdefault(visible_ref, []).append(substrate_ref)
+        for visible_ref, substrate_refs in sorted(substrate_owners.items()):
+            if visible_ref == mechanism.mechanism_id:
+                continue
+            edges.append(
+                {
+                    "id": (
+                        f"substrate_{mechanism.mechanism_id}_to_"
+                        f"{visible_ref}"
+                    ),
+                    "kind": "mechanism_substrate",
+                    "source": mechanism.mechanism_id,
+                    "target": visible_ref,
+                    "enabled": True,
+                    "exact_route_ids": [],
+                    "description": (
+                        f"{mechanism.mechanism_id} operates through configured "
+                        f"substrate {', '.join(sorted(substrate_refs))}."
+                    ),
+                }
+            )
+        for target_id in sorted(set(mechanism.observation_target_ids)):
+            if target_id == mechanism.mechanism_id:
+                continue
+            edges.append(
+                {
+                    "id": (
+                        f"observation_{mechanism.mechanism_id}_to_"
+                        f"{target_id}"
+                    ),
+                    "kind": "observation_target",
+                    "source": mechanism.mechanism_id,
+                    "target": target_id,
+                    "enabled": True,
+                    "exact_route_ids": [],
+                    "description": (
+                        f"{mechanism.mechanism_id} can deliver an observation "
+                        f"to {target_id}."
+                    ),
+                }
+            )
+        writable_carrier_owners: dict[str, list[str]] = {}
+        for carrier_id in mechanism.write_carrier_ids:
+            owner_ref = state.carriers[carrier_id].owner_ref
+            writable_carrier_owners.setdefault(owner_ref, []).append(carrier_id)
+        for owner_ref, carrier_ids in sorted(writable_carrier_owners.items()):
+            if owner_ref == mechanism.mechanism_id:
+                continue
+            edges.append(
+                {
+                    "id": (
+                        f"carrier_write_{mechanism.mechanism_id}_to_"
+                        f"{owner_ref}"
+                    ),
+                    "kind": "mechanism_write",
+                    "source": mechanism.mechanism_id,
+                    "target": owner_ref,
+                    "enabled": True,
+                    "exact_route_ids": [],
+                    "description": (
+                        f"{mechanism.mechanism_id} can write through configured "
+                        f"carrier {', '.join(sorted(carrier_ids))} owned by "
+                        f"{owner_ref}."
                     ),
                 }
             )
@@ -1855,6 +2001,68 @@ def analyst_edges(state: CausalState) -> list[dict[str, object]]:
                 }
             )
     return edges
+
+
+def analyst_graph_diagnostics(
+    state: CausalState,
+    analytical_boundaries: Sequence[AnalyticalBoundary] = (),
+) -> dict[str, object]:
+    """Classify nodes and warn only about unexplained configured isolation."""
+    nodes = analyst_nodes(state)
+    edges = analyst_edges(state)
+    degree = {str(node["id"]): 0 for node in nodes}
+    for edge in edges:
+        source = str(edge["source"])
+        target = str(edge["target"])
+        if source in degree:
+            degree[source] += 1
+        if target in degree:
+            degree[target] += 1
+    analytical_members = {
+        member_ref
+        for boundary in analytical_boundaries
+        for member_ref in boundary.member_refs
+    }
+    placed_entities = set(state.placements)
+    classifications: dict[str, str] = {}
+    warnings: list[dict[str, str]] = []
+    for node_id in sorted(degree):
+        if degree[node_id]:
+            classification = "causal"
+        elif node_id in analytical_members:
+            classification = "analytical_only"
+        elif node_id in placed_entities:
+            classification = "spatial_only"
+        else:
+            classification = "unused"
+            warnings.append(
+                {
+                    "code": "unexplained_isolated_node",
+                    "node_id": node_id,
+                    "message": (
+                        f"{_label(node_id)} has no configured causal, spatial, "
+                        "or analytical relationship."
+                    ),
+                }
+            )
+        classifications[node_id] = classification
+    counts = {
+        classification: sum(
+            item == classification for item in classifications.values()
+        )
+        for classification in (
+            "causal",
+            "analytical_only",
+            "spatial_only",
+            "unused",
+        )
+    }
+    return {
+        "contract": "configured-graph-diagnostics.v1",
+        "counts": counts,
+        "node_classification": classifications,
+        "warnings": warnings,
+    }
 
 
 def analyst_nodes(state: CausalState) -> list[dict[str, object]]:

@@ -380,6 +380,22 @@ def test_unknown_terminal_outcome_fails_typed_authoring() -> None:
         ScenarioDraftProposal.model_validate(payload)
 
 
+def test_collective_goal_cannot_count_every_terminal_outcome_as_success() -> None:
+    payload = _proposal_payload()
+    workflow = payload["workflow"]
+    assert isinstance(workflow, dict)
+    workflow["collective_goal"]["acceptable_outcomes"] = list(
+        workflow["terminal_outcomes"]
+    )
+    proposal = ScenarioDraftProposal.model_validate(payload)
+
+    with pytest.raises(
+        AuthoringCompilationError,
+        match="must distinguish goal-satisfying outcomes",
+    ):
+        compile_scenario(proposal)
+
+
 @pytest.mark.parametrize("mutation", ["source", "recipient", "route"])
 def test_incompatible_message_referents_fail_compilation(mutation: str) -> None:
     payload = _proposal_payload()

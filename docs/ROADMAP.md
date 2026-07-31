@@ -130,9 +130,10 @@ cross-run comparisons. It is explicitly outside the current MVP.
 - The operator has repeatedly reviewed the private UI and accepted the current
   maps, live causal animation, authoring conversation, and multi-episode
   narrative as useful foundations.
-- The last MVP boundary is stakeholder review of the retained canonical run:
-  can the user explain the situation, trajectory, two theoretical readouts, and
-  their evidence/limitations without opening raw JSON?
+- An audit of the retained canonical run found one invalid Levin goal
+  classification plus incomplete configured-graph relationships and ambiguous
+  terminal wording. The implementation repair is complete; a corrected
+  retained readout must replace that evidence before stakeholder review.
 
 ### Enabling progress
 
@@ -170,21 +171,23 @@ cross-run comparisons. It is explicitly outside the current MVP.
 | `MVP-C2` | Explicit `RunSpec` and `AnalysisSpec` snapshot bound to the approved scenario | hard | satisfied | Preview and retained run expose all three identities and digests |
 | `MVP-C3` | Theory-neutral `RunEvidenceBundle` | hard | satisfied | Bundle includes configuration, state/events, information lineage, participant evidence, boundary activity, and completion evidence with reference validation |
 | `MVP-C4` | Waltzman per-run module over the evidence bundle | hard | satisfied | Existing exact/coded measures consume the common bundle and render with method/provenance |
-| `MVP-C5` | Levin per-run module over the evidence bundle | hard | satisfied | Candidate goal/boundary, glue, activity, correction, persistence, adaptation, and limits render without an aggregate executor or scalar |
-| `MVP-C6` | One integrated private review flow | evidence | technical pass; stakeholder judgment pending | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
+| `MVP-C5` | Levin per-run module over the evidence bundle | hard | implementation repaired; corrected retained readout pending | Candidate goal/boundary, glue, activity, correction, persistence, adaptation, and limits render without an aggregate executor or scalar |
+| `MVP-C6` | One integrated private review flow | evidence | truthfulness repair implemented; corrected proof and stakeholder judgment pending | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
 | `POST-C1` | `ExperimentSpec` and repeated comparison | optional | deferred | Explicit post-MVP selection |
 | `POST-C2` | Perturbation, robustness, and persuadability assays | optional | deferred | Explicit post-MVP selection after the per-run workflow is observed |
 
-The first and only open boundary is the stakeholder judgment portion of
-`MVP-C6`. No further implementation is required to make that decision.
+The open boundaries are one corrected retained M6 readout followed by the
+stakeholder judgment portion of `MVP-C6`.
 
 ## Shortest Critical Path
 
-1. **Stakeholder readout — current boundary.** Review the retained canonical
-   run in the private simulator and decide whether its situation, trajectory,
-   Waltzman readout, Levin readout, evidence, and limitations are
-   understandable without raw JSON.
-2. **MVP closeout — conditional next step.** If accepted, mark M7 and the goal
+1. **Corrected retained readout — current boundary.** Approve a configuration
+   whose goal-satisfying outcomes are a proper subset of terminal outcomes,
+   run it, and verify configured-graph diagnostics plus exact terminal wording.
+2. **Stakeholder readout.** Review that corrected run and decide whether its
+   situation, trajectory, Waltzman readout, Levin readout, evidence, and
+   limitations are understandable without raw JSON.
+3. **MVP closeout — conditional next step.** If accepted, mark M6, M7, and the goal
    complete and select a post-MVP direction. If rejected, convert the concrete
    usability failure into one bounded correction rather than reopening the
    simulator architecture.
@@ -224,9 +227,10 @@ remain evidence. They do not own current direction.
 
 ## Planning Frontier
 
-- `MVP-C1` through `MVP-C5` are satisfied on the canonical retained example.
-- Stakeholder comprehensibility is the only remaining MVP uncertainty. Use the
-  retained review surface and exact evidence rather than another provider run.
+- `MVP-C1` through `MVP-C4` are satisfied on the canonical retained example.
+- `MVP-C5` has a repaired implementation but needs corrected retained evidence;
+  stakeholder comprehensibility follows that evidence rather than reviewing a
+  known-invalid goal classification.
 - Provider-backed execution is operationally conditional on a certified route
   with available capacity. Reference execution remains available and meaningful.
 - `ExperimentSpec`, perturbation, comparison, robustness, evasion, attribution,
@@ -235,10 +239,10 @@ remain evidence. They do not own current direction.
 
 ## Continue, Reset, Scale, Stop
 
-- **Decision:** retain the current direction; the technical vertical is
-  complete.
-- **Continue:** obtain the M7 stakeholder readout on the canonical retained
-  run.
+- **Decision:** retain the current direction; repair the audited truthfulness
+  defects without reopening the simulator architecture.
+- **Continue:** retain one corrected M6 readout, then obtain the M7 stakeholder
+  readout on that run.
 - **Reset:** after two substantive increments or four hours without a new
   user-visible part of the canonical flow, or if configuration requires
   arbitrary generated mechanism code/a second runtime.

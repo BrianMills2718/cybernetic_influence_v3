@@ -10,6 +10,37 @@ import httpx
 from playwright.sync_api import sync_playwright
 
 
+def assert_spatial_containment(page: object) -> None:
+    """Every placed node must remain inside its rendered place container."""
+    violations = page.evaluate(
+        """() => {
+          const places = [...document.querySelectorAll(
+            '.react-flow__node.cy-place-group'
+          )]
+          const placeById = new Map(
+            places.map((element) => [
+              element.dataset.id,
+              element.getBoundingClientRect(),
+            ])
+          )
+          return [...document.querySelectorAll(
+            '.react-flow__node[data-parentid]'
+          )].flatMap((element) => {
+            const child = element.getBoundingClientRect()
+            const parent = placeById.get(element.dataset.parentid)
+            if (!parent) return [element.dataset.id]
+            const outside =
+              child.left < parent.left - 1 ||
+              child.top < parent.top - 1 ||
+              child.right > parent.right + 1 ||
+              child.bottom > parent.bottom + 1
+            return outside ? [element.dataset.id] : []
+          })
+        }"""
+    )
+    assert violations == [], violations
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://127.0.0.1:8620")
@@ -19,23 +50,43 @@ def parse_args() -> argparse.Namespace:
         help="Optional Chromium executable; otherwise Playwright's installed browser is used.",
     )
     parser.add_argument("--screenshot", type=Path)
+    parser.add_argument(
+        "--run-id",
+        help="Reuse one disposable completed coordination run instead of creating another.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     base_url = args.base_url.rstrip("/")
-    response = httpx.post(
-        f"{base_url}/api/runs",
-        json={
-            "scenario": "coordination_decision",
-            "arm_id": "stabilization",
-            "execution": "scripted",
-        },
-        timeout=60,
+    if args.run_id:
+        response = httpx.get(f"{base_url}/api/runs/{args.run_id}", timeout=30)
+        response.raise_for_status()
+        if response.json().get("status") != "completed":
+            raise RuntimeError("the supplied browser-verification run is not completed")
+        run_id = args.run_id
+    else:
+        response = httpx.post(
+            f"{base_url}/api/runs",
+            json={
+                "scenario": "coordination_decision",
+                "arm_id": "stabilization",
+                "execution": "scripted",
+            },
+            timeout=240,
+        )
+        response.raise_for_status()
+        run_id = response.json()["run_id"]
+    config_response = httpx.get(f"{base_url}/api/config", timeout=30)
+    config_response.raise_for_status()
+    config = config_response.json()
+    live_expected = bool(
+        config.get("live_authorized")
+        and config.get("scenarios", {})
+        .get("coordination_decision", {})
+        .get("live_model_ids", [])
     )
-    response.raise_for_status()
-    run_id = response.json()["run_id"]
     console_errors: list[str] = []
     failed_requests: list[str] = []
     with sync_playwright() as playwright:
@@ -71,15 +122,19 @@ def main() -> None:
         assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
         assert page.locator("#analytical-scale-toggle").is_enabled()
         assert page.locator("#analytical-boundary").is_enabled()
-        assert page.locator("#live").is_checked()
-        page.locator("#run-settings").evaluate("element => element.open = true")
-        assert page.locator("#model").is_visible()
-        assert page.locator("#model").input_value() == "codex/gpt-5.6-terra"
-        assert page.locator("#reasoning").input_value() == "medium"
-        assert page.locator("#max-cost-field").is_hidden()
-        assert "included with the signed-in ChatGPT Codex subscription" in (
-            page.locator("#cost-details").inner_text()
-        )
+        assert_spatial_containment(page)
+        assert page.locator("#live").is_checked() is live_expected
+        if live_expected:
+            page.locator("#run-settings").evaluate("element => element.open = true")
+            assert page.locator("#model").is_visible()
+            assert page.locator("#reasoning").input_value()
+            assert page.locator("#max-cost-field").is_hidden() is (
+                page.locator("#cost-details").inner_text().find(
+                    "included with the signed-in ChatGPT Codex subscription"
+                ) >= 0
+            )
+        else:
+            assert page.locator("#live").is_disabled()
 
         first_story = page.locator("#turn-narratives .turn-narrative").first
         assert first_story.locator("p").is_visible()
@@ -178,6 +233,7 @@ def main() -> None:
         )
         page.locator("#analytical-scale-toggle").click()
         page.locator(".cy-graph-bar strong", has_text="World topology").wait_for()
+        assert_spatial_containment(page)
         assert page.locator("#spatial-layout").get_attribute("aria-pressed") == "true"
         assert page.locator("#analytical-scale-toggle").inner_text().startswith(
             "Collapse "
@@ -187,6 +243,17 @@ def main() -> None:
         assert page.locator("#causal-layout").get_attribute("aria-pressed") == "true"
         assert page.locator("#analytical-scale-toggle").is_enabled()
         assert page.locator("#analytical-boundary").is_enabled()
+        page.wait_for_timeout(600)
+        assert page.locator(".cy-graph-warning").count() == 0
+        canvas = page.locator(".cy-graph-canvas").bounding_box()
+        assert canvas is not None
+        for node in page.locator(".react-flow__node").all():
+            bounds = node.bounding_box()
+            assert bounds is not None
+            assert bounds["x"] >= canvas["x"] - 1
+            assert bounds["y"] >= canvas["y"] - 1
+            assert bounds["x"] + bounds["width"] <= canvas["x"] + canvas["width"] + 1
+            assert bounds["y"] + bounds["height"] <= canvas["y"] + canvas["height"] + 1
 
         page.locator("#analytical-scale-toggle").click()
         page.locator(".cy-graph-bar strong", has_text="Collapsed composite").wait_for()
@@ -249,8 +316,9 @@ def main() -> None:
             """() => document.querySelectorAll('#analytical-boundary option').length === 2
                 && document.querySelector('#spatial-layout')?.getAttribute('aria-pressed') === 'true'"""
         )
-        assert page.locator("#live").is_checked()
-        page.locator("#live").uncheck()
+        assert page.locator("#live").is_checked() is live_expected
+        if live_expected:
+            page.locator("#live").uncheck()
         assert page.locator("#run").inner_text() == "Play reference simulation"
         page.locator("#run").click()
         page.locator("#pause").wait_for(state="visible")

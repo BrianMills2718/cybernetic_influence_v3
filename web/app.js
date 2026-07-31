@@ -656,6 +656,7 @@ function renderAuthoring() {
       })),
       boundaries: authoringPreview.boundaries || [], world,
       trajectory: authoringPreview.trajectory || {nodes: [], edges: []},
+      graphDiagnostics:graphDiagnostics(authoringPreview.graph_diagnostics),
       viewMode: selectedAuthoringGraphView, event: null,
       initialRevision: authoringPreview.initial_revision, selectedNodeId: null, selectedEdgeId: null,
       boundary: null, collapsedBoundaryId: null,
@@ -1309,6 +1310,20 @@ function graphProjection() {
   }
 }
 
+function graphDiagnostics(raw = liveProjection?.graph_diagnostics || current?.graph_diagnostics) {
+  if (!raw || raw.contract !== 'configured-graph-diagnostics.v1') return null
+  return {
+    contract:raw.contract,
+    counts:raw.counts || {},
+    nodeClassification:raw.node_classification || {},
+    warnings:(raw.warnings || []).map((item) => ({
+      code:item.code,
+      nodeId:item.node_id,
+      message:item.message,
+    })),
+  }
+}
+
 function renderScaleControls() {
   const boundaries = current?.boundaries || []
   if (selectedScale !== 'exact' && !boundaries.some((item) => item.id === selectedScale)) {
@@ -1772,6 +1787,14 @@ function renderGraph() {
       <strong>${html(edge.source.replaceAll('_',' '))}</strong> → ${html(edge.target.replaceAll('_',' '))}
       ${edge.kind === 'mechanism_binding'
         ? '<small>declared input binding</small>'
+        : edge.kind === 'mechanism_read'
+          ? '<small>configured read</small>'
+        : edge.kind === 'mechanism_write'
+          ? '<small>configured update</small>'
+        : edge.kind === 'mechanism_substrate'
+          ? '<small>configured substrate</small>'
+        : edge.kind === 'observation_target'
+          ? '<small>configured observation delivery</small>'
         : edge.kind === 'information_lineage'
           ? '<small>information lineage</small>'
         : edge.kind === 'information_location'
@@ -1792,6 +1815,7 @@ function renderGraph() {
       initialRevision:current?.initial_revision ?? null,
       world:worldProjection(),
       trajectory:current?.trajectory || null,
+      graphDiagnostics:graphDiagnostics(),
       viewMode:selectedGraphView,
       boundary:authoredBoundary && snapshot ? {
         id:authoredBoundary.id,
@@ -2317,7 +2341,7 @@ const theoryFindingLabels = {
   waltzman_informal_alignment:'Informal alignment',
   waltzman_disengagement:'Partner disengagement',
   waltzman_authority_divergence_scope:'Authority divergence',
-  levin_goal_progress:'Progress toward the collective goal',
+  levin_goal_progress:'Did this run satisfy the candidate goal?',
   levin_boundary_activity:'What crossed the group boundary',
   levin_collective_glue:'What connected the group',
   levin_error_correction:'Observed error correction',
@@ -2332,7 +2356,10 @@ function theoryFindingValue(finding) {
     return readableMeasureValue(value)
   }
   if (finding.finding_id === 'levin_goal_progress') {
-    return `${String(value.terminal_status || 'No terminal status').replaceAll('_', ' ')} · ${value.acceptable_outcome ? 'within the reviewed acceptable outcomes' : 'outside the reviewed acceptable outcomes'}`
+    const status = String(value.terminal_status || 'No terminal status').replaceAll('_', ' ')
+    return value.acceptable_outcome
+      ? `Yes · ${status} was configured as a goal-satisfying outcome`
+      : `No · the run ended with ${status}`
   }
   if (finding.finding_id === 'levin_boundary_activity') {
     return `${value.incoming_crossings || 0} incoming crossing${value.incoming_crossings === 1 ? '' : 's'}, ${value.outgoing_crossings || 0} outgoing crossing${value.outgoing_crossings === 1 ? '' : 's'}, and ${value.completed_coordination_episodes || 0} completed coordination episode${value.completed_coordination_episodes === 1 ? '' : 's'}`

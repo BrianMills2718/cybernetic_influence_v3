@@ -71,6 +71,7 @@ from cybernetic_influence.presentation import (
     BoundaryActivityProjection,
     analyst_boundaries,
     analyst_edges,
+    analyst_graph_diagnostics,
     analyst_progress_projection,
     analyst_nodes,
     analyst_world,
@@ -286,6 +287,13 @@ def _coordination_reference_narration(
         for item in raw_timeline
         if isinstance(item, dict) and isinstance(item.get("event_id"), str)
     }
+    raw_outcome = document.get("outcome")
+    final_status = (
+        str(raw_outcome.get("final_status"))
+        if isinstance(raw_outcome, dict)
+        and isinstance(raw_outcome.get("final_status"), str)
+        else None
+    )
     moments: list[dict[str, object]] = []
 
     def readable_summary(value: str) -> str:
@@ -342,10 +350,16 @@ def _coordination_reference_narration(
             ),
             "scope_threshold_recorded": "The proposal record accepted the selected scope.",
             "terminal_decision_accepted": (
-                "The final decision passed the exact support and review gate."
+                "The deadline gate recorded that no deployment decision had "
+                "been approved."
+                if final_status == "no_decision_by_horizon"
+                else "The final decision passed the exact support and review gate."
             ),
             "external_decision_received": (
-                "The external decision registry received the final decision."
+                "The external registry recorded that the deadline passed "
+                "without an approved deployment."
+                if final_status == "no_decision_by_horizon"
+                else "The external decision registry received the final decision."
             ),
         }
         sentences: list[str] = []
@@ -549,6 +563,10 @@ def _scenario_preview(
         "nodes": analyst_nodes(state),
         "snapshots": {revision: analyst_nodes(state)},
         "edges": edges,
+        "graph_diagnostics": analyst_graph_diagnostics(
+            state,
+            compiled_scenario.analytical_boundaries,
+        ),
         "boundaries": analyst_boundaries(
             compiled_scenario.analytical_boundaries,
             temporal_states,
@@ -1013,7 +1031,12 @@ def create_app(
             "profile": "authored_typed_scenario", "arm": "approved_draft",
             "initial_revision": state.revision, "world": analyst_world(temporal_states),
             "nodes": analyst_nodes(state), "snapshots": {revision: analyst_nodes(state)},
-            "edges": edges, "timeline": [], "trajectory": {"nodes": [], "edges": []},
+            "edges": edges,
+            "graph_diagnostics": analyst_graph_diagnostics(
+                state,
+                compiled.scenario.analytical_boundaries,
+            ),
+            "timeline": [], "trajectory": {"nodes": [], "edges": []},
             "boundaries": analyst_boundaries(compiled.scenario.analytical_boundaries, temporal_states, edges, []),
             "draft_id": draft_id, "draft_revision": document["revision"],
         }

@@ -147,6 +147,14 @@ def validate_coordination_proposal(proposal: ScenarioDraftProposal) -> None:
         raise ValueError(
             "terminal outcomes must cover every exact reviewed decision outcome"
         )
+    if set(workflow.collective_goal.acceptable_outcomes) >= set(
+        workflow.terminal_outcomes
+    ):
+        raise ValueError(
+            "the candidate collective goal must distinguish goal-satisfying "
+            "outcomes from at least one terminal outcome that ends the run "
+            "without satisfying the goal"
+        )
 
     expected_stabilizers = (
         _STABILIZERS if workflow.condition == "stabilization" else set()

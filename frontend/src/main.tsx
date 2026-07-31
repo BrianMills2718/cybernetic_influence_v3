@@ -40,6 +40,17 @@ interface AnalystEdge {
   substrateEntityIds?: string[]
 }
 
+interface GraphDiagnostics {
+  contract: 'configured-graph-diagnostics.v1'
+  counts: Record<string, number>
+  nodeClassification: Record<string, string>
+  warnings: Array<{
+    code: string
+    nodeId: string
+    message: string
+  }>
+}
+
 interface PlaceView {
   id: string
   kind: string
@@ -116,6 +127,7 @@ interface CanvasOptions {
   boundary: BoundaryView | null
   world: WorldView | null
   trajectory: TrajectoryView | null
+  graphDiagnostics?: GraphDiagnostics | null
   viewMode: 'world' | 'causal' | 'trajectory'
   collapsedBoundaryId: string | null
   selectedNodeId: string | null
@@ -131,6 +143,7 @@ interface CanvasOptions {
 interface CanvasNodeData {
   raw: AnalystNode
   active: boolean
+  connectivityClass?: string
   aggregateMode?: 'expanded' | 'collapsed'
   memberCount?: number
   placeMode?: 'root' | 'place'
@@ -159,6 +172,10 @@ function relationLabel(kind: string): string {
   return {
     connection: 'route',
     mechanism_binding: 'input',
+    mechanism_read: 'reads',
+    mechanism_write: 'updates',
+    mechanism_substrate: 'uses',
+    observation_target: 'notifies',
     information_location: 'carried',
     information_lineage: 'derived',
     spatial_link: 'adjacent via',
@@ -169,6 +186,10 @@ function relationColor(kind: string): string {
   return {
     connection: '#5aa9e6',
     mechanism_binding: '#e8a84d',
+    mechanism_read: '#97a9bd',
+    mechanism_write: '#d7b46a',
+    mechanism_substrate: '#70b7aa',
+    observation_target: '#88aee8',
     information_location: '#ef79b7',
     information_lineage: '#c36fa1',
     spatial_link: '#83d6c0',
@@ -189,6 +210,7 @@ function toCanvasNode(
   item: AnalystNode,
   active: boolean,
   selected: boolean,
+  connectivityClass?: string,
 ): Node<CanvasNodeData> {
   const collapsed = item.kind === 'analytical_boundary'
   return {
@@ -197,12 +219,14 @@ function toCanvasNode(
     data: {
       raw: item,
       active,
+      connectivityClass,
       aggregateMode: collapsed ? 'collapsed' : undefined,
     },
     className: [
       'cy-flow-node-wrap',
       active ? 'cy-flow-node-wrap--active' : '',
       selected ? 'cy-flow-node-wrap--selected' : '',
+      connectivityClass === 'unused' ? 'cy-flow-node-wrap--unused' : '',
     ].filter(Boolean).join(' '),
     style: {
       width: collapsed ? 238 : NODE_WIDTH,
@@ -237,13 +261,21 @@ function toCanvasEdge(
   const liveCue = Boolean(activity?.cue?.edge_ids.includes(item.id))
   const cue = liveCue ? activity?.cue ?? null : null
   const active = focusedRoute || focusedSpatialLink || focusedEndpoints || liveCue
+  const supportingRelationship = [
+    'mechanism_read',
+    'mechanism_write',
+    'mechanism_substrate',
+    'observation_target',
+  ].includes(item.kind)
   return {
     id: item.id,
     source: item.source,
     target: item.target,
-    label: item.kind === 'spatial_link' && item.substrateEntityIds?.length
-      ? `${relationLabel(item.kind)} ${item.substrateEntityIds.join(', ')}`
-      : relationLabel(item.kind),
+    label: supportingRelationship && !active && !selected
+      ? undefined
+      : item.kind === 'spatial_link' && item.substrateEntityIds?.length
+        ? `${relationLabel(item.kind)} ${item.substrateEntityIds.join(', ')}`
+        : relationLabel(item.kind),
     // A moving token is reserved for a retained delivery/effect that names a
     // resolved visible edge. Other event kinds get a truthful pulse only.
     type: cue && ['information_transfer', 'observation_delivered'].includes(cue.kind)
@@ -537,6 +569,16 @@ function buildWorldGraph(options: CanvasOptions): {
     ? boundary
     : null
   const collapsedMemberIds = new Set(collapsedBoundary?.memberIds ?? [])
+  const visibleOccupantCount = (placeId: string): number =>
+    world.placements.filter(
+      (placement) =>
+        placement.placeId === placeId
+        && !collapsedMemberIds.has(placement.entityId),
+    ).length
+  const placeHeight = (placeId: string): number => {
+    const rows = Math.ceil(visibleOccupantCount(placeId) / 2)
+    return Math.max(260, 112 + rows * 92)
+  }
   const roots = world.places.filter((place) => place.parentPlaceId === null)
   const nodes: Node<CanvasNodeData>[] = []
   const placeWidths = new Map<string, number>()
@@ -547,7 +589,11 @@ function buildWorldGraph(options: CanvasOptions): {
       (place) => place.parentPlaceId === root.id,
     )
     const width = Math.max(800, 90 + Math.max(1, children.length) * 360)
-    const height = 560
+    const tallestChild = Math.max(
+      0,
+      ...children.map((place) => placeHeight(place.id)),
+    )
+    const height = Math.max(560, 150 + tallestChild)
     placeWidths.set(root.id, width)
     nodes.push(placeNode(root, {
       position: { x: rootOffset, y: 30 },
@@ -559,8 +605,8 @@ function buildWorldGraph(options: CanvasOptions): {
     children.forEach((place, index) => {
       nodes.push(placeNode(place, {
         position: { x: 46 + index * 350, y: 110 },
-        width: 314,
-        height: 390,
+        width: 330,
+        height: placeHeight(place.id),
         parentNode: root.id,
         active: eventFocus.has(place.id),
         selected: options.selectedNodeId === place.id,
@@ -598,7 +644,7 @@ function buildWorldGraph(options: CanvasOptions): {
           parentNode: placeId,
           extent: 'parent',
           position: {
-            x: 18 + (index % 2) * 148,
+            x: 12 + (index % 2) * 164,
             y: 88 + Math.floor(index / 2) * 92,
           },
           style: {
@@ -709,6 +755,7 @@ function buildGraph(options: CanvasOptions): {
       item,
       activeIds.has(item.id) || boundaryActive,
       options.selectedNodeId === item.id,
+      options.graphDiagnostics?.nodeClassification[item.id],
     )
   })
   const canvasEdges = options.edges.map((item) =>
@@ -756,6 +803,8 @@ function NodeLabel({ data }: { data: CanvasNodeData }) {
       <span>
         {data.aggregateMode === 'collapsed'
           ? 'analytical composite · executor=false'
+          : data.connectivityClass === 'unused'
+            ? 'unconnected configured item'
           : data.raw.kind.replaceAll('_', ' ')}
       </span>
       <strong>{data.raw.label}</strong>
@@ -773,7 +822,7 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
   const initialized = useNodesInitialized()
-  const { fitView } = useReactFlow()
+  const { fitBounds, fitView } = useReactFlow()
   const layoutKey = [
     options.viewMode,
     options.collapsedBoundaryId ?? 'exact',
@@ -789,19 +838,41 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
   useEffect(() => {
     if (!initialized) return
     const frame = window.requestAnimationFrame(() => {
+      if (!graph.nodes.length) return
       const mobileWorldMinimum =
         options.viewMode === 'world' && window.innerWidth <= 700 ? 0.65 : 0.1
-      void fitView({
-        padding: 0.12,
-        duration: 280,
-        minZoom: mobileWorldMinimum,
-        maxZoom: 1.35,
-      })
+      if (options.viewMode === 'world') {
+        void fitView({
+          padding: 0.12,
+          duration: 280,
+          minZoom: mobileWorldMinimum,
+          maxZoom: 1.35,
+        })
+      } else {
+        const left = Math.min(...graph.nodes.map((node) => node.position.x))
+        const top = Math.min(...graph.nodes.map((node) => node.position.y))
+        const right = Math.max(...graph.nodes.map(
+          (node) => node.position.x + Number(node.style?.width ?? NODE_WIDTH),
+        ))
+        const bottom = Math.max(...graph.nodes.map(
+          (node) => node.position.y + Number(node.style?.height ?? NODE_HEIGHT),
+        ))
+        void fitBounds(
+          {
+            x: left,
+            y: top,
+            width: Math.max(1, right - left),
+            height: Math.max(1, bottom - top),
+          },
+          { padding: 0.12, duration: 280 },
+        )
+      }
       setEdges(graph.edges.map((edge) => ({ ...edge })))
     })
     return () => window.cancelAnimationFrame(frame)
   }, [
     fitView,
+    fitBounds,
     initialized,
     layoutKey,
     graph.edges,
@@ -812,6 +883,9 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
   const collapsed = options.collapsedBoundaryId !== null
   const worldMode = options.viewMode === 'world'
   const trajectoryMode = options.viewMode === 'trajectory'
+  const unusedWarnings = options.viewMode === 'causal'
+    ? options.graphDiagnostics?.warnings ?? []
+    : []
   return (
     <section className="cy-graph-shell">
       <div className="cy-graph-bar">
@@ -828,6 +902,18 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
             ? ` · ${options.world.unplacedEntityIds.length} logical entities are outside this spatial projection; inspect them in Configured interaction pathways`
             : ''}
         </span>
+        {unusedWarnings.length > 0
+          ? (
+            <span
+              className="cy-graph-warning"
+              title={unusedWarnings.map((item) => item.message).join(' ')}
+            >
+              {unusedWarnings.length} unconnected configured item{
+                unusedWarnings.length === 1 ? '' : 's'
+              }
+            </span>
+          )
+          : null}
       </div>
       <div className="cy-graph-canvas">
         <ReactFlow

@@ -57,6 +57,9 @@ user: |
   observation_delivery means new information arrived; and internal_wake means
   a scheduled process update. Include silence only when it changes the story.
   Never describe scenario_start as an internal wake or observation delivery.
+  When exact_terminal_status is supplied, it is the exact outcome established
+  at this moment. State that outcome plainly; do not replace it with a generic
+  claim that a decision succeeded.
   Do not inventory mechanism names, state revisions, representation scope, or
   routine deliveries. Do not repeat generic omissions in every account; the
   scenario's Read me and evidence views carry those limits. Do not imply an

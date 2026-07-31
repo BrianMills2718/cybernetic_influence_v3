@@ -24,9 +24,9 @@ NARRATOR_MAX_BUDGET = 0.025
 NARRATOR_MAX_TOKENS = 640
 NARRATOR_TIMEOUT_SECONDS = 180
 NARRATOR_REASONING_EFFORT = "low"
-NARRATOR_PROMPT_VERSION = "causal_moment_narrator/v4"
+NARRATOR_PROMPT_VERSION = "causal_moment_narrator/v5"
 _LEGACY_V3_PROMPT_VERSION = "causal_moment_narrator/v3"
-NARRATIVE_VERSION = 3
+NARRATIVE_VERSION = 4
 
 StructuredCall = Callable[..., tuple[Any, Any]]
 _FORBID = ConfigDict(extra="forbid", strict=True)
@@ -256,6 +256,7 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
                         "event_id",
                         "kind",
                         "summary",
+                        "focus_ids",
                         "logical_time",
                         "state_revision",
                         "mechanism_id",
@@ -312,6 +313,7 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
                     "event_id",
                     "kind",
                     "summary",
+                    "focus_ids",
                     "logical_time",
                     "state_revision",
                     "mechanism_id",
@@ -349,6 +351,35 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
                 "logical_time": logical_time,
                 "state_revision": None,
             }]
+        exact_terminal_status: str | None = None
+        raw_outcome = document.get("outcome")
+        if isinstance(raw_outcome, Mapping):
+            raw_status = raw_outcome.get("final_status")
+            if isinstance(raw_status, str):
+                terminal_ids = {
+                    "terminal_decision_gate",
+                    "external_decision_receiver",
+                }
+
+                def is_terminal_event(event: Mapping[str, object]) -> bool:
+                    raw_focus_ids = event.get("focus_ids")
+                    focus_ids = (
+                        {
+                            str(item)
+                            for item in raw_focus_ids
+                            if isinstance(item, str)
+                        }
+                        if isinstance(raw_focus_ids, list)
+                        else set()
+                    )
+                    summary = str(event.get("summary", ""))
+                    return bool(focus_ids.intersection(terminal_ids)) or any(
+                        terminal_id in summary for terminal_id in terminal_ids
+                    )
+
+                terminal_evidence = any(is_terminal_event(event) for event in events)
+                if terminal_evidence:
+                    exact_terminal_status = raw_status
         moments.append(
             {
                 "activation": activation,
@@ -357,6 +388,11 @@ def _moment_inputs(document: Mapping[str, object]) -> list[dict[str, object]]:
                 "causal_timestamp": causal_timestamp,
                 "logical_time": logical_time,
                 "events": events,
+                **(
+                    {"exact_terminal_status": exact_terminal_status}
+                    if exact_terminal_status is not None
+                    else {}
+                ),
                 "participant_traces": [
                     {
                         key: trace[key]

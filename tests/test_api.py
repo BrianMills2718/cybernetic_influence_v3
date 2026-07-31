@@ -1714,6 +1714,10 @@ def test_coordination_scenario_runs_reopens_and_clips_boundary_activity(
     assert preview.status_code == 200, preview.text
     assert preview.json()["nodes"]
     assert preview.json()["edges"]
+    assert preview.json()["graph_diagnostics"]["contract"] == (
+        "configured-graph-diagnostics.v1"
+    )
+    assert preview.json()["graph_diagnostics"]["warnings"] == []
     assert preview.json()["world"]["places"]
     assert len(preview.json()["boundaries"]) == 2
 
