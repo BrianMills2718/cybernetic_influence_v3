@@ -1077,7 +1077,7 @@ def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) ->
         )
     )
     config = api.get("/api/config").json()["authoring"]
-    assert config["model"] == "codex/gpt-5.6-terra"
+    assert config["model"] == "openrouter/openai/gpt-5.6-terra"
     assert config["reasoning_effort"] == "medium"
     draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
     drafted = api.post(

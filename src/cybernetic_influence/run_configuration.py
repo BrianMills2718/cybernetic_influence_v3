@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
     CODEX_TERRA_MODEL,
+    OPENROUTER_TERRA_MODEL,
     codex_subscription_available,
     is_codex_subscription_model,
 )
@@ -24,7 +25,7 @@ from cybernetic_influence.scenarios.coordination_decision import (
 )
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh"]
-DEFAULT_MODEL = CODEX_TERRA_MODEL
+DEFAULT_MODEL = OPENROUTER_TERRA_MODEL
 DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium"
 NARRATOR_REASONING_EFFORT: Literal["medium"] = "medium"
 PARTICIPANT_PER_CALL_CEILING = 0.05
@@ -72,7 +73,7 @@ _ADVERTISEMENT: dict[str, _RouteAdvertisement] = {
         "agent_reasoning_efforts": ("medium",),
         "narrator_reasoning_effort": "medium",
     },
-    "openrouter/openai/gpt-5.6-terra": {
+    OPENROUTER_TERRA_MODEL: {
         "label": "OpenAI GPT-5.6 Terra",
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_TERRA",
         "coordination_certification_env": (

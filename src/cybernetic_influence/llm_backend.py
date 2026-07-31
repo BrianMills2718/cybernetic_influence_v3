@@ -11,6 +11,7 @@ from typing import Final
 
 CODEX_LUNA_MODEL: Final = "codex/gpt-5.6-luna"
 CODEX_TERRA_MODEL: Final = "codex/gpt-5.6-terra"
+OPENROUTER_TERRA_MODEL: Final = "openrouter/openai/gpt-5.6-terra"
 CODEX_SUBSCRIPTION_MODELS: Final[frozenset[str]] = frozenset(
     {CODEX_LUNA_MODEL, CODEX_TERRA_MODEL}
 )

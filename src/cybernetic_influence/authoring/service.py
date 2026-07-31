@@ -32,6 +32,7 @@ from cybernetic_influence.authoring.store import AuthoringDraftStore, DraftConfl
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
     CODEX_TERRA_MODEL,
+    OPENROUTER_TERRA_MODEL,
     structured_backend_options,
 )
 from cybernetic_influence.run_store import now_iso
@@ -46,7 +47,7 @@ AuthoringModel = Literal[
     "openrouter/openai/gpt-5.6-sol",
 ]
 AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
-AUTHORING_MODEL: AuthoringModel = CODEX_TERRA_MODEL
+AUTHORING_MODEL: AuthoringModel = OPENROUTER_TERRA_MODEL
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
 AUTHORING_MAX_TOKENS = 8000
@@ -80,7 +81,7 @@ AUTHORING_MODEL_OPTIONS: tuple[AuthoringModelOption, ...] = (
         "default_reasoning_effort": "medium",
     },
     {
-        "model": "openrouter/openai/gpt-5.6-terra",
+        "model": OPENROUTER_TERRA_MODEL,
         "label": "Terra · OpenRouter",
         "provider": "OpenRouter",
         "billing_mode": "usage_based",
