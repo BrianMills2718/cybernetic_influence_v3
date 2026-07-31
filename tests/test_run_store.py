@@ -135,11 +135,15 @@ def test_restart_preserves_world_when_narration_resume_is_interrupted(
     assert retained["status"] == "completed"
     assert retained["story"] == {"headline": "World outcome retained"}
     assert retained["cost_fully_observable"] is False
-    assert retained["narration"]["failure_boundary"]["kind"] == (
-        "interrupted_narration_resume"
-    )
-    assert retained["narration_resume"]["status"] == "failed"
-    assert retained["narration_resume"]["world_replayed"] is False
+    narration = retained["narration"]
+    assert isinstance(narration, Mapping)
+    failure_boundary = narration["failure_boundary"]
+    assert isinstance(failure_boundary, Mapping)
+    assert failure_boundary["kind"] == "interrupted_narration_resume"
+    narration_resume = retained["narration_resume"]
+    assert isinstance(narration_resume, Mapping)
+    assert narration_resume["status"] == "failed"
+    assert narration_resume["world_replayed"] is False
 
 
 def test_run_summary_marks_only_measurements_that_need_validation(

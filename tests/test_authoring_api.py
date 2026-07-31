@@ -39,7 +39,10 @@ from cybernetic_influence.authoring.service import (
     _ProposalConsumer,
     _provider_candidate_from_proposal,
 )
-from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
+from cybernetic_influence.run_configuration import (
+    EffectiveRunLlmConfiguration,
+    llm_client_revision,
+)
 from cybernetic_influence.run_store import RunStore
 
 
@@ -249,7 +252,7 @@ def test_completed_authored_run_resumes_only_missing_narration(
     # made the narration preflight exceed its configured limit.
     moments = deepcopy(completed["moments"])
 
-    revision = api_module.llm_client_revision()
+    revision = llm_client_revision()
     effective = EffectiveRunLlmConfiguration(
         model="openrouter/openai/gpt-5.6-terra",
         agent_reasoning_effort="medium",
