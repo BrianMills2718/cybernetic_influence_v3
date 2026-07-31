@@ -1,7 +1,7 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: post_mvp_candidate
+status: packet_22a0_complete
 created: 2026-07-27
 updated: 2026-07-30
 ---
@@ -22,8 +22,11 @@ completion of the historical Slice 21 comparison is the only valid gate.
 It does not create another scenario, organization executor, agency score,
 general causal-attribution framework, or generalized perturbation DSL.
 
-The detailed contracts below remain design evidence, not standing execution
-authority.
+On 2026-07-30 the operator explicitly selected the implementation foundation
+without authorizing any trajectories. Packet 22A0 is therefore active as a
+pure analysis-contract slice. Packets 22A1, 22A2, and 22B remain unstarted and
+require a later instruction. This selection does not mark the Slice-24 M7
+stakeholder readout complete or redefine the MVP.
 
 ## Analyst outcome
 
@@ -178,11 +181,19 @@ class CompositeControlReadout(_ProducedModel):
     input_crossing_ids: list[str]
     output_crossing_ids: list[str]
     coordination_episode_ids: list[str]
+    output_attempt_event_ids: list[str]
+    external_result_event_ids: list[str]
+    terminal_outcome_event_id: str
     coordination_measurement_ref: str
-    coded_patterns: list[IndicatorEvidence]
+    coded_patterns: list[CompositePatternEvidence]
     source_run_ids: list[str]
     limitations: list[str]
 ```
+
+`CompositePatternEvidence` is a separate evidence-cited type for the six
+perturbation interpretations listed below. The existing Slice-21
+`IndicatorEvidence` cannot be reused truthfully because its ID union is frozen
+to three Waltzman-inspired indicators.
 
 `_ProducedModel` uses strict validation and `extra="forbid"`. Reopening uses a
 separate consumer projection with `extra="ignore"` while retaining all required
@@ -291,6 +302,10 @@ candidate composite as robust.
 
 ### Packet 22A0 — schema and both-sign fixtures
 
+**Status:** complete on 2026-07-30. No scripted/live perturbation trajectory or
+provider call was made. Do not expose a new API/UI action or start 22A1 without
+a later instruction.
+
 Create `src/cybernetic_influence/analysis/composite_agency.py` and focused
 `tests/test_composite_agency.py`; extend the shared analysis models only when
 the Slice-21 types cannot truthfully express the contract. Implement the strict
@@ -310,6 +325,30 @@ attempt to rederive an episode from prose or event-time proximity.
 
 Do not edit runtime, API, UI, scenario, prompt, or `llm_client` paths in 22A0.
 Audit and commit before 22A1.
+
+Observed evidence:
+
+- the scenario adapter derives the partnership people, execution substrate,
+  configured references, exact executors, analytical boundary, and control
+  fingerprint from the real reviewed Slice-21 coordination fixture;
+- reviewed future shock objects remain explicit additions rather than being
+  misrepresented as existing world objects;
+- strict producer and forward-tolerant consumer contracts cover the capability,
+  four perturbations, run references, separate composite-pattern evidence, and
+  evidence-reversible readouts;
+- the validator requires five rows, one matched control, matching world/model/
+  run-control and measurement contracts, concrete changed references, retained
+  perturbation application evidence, and separate output attempts, boundary
+  outputs, external results, and terminal outcomes;
+- invalid rows can remain visible and unscored without inventing missing
+  measurements or boundary activity; and
+- `tests/test_composite_agency.py` passes 13 execution-free positive and
+  adversarial tests, focused mypy is clean, analysis exports import, bytecode
+  compilation succeeds, and `git diff --check` is clean.
+
+Code-diff audit verdict: `pass`. The audit replaced the first manually described
+fixture with derivation from the retained scenario contract and added consumer,
+invalid-row, evidence-linkage, and schema-self-validation checks.
 
 ### Packet 22A1 — zero-cost matched runs and exact calculator
 

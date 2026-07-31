@@ -154,8 +154,12 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 Follow [Slice 24: Configurable theory-informed simulation
 MVP](plans/024-configurable-theory-analysis-mvp.md). Packets 24A0–24D are
 technically complete. The active boundary is the M7 stakeholder review of the
-corrected retained run; do not add another implementation packet before that
-judgment.
+corrected retained run.
+
+The operator separately selected and completed the execution-free Packet 22A0
+contract foundation on 2026-07-30. That bounded post-MVP setup did not mark M7
+complete, change this MVP, execute trajectories, or authorize Packets
+22A1/22A2/22B.
 
 Execute one packet at a time from a clean linked worktree. For each packet:
 
@@ -165,7 +169,8 @@ Execute one packet at a time from a clean linked worktree. For each packet:
 4. commit and push the coherent packet; and
 5. stop at any explicit provider, deployment, or operator-readout boundary.
 
-Do not resume 21C1, 21C2, Slice 21D, or Slice 22 under this goal.
+Do not resume 21C1, 21C2, Slice 21D, or any Slice-22 work beyond the explicitly
+selected execution-free Packet 22A0 under this goal.
 
 ## Completion and Reset
 

@@ -13,16 +13,15 @@ updated: 2026-07-30
 ## Active execution
 
 [Slice 24: Configurable theory-informed simulation MVP](024-configurable-theory-analysis-mvp.md)
-is the sole executable continuation plan. Packets 24A0–24C are technically
-complete. The only active boundary is the M7 stakeholder readout of the
-retained canonical run; do not launch another provider run to satisfy it.
-
-## Deferred candidate
+remains the MVP authority. Packets 24A0–24D are technically complete. Its only
+active boundary is the M7 stakeholder readout of the retained canonical run;
+do not launch another provider run to satisfy it.
 
 [Slice 22: Composite-agency perturbation assay](022-composite-agency-perturbation-assay.md)
-is a post-MVP candidate. It does not authorize comparison work now; it remains
-available because it is the prospective home for later robustness and
-perturbation analysis.
+has one completed execution-free packet: 22A0 implements strict capability,
+perturbation, run-reference, readout, and retained-evidence validation
+contracts. It does not authorize a scripted/live trajectory, provider call,
+comparison result, API/UI change, or Packet 22A1.
 
 ## Historical foundations
 
