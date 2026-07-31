@@ -180,6 +180,19 @@ def composition_receipt(
 
     state = scenario.initial_state
     components = _resolved_components(state, scenario)
+    # Do not merely label runtime surfaces after compilation: resolve the exact
+    # component kind/version through the same registry future authored
+    # compositions use. A removed or unreviewed kind therefore fails here.
+    resolve_component_selections(
+        [
+            ComponentSelectionV1(
+                component_id=item.component_id,
+                component_kind=item.component_kind,
+                version=item.version,
+            )
+            for item in components
+        ]
+    )
     return CompositionReceiptV1(
         registry_digest=reviewed_component_registry_digest(),
         scenario_id=scenario.scenario_id,
