@@ -12,7 +12,10 @@ from cybernetic_influence.authoring import (
     AuthoringCompilationError,
     ScenarioDraftProposal,
     compile_resource_request,
+    compile_scenario,
+    reviewed_coordination_proposal,
 )
+from cybernetic_influence.authoring import compiler as compiler_module
 from cybernetic_influence.causal_core.replay import replay_committed_trajectory
 
 
@@ -266,6 +269,44 @@ def test_live_resource_people_use_the_reviewed_profile_and_exact_gate() -> None:
     )
     assert "Ari values being prepared for fieldwork." in system_prompts[0]
     assert "Mina tends to check records before deciding." in system_prompts[1]
+
+
+def test_live_authored_coordination_rebinds_specs_and_implementations_together(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    compiled = compile_scenario(reviewed_coordination_proposal())
+    sentinel = object()
+
+    def require_matching_registry(
+        fixture: Any,
+        bindings: dict[str, Any],
+        **_kwargs: object,
+    ) -> object:
+        active_specs = fixture.active_specs
+        assert {
+            spec.active_system_id: spec.implementation_id
+            for spec in active_specs
+        } == {
+            active_system_id: binding.implementation_id
+            for active_system_id, binding in bindings.items()
+        }
+        return sentinel
+
+    monkeypatch.setattr(
+        compiler_module,
+        "run_coordination",
+        require_matching_registry,
+    )
+
+    result = compiled.run_live(
+        run_id="authored_coordination_live_registry",
+        model="openrouter/openai/gpt-5.6-terra",
+        reasoning_effort="medium",
+        per_call_budget=0.05,
+        per_run_budget=0.74,
+    )
+
+    assert result is sentinel
 
 
 def test_compiler_rejects_unknown_boundary_referent() -> None:

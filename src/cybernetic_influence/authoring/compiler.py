@@ -163,14 +163,19 @@ class CompiledScenario:
             max_private_state_bytes=16_384,
         )
         if isinstance(self.fixture, CoordinationRuntimeFixture):
+            live_fixture = coordination_runtime_fixture(
+                self.fixture.contract,
+                model=model,
+                reasoning_effort=reasoning_effort,
+            )
             bindings = coordination_native_bindings(
-                self.fixture,
+                live_fixture,
                 trace_id_prefix=run_id,
                 model=model,
                 reasoning_effort=reasoning_effort,
             )
             return run_coordination(
-                self.fixture,
+                live_fixture,
                 bindings,
                 run_id=run_id,
                 runtime_config=coordination_runtime_config(
