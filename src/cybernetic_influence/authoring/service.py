@@ -728,6 +728,7 @@ class DraftAuthoringService:
                 "approved_from_revision": expected_revision,
                 "proposal_digest": compiled.proposal_digest,
                 "template_id": compiled.proposal.workflow.template_id,
+                "composition_receipt_digest": compiled.composition_receipt.digest,
                 "approved_at": now_iso(),
             },
             "updated_at": now_iso(),
@@ -742,6 +743,9 @@ class DraftAuthoringService:
         compiled = self.compile(document)
         if approval.get("proposal_digest") != compiled.proposal_digest:
             raise AuthoringCompilationError("approval no longer matches compiled proposal")
+        receipt_digest = approval.get("composition_receipt_digest")
+        if receipt_digest is not None and receipt_digest != compiled.composition_receipt.digest:
+            raise AuthoringCompilationError("approval no longer matches compiled composition")
         return compiled
 
 

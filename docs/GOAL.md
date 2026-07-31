@@ -3,7 +3,7 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-07-30
+updated: 2026-07-31
 supersedes: comparison-centered research MVP goal at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -152,14 +152,17 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 ## Active Plan
 
 Follow [Slice 24: Configurable theory-informed simulation
-MVP](plans/024-configurable-theory-analysis-mvp.md). Packets 24A0–24D are
-technically complete. The active boundary is the M7 stakeholder review of the
-corrected retained run.
+MVP](plans/024-configurable-theory-analysis-mvp.md) for MVP acceptance. Packets
+24A0–24D are technically complete; M7 remains the stakeholder review of the
+corrected retained run. The operator has separately selected
+[Slice 25: Typed component composition](plans/025-typed-component-composition.md)
+as the active architecture implementation path. It broadens reusable reviewed
+composition without changing the MVP acceptance criteria or its non-claims.
 
-The operator separately selected and completed the execution-free Packet 22A0
-contract foundation on 2026-07-30. That bounded post-MVP setup did not mark M7
-complete, change this MVP, execute trajectories, or authorize Packets
-22A1/22A2/22B.
+The operator separately selected and completed Packet 22A0's contract
+foundation, Packet 22A1's five provider-free scripted trajectories, and Packet
+22A2's comparison/step-down UI. Those post-MVP packets do not mark M7 complete,
+change this MVP, or authorize Packet 22B's live repetitions.
 
 Execute one packet at a time from a clean linked worktree. For each packet:
 
@@ -169,8 +172,9 @@ Execute one packet at a time from a clean linked worktree. For each packet:
 4. commit and push the coherent packet; and
 5. stop at any explicit provider, deployment, or operator-readout boundary.
 
-Do not resume 21C1, 21C2, Slice 21D, or any Slice-22 work beyond the explicitly
-selected execution-free Packet 22A0 under this goal.
+Do not resume 21C1, 21C2, Slice 21D, or Packet 22B under this goal. Packet 22A0
+through 22A2 remain retained post-MVP evidence and require their own stakeholder
+readout before any live repetition work.
 
 ## Completion and Reset
 

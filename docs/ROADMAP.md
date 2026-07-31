@@ -24,8 +24,13 @@ run one meaningful trajectory, and inspect:
 Delivery maturity is a private functional PoC. Capability ambition is an
 advanced but bounded multiscale social simulator, not a production platform.
 
-The active execution contract is
-[Configurable Waltzman–Levin Research MVP Goal](GOAL.md).
+The MVP acceptance contract remains
+[Configurable Waltzman–Levin Research MVP Goal](GOAL.md). The operator has also
+selected the next architecture outcome: reusable typed composition of reviewed
+people, mechanisms, information carriers, places, and routes, with retained
+compiler/runtime diagnostics. That work is owned by
+[Slice 25](plans/025-typed-component-composition.md); it must preserve the
+MVP's evidence and non-claim boundaries rather than replace them.
 
 ## Canonical Outcome Probe
 

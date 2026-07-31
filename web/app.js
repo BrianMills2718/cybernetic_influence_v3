@@ -125,7 +125,24 @@ function setWorkspaceView(view) {
   if (priorView && priorView !== view) window.scrollTo({top:0, left:0, behavior:'auto'})
 }
 
-function authoringSummary(proposal) {
+function compositionSummary(receipt) {
+  if (!receipt?.selected_components?.length) return ''
+  const counts = receipt.selected_components.reduce((current, component) => {
+    current[component.component_kind] = (current[component.component_kind] || 0) + 1
+    return current
+  }, {})
+  const named = Object.entries(counts)
+    .map(([kind, count]) => `${count} ${kind.replaceAll('_', ' ')}`)
+    .join(' · ')
+  return `<section>
+    <span class="eyebrow">Reviewed composition</span>
+    <h4>What the compiler assembled</h4>
+    <p>${html(named)}.</p>
+    <small>These are reviewed runtime components resolved from this draft. They do not add hidden actors, permissions, or generated code.</small>
+  </section>`
+}
+
+function authoringSummary(proposal, receipt = null) {
   const people = (proposal.people || []).map((person) => person.label).join(', ')
   const places = (proposal.places || []).map((place) => place.label).join(', ')
   const coordination = proposal.workflow?.template_id === 'coordination_decision_v1'
@@ -164,12 +181,13 @@ function authoringSummary(proposal) {
           <p>Repeated comparisons, controlled perturbations, member replacement, recovery from shock, and claims about causal influence remain separate future experiments.</p>
           <small>This run reports only what occurred in its retained trajectory.</small>
         </section>
+        ${compositionSummary(receipt)}
       </div>`
   }
   const workflow = informationCampaign
     ? 'a retained claim is published through a configured channel, delivered to a recipient, and exactly recorded when assessed. Persuasion, truth, virality, and geopolitical outcomes are not inferred.'
     : 'an authored request is delivered to a reviewer, checked against copied eligibility and resource availability, then delivered back to the requester.'
-  return `<span class="eyebrow">Compiled typed proposal · ${html(proposal.workflow?.template_id || 'unknown template')}</span><h3>${html(proposal.title || 'Untitled draft')}</h3><p>${html(proposal.description || '')}</p><p><strong>People:</strong> ${html(people)}. <strong>Places:</strong> ${html(places)}.</p><p><strong>Exact workflow:</strong> ${html(workflow)} The analytical boundary remains a view, not an executor.</p>`
+  return `<span class="eyebrow">Compiled typed proposal · ${html(proposal.workflow?.template_id || 'unknown template')}</span><h3>${html(proposal.title || 'Untitled draft')}</h3><p>${html(proposal.description || '')}</p><p><strong>People:</strong> ${html(people)}. <strong>Places:</strong> ${html(places)}.</p><p><strong>Exact workflow:</strong> ${html(workflow)} The analytical boundary remains a view, not an executor.</p><div class="configuration-review">${compositionSummary(receipt)}</div>`
 }
 
 function authoringModelLabel(model) {
@@ -641,7 +659,7 @@ function renderAuthoring() {
     ? `Attempts: ${attempts.map((attempt) => `${attempt.attempt} (${attempt.status})`).join(' · ')}. Each attempt is traceable; no hidden retry loop is running.`
     : ''
   $('#authoring-summary').innerHTML = draft.proposal
-    ? authoringSummary(draft.proposal)
+    ? authoringSummary(draft.proposal, authoringPreview?.composition_receipt)
     : '<span class="eyebrow">Draft needs correction</span><h3>No executable proposal yet</h3><p>The provider response was retained only as a validation diagnostic. Send a follow-up after correcting the shown schema issue; the earlier draft remains intact.</p>'
   renderAuthoringConfiguration(draft)
   renderAuthoringPeople(draft)

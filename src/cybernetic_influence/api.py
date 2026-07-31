@@ -1208,6 +1208,8 @@ def create_app(
             ),
             "timeline": [], "trajectory": {"nodes": [], "edges": []},
             "boundaries": analyst_boundaries(compiled.scenario.analytical_boundaries, temporal_states, edges, []),
+            "composition_receipt": compiled.composition_receipt.model_dump(mode="json"),
+            "composition_receipt_digest": compiled.composition_receipt.digest,
             "draft_id": draft_id, "draft_revision": document["revision"],
         }
 
@@ -1352,6 +1354,8 @@ def create_app(
                 "draft_id": draft_id,
                 "proposal_digest": compiled.proposal_digest,
                 "template_id": compiled.proposal.workflow.template_id,
+                "composition_receipt": compiled.composition_receipt.model_dump(mode="json"),
+                "composition_receipt_digest": compiled.composition_receipt.digest,
                 "title": compiled.proposal.title,
                 "description": compiled.proposal.description,
             },

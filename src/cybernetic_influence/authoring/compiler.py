@@ -24,6 +24,10 @@ from cybernetic_influence.authoring.models import (
     ResourceRequestWorkflowDraft,
     ScenarioDraftProposal,
 )
+from cybernetic_influence.authoring.composition import (
+    CompositionReceiptV1,
+    composition_receipt,
+)
 from cybernetic_influence.authoring.coordination_decision import (
     authored_coordination_fixture,
     validate_coordination_proposal,
@@ -118,6 +122,15 @@ class CompiledScenario:
     @property
     def exact_bindings(self) -> dict[str, ExactMechanismBinding]:
         return dict(self.fixture.exact_bindings)
+
+    @property
+    def composition_receipt(self) -> CompositionReceiptV1:
+        """Retained mapping from reviewed component families to runtime surfaces."""
+
+        return composition_receipt(
+            self.scenario,
+            workflow_template_id=self.proposal.workflow.template_id,
+        )
 
     def run_scripted(
         self, *, run_id: str, progress_observer: RuntimeProgressObserver | None = None
