@@ -1145,6 +1145,16 @@ def create_app(
         with authoring_lock:
             return authoring.create_reviewed_coordination_draft()
 
+    @app.post("/api/authoring/reviewed-component-composition-drafts")
+    def create_reviewed_component_composition_draft(
+        request: Request,
+    ) -> dict[str, object]:
+        """Create the first mixed reviewed-component example without a model call."""
+
+        _require_access(request)
+        with authoring_lock:
+            return authoring.create_reviewed_component_composition_draft()
+
     @app.get("/api/authoring/drafts/{draft_id}")
     def get_draft(draft_id: str, request: Request) -> dict[str, object]:
         _require_access(request)
@@ -1480,13 +1490,18 @@ def create_app(
             outcome_entity_id = (
                 workflow.request_id
                 if workflow.template_id == "resource_request_v1"
-                else workflow.campaign_id
+                else (
+                    workflow.record_id
+                    if workflow.template_id == "component_composition_v1"
+                    else workflow.campaign_id
+                )
             )
             outcome_status = result.core_result.final_state.entities[
                 outcome_entity_id
             ].attributes["status"].value
             title = compiled.proposal.title
             resource_request = workflow.template_id == "resource_request_v1"
+            component_composition = workflow.template_id == "component_composition_v1"
             outcome: dict[str, object] = {
                 "status": outcome_status,
                 "draft_id": draft_id,
@@ -1512,14 +1527,18 @@ def create_app(
                     )
                     if resource_request
                     else (
+                        "Report delivered and assessed"
+                        if component_composition
+                        else (
                         "Claim delivered and assessed"
                         if str(outcome_status).startswith("assessed_")
                         else "Claim was not delivered"
+                        )
                     )
                 ),
                 summary=(
                     f"{title}: the exact "
-                    f"{'reservation' if resource_request else 'information-delivery'} "
+                    f"{'reservation' if resource_request else ('component delivery-and-recording' if component_composition else 'information-delivery')} "
                     f"mechanisms recorded {outcome_status}."
                 ),
             )

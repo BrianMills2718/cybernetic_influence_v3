@@ -261,3 +261,122 @@ def reviewed_coordination_proposal() -> ScenarioDraftProposal:
         "unresolved_questions": [],
     }
     return ScenarioDraftProposal.model_validate(payload)
+
+
+def reviewed_component_composition_proposal() -> ScenarioDraftProposal:
+    """A provider-free mixed-component review example for Slice 25B."""
+
+    payload = {
+        "proposal_version": 1,
+        "scenario_id": "reviewed_component_delivery",
+        "title": "Field report review",
+        "description": (
+            "A field coordinator sends a safety report through a declared channel. "
+            "A review officer receives it and records a contested assessment in "
+            "an exact ledger."
+        ),
+        "people": [
+            {
+                "entity_id": "field_coordinator",
+                "label": "Field coordinator",
+                "position": "Receives and forwards the retained field report.",
+                "disposition": "Careful about preserving the report's source and content.",
+                "memories": ["A safety report requires documented review."],
+            },
+            {
+                "entity_id": "review_officer",
+                "label": "Review officer",
+                "position": "Assesses delivered field reports for the decision ledger.",
+                "disposition": "Challenges unverified claims before treating them as settled.",
+                "memories": ["Only delivered reports can be assessed."],
+            },
+        ],
+        "objects": [
+            {
+                "entity_id": "secure_review_channel",
+                "entity_kind": "message_channel",
+                "label": "Secure review channel",
+                "description": "The concrete channel used for the reviewed report delivery.",
+            }
+        ],
+        "information": [
+            {
+                "information_id": "field_safety_report",
+                "label": "Field safety report",
+                "content": "The field team reports an unverified safety concern requiring review.",
+            }
+        ],
+        "places": [
+            {
+                "place_id": "field_site",
+                "label": "Field site",
+                "description": "Where the field coordinator works.",
+            },
+            {
+                "place_id": "review_office",
+                "label": "Review office",
+                "description": "Where the review officer records the assessment.",
+            },
+        ],
+        "spatial_links": [
+            {
+                "spatial_link_id": "field_review_link",
+                "endpoint_a_place_id": "field_site",
+                "endpoint_b_place_id": "review_office",
+                "description": "A physical-network relationship represented separately from the review route.",
+            }
+        ],
+        "placements": {
+            "field_coordinator": "field_site",
+            "review_officer": "review_office",
+            "secure_review_channel": "field_site",
+            "field_safety_report": "field_site",
+        },
+        "timing_assumptions": [
+            {
+                "name": "report_delivery",
+                "minutes": 30,
+                "basis": "Reviewed synthetic delivery duration.",
+            },
+            {
+                "name": "ledger_recording",
+                "minutes": 15,
+                "basis": "Reviewed synthetic exact-recording duration.",
+            },
+        ],
+        "workflow": {
+            "template_id": "component_composition_v1",
+            "components": [
+                {"component_id": "field_coordinator", "component_kind": "person_participant", "version": 1},
+                {"component_id": "review_officer", "component_kind": "person_participant", "version": 1},
+                {"component_id": "secure_review_channel", "component_kind": "stateful_object", "version": 1},
+                {"component_id": "field_safety_report", "component_kind": "information_carrier", "version": 1},
+                {"component_id": "publication_route", "component_kind": "directed_connection", "version": 1},
+                {"component_id": "assessment_route", "component_kind": "directed_connection", "version": 1},
+                {"component_id": "publication_delivery", "component_kind": "exact_mechanism", "version": 1},
+                {"component_id": "assessment_recording", "component_kind": "exact_mechanism", "version": 1},
+            ],
+            "source_id": "field_coordinator",
+            "recipient_id": "review_officer",
+            "record_id": "field_report_ledger",
+            "information_id": "field_safety_report",
+            "channel_object_id": "secure_review_channel",
+            "delivery_enabled": True,
+            "delivery_minutes": 30,
+            "recording_minutes": 15,
+        },
+        "analytical_boundaries": [
+            {
+                "boundary_id": "field_review_team",
+                "label": "Field review team",
+                "description": "An analytical view of the two people and their concrete report-review components.",
+                "member_refs": ["field_coordinator", "review_officer", "secure_review_channel", "field_report_ledger"],
+            }
+        ],
+        "fidelity_questions": [
+            "Did the assessment follow delivery through the declared route?",
+            "Did the exact ledger record an assessment without inferring report truth?",
+        ],
+        "unresolved_questions": [],
+    }
+    return ScenarioDraftProposal.model_validate(payload)

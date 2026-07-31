@@ -21,8 +21,12 @@ from cybernetic_influence.authoring.coordination_review import (
     coordination_proposal_from_review,
     coordination_review_from_proposal,
 )
-from cybernetic_influence.authoring.examples import reviewed_coordination_proposal
+from cybernetic_influence.authoring.examples import (
+    reviewed_component_composition_proposal,
+    reviewed_coordination_proposal,
+)
 from cybernetic_influence.authoring.models import (
+    ComponentCompositionWorkflowDraft,
     CoordinationScenarioReview,
     PersonDraft,
     ProfileStatement,
@@ -211,6 +215,27 @@ class _InformationCampaignWorkflowConsumer(BaseModel):
     assessment_recording_minutes: int
 
 
+class _ComponentSelectionConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    component_id: str
+    component_kind: str
+    version: int
+
+
+class _ComponentCompositionWorkflowConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    template_id: Literal["component_composition_v1"]
+    components: list[_ComponentSelectionConsumer]
+    source_id: str
+    recipient_id: str
+    record_id: str
+    information_id: str
+    channel_object_id: str
+    delivery_enabled: bool
+    delivery_minutes: int
+    recording_minutes: int
+
+
 class _BoundaryConsumer(BaseModel):
     model_config = ConfigDict(extra="ignore")
     boundary_id: str
@@ -236,7 +261,9 @@ class _LegacyProposalConsumer(BaseModel):
     placements: list[_PlacementConsumer]
     timing_assumptions: list[_TimingConsumer]
     workflow: Annotated[
-        _WorkflowConsumer | _InformationCampaignWorkflowConsumer,
+        _WorkflowConsumer
+        | _InformationCampaignWorkflowConsumer
+        | _ComponentCompositionWorkflowConsumer,
         Field(discriminator="template_id"),
     ]
     analytical_boundaries: list[_BoundaryConsumer]
@@ -339,6 +366,31 @@ class DraftAuthoringService:
                 "authoring_summary": (
                     "Ready to review: Multinational bio-surveillance deployment "
                     "review. This example is already typed and made no model call."
+                ),
+                "proposal": proposal.model_dump(mode="json"),
+                "diagnostics": [],
+                "approval": None,
+                "updated_at": now_iso(),
+            },
+        )
+
+    def create_reviewed_component_composition_draft(self) -> dict[str, object]:
+        """Create the first mixed reviewed-component example without a model call."""
+
+        proposal = reviewed_component_composition_proposal()
+        compile_scenario(proposal)
+        current = self.store.create(now=now_iso())
+        return self.store.replace(
+            str(current["draft_id"]),
+            expected_revision=0,
+            document={
+                **current,
+                "revision": 1,
+                "status": "ready_for_review",
+                "authoring_summary": (
+                    "Ready to review: a field report moves through selected "
+                    "delivery, recording, route, and person components. This "
+                    "example is already typed and made no model call."
                 ),
                 "proposal": proposal.model_dump(mode="json"),
                 "diagnostics": [],

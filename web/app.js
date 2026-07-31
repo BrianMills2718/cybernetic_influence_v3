@@ -42,6 +42,7 @@ const buttonTooltips = {
   'readme-tab': 'Read how the simulator, maps, and evidence should be interpreted.',
   'authoring-draft': 'Send this message with the selected model and thinking level to generate the next saved draft revision.',
   'authoring-load-coordination': 'Create a saved, already typed coordination example without making a model call.',
+  'authoring-load-composition': 'Create a saved, already typed mixed-component example without making a model call.',
   'authoring-copy-link': 'Copy a link that reopens this automatically saved draft.',
   'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
   'authoring-run': 'Run the approved draft with fixed zero-cost reference actions. This checks the compiled routes and exact mechanisms, not the reviewed personalities.',
@@ -147,6 +148,7 @@ function authoringSummary(proposal, receipt = null) {
   const places = (proposal.places || []).map((place) => place.label).join(', ')
   const coordination = proposal.workflow?.template_id === 'coordination_decision_v1'
   const informationCampaign = proposal.workflow?.template_id === 'information_campaign_v1'
+  const componentComposition = proposal.workflow?.template_id === 'component_composition_v1'
   if (coordination) {
     const workflow = proposal.workflow
     const goal = workflow.collective_goal || {}
@@ -184,7 +186,9 @@ function authoringSummary(proposal, receipt = null) {
         ${compositionSummary(receipt)}
       </div>`
   }
-  const workflow = informationCampaign
+  const workflow = componentComposition
+    ? 'a field report moves through selected person, information, channel, route, exact-delivery, and exact-recording components. The ledger records an assessment; it does not infer that the report is true.'
+    : informationCampaign
     ? 'a retained claim is published through a configured channel, delivered to a recipient, and exactly recorded when assessed. Persuasion, truth, virality, and geopolitical outcomes are not inferred.'
     : 'an authored request is delivered to a reviewer, checked against copied eligibility and resource availability, then delivered back to the requester.'
   return `<span class="eyebrow">Compiled typed proposal · ${html(proposal.workflow?.template_id || 'unknown template')}</span><h3>${html(proposal.title || 'Untitled draft')}</h3><p>${html(proposal.description || '')}</p><p><strong>People:</strong> ${html(people)}. <strong>Places:</strong> ${html(places)}.</p><p><strong>Exact workflow:</strong> ${html(workflow)} The analytical boundary remains a view, not an executor.</p><div class="configuration-review">${compositionSummary(receipt)}</div>`
@@ -3242,6 +3246,24 @@ $('#authoring-load-coordination').onclick = async () => {
   $('#authoring-status').textContent = 'Loading the reviewed typed example…'
   try {
     authoringDraft = await request('/api/authoring/reviewed-coordination-drafts', {
+      method:'POST',
+    })
+    await loadAuthoringPreview()
+    syncAuthoringUrl()
+    renderAuthoring()
+  } catch (error) {
+    $('#authoring-status').textContent = error.message
+  } finally {
+    button.disabled = false
+  }
+}
+
+$('#authoring-load-composition').onclick = async () => {
+  const button = $('#authoring-load-composition')
+  button.disabled = true
+  $('#authoring-status').textContent = 'Loading the reviewed component example…'
+  try {
+    authoringDraft = await request('/api/authoring/reviewed-component-composition-drafts', {
       method:'POST',
     })
     await loadAuthoringPreview()

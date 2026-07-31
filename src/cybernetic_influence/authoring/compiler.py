@@ -19,10 +19,14 @@ from cybernetic_influence.active_runtime import (
     RuntimeProgressObserver,
 )
 from cybernetic_influence.authoring.models import (
+    ComponentCompositionWorkflowDraft,
     CoordinationDecisionWorkflowDraft,
     InformationCampaignWorkflowDraft,
     ResourceRequestWorkflowDraft,
     ScenarioDraftProposal,
+)
+from cybernetic_influence.authoring.component_composition import (
+    component_composition_fixture,
 )
 from cybernetic_influence.authoring.composition import (
     CompositionReceiptV1,
@@ -258,6 +262,19 @@ def compile_scenario(proposal: ScenarioDraftProposal) -> CompiledScenario:
             proposal=selected,
             proposal_digest=_proposal_digest(selected),
             fixture=information_campaign_fixture(selected),
+        )
+    if proposal.workflow.template_id == "component_composition_v1":
+        selected = ScenarioDraftProposal.model_validate(proposal.model_dump(mode="json"))
+        if not isinstance(selected.workflow, ComponentCompositionWorkflowDraft):
+            raise AuthoringCompilationError("proposal is not a component_composition_v1 workflow")
+        try:
+            fixture = component_composition_fixture(selected)
+        except ValueError as error:
+            raise AuthoringCompilationError(str(error)) from error
+        return CompiledScenario(
+            proposal=selected,
+            proposal_digest=_proposal_digest(selected),
+            fixture=fixture,
         )
     if proposal.workflow.template_id == "coordination_decision_v1":
         return compile_coordination_decision(proposal)

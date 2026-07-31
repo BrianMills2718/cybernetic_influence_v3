@@ -11,6 +11,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from cybernetic_influence.authoring.composition import ComponentSelectionV1
+
 
 _FORBID = ConfigDict(extra="forbid", strict=True)
 _ID_PATTERN = r"^[a-z][a-z0-9_]*$"
@@ -143,6 +145,28 @@ class InformationCampaignWorkflowDraft(_StrictModel):
     publication_enabled: bool
     publication_delivery_minutes: int = Field(ge=1)
     assessment_recording_minutes: int = Field(ge=1)
+
+
+class ComponentCompositionWorkflowDraft(_StrictModel):
+    """Reviewed delivery-and-recording composition, not executable source code."""
+
+    template_id: Literal["component_composition_v1"]
+    components: list[ComponentSelectionV1] = Field(min_length=8, max_length=8)
+    source_id: str = Field(pattern=_ID_PATTERN)
+    recipient_id: str = Field(pattern=_ID_PATTERN)
+    record_id: str = Field(pattern=_ID_PATTERN)
+    information_id: str = Field(pattern=_ID_PATTERN)
+    channel_object_id: str = Field(pattern=_ID_PATTERN)
+    delivery_enabled: bool
+    delivery_minutes: int = Field(ge=1)
+    recording_minutes: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def unique_component_ids(self) -> "ComponentCompositionWorkflowDraft":
+        component_ids = [item.component_id for item in self.components]
+        if len(component_ids) != len(set(component_ids)):
+            raise ValueError("composition component IDs must be unique")
+        return self
 
 
 CoordinationOutcome = Literal[
@@ -508,6 +532,7 @@ class ScenarioDraftProposal(_StrictModel):
     workflow: Annotated[
         ResourceRequestWorkflowDraft
         | InformationCampaignWorkflowDraft
+        | ComponentCompositionWorkflowDraft
         | CoordinationDecisionWorkflowDraft,
         Field(discriminator="template_id"),
     ]
