@@ -19,6 +19,7 @@ from cybernetic_influence.analysis.composite_agency import (
     PerturbationSpecConsumer,
     build_composite_assay_scenario_fixture,
     compile_composite_assay_setup,
+    reviewed_perturbation_specs,
     validate_composite_assay_evidence,
 )
 from cybernetic_influence.analysis.coordination_comparison import (
@@ -134,6 +135,7 @@ __all__ = [
     "build_waltzman_reference_readout",
     "build_composite_assay_scenario_fixture",
     "compile_composite_assay_setup",
+    "reviewed_perturbation_specs",
     "compare_coordination_runs",
     "coordination_analysis_specs",
     "measurement_spec_fingerprint",

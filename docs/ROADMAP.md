@@ -181,7 +181,7 @@ cross-run comparisons. It is explicitly outside the current MVP.
 | `MVP-C5` | Levin per-run module over the evidence bundle | hard | satisfied | Candidate goal/boundary, glue, activity, correction, persistence, adaptation, and limits render without an aggregate executor or scalar |
 | `MVP-C6` | One integrated private review flow | evidence | technical execution passed; stakeholder judgment pending | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
 | `POST-C1` | `ExperimentSpec` and repeated comparison | optional | deferred | Explicit post-MVP selection |
-| `POST-C2` | Perturbation, robustness, and persuadability assays | optional | Packet 22A0 foundation satisfied; no runs authorized | Strict setup/evidence contracts pass both-sign fixtures before any trajectory |
+| `POST-C2` | Perturbation, robustness, and persuadability assays | optional | Packets 22A0–22A1 satisfied; scripted evidence retained | Five matched provider-free rows distinguish concrete pathways and step down to exact evidence before any UI/live repetition |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
 
@@ -199,11 +199,12 @@ The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
 Detailed implementation authority:
 [Slice 24](plans/024-configurable-theory-analysis-mvp.md).
 
-In parallel, the operator explicitly selected and completed the execution-free
-foundation of [Slice 22](plans/022-composite-agency-perturbation-assay.md).
-Packet 22A0 now defines and tests strict perturbation setup and retained-evidence
-contracts. It does not authorize trajectories, comparison results, exact
-perturbation calculation, or UI work.
+In parallel, the operator separately authorized the provider-free execution
+vertical of [Slice 22](plans/022-composite-agency-perturbation-assay.md).
+Packets 22A0–22A1 now define the strict assay contracts, compile and execute the
+five scripted rows, calculate evidence-reversible vectors, and retain the
+results. This does not authorize UI work, live repetitions, scalar agency
+scores, or causal/predictive claims.
 
 ## Artifact Dispositions
 
@@ -213,7 +214,7 @@ perturbation calculation, or UI work.
 | This roadmap | update/active | Owns current direction and first missing boundary |
 | [Slice 17](archive/plans/017-conversational-scenario-authoring.md) | reuse unchanged | Completed authoring foundation |
 | [Slice 21](archive/plans/021-coordination-environment-assay.md) | completed foundation; 21C post-MVP | Runtime and per-run Waltzman work are reused; paid comparison is not active |
-| [Slice 22](plans/022-composite-agency-perturbation-assay.md) | Packet 22A0 complete; later packets deferred | Execution-free contract setup is verified; no runs are authorized |
+| [Slice 22](plans/022-composite-agency-perturbation-assay.md) | Packets 22A0–22A1 complete; 22A2 is the next separately selectable packet | Five zero-cost scripted rows and retained exact readouts are verified; UI and live repetitions remain unauthorized |
 | [Slice 24](plans/024-configurable-theory-analysis-mvp.md) | active bounded design | Owns the new execution frontier |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |
@@ -242,9 +243,9 @@ remain evidence. They do not own current direction.
   stakeholder comprehensibility remains unobserved.
 - Provider-backed execution is operationally conditional on a certified route
   with available capacity. Reference execution remains available and meaningful.
-- The Packet-22A0 experiment/perturbation contract foundation is satisfied.
-  Trajectory execution, comparison, robustness claims, evasion,
-  attribution, calibration, and prediction remain deferred.
+- The Packet-22A0 contract foundation and Packet-22A1 five-row scripted
+  execution/readout are satisfied. Analyst UI, live repetitions, robustness
+  claims, evasion, attribution, calibration, and prediction remain deferred.
 
 ## Continue, Reset, Scale, Stop
 
@@ -255,8 +256,8 @@ remain evidence. They do not own current direction.
 - **Reset:** after two substantive increments or four hours without a new
   user-visible part of the canonical flow, or if configuration requires
   arbitrary generated mechanism code/a second runtime.
-- **Scale:** do not scale beyond execution-free Packet 22A0 until the
-  stakeholder accepts the canonical example and separately authorizes runs.
+- **Scale:** do not proceed beyond the retained scripted Packet-22A1 evidence
+  into UI or live repetitions without separately selecting that packet.
 - **Stop:** if the resulting analysis cannot distinguish scenario inputs from
   derived findings, or aggregate findings cannot step down to retained evidence.
 

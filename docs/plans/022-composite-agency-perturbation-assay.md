@@ -1,9 +1,9 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: packet_22a0_complete
+status: packet_22a1_complete
 created: 2026-07-27
-updated: 2026-07-30
+updated: 2026-07-31
 ---
 
 # Slice 22: Composite-agency perturbation assay
@@ -22,10 +22,10 @@ completion of the historical Slice 21 comparison is the only valid gate.
 It does not create another scenario, organization executor, agency score,
 general causal-attribution framework, or generalized perturbation DSL.
 
-On 2026-07-30 the operator explicitly selected the implementation foundation
-without authorizing any trajectories. Packet 22A0 is therefore active as a
-pure analysis-contract slice. Packets 22A1, 22A2, and 22B remain unstarted and
-require a later instruction. This selection does not mark the Slice-24 M7
+On 2026-07-30 the operator explicitly selected the implementation foundation,
+then on 2026-07-31 separately authorized Packet 22A1's provider-free scripted
+vertical. Packets 22A0–22A1 are complete. Packets 22A2 and 22B remain unstarted
+and require a later instruction. This selection does not mark the Slice-24 M7
 stakeholder readout complete or redefine the MVP.
 
 ## Analyst outcome
@@ -167,7 +167,7 @@ class CompositeAssayRunRef(_ProducedModel):
     run_id: str
     perturbation_id: str
     scenario_fingerprint: str
-    measurement_spec_version: int
+    evidence_bundle_version: int
     valid: bool
     invalid_reason: str | None
 
@@ -184,7 +184,7 @@ class CompositeControlReadout(_ProducedModel):
     output_attempt_event_ids: list[str]
     external_result_event_ids: list[str]
     terminal_outcome_event_id: str
-    coordination_measurement_ref: str
+    framework_readout_refs: list[str]
     coded_patterns: list[CompositePatternEvidence]
     source_run_ids: list[str]
     limitations: list[str]
@@ -205,7 +205,7 @@ retention.
 
 1. **Matched-world rule — assay compiler:** control and perturbation must share
    the same scenario revision, initial state, model policy, run-control plan,
-   and measurement version except for declared `changed_refs`.
+   and evidence-bundle version except for declared `changed_refs`.
 2. **Concrete-change rule — assay compiler:** every perturbation compiles to a
    real person, route, mechanism, record, or exogenous-event change. Analysis
    labels cannot drive execution.
@@ -224,8 +224,8 @@ retention.
    perturbed path.
 7. **Validity rule — analysis service:** infrastructure/schema failure,
    fingerprint drift, missing perturbation application, missing scheduled work,
-   or incomplete Slice-21 measurement invalidates the run and cannot be scored
-   as low agency.
+   or an incomplete current evidence bundle/framework readout invalidates the
+   run and cannot be scored as low agency.
 8. **No scalar rule — presentation:** exact vectors and coded patterns remain
    separate. The UI cannot average them into an agency or systemic-influence
    score.
@@ -314,7 +314,7 @@ validation against a frozen Slice-21 fixture.
 
 Positive fixtures cover all five matrix rows. Negative fixtures cover unknown
 variant, changed ref outside the allowlist, mismatched scenario fingerprint,
-aggregate boundary as executor, missing control, missing Slice-21 measurement,
+aggregate boundary as executor, missing control, missing current framework readouts,
 duplicate run ID, invalid evidence ID, and an apparent fast decision that
 violates a blocking constraint.
 
@@ -337,11 +337,11 @@ Observed evidence:
   four perturbations, run references, separate composite-pattern evidence, and
   evidence-reversible readouts;
 - the validator requires five rows, one matched control, matching world/model/
-  run-control and measurement contracts, concrete changed references, retained
+  run-control and evidence-bundle contracts, concrete changed references, retained
   perturbation application evidence, and separate output attempts, boundary
   outputs, external results, and terminal outcomes;
 - invalid rows can remain visible and unscored without inventing missing
-  measurements or boundary activity; and
+  framework readouts or boundary activity; and
 - `tests/test_composite_agency.py` passes 13 execution-free positive and
   adversarial tests, focused mypy is clean, analysis exports import, bytecode
   compilation succeeds, and `git diff --check` is clean.
@@ -351,6 +351,32 @@ fixture with derivation from the retained scenario contract and added consumer,
 invalid-row, evidence-linkage, and schema-self-validation checks.
 
 ### Packet 22A1 — zero-cost matched runs and exact calculator
+
+**Status:** complete under adopted revision `PACKET-22A1@2` (2026-07-31).
+
+Runtime reconciliation for this packet:
+
+- all five rows share an inert typed perturbation register, an exact terminal-
+  proposal route switch, an alternate configured route, and delayed
+  verification delivery so the comparison remains matched;
+- scheduled route and feedback changes commit through an exact day-4
+  perturbation controller rather than changing topology invisibly;
+- their reviewed `changed_refs` therefore name the exact switch facts
+  `perturbation_register.direct_route_enabled` and
+  `perturbation_register.verification_feedback_enabled`; configured route IDs
+  remain the pathways whose use or non-use provides downstream evidence;
+- the external-risk row adds its concrete source, representation, carrier,
+  ports, route, and delivery mechanism and emits at day 4;
+- member replacement keeps the position-owned interface slot stable while a
+  different retained person identity, assumptions, and scripted choice pattern
+  occupy it; and
+- provider-free rows consume the current `RunEvidenceBundle` and framework
+  readouts. They do not fabricate a legacy evidence-coder call merely to satisfy
+  the older Slice-21 measurement envelope.
+
+This reconciliation supersedes only conflicting 22A1 implementation details;
+the frozen capability, four perturbation families, no-aggregate-executor rule,
+exact evidence step-down, and no-scalar boundary remain unchanged.
 
 Compile each reviewed perturbation into the existing scripted Slice-21
 scenario, run one matched trajectory per row, calculate the exact vector, and
@@ -372,6 +398,36 @@ Acceptance:
   hostile influence by construction;
 - invalid runs remain visible and unscored; and
 - rerendering retained results makes no execution or provider call.
+
+Observed evidence (2026-07-31):
+
+- five scripted rows completed and reopened through the ordinary `RunStore` at
+  exactly zero model calls and `$0.00` observed cost;
+- the component row preserved the technical position's interfaces while
+  changing its retained occupant identity, assumptions, and first verification
+  request timing;
+- the structure row applied its exact day-4 switch, used
+  `terminal_proposal_alternate_route`, and still reached `deploy_on_time`;
+- the feedback row applied its exact day-4 switch, interrupted all five
+  verification deliveries, reached `no_decision_by_horizon`, and truthfully
+  reported recovery as `not_observed`;
+- the shock row routed a retained representation through a concrete source,
+  carrier, ports, connection, and exact delivery, producing an evidence-cited
+  `rational_caution` reference pattern without construing it as hostile;
+- every row retained current Waltzman and Levin framework readouts over the
+  same theory-neutral evidence bundle, plus exact partnership boundary
+  crossings and coordination episodes; and
+- the full backend suite passed 280 tests before the final audit corrections;
+  after those corrections all 17 focused contract/execution tests, focused
+  mypy, bytecode compilation, frontend production build, deploy-script syntax,
+  and diff hygiene pass;
+- the isolated code-diff audit found and fixed collision-prone retained run
+  IDs, pre-validation partial persistence, route labels that did not name the
+  exact changed switch facts, and incomplete embedded-event validation; its
+  final verdict is `pass`; and
+- repository-wide mypy remains blocked by the same 18 pre-existing errors in
+  `tests/test_configurable_theory_analysis.py` reproduced on clean `main`; no
+  changed Packet-22A1 file has a mypy error.
 
 ### Packet 22A2 — analyst comparison and readout
 
@@ -436,8 +492,8 @@ replay, API/presentation, and affected UI checks; run mypy, the frontend build,
 and `git diff --check`. Terminal 22A acceptance requires `make check`, retained
 reopening, browser console/network inspection, and an isolated code-diff audit.
 
-Commit and report each packet separately. A later agent may proceed from 22A0
-to 22A1 only when the prior packet is clean, committed, and its acceptance
-evidence is recorded in this plan. Any required aggregate executor, global
+Commit and report each packet separately. A later agent may proceed to 22A2
+only when 22A1 is clean, committed, and its acceptance evidence is recorded in
+this plan. Any required aggregate executor, global
 agency state, arbitrary perturbation code, or non-reversible claim is an exact
 stop condition.

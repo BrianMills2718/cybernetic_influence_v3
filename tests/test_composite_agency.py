@@ -28,13 +28,8 @@ from cybernetic_influence.analysis.composite_agency import (
     compile_composite_assay_setup,
     validate_composite_assay_evidence,
 )
-from cybernetic_influence.analysis.coordination_measurement import (
-    CODED_MEASURE_IDS,
-    COORDINATION_MEASUREMENT_SPEC_FINGERPRINT,
-    EXACT_MEASURE_IDS,
-    RunMeasurementConsumer,
-)
 from cybernetic_influence.analysis.theory_analysis import (
+    FrameworkReadoutConsumerV1,
     RunEvidenceBundleConsumerV1,
 )
 from cybernetic_influence.presentation import (
@@ -68,7 +63,7 @@ _PERTURBATION_PAYLOADS: tuple[dict[str, object], ...] = (
         "family": "structure",
         "variant": "decision_route_interruption",
         "application": "scheduled_day_4",
-        "changed_refs": ["terminal_proposal_route"],
+        "changed_refs": ["perturbation_register.direct_route_enabled"],
         "description": "Interrupt the direct terminal-proposal route.",
     },
     {
@@ -77,7 +72,7 @@ _PERTURBATION_PAYLOADS: tuple[dict[str, object], ...] = (
         "variant": "verification_feedback_interruption",
         "application": "scheduled_day_4",
         "changed_refs": [
-            f"verification_response_{person_id}_route" for person_id in PERSON_IDS
+            "perturbation_register.verification_feedback_enabled"
         ],
         "description": "Interrupt reviewed verification feedback routes.",
     },
@@ -88,8 +83,12 @@ _PERTURBATION_PAYLOADS: tuple[dict[str, object], ...] = (
         "application": "scheduled_day_4",
         "changed_refs": [
             "external_risk_source",
+            "external_risk_carrier",
             "external_risk_message",
+            "external_risk_out",
             "external_risk_route",
+            "external_risk_in",
+            "external_risk_delivery",
         ],
         "description": "Introduce one legitimate decision-relevant risk.",
     },
@@ -239,51 +238,33 @@ def _bundle(run_id: str, fingerprint: str = _DIGEST) -> RunEvidenceBundleConsume
     )
 
 
-def _measurement(run_id: str, fingerprint: str = _DIGEST) -> RunMeasurementConsumer:
-    raw_indicators = [
-        {
-            "indicator_id": indicator_id,
-            "direction": "unclear",
-            "explanation": "Synthetic structural fixture; no coding claim is made.",
-        }
-        for indicator_id in CODED_MEASURE_IDS
+def _framework_readouts(run_id: str) -> list[FrameworkReadoutConsumerV1]:
+    bundle_id = f"bundle_{run_id}"
+    return [
+        FrameworkReadoutConsumerV1.model_validate(
+            {
+                "readout_version": 1,
+                "readout_id": f"{framework}_{bundle_id}",
+                "framework": framework,
+                "analysis_id": analysis_id,
+                "bundle_id": bundle_id,
+                "bundle_digest": "f" * 64,
+                "findings": [
+                    {
+                        "finding_id": f"{framework}_fixture_finding",
+                        "framework": framework,
+                        "evidence_refs": ["event:event_000002"],
+                        "analysis_id": analysis_id,
+                    }
+                ],
+                "record_digest": "a" * 64,
+            }
+        )
+        for framework, analysis_id in (
+            ("waltzman", "waltzman_decision_environment_v1"),
+            ("levin", "levin_collective_competence_v1"),
+        )
     ]
-    retained_indicators = [
-        {
-            **item,
-            "source_event_ids": ["event_000002"],
-            "source_trace_ids": ["trace:fixture"],
-        }
-        for item in raw_indicators
-    ]
-    return RunMeasurementConsumer.model_validate(
-        {
-            "measurement_id": f"measurement_{run_id.removeprefix('run_')}",
-            "run_id": run_id,
-            "measurement_spec_version": 1,
-            "measurement_spec_fingerprint": (
-                COORDINATION_MEASUREMENT_SPEC_FINGERPRINT
-            ),
-            "scenario_fingerprint": fingerprint,
-            "exact_values": {measure_id: None for measure_id in EXACT_MEASURE_IDS},
-            "coded_indicators": retained_indicators,
-            "coder_call": {
-                "status": "completed",
-                "task": "fixture_only",
-                "trace_id": f"{run_id}/measurement/v1",
-                "schema_revision": 1,
-                "prompt_version": "fixture_v1",
-                "model": "fixture",
-                "reasoning_effort": "none",
-                "max_budget": 0.01,
-                "observed_cost": 0.0,
-                "cost_source": "fixture",
-                "cost_covers_all_attempts": True,
-                "structured_output": {"coded_indicators": raw_indicators},
-            },
-            "limitations": ["Synthetic contract fixture; no trajectory was run."],
-        }
-    )
 
 
 def _exact_values(
@@ -328,9 +309,9 @@ def _readout(
         output_attempt_event_ids=["event_000003"],
         external_result_event_ids=episode.external_result_event_ids,
         terminal_outcome_event_id="event_000006",
-        coordination_measurement_ref=(
-            f"measurement_{run_id.removeprefix('run_')}"
-        ),
+        framework_readout_refs=[
+            item.readout_id for item in _framework_readouts(run_id)
+        ],
         coded_patterns=[
             CompositePatternEvidence(
                 pattern_id="unclear",
@@ -386,7 +367,7 @@ def _matrix() -> tuple[
                 else None
             ),
             evidence_bundle=_bundle(run_id),
-            measurement=_measurement(run_id),
+            framework_readouts=_framework_readouts(run_id),
             boundary_activity_ref=_BOUNDARY_REF,
             boundary_activity=activity,
         )
@@ -409,8 +390,10 @@ def test_compiles_all_five_rows_and_validates_synthetic_retained_evidence() -> N
     ]
     assert len(validated.run_refs) == len(validated.readouts) == 5
     for evidence in evidence_by_run.values():
-        assert evidence.measurement is not None
-        assert evidence.measurement.coder_call.model == "fixture"
+        assert {item.framework for item in evidence.framework_readouts} == {
+            "waltzman",
+            "levin",
+        }
 
 
 def test_unknown_variant_and_out_of_scope_changed_ref_fail_loud() -> None:
@@ -500,13 +483,11 @@ def test_missing_control_and_duplicate_run_id_fail_loud() -> None:
         )
 
 
-def test_fingerprint_and_measurement_drift_fail_loud() -> None:
+def test_fingerprint_and_evidence_version_drift_fail_loud() -> None:
     setup, run_refs, readouts, evidence_by_run = _matrix()
     evidence_by_run["run_assay_2"] = evidence_by_run[
         "run_assay_2"
-    ].model_copy(
-        update={"measurement": _measurement("run_assay_2", "9" * 64)}
-    )
+    ].model_copy(update={"evidence_bundle": _bundle("run_assay_2", "9" * 64)})
     with pytest.raises(
         CompositeAssayContractError, match="scenario fingerprint mismatch"
     ):
@@ -515,33 +496,20 @@ def test_fingerprint_and_measurement_drift_fail_loud() -> None:
         )
 
     setup, run_refs, readouts, evidence_by_run = _matrix()
-    measurement = evidence_by_run["run_assay_2"].measurement
-    assert measurement is not None
-    bad_measurement = measurement.model_copy(
-        update={"measurement_spec_fingerprint": "9" * 64}
-    )
-    evidence_by_run["run_assay_2"] = evidence_by_run[
-        "run_assay_2"
-    ].model_copy(update={"measurement": bad_measurement})
+    run_refs[2] = run_refs[2].model_copy(update={"evidence_bundle_version": 2})
     with pytest.raises(
-        CompositeAssayContractError, match="missing current Slice-21 measurement"
+        CompositeAssayContractError, match="evidence-bundle version mismatch"
     ):
         validate_composite_assay_evidence(
             setup, run_refs, readouts, evidence_by_run
         )
 
 
-def test_valid_run_requires_measurement_and_boundary_activity() -> None:
-    setup, run_refs, readouts, evidence_by_run = _matrix()
-    evidence_by_run["run_assay_1"] = evidence_by_run[
-        "run_assay_1"
-    ].model_copy(update={"measurement": None})
-    with pytest.raises(
-        CompositeAssayContractError, match="missing current Slice-21 measurement"
-    ):
-        validate_composite_assay_evidence(
-            setup, run_refs, readouts, evidence_by_run
-        )
+def test_valid_run_requires_framework_readouts_and_boundary_activity() -> None:
+    payload = _matrix()[3]["run_assay_1"].model_dump(mode="json")
+    payload["framework_readouts"] = []
+    with pytest.raises(ValidationError):
+        CompositeAssayRunEvidence.model_validate(payload)
 
     setup, run_refs, readouts, evidence_by_run = _matrix()
     evidence_by_run["run_assay_1"] = evidence_by_run[
@@ -557,7 +525,7 @@ def test_valid_run_requires_measurement_and_boundary_activity() -> None:
         )
 
 
-def test_boundary_measurement_and_event_references_are_exact() -> None:
+def test_boundary_framework_and_event_references_are_exact() -> None:
     setup, run_refs, readouts, evidence_by_run = _matrix()
     readouts[0] = readouts[0].model_copy(
         update={"boundary_activity_ref": "boundary:wrong:activity"}
@@ -571,10 +539,10 @@ def test_boundary_measurement_and_event_references_are_exact() -> None:
 
     setup, run_refs, readouts, evidence_by_run = _matrix()
     readouts[0] = readouts[0].model_copy(
-        update={"coordination_measurement_ref": "measurement_wrong"}
+        update={"framework_readout_refs": ["waltzman_wrong", "levin_wrong"]}
     )
     with pytest.raises(
-        CompositeAssayContractError, match="measurement reference mismatch"
+        CompositeAssayContractError, match="framework readout references mismatch"
     ):
         validate_composite_assay_evidence(
             setup, run_refs, readouts, evidence_by_run
@@ -584,6 +552,17 @@ def test_boundary_measurement_and_event_references_are_exact() -> None:
     readouts[0] = readouts[0].model_copy(
         update={"terminal_outcome_event_id": "event_999999"}
     )
+    with pytest.raises(
+        CompositeAssayContractError, match="unknown source event"
+    ):
+        validate_composite_assay_evidence(
+            setup, run_refs, readouts, evidence_by_run
+        )
+
+    setup, run_refs, readouts, evidence_by_run = _matrix()
+    exact_values = dict(readouts[0].exact_values)
+    exact_values["alternate_routes_used"] = ["event_999999"]
+    readouts[0] = readouts[0].model_copy(update={"exact_values": exact_values})
     with pytest.raises(
         CompositeAssayContractError, match="unknown source event"
     ):

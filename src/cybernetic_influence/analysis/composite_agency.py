@@ -7,16 +7,13 @@ scenario, apply a perturbation, call a model, or mutate world state.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, Literal, TypeAlias, cast
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
-from cybernetic_influence.analysis.coordination_measurement import (
-    COORDINATION_MEASUREMENT_SPEC_FINGERPRINT,
-    EXACT_MEASURE_IDS,
-    RunMeasurementConsumer,
-)
+from cybernetic_influence.analysis.coordination_measurement import EXACT_MEASURE_IDS
 from cybernetic_influence.analysis.theory_analysis import (
+    FrameworkReadoutConsumerV1,
     RunEvidenceBundleConsumerV1,
 )
 from cybernetic_influence.presentation import BoundaryActivityProjection
@@ -74,17 +71,12 @@ _EXPECTED_VARIANT_CONTRACT: dict[
     "decision_route_interruption": (
         "structure",
         "scheduled_day_4",
-        frozenset({"terminal_proposal_route"}),
+        frozenset({"perturbation_register.direct_route_enabled"}),
     ),
     "verification_feedback_interruption": (
         "feedback",
         "scheduled_day_4",
-        frozenset(
-            {
-                f"verification_response_{person_id}_route"
-                for person_id in PERSON_IDS
-            }
-        ),
+        frozenset({"perturbation_register.verification_feedback_enabled"}),
     ),
     "relevant_external_risk": (
         "shock",
@@ -92,8 +84,12 @@ _EXPECTED_VARIANT_CONTRACT: dict[
         frozenset(
             {
                 "external_risk_source",
+                "external_risk_carrier",
                 "external_risk_message",
+                "external_risk_out",
                 "external_risk_route",
+                "external_risk_in",
+                "external_risk_delivery",
             }
         ),
     ),
@@ -234,7 +230,7 @@ class CompositeAssayRunRef(_ProducedModel):
     run_id: str = Field(pattern=_ID_PATTERN)
     perturbation_id: str = Field(pattern=_ID_PATTERN)
     scenario_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
-    measurement_spec_version: Literal[1] = 1
+    evidence_bundle_version: Literal[1] = 1
     valid: bool
     invalid_reason: str | None = Field(default=None, min_length=1)
 
@@ -288,7 +284,7 @@ class CompositeControlReadout(_ProducedModel):
     output_attempt_event_ids: list[str]
     external_result_event_ids: list[str]
     terminal_outcome_event_id: str = Field(pattern=_EVENT_ID_PATTERN)
-    coordination_measurement_ref: str = Field(pattern=_ID_PATTERN)
+    framework_readout_refs: list[str] = Field(min_length=2, max_length=2)
     coded_patterns: list[CompositePatternEvidence]
     source_run_ids: list[str] = Field(min_length=1)
     limitations: list[str] = Field(min_length=1)
@@ -306,6 +302,7 @@ class CompositeControlReadout(_ProducedModel):
                 [item.pattern_id for item in self.coded_patterns],
             ),
             ("source runs", self.source_run_ids),
+            ("framework readouts", self.framework_readout_refs),
             ("limitations", self.limitations),
         ):
             if len(refs) != len(set(refs)):
@@ -410,8 +407,7 @@ class CompositeAssaySetup(_ProducedModel):
     matched_world_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
     model_policy_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
     run_control_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
-    measurement_spec_version: Literal[1] = 1
-    measurement_spec_fingerprint: str = Field(pattern=_DIGEST_PATTERN)
+    evidence_bundle_version: Literal[1] = 1
 
     @model_validator(mode="after")
     def validate_setup(self) -> "CompositeAssaySetup":
@@ -423,11 +419,6 @@ class CompositeAssaySetup(_ProducedModel):
             raise ValueError("setup must contain each reviewed variant exactly once")
         if self.row_ids != [CONTROL_ID, *perturbation_ids]:
             raise ValueError("setup row order must be control then perturbations")
-        if (
-            self.measurement_spec_fingerprint
-            != COORDINATION_MEASUREMENT_SPEC_FINGERPRINT
-        ):
-            raise ValueError("setup measurement specification is not current")
         return self
 
 
@@ -446,7 +437,10 @@ class CompositeAssayRunEvidence(_ProducedModel):
         default=None, pattern=_EVENT_ID_PATTERN
     )
     evidence_bundle: RunEvidenceBundleConsumerV1
-    measurement: RunMeasurementConsumer | None = None
+    framework_readouts: list[FrameworkReadoutConsumerV1] = Field(
+        min_length=2,
+        max_length=2,
+    )
     boundary_activity_ref: str | None = Field(
         default=None, pattern=_EVIDENCE_REF_PATTERN
     )
@@ -458,8 +452,20 @@ class CompositeAssayRunEvidence(_ProducedModel):
             raise ValueError("applied changed references must be unique")
         if self.evidence_bundle.run_id != self.run_id:
             raise ValueError("evidence bundle belongs to another run")
-        if self.measurement is not None and self.measurement.run_id != self.run_id:
-            raise ValueError("coordination measurement belongs to another run")
+        readout_ids = [item.readout_id for item in self.framework_readouts]
+        if len(readout_ids) != len(set(readout_ids)):
+            raise ValueError("framework readouts must be unique")
+        if {item.framework for item in self.framework_readouts} != {
+            "waltzman",
+            "levin",
+        }:
+            raise ValueError("assay evidence requires both current framework readouts")
+        if any(
+            item.bundle_id != self.evidence_bundle.bundle_id
+            or item.bundle_digest != self.evidence_bundle.record_digest
+            for item in self.framework_readouts
+        ):
+            raise ValueError("framework readout belongs to another evidence bundle")
         if self.evidence_bundle.scenario_id != COORDINATION_SCENARIO_ID:
             raise ValueError("assay evidence is not the coordination scenario")
         if (self.boundary_activity_ref is None) != (self.boundary_activity is None):
@@ -548,8 +554,78 @@ def compile_composite_assay_setup(
         matched_world_fingerprint=fixture.matched_world_fingerprint,
         model_policy_fingerprint=fixture.model_policy_fingerprint,
         run_control_fingerprint=fixture.run_control_fingerprint,
-        measurement_spec_fingerprint=COORDINATION_MEASUREMENT_SPEC_FINGERPRINT,
+        evidence_bundle_version=1,
     )
+
+
+def reviewed_perturbation_specs() -> list[PerturbationSpec]:
+    """Return the complete reviewed four-row perturbation language."""
+
+    payloads = (
+        {
+            "perturbation_id": "member_replacement",
+            "family": "component",
+            "variant": "position_matched_member_replacement",
+            "application": "initial_condition",
+            "changed_refs": ["technical_validation_lead"],
+            "description": (
+                "Replace the technical-validation position occupant while "
+                "preserving the position-owned interfaces."
+            ),
+        },
+        {
+            "perturbation_id": "route_interruption",
+            "family": "structure",
+            "variant": "decision_route_interruption",
+            "application": "scheduled_day_4",
+            "changed_refs": ["perturbation_register.direct_route_enabled"],
+            "description": (
+                "Interrupt the direct terminal-proposal route at modeled day 4."
+            ),
+        },
+        {
+            "perturbation_id": "feedback_interruption",
+            "family": "feedback",
+            "variant": "verification_feedback_interruption",
+            "application": "scheduled_day_4",
+            "changed_refs": [
+                "perturbation_register.verification_feedback_enabled"
+            ],
+            "description": (
+                "Interrupt all reviewed verification-feedback deliveries at "
+                "modeled day 4."
+            ),
+        },
+        {
+            "perturbation_id": "external_risk",
+            "family": "shock",
+            "variant": "relevant_external_risk",
+            "application": "scheduled_day_4",
+            "changed_refs": [
+                "external_risk_source",
+                "external_risk_carrier",
+                "external_risk_message",
+                "external_risk_out",
+                "external_risk_route",
+                "external_risk_in",
+                "external_risk_delivery",
+            ],
+            "description": (
+                "Introduce one legitimate decision-relevant external risk at "
+                "modeled day 4."
+            ),
+        },
+    )
+    return [
+        PerturbationSpec.model_validate(
+            {
+                "schema_version": 1,
+                "matched_control_id": CONTROL_ID,
+                **payload,
+            }
+        )
+        for payload in payloads
+    ]
 
 
 def build_composite_assay_scenario_fixture(
@@ -560,9 +636,15 @@ def build_composite_assay_scenario_fixture(
     model_policy_fingerprint: str,
     run_control_fingerprint: str,
     reviewed_created_refs: Sequence[str] = (
+        "perturbation_register.direct_route_enabled",
+        "perturbation_register.verification_feedback_enabled",
         "external_risk_source",
+        "external_risk_carrier",
         "external_risk_message",
+        "external_risk_out",
         "external_risk_route",
+        "external_risk_in",
+        "external_risk_delivery",
     ),
 ) -> CompositeAssayScenarioFixture:
     """Derive the assay's reviewed facts from a real coordination fixture."""
@@ -593,6 +675,11 @@ def build_composite_assay_scenario_fixture(
         state.representations,
     ):
         state_refs.extend(values)
+    state_refs.extend(
+        f"{entity_id}.{attribute}"
+        for entity_id, entity in state.entities.items()
+        for attribute in entity.attributes
+    )
     configured_refs = list(
         dict.fromkeys(
             [
@@ -683,8 +770,6 @@ def validate_composite_assay_evidence(
             run_ref.scenario_fingerprint,
             evidence.evidence_bundle.scenario_fingerprint,
         }
-        if evidence.measurement is not None:
-            fingerprints.add(evidence.measurement.scenario_fingerprint)
         if len(fingerprints) != 1:
             raise CompositeAssayContractError("scenario fingerprint mismatch")
         if (
@@ -695,17 +780,8 @@ def validate_composite_assay_evidence(
             raise CompositeAssayContractError(
                 "control scenario fingerprint does not match setup"
             )
-        if run_ref.measurement_spec_version != setup.measurement_spec_version:
-            raise CompositeAssayContractError("measurement version mismatch")
-        if run_ref.valid and evidence.measurement is None:
-            raise CompositeAssayContractError("missing current Slice-21 measurement")
-        if evidence.measurement is not None and (
-            evidence.measurement.measurement_spec_version
-            != setup.measurement_spec_version
-            or evidence.measurement.measurement_spec_fingerprint
-            != setup.measurement_spec_fingerprint
-        ):
-            raise CompositeAssayContractError("missing current Slice-21 measurement")
+        if run_ref.evidence_bundle_version != setup.evidence_bundle_version:
+            raise CompositeAssayContractError("evidence-bundle version mismatch")
         expected_changed_refs = (
             set()
             if row_id == CONTROL_ID
@@ -775,10 +851,9 @@ def _validate_readout(
     readout: CompositeControlReadout,
     evidence: CompositeAssayRunEvidence,
 ) -> None:
-    measurement = evidence.measurement
     activity = evidence.boundary_activity
     boundary_activity_ref = evidence.boundary_activity_ref
-    if measurement is None or activity is None or boundary_activity_ref is None:
+    if activity is None or boundary_activity_ref is None:
         raise CompositeAssayContractError("valid run evidence is incomplete")
     if readout.capability_id != capability.capability_id:
         raise CompositeAssayContractError("readout capability mismatch")
@@ -790,11 +865,9 @@ def _validate_readout(
         raise CompositeAssayContractError("readout must cite exactly its source run")
     if readout.boundary_activity_ref != boundary_activity_ref:
         raise CompositeAssayContractError("boundary activity reference mismatch")
-    if (
-        readout.coordination_measurement_ref
-        != measurement.measurement_id
-    ):
-        raise CompositeAssayContractError("coordination measurement reference mismatch")
+    expected_readout_refs = [item.readout_id for item in evidence.framework_readouts]
+    if set(readout.framework_readout_refs) != set(expected_readout_refs):
+        raise CompositeAssayContractError("framework readout references mismatch")
 
     crossing_by_id = {
         item.crossing_id: item for item in activity.crossings
@@ -857,6 +930,7 @@ def _validate_readout(
         *readout.output_attempt_event_ids,
         *readout.external_result_event_ids,
         readout.terminal_outcome_event_id,
+        *_exact_readout_event_ids(readout.exact_values),
         *(
             event_id
             for pattern in readout.coded_patterns
@@ -915,3 +989,46 @@ def _require_known_ids(
         raise CompositeAssayContractError(
             f"readout has unknown {label} IDs {sorted(unknown)!r}"
         )
+
+
+def _exact_readout_event_ids(values: Mapping[str, JsonValue]) -> set[str]:
+    """Extract and shape-check every event citation embedded in exact values."""
+
+    refs: set[str] = set()
+    correction_pairs = values["correction_event_pairs"]
+    if not isinstance(correction_pairs, list):
+        raise CompositeAssayContractError("correction pairs must be a list")
+    for pair in correction_pairs:
+        if not isinstance(pair, dict) or set(pair) != {
+            "issue_event_id",
+            "correction_event_id",
+        }:
+            raise CompositeAssayContractError("correction pair has invalid shape")
+        for value in pair.values():
+            if not isinstance(value, str):
+                raise CompositeAssayContractError("correction event ID must be text")
+            refs.add(value)
+    recovery = values["recovery"]
+    if isinstance(recovery, dict):
+        if set(recovery) != {
+            "scenario_minutes",
+            "application_event_id",
+            "restoration_event_id",
+        }:
+            raise CompositeAssayContractError("recovery evidence has invalid shape")
+        if not isinstance(recovery["scenario_minutes"], int):
+            raise CompositeAssayContractError("recovery time must be an integer")
+        for key in ("application_event_id", "restoration_event_id"):
+            value = recovery[key]
+            if not isinstance(value, str):
+                raise CompositeAssayContractError("recovery event ID must be text")
+            refs.add(value)
+    elif recovery not in {"not_applicable", "not_observed"}:
+        raise CompositeAssayContractError("recovery status is invalid")
+    alternate_routes = values["alternate_routes_used"]
+    if not isinstance(alternate_routes, list) or any(
+        not isinstance(value, str) for value in alternate_routes
+    ):
+        raise CompositeAssayContractError("alternate-route evidence is invalid")
+    refs.update(cast(list[str], alternate_routes))
+    return refs

@@ -14,8 +14,10 @@ yet make robustness or perturbation comparisons part of a normal run.
 
 - [Current goal](docs/GOAL.md) — outcome, scope, and acceptance criteria.
 - [Roadmap](docs/ROADMAP.md) — current truth and implementation sequence.
-- [Active design: Slice 24](docs/plans/024-configurable-theory-analysis-mvp.md)
-  — the only executable continuation plan.
+- [Active MVP design: Slice 24](docs/plans/024-configurable-theory-analysis-mvp.md)
+  — the canonical MVP closeout plan.
+- [Post-MVP perturbation design: Slice 22](docs/plans/022-composite-agency-perturbation-assay.md)
+  — completed scripted assay foundation and separately gated next packets.
 - [Architectural decisions](docs/adr/README.md) — binding ontology and runtime
   constraints.
 - [Research basis](docs/research/001-from-minds-to-coordination.md) — what the
