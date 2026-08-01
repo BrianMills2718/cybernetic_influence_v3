@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-07-25
+updated: 2026-07-31
 ---
 
 # Architectural Decisions
@@ -25,3 +25,4 @@ plans provide scoped execution and historical evidence.
 | [010](010-autonomous-multirate-process-time.md) | Autonomous multirate process time | accepted; implemented in Service Desk and purchase-to-payment |
 | [011](011-declared-representation-depth.md) | Declared subsystem representation depth | accepted direction; general framework deferred |
 | [012](012-decision-environment-measures-are-derived.md) | Trust, risk, coordination, and directional patterns are derived evidence-bound analyst views | accepted |
+| [013](013-generalized-simulator-foundation.md) | Concordia owns the generalized simulation foundation; selected Cybernetic Influence capabilities migrate through public component and projection seams | accepted |

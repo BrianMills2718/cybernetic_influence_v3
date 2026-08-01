@@ -4,27 +4,43 @@ authority: continuous_execution
 status: active
 created: 2026-07-27
 updated: 2026-07-31
-supersedes: comparison-centered research MVP goal at 0c91c418377a47185e40456eef77a67686f1f6ac
+supersedes: configurable Waltzman-Levin MVP as active product frontier; retained below as baseline evidence
 ---
 
-# Configurable Waltzman–Levin Research MVP Goal
+# Generalizable Socio-Technical Simulation System Goal
 
 ## Mission
 
-Deliver a reviewable private PoC in which an analyst can:
+Build a reviewable private simulation system in which an analyst can:
 
-1. describe a bounded organizational decision situation conversationally;
+1. describe a bounded socio-technical world conversationally;
 2. review and edit the compiled simulation configuration;
-3. run one meaningful LLM-driven multi-episode trajectory; and
-4. inspect separate Waltzman- and Levin-informed per-run findings, with every
-   finding labeled by method and linked to the retained evidence that supports
-   it.
+3. run interacting LLM and deterministic entities through a Concordia-owned
+   simulation lifecycle; and
+4. inspect the trajectory, state, assumptions, provenance, and selected
+   domain-specific analyses.
 
-The MVP proves a configurable simulation-and-analysis workflow. It does not
-require a perturbation assay, repeated comparison, counterfactual attribution,
-or predictive validation.
+The system must first reproduce the current Cybernetic Influence capabilities,
+then demonstrate that a materially different domain can be expressed through
+reusable components rather than another bespoke runtime. Wargaming, economic
+modeling, and organizational analysis are exemplar applications, not the
+definition of the product.
 
-## Canonical Example
+The simulation explores conditional pathways, mechanisms, strategies, and
+sensitivities under explicit assumptions. It does not claim predictive accuracy
+for chaotic socio-technical systems or real-world probabilities merely from
+generated trajectories.
+
+## Adopted foundation
+
+[ADR-013](adr/013-generalized-simulator-foundation.md) adopts Concordia as the
+simulation foundation. Concordia owns the entity/component lifecycle,
+environment/game-master loop, scheduling, and checkpoint substrate. Existing
+Cybernetic Influence code is retained as baseline evidence and selectively
+ported where its exact mechanisms, information lineage, causal inspection,
+authoring, UI, or analysis add observable value.
+
+## Retained baseline exemplar
 
 The analyst describes a multinational partnership deciding whether and how to
 deploy a bio-surveillance capability while different participants encounter
@@ -53,7 +69,7 @@ After running, the analyst can inspect:
 - provenance from each finding to configuration, state, events, information
   lineage, participant output, boundary activity, or other retained evidence.
 
-## Four Contracts
+## Retained baseline contracts
 
 The implementation must keep these concerns separate:
 
@@ -65,9 +81,24 @@ The implementation must keep these concerns separate:
 4. **Experiment specification** — conditions, perturbations, repetitions, and
    comparisons across runs.
 
-Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
+Only the first three were part of the retained MVP. `ExperimentSpec` was
+post-MVP and remains deferred unless selected for the generalized product.
 
-## Acceptance
+## Current acceptance
+
+| ID | Criterion | Provenance | Evidence |
+|---|---|---|---|
+| G1 | The Concordia-first product reproduces the current user-visible authoring, execution, inspection, replay, and analysis capabilities | explicit_user | Side-by-side parity inventory and inspectable retained runs |
+| G2 | Concordia—not the old `CausalSession`/`ActiveRuntimeSession`—owns the migrated simulation lifecycle | explicit_user | Runtime trace, dependency review, and negative control proving the old runtime was not invoked |
+| G3 | Exact rules and structured evidence remain selective, question-relative components rather than a second hidden foundation | explicit_user | Component/state/evidence inspection in the parity exemplar |
+| G4 | At least one materially different exemplar reuses the same authoring and execution seams without generated executable code or another scenario-specific runtime | explicit_user | Reviewed compile/run/reopen flow and implementation-diff review |
+| G5 | Every result exposes assumptions and limitations and avoids predictive or real-world-probability claims unsupported by calibration | explicit_user | Human inspection of the rendered run and analysis surfaces |
+
+## Retained MVP acceptance evidence
+
+The following completed or pending criteria describe the pre-migration
+Cybernetic Influence baseline. They remain parity evidence; they no longer
+select the product foundation.
 
 | ID | Criterion | Provenance | Evidence |
 |---|---|---|---|
@@ -80,7 +111,7 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 | M7 | A demo user can explain the situation, what happened, what each theoretical readout says, and what evidence supports or limits each claim without opening raw JSON | explicit_user | Operator review of the canonical retained run |
 | M8 | Canonical documents and UI language distinguish scenario inputs, per-run measurements, and post-MVP experiments | explicit_user | Documentation/link check and rendered UI inspection |
 
-## Boundaries
+## Retained MVP boundaries
 
 - People and exact or declared-coarse mechanisms execute. Organizations remain
   reversible analytical boundaries.
@@ -103,6 +134,11 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   coordination score, or agency score.
 
 ## Current Truth
+
+- The product owner adopted a Concordia-first generalized simulation direction
+  on 2026-07-31. Wargaming is an exemplar, not the goal.
+- Current Cybernetic Influence behavior remains the parity baseline. No
+  Concordia-first product implementation has begun.
 
 - The causal runtime, maps, narrative, pause/resume, analytical boundaries, and
   exact evidence inspection are technically observed.
@@ -151,21 +187,20 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 ## Active Plan
 
-Follow [Slice 24: Configurable theory-informed simulation
-MVP](plans/024-configurable-theory-analysis-mvp.md) for MVP acceptance. Packets
-24A0–24D are technically complete; M7 remains the stakeholder review of the
-corrected retained run. The separately selected [Slice 26 foundation
-research](plans/026-concordia-foundation-research.md) is complete. Its
-[evidence record](research/026-foundation-comparison.md) recommends Candidate C:
-retain the Cybernetic Influence causal runtime and its existing provider-neutral
-active-system protocol, then add narrow compatibility adapters. Candidate B,
-Concordia cognition around the CI environment, is the strongest rejected
-alternative. [ADR-013](adr/013-generalized-simulator-foundation.md) and the
-[Slice 27 adapter handoff](handoffs/027-foundation-implementation.md) await the
-product owner's architecture judgment; further simulator construction remains
-paused. [Slice 25](plans/025-typed-component-composition.md) Packets 25A–25C
-remain completed evidence and 25D remains paused. This research does not change
-the MVP criteria or close M7.
+The generalized-product track starts with the [Slice 27 parity
+proof](handoffs/027-foundation-implementation.md), after separate implementation
+authorization. [Slice 26 foundation research](plans/026-concordia-foundation-research.md)
+is complete; the owner revised its invariant-preserving recommendation and adopted Concordia as the product foundation in
+[ADR-013](adr/013-generalized-simulator-foundation.md). The first migration
+boundary must reproduce the physical-access capability with Concordia actually
+owning execution before broader parity work begins. [Slice 25](plans/025-typed-component-composition.md)
+Packets 25A–25C and all retained runs remain baseline evidence. This reset does
+not retroactively change the prior MVP evidence or close M7.
+
+The retained-MVP track remains governed by [Slice 24: Configurable
+theory-informed simulation MVP](plans/024-configurable-theory-analysis-mvp.md)
+only for its separate stakeholder decision. Packets 24A0–24D are technically
+complete; M7 remains the review of the corrected retained run.
 
 The operator separately selected and completed Packet 22A0's contract
 foundation, Packet 22A1's five provider-free scripted trajectories, and Packet
@@ -186,19 +221,20 @@ readout before any live repetition work.
 
 ## Completion and Reset
 
-The MVP is complete when M1–M8 are demonstrated on one canonical authored
-coordination example, all owned changes are verified and merged on canonical
-`main`, and the private review surface reopens the accepted draft and run
-without re-execution.
+The current goal is complete when G1–G5 are observed: present capabilities run
+on the Concordia foundation, one materially different exemplar reuses the same
+seams, and the analyst can inspect assumptions, evidence, and limitations. The
+retained MVP's M7 stakeholder judgment may close independently and does not
+gate the architecture migration.
 
 Reset the implementation plan after two substantive increments or four elapsed
-hours without a new user-visible part of the canonical flow. Also reset if the
-coordination scenario cannot be made meaningfully configurable without
-arbitrary generated mechanism code or a second simulation runtime.
+hours without a new user-visible part of the parity or generalization flow.
+Also reset if migration requires the old runtime as a hidden executor,
+arbitrary generated mechanism code, or a new scenario-specific runtime.
 
-## Post-MVP
+## Retained deferred work
 
-The following are preserved but not required for MVP completion:
+The following are preserved but not required for current capability parity:
 
 - repeated baseline/pressure/stabilization comparisons;
 - directional-invariant claims across runs;
@@ -206,5 +242,5 @@ The following are preserved but not required for MVP completion:
 - recovery, robustness, and axis-of-persuadability experiments;
 - Waltzman's evasion dimensions;
 - causal attribution and predictive or empirical calibration; and
-- generalized reusable component composition beyond the canonical scenario
-  family.
+- additional perturbation or domain families beyond the one required
+  materially different generalization exemplar.

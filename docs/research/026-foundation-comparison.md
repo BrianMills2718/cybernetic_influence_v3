@@ -1,14 +1,29 @@
 ---
 doc_role: architecture_research
 authority: evidence_record
-status: complete_awaiting_owner_decision
+status: complete_decision_adopted
 created: 2026-07-31
 updated: 2026-07-31
 ---
 
 # Slice 26 foundation comparison
 
-## Decision readout
+## Product-owner disposition
+
+On 2026-07-31, after reviewing the technical recommendation and clarifying the
+product goal, the product owner adopted **A — Concordia foundation**. The target
+is a generalizable simulation system for bounded socio-technical worlds;
+wargaming is one exemplar rather than the product definition. Simulation is an
+exploratory instrument for conditional pathways, mechanisms, and sensitivities,
+not a claim to decision-grade prediction of chaotic social systems.
+
+The owner explicitly judged that preserving every Cybernetic Influence runtime
+invariant as a foundational requirement may cost more than it contributes to
+that broader goal. Selected Cybernetic Influence mechanisms and analytical
+ideas remain candidates for reuse as Concordia components or projections. The
+accepted decision is recorded in [ADR-013](../adr/013-generalized-simulator-foundation.md).
+
+## Research recommendation under the frozen Slice 26 contract
 
 Recommend **C — Cybernetic Influence foundation with compatibility adapters**.
 Keep the existing typed causal runtime as the sole authority for world state,
@@ -27,9 +42,10 @@ action, and upstream/provider coupling before a demonstrated product need.
 Candidate C preserves the same future option behind an adapter without making
 that dependency architectural.
 
-This is a proposed decision. [ADR-013](../adr/013-generalized-simulator-foundation.md)
-awaits product-owner adoption. No product implementation is authorized by this
-research record.
+This was the technical recommendation under the original frozen comparison
+contract, which treated all Cybernetic Influence invariants as non-negotiable.
+It remains evidence, not the adopted product decision. The owner's clarified
+outcome changed the tradeoff rather than invalidating the source audit.
 
 ## 26A — Frozen comparison contract
 
@@ -332,7 +348,7 @@ answer a remaining architectural unknown more safely than these sources.
 | R2 identical invariants/cases | Pass — one frozen matrix and all three A–D walkthroughs |
 | R3 immutable evidence | Pass — external claims link pinned commits; CI claims link pinned-baseline source paths |
 | R4 fixed taxonomy | Pass — every matrix cell uses one of the six values |
-| R5 authority boundaries | Pass — proposed ADR and authority map name every owner |
+| R5 authority boundaries | Pass — the original authority map supported the research recommendation; accepted ADR-013 now owns the revised foundation boundary |
 | R6 strongest rejection | Pass — Candidate B is stated and represented fairly |
 | R7 migration disposition | Pass — keep/adapt/do-not-adopt dispositions cover current code and retained evidence |
-| R8 smaller-than-rewrite next slice | Pass pending owner adoption — the Slice 27 handoff defines one Concordia-compatible adapter vertical and cannot begin before judgment |
+| R8 smaller-than-rewrite next slice | Pass after owner revision — the original Candidate C handoff was replaced by a Concordia-foundation parity proof after Candidate A adoption |

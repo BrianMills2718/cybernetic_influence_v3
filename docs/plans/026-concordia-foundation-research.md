@@ -1,13 +1,23 @@
 ---
 doc_role: research_execution_plan
 authority: bounded_design
-status: selected
+status: complete
 created: 2026-07-31
 updated: 2026-07-31
 supersedes: further Slice 25 expansion before a foundation decision
 ---
 
 # Slice 26: Foundation decision for a generalized cybernetic simulator
+
+## Completion disposition
+
+Slices 26A–26D are complete. The source comparison recommended Candidate C
+under the frozen invariant contract. After clarifying the broader product goal,
+the product owner adopted **Candidate A — Concordia foundation** on 2026-07-31.
+The accepted authority boundary is [ADR-013](../adr/013-generalized-simulator-foundation.md),
+and the next bounded design is the [Slice 27 Concordia-owned parity
+proof](../handoffs/027-foundation-implementation.md). No product implementation
+was performed under this research plan.
 
 ## Outcome
 

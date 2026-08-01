@@ -1,134 +1,151 @@
 ---
 doc_role: active_authority
-authority: proposed
-status: proposed_awaiting_product_owner
+authority: canonical
+status: accepted
 created: 2026-07-31
 updated: 2026-07-31
+supersedes: proposed Candidate C revision at e8429b0e2e769931e8d211262d70fc48bc5032da
 ---
 
-# ADR-013: Keep one Cybernetic Influence causal authority behind compatibility adapters
+# ADR-013: Use Concordia as the generalized simulation foundation
 
 ## Status
 
-**Proposed; awaiting product-owner judgment.** This ADR does not authorize
-implementation until the owner adopts, rejects, or revises it.
+**Accepted by the product owner on 2026-07-31.** Architecture adoption does not
+by itself authorize product implementation or deployment.
 
 ## Context
 
-Cybernetic Influence has proven a typed causal runtime, multirate participant
-execution, retained evidence, reviewed authoring, and analytical step-down. It
-also owns bespoke cognition, composition, runtime, checkpoint, server, and
-product machinery. Before expanding the component catalog, Slice 26 compared:
+Slice 26 compared four foundations:
 
 - A — Concordia as the foundation;
 - B — Concordia cognition around a Cybernetic Influence environment;
 - C — Cybernetic Influence as the foundation with compatibility adapters; and
-- D — an independent Cybernetic Influence product without Concordia compatibility.
+- D — an independent Cybernetic Influence product.
 
-The comparison held the same product invariants and physical-access, hidden-
-microphone, and heterogeneous-organization cases constant. The full source
-audit, capability matrix, walkthroughs, and migration dispositions are in the
-[Slice 26 research record](../research/026-foundation-comparison.md).
+The [source audit and same-case comparison](../research/026-foundation-comparison.md)
+recommended Candidate C under a frozen contract that treated every current
+Cybernetic Influence invariant as non-negotiable. The product owner then
+clarified the higher-level objective:
 
-Concordia supports exact Python component state and is not disqualified by its
-natural-language defaults. Its stock agent seam, resolution, observation,
-scheduling, checkpoint, and logging semantics do not, however, own the typed
-causal distinctions required by this product. Making Concordia foundational
-would require replacing those recurring authorities. Keeping Concordia as a
-privileged cognition layer would preserve the causal core but create a second
-component and checkpoint lifecycle before a concrete component justifies it.
+- build a generalizable simulation system for bounded socio-technical worlds;
+- treat wargaming, economic modeling, organizational analysis, and similar
+  domains as exemplars rather than the product definition;
+- optimize fidelity as useful structure, decisions, mechanisms, information,
+  and inspectability under declared assumptions; and
+- do not claim that generated trajectories predict chaotic socio-technical
+  systems or supply real-world probabilities without separate calibration.
 
-## Proposed decision
+That clarification changes the product tradeoff. Cybernetic Influence's exact
+runtime guarantees improve internal consistency and auditability, but
+preserving all of them as foundational requirements risks maintaining a second
+simulation framework and restricting exploratory breadth. Existing code is
+evidence and a parity baseline, not a sunk-cost reason to retain its runtime.
 
-Choose **C — Cybernetic Influence foundation with compatibility adapters**.
+## Decision
 
-One Cybernetic Influence causal session remains authoritative for world state,
-modeled time, scheduling, routing, exact adjudication, committed effects,
-observations, lineage, checkpointing, replay, and retained evidence. Analytical
-boundaries and Waltzman-/Levin-informed measures remain derived views over that
-evidence.
+Choose **A — Concordia foundation**.
 
-Retain the existing provider-neutral `ActiveSystemImplementation` protocol as
-the participant-cognition port. A cognition implementation:
+Concordia owns the primary simulation lifecycle:
 
-1. receives only the authorized, typed participant input selected by the causal
-   runtime;
-2. may interpret that input, update explicitly checkpointed private cognition
-   state, and propose a reviewed typed intent;
-3. cannot mutate canonical world state, schedule work, deliver observations, or
-   adjudicate success; and
-4. fails visibly when it cannot produce a valid proposal.
+- entity identity, private component state, memory, cognition, and action;
+- environment/game-master control and action resolution;
+- simulated-time and actor-selection policy;
+- component assembly and state restoration; and
+- the foundation checkpoint/log lifecycle.
 
-Native participant implementations already use this port. Concordia-compatible
-entities may be hosted through an optional adapter at the same boundary.
-Concordia's engine, game master, scheduler,
-checkpoint, and log do not become product authorities. All provider-backed
-cognition continues through shared `llm_client`.
+Cybernetic Influence does not remain as a hidden authoritative environment
+behind Concordia. Selected capabilities may migrate when they add observable
+value:
 
-`data_contracts.composition` is an eligible **compile-time** substrate, not a
-runtime. Do not migrate Slice 25 contracts yet. First prove a narrow projection
-that preserves causal declarations and reduces duplicate validation; Cybernetic
-Influence continues to own implementation discovery, effects, state,
-scheduling, evidence, persistence, and replay.
+- exact deterministic components for hard rules and constrained state;
+- distinctions among capability, permission, attempt, adjudication, and
+  realized outcome where the modeled question requires them;
+- information-copy lineage and selective causal provenance;
+- spatial, configured-pathway, and realized-event projections;
+- reviewed conversational authoring and compilation;
+- retained-run inspection, replay, maps, narration, and comparison surfaces;
+- analytical boundaries and Waltzman-/Levin-informed analysis; and
+- shared `llm_client` invocation and retained model-call evidence.
+
+Typed state is question-relative. A component should be exact where a modeled
+constraint or analytical question needs exactness. Narrative or explicitly
+coarse state is acceptable elsewhere. Exact components must use Concordia's
+public component/state seams rather than recreating `CausalSession` or
+`ActiveRuntimeSession` as a second engine.
 
 ## Authority boundaries
 
-| Concern | Authority |
+| Concern | Adopted authority |
 |---|---|
-| Cognition, private memory, planning | Existing `ActiveSystemImplementation` and versioned `ActiveSystemState.private_state` |
-| Natural-language interpretation | Cognition adapter producing a validated typed proposal |
-| Canonical world state and time | Cybernetic Influence causal/active runtime |
-| Capability, permission, and success | Cybernetic Influence mechanisms and declared invariants |
-| Observation selection and information lineage | Cybernetic Influence routing and representations |
-| Checkpoint, replay, and evidence | Cybernetic Influence retained run; adapter state is an explicit payload |
-| Scenario authoring and runtime implementation selection | Cybernetic Influence compiler/registry until a separate contract decision |
-| Analysis and aggregate boundaries | Derived Cybernetic Influence views over retained lower-level evidence |
+| Entity cognition, memory, and planning | Concordia entities/components; provider calls route through `llm_client` |
+| Simulation loop and actor selection | Concordia engine/game-master foundation |
+| World and component state | Concordia component state, with exact typed state only where declared |
+| Action interpretation | Concordia action seam plus reviewed parsers or structured components |
+| Adjudication | Game-master resolution; deterministic components own declared hard rules |
+| Time and scheduling | Concordia scheduling/time components, extended through public seams when needed |
+| Checkpoint and continuation | Concordia checkpoint/component state; migration artifacts must fail on silent loss |
+| Evidence and provenance | Concordia logs plus selected typed evidence projections required by the question |
+| Authoring | Adapt the existing reviewed workflow to emit Concordia configuration/components |
+| Analysis and UI | Adapt existing CI analysis and presentation over the new retained-run projection |
+
+No component may claim predictive validity merely because its internal state is
+exact. Exactness describes execution under assumptions, not correspondence to
+the real world.
 
 ## Strongest rejected alternative
 
-**B — Concordia cognition around a Cybernetic Influence environment** is the
-strongest alternative. It preserves one world authority and offers immediate
-access to Concordia's component lifecycle, memory, and social cognition. It is
-not selected because every participant would cross Concordia's string action
-seam, the product would carry two component/state/checkpoint lifecycles, and
-Concordia/provider upgrades would become architectural coupling. Candidate C
-can add the same concrete reuse through an optional adapter after its value is
-demonstrated, without imposing it on native or non-LLM participants.
+**C — Cybernetic Influence foundation with compatibility adapters** best
+preserves existing behavior and minimizes migration risk. It was the Slice 26
+technical recommendation. It is rejected as the product foundation because it
+makes Concordia an optional edge around a bespoke runtime, while the adopted
+goal values a broader simulation ecosystem and accepts selective rather than
+universal causal typing.
 
-## Other rejected alternatives
+Candidate C remains the fallback if the first Concordia-owned parity proof
+cannot reproduce a current capability without embedding the old runtime or
+losing behavior the product owner judges indispensable.
 
-- **A — Concordia foundation:** rejected because preserving the fixed causal,
-  visibility, evidence, and replay invariants repeatedly replaces Concordia's
-  engine-level ownership. The result would be a nominal Concordia foundation
-  around a second product engine.
-- **D — independent product:** viable and authority-clean, but rejected because
-  refusing a compatibility boundary would unnecessarily make future cognition
-  ecosystem reuse and interoperability product-specific.
+## Other alternatives
 
-## Consequences if adopted
+- **B — Concordia cognition around a CI environment:** rejects the migration
+  risk of A but permanently carries two lifecycle/state/checkpoint models. It
+  is not selected unless the parity proof demonstrates that a separate exact
+  environment is indispensable.
+- **D — independent CI product:** retains maximum local control but gains the
+  least ecosystem leverage and does not address the maintenance concern that
+  motivated the decision.
 
-- Existing causal state, runtime, retained runs, checkpoints, and analysis stay
-  authoritative and require no migration.
-- The first implementation increment is a smaller-than-rewrite
-  Concordia-compatible adapter vertical through one canonical provider-free
-  scenario; it does not create a second cognition abstraction.
-- The exact Concordia pin is confined to an optional adapter/test boundary; a
-  minimal provider-free entity proves compatibility without adopting the
-  Concordia engine or granting it runtime authority.
-- Invalid cognition output remains an explicit failed proposal; no productive
-  fallback silently mutates the world.
-- A materially different scenario, rather than additional variants of the
-  current family, remains the test of generalized composition.
-- This decision does not close the separate MVP stakeholder-comprehension gate
-  or establish empirical validity.
+## Migration consequences
 
-## Adoption gate
+- Existing retained runs, traces, analyses, and screenshots remain historical
+  evidence and the behavioral parity baseline. They are not rewritten.
+- Existing code is classified capability by capability as `reuse_unchanged`,
+  `adapt`, `replace`, or `retire`; no repository-wide rewrite is authorized.
+- `data_contracts.composition` remains an optional compile-time authoring
+  substrate. It is not a runtime authority and is deferred until authoring
+  migration presents a concrete duplication or validation problem.
+- The first proof reproduces the current physical-access behavior with
+  Concordia actually executing it. The old causal/active runtime must not run
+  behind the new surface.
+- Broader parity work begins only after that proof. Cross-domain generalization
+  begins only after current public capabilities have an explicit disposition.
+- A materially different exemplar must reuse the same authoring and execution
+  seams before the product claims generality.
+- Wargaming may be that later exemplar, but it is not privileged in the core
+  architecture.
+- The separate MVP stakeholder-comprehension judgment remains open and is not
+  closed by this decision.
 
-The product owner must choose one of:
+## Non-claims
 
-1. adopt Candidate C as written and authorize the Slice 27 handoff;
-2. select Candidate B and request a revised authority/handoff packet; or
-3. reject the framing and name the product tradeoff requiring more research.
+This decision does not establish that Concordia is empirically predictive,
+that every Cybernetic Influence feature should be ported, that exact components
+increase real-world accuracy, or that one successful scenario proves a
+generalized simulator.
 
-Until then, Slice 27 is `awaiting_owner_adoption` and product implementation is
-stopped.
+## Execution gate
+
+The replacement [Slice 27 handoff](../handoffs/027-foundation-implementation.md)
+is a bounded design for the first Concordia-owned parity proof. Begin it only
+after explicit implementation authorization.

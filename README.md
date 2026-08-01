@@ -1,21 +1,26 @@
 # Cybernetic Influence V3
 
-Cybernetic Influence is a traceable multiscale-agency simulator. It represents
-people, information carriers, stateful objects, interfaces, connections, and
-exact mechanisms separately. An organization is an analytical boundary over
-those concrete members, not another mind or world executor.
+Cybernetic Influence is becoming a generalizable, reviewable simulator for
+bounded socio-technical worlds. Concordia is the adopted simulation foundation;
+the current Cybernetic Influence application is the capability-parity baseline
+and a source of selected exact mechanisms, evidence projections, authoring,
+analysis, and presentation features.
 
-The current MVP is to configure a bounded coordination scenario and obtain
-separate, evidence-bound findings relevant to Waltzman's coordination ideas
-and Levin-style composite agency. It is not a prediction engine and it does not
-yet make robustness or perturbation comparisons part of a normal run.
+Wargaming, economic modeling, and organizational analysis are exemplar uses,
+not separate product definitions. The system explores conditional pathways and
+sensitivities under declared assumptions; it is not a prediction engine.
 
 ## Start here
 
 - [Current goal](docs/GOAL.md) — outcome, scope, and acceptance criteria.
 - [Roadmap](docs/ROADMAP.md) — current truth and implementation sequence.
-- [Active MVP design: Slice 24](docs/plans/024-configurable-theory-analysis-mvp.md)
-  — the canonical MVP closeout plan.
+- [Foundation decision: ADR-013](docs/adr/013-generalized-simulator-foundation.md)
+  — accepted Concordia-first authority boundary.
+- [Next bounded design: Slice 27](docs/handoffs/027-foundation-implementation.md)
+  — Concordia-owned physical-access parity proof, awaiting explicit
+  implementation authorization.
+- [Retained MVP design: Slice 24](docs/plans/024-configurable-theory-analysis-mvp.md)
+  — completed technical baseline with a separate stakeholder readout pending.
 - [Post-MVP perturbation design: Slice 22](docs/plans/022-composite-agency-perturbation-assay.md)
   — completed scripted assay foundation and separately gated next packets.
 - [Architectural decisions](docs/adr/README.md) — binding ontology and runtime
@@ -41,6 +46,8 @@ reasoning options, and observed spend are shown by the running application.
 Do not infer current route availability from historical documentation.
 
 ## What the application shows
+
+The current application is the pre-migration parity baseline. It shows:
 
 - a pre-run spatial topology and configured interaction-pathway map;
 - a realized causal graph after retained events exist;

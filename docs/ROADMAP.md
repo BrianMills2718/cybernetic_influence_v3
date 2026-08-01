@@ -7,35 +7,35 @@ updated: 2026-07-31
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
-# Cybernetic Influence V3 Roadmap
+# Generalizable Simulation System Roadmap
 
 ## Outcome
 
-For an analyst studying influence and multiscale agency, turn a bounded
-organizational decision problem into a reviewable simulation configuration,
-run one meaningful trajectory, and inspect:
+For an analyst exploring a bounded socio-technical system, turn a described
+world into a reviewable simulation configuration, run interacting LLM and
+deterministic entities, and inspect:
 
-- what happened;
-- how the decision environment changed under Waltzman's framework;
-- what collective goal-directed competence was observed under a Levin-informed
-  framework; and
-- which retained evidence supports or limits every finding.
+- what happened under the declared assumptions;
+- which actors, mechanisms, information flows, and constraints produced it;
+- which alternative pathways or sensitivities deserve further exploration; and
+- which retained evidence supports or limits every interpretation.
 
 Delivery maturity is a private functional PoC. Capability ambition is an
-advanced but bounded multiscale social simulator, not a production platform.
+advanced generalizable socio-technical simulator, not a predictive oracle or
+production platform. Wargaming, economic modeling, and organizational analysis
+are exemplar applications rather than separate product definitions.
 
-The MVP acceptance contract remains
-[Configurable Waltzman–Levin Research MVP Goal](GOAL.md). [Slice 26](plans/026-concordia-foundation-research.md)
-research is complete and recommends keeping Cybernetic Influence's causal
-runtime authoritative behind compatibility adapters. [ADR-013](adr/013-generalized-simulator-foundation.md)
-and the bounded [Slice 27 handoff](handoffs/027-foundation-implementation.md)
-await product-owner adoption; implementation is stopped at that judgment.
-[Slice 25](plans/025-typed-component-composition.md) Packets 25A–25C remain
-retained evidence and further expansion remains paused. Neither architecture
-research nor later implementation may weaken the MVP's evidence and non-claim
-boundaries.
+The active contract is the [Generalizable Simulation System Goal](GOAL.md).
+[Slice 26](plans/026-concordia-foundation-research.md) source research is
+complete, and the product owner adopted **Candidate A — Concordia foundation**
+in [ADR-013](adr/013-generalized-simulator-foundation.md). The research's
+Candidate C recommendation remains evidence under its original frozen
+invariants; it is not the adopted direction. The current Cybernetic Influence
+product and retained runs are the parity baseline. [Slice 27](handoffs/027-foundation-implementation.md)
+is the first Concordia-owned execution proof and awaits explicit implementation
+authorization.
 
-## Canonical Outcome Probe
+## Retained Baseline Outcome Probe
 
 Starting input:
 
@@ -71,9 +71,15 @@ completed simulation intact and visible.
 Non-claim: the PoC does not establish predictive accuracy, empirical validity,
 hostile attribution, consciousness, or a universal scalar measure.
 
-## Architecture of the Research Workflow
+This completed Cybernetic Influence workflow is the parity target, not the new
+foundation. After parity, a materially different exemplar must reuse the same
+Concordia authoring/execution seams before generalizability is claimed.
 
-The initiative distinguishes four specifications:
+## Retained Baseline Workflow Architecture
+
+The current Cybernetic Influence baseline distinguishes four specifications.
+Migration should preserve their useful public separation while changing the
+execution foundation:
 
 ```text
 ScenarioSpec + RunSpec
@@ -190,25 +196,31 @@ cross-run comparisons. It is explicitly outside the current MVP.
 | `MVP-C6` | One integrated private review flow | evidence | technical execution passed; stakeholder judgment pending | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
 | `POST-C1` | `ExperimentSpec` and repeated comparison | optional | deferred | Explicit post-MVP selection |
 | `POST-C2` | Perturbation, robustness, and persuadability assays | optional | Packets 22A0–22A2 technically satisfied; stakeholder readout pending | Five matched provider-free rows distinguish concrete pathways and step down through one comparison UI to exact retained evidence |
+| `GEN-C0` | Concordia owns one migrated physical-access execution end to end | hard | proposed; implementation not authorized | Same three current outcomes and inspectable evidence, with a negative control proving the old runtime did not execute |
+| `GEN-C1` | Current Cybernetic Influence capability parity on Concordia | hard | blocked by `GEN-C0` | Authoring, execution, retention, replay, maps, narration, and analyses are inspectably equivalent at their public boundaries |
+| `GEN-C2` | Cross-domain generalization | evidence | blocked by `GEN-C1` | One materially different exemplar reuses the same seams without generated code or a scenario-specific runtime |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
 
 ## Shortest Critical Path
 
-There are two explicit tracks rather than one blended implementation queue:
+There are four explicit tracks rather than one blended implementation queue:
 
-1. **Architecture judgment — current engineering boundary.** Review the
-   [Slice 26 evidence](research/026-foundation-comparison.md) and adopt, reject,
-   or revise proposed [ADR-013](adr/013-generalized-simulator-foundation.md).
-   Research recommends Candidate C; Candidate B is the strongest rejected
-   alternative. Do not begin product implementation before this judgment.
-2. **Concordia-compatible cognition adapter — blocked next implementation frontier.** If
-   Candidate C is adopted, execute the bounded [Slice 27 handoff](handoffs/027-foundation-implementation.md):
-   preserve one physical-access vertical through the existing provider-neutral
-   active-system protocol while proving an adapter against a minimal
-   provider-free entity using the pinned Concordia API. If another architecture
-   is selected, replace the handoff.
-3. **Stakeholder readout — separate MVP boundary.** Review corrected run
+1. **Concordia foundation parity proof — next engineering boundary.** After
+   explicit implementation authorization, execute the bounded
+   [Slice 27 handoff](handoffs/027-foundation-implementation.md). Reproduce the
+   current physical-access capability with Concordia owning entity state,
+   simulation control, exact-component state, and checkpointing. Fail if the
+   old causal/active runtime executes behind the new surface.
+2. **Current-capability parity — conditional.** Only after the foundation proof
+   passes, migrate the current authoring, scenarios, retention/replay, maps,
+   narration, analyses, and comparison surfaces. Preserve public behavior where
+   it remains useful; do not preserve internal architecture for its own sake.
+3. **Cross-domain generalization — conditional.** After parity, select one
+   materially different exemplar and require it to reuse the same reviewed
+   component and execution seams. Wargaming is one candidate exemplar, not the
+   roadmap goal.
+4. **Stakeholder readout — separate retained MVP boundary.** Review corrected run
    `run_eded0f70b15f` and decide whether its situation, trajectory, Waltzman
    readout, Levin readout, evidence, and limitations are understandable without
    raw JSON. This judgment can close M7 but does not decide the generalized
@@ -229,16 +241,16 @@ claims.
 
 | Artifact | Disposition | Reason |
 |---|---|---|
-| [Goal](GOAL.md) | update/active | Owns the new MVP completion contract |
+| [Goal](GOAL.md) | update/active | Owns the generalized product outcome and retained parity baseline |
 | This roadmap | update/active | Owns current direction and first missing boundary |
 | [Slice 17](archive/plans/017-conversational-scenario-authoring.md) | reuse unchanged | Completed authoring foundation |
 | [Slice 21](archive/plans/021-coordination-environment-assay.md) | completed foundation; 21C post-MVP | Runtime and per-run Waltzman work are reused; paid comparison is not active |
 | [Slice 22](plans/022-composite-agency-perturbation-assay.md) | Packets 22A0–22A2 technically complete; stakeholder readout pending | Five zero-cost scripted rows, retained exact readouts, and one comparison/step-down UI are verified; live repetitions remain unauthorized |
 | [Slice 24](plans/024-configurable-theory-analysis-mvp.md) | active MVP authority | Owns the separate MVP acceptance contract and M7 boundary |
 | [Slice 25](plans/025-typed-component-composition.md) | 25A–25C retained; 25D paused | Useful local composition evidence, but not authority for choosing the generalized product foundation |
-| [Slice 26](plans/026-concordia-foundation-research.md) | research complete; owner judgment pending | Evidence recommends Candidate C and fairly rejects Candidate B; implementation remains stopped |
-| [ADR 013](adr/013-generalized-simulator-foundation.md) | proposed/awaiting product owner | Would keep one CI causal authority behind provider-neutral compatibility adapters |
-| [Slice 27](handoffs/027-foundation-implementation.md) | blocked/awaiting ADR adoption | Smaller-than-rewrite implementation handoff; not executable until Candidate C is adopted |
+| [Slice 26](plans/026-concordia-foundation-research.md) | research complete; owner disposition recorded | Source audit remains valid; owner revised the invariant premise and selected Candidate A |
+| [ADR 013](adr/013-generalized-simulator-foundation.md) | accepted | Concordia owns the simulation foundation; selected CI capabilities migrate as components/projections |
+| [Slice 27](handoffs/027-foundation-implementation.md) | designed; awaiting implementation authorization | Direct foundation proof reproduces one current capability without the old runtime as hidden executor |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |
 | [Waltzman source note](research/001-from-minds-to-coordination.md) | amend | Separates scenario inputs, per-run measurements, and experiments |
@@ -246,21 +258,28 @@ claims.
 Historical commits, runs, traces, comparison artifacts, and operations records
 remain evidence. They do not own current direction.
 
-## Binding Decisions
+## Binding and retained design decisions
 
-- [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md): aggregate
-  organizations are reversible analytical boundaries, not hidden executors.
+ADR-013 governs the new foundation. Earlier ADRs remain binding for the
+retained baseline and become migration requirements only where the modeled
+question or a parity contract explicitly selects their distinction; they do
+not silently recreate the old runtime as a universal invariant set.
+
+- [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md): retained
+  organizational analyses use reversible boundaries rather than hidden
+  executors; a future aggregate actor requires an explicit component contract.
 - [ADR 008](adr/008-separate-spatial-topology-from-routing-and-permission.md):
   spatial adjacency is not communication, capability, or authorization.
-- [ADR 010](adr/010-autonomous-multirate-process-time.md): components evolve on
-  their own modeled timescales.
+- [ADR 010](adr/010-autonomous-multirate-process-time.md): retain independent
+  modeled timescales where the scenario question requires multirate behavior.
 - [ADR 011](adr/011-declared-representation-depth.md): representation depth is
   explicit, question-relative, and replaceable.
 - [ADR 012](adr/012-decision-environment-measures-are-derived.md): theoretical
   measurements are derived analyst views and never hidden causal state.
 
-Proposed [ADR 013](adr/013-generalized-simulator-foundation.md) is not binding
-until product-owner adoption.
+- [ADR 013](adr/013-generalized-simulator-foundation.md): Concordia owns the
+  generalized simulation foundation. Exact typed state and evidence are
+  selective components/projections, not a second foundational runtime.
 
 ## Planning Frontier
 
@@ -277,22 +296,22 @@ until product-owner adoption.
 - Slice 25 Packets 25A–25C prove a bounded local registry, composition receipt,
   mixed scenario, and authoring path. They do not prove that the current
   runtime is the optimal generalized foundation.
-- Slice 26A–26D are complete. The pinned source audit and three same-case
-  walkthroughs recommend Candidate C: retain one Cybernetic Influence causal
-  authority and put cognition behind compatibility adapters. Candidate B is
-  the strongest rejected alternative. No disposable spike was needed because
-  the decision-changing seams were observable in source.
-- ADR-013, rather than the research recommendation, owns adoption. Slice 27 is
-  validated and bounded but remains `awaiting_owner_adoption`.
+- Slice 26A–26D are complete. Its Candidate C recommendation was conditional on
+  preserving every existing CI invariant. The owner clarified the broader,
+  exploratory general-simulation goal and adopted Candidate A. The source audit
+  remains evidence; the product tradeoff changed.
+- `GEN-C0` is fully specifiable now but implementation is not authorized by the
+  architecture approval alone. `GEN-C1` and `GEN-C2` remain conditional on the
+  observed preceding result.
 
 ## Continue, Reset, Scale, Stop
 
-- **Decision:** keep simulator construction paused at the product-owner
-  architecture judgment. The research recommendation is Candidate C, not yet
-  an adopted architecture.
-- **Continue:** obtain the product owner's judgment on ADR-013. Only after
-  Candidate C is adopted may Slice 27 begin. The independent M7 readout remains
-  open.
+- **Decision:** reset the foundation to Concordia while retaining the current
+  product as parity evidence. Retain useful CI mechanisms and surfaces; replace
+  its foundational runtime authority; clear the obsolete Candidate C handoff.
+- **Continue:** begin Slice 27 only after explicit implementation
+  authorization. The independent M7 readout remains open and does not block the
+  architecture migration.
 - **Reset:** after two substantive increments or four hours without a new
   user-visible part of the canonical flow, or if configuration requires
   arbitrary generated mechanism code/a second runtime.
@@ -302,7 +321,7 @@ until product-owner adoption.
 - **Stop:** if the resulting analysis cannot distinguish scenario inputs from
   derived findings, or aggregate findings cannot step down to retained evidence.
 
-## Post-MVP Options
+## Deferred options
 
 After the canonical flow is observed, select rather than automatically execute:
 
@@ -310,6 +329,7 @@ After the canonical flow is observed, select rather than automatically execute:
 - Waltzman's candidate directional invariants and evasion dimensions;
 - Levin-style perturbation, member replacement, recovery, robustness, and
   persuadability assays;
-- generalized component composition and additional scenario families;
+- additional component and scenario families beyond the required
+  generalization exemplar;
 - empirical calibration, attribution, and predictive evaluation; and
 - production or public deployment.

@@ -1,12 +1,23 @@
 ---
 doc_role: context_handoff
-status: ready
+status: completed
 created: 2026-07-31
 updated: 2026-07-31
 machine_contract: 026-concordia-foundation-research.json
 ---
 
 # Resume handoff: execute the foundation research decision
+
+## Completion disposition
+
+This handoff was executed through 26A–26D and stopped for product-owner
+judgment as required. The owner adopted **Candidate A — Concordia foundation**
+on 2026-07-31 after clarifying that the goal is a generalizable simulation
+system and wargaming is only an exemplar. [ADR-013](../adr/013-generalized-simulator-foundation.md)
+owns the accepted decision. The replacement [Slice 27
+handoff](027-foundation-implementation.md) remains unexecuted pending explicit
+implementation authorization. The paired JSON below is retained unchanged as
+the immutable selection snapshot that initiated Slice 26.
 
 ## Message to give the next agent
 
