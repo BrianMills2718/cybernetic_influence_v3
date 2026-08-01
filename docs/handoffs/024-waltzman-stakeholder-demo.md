@@ -26,6 +26,10 @@ prediction of institutional behavior.
 
 - Local retained demo:
   <http://127.0.0.1:8620/?run=run_7624eb5f9278>
+- Shareable 28-second screen walkthrough:
+  [waltzman-demo-walkthrough.webm](../assets/waltzman-demo-walkthrough.webm)
+- Shareable result card:
+  [waltzman-demo-walkthrough.png](../assets/waltzman-demo-walkthrough.png)
 - Canonical private surface after deployment:
   <https://brian-mac-mini.tail9c321e.ts.net:8620/?run=run_eded0f70b15f>
 
@@ -66,6 +70,10 @@ mechanism should be demonstrated next.
   service-desk preview, pause/resume, console, and failed requests.
 - A fresh local canonical-service browser open showed the walkthrough with no
   console error.
+- `scripts/capture_waltzman_demo.py` reproduced the silent 28-second WebM and
+  result-card PNG from the real deep-linked run with no console or failed-request
+  error. Representative frames were visually inspected at the initial
+  situation, Waltzman readout, exact-event step-down, and final limitations.
 
 ## Private deployment resume event
 
