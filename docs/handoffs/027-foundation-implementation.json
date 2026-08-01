@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.1",
+  "record_type": "roadmap_goal_handoff",
+  "handoff_id": "roadmap-goal:cybernetic-influence-v3:concordia-compatible-cognition-adapter-027:awaiting-owner-adoption",
+  "project_id": "cybernetic-influence-v3",
+  "goal_id": "concordia-compatible-cognition-adapter-027",
+  "status": "awaiting_owner_adoption",
+  "activation_condition": "The product owner adopts Candidate C in docs/adr/013-generalized-simulator-foundation.md.",
+  "project_roadmap_ref": {
+    "path": "docs/ROADMAP.md",
+    "revision": "slice-26-research-2026-07-31",
+    "concern": "architecture judgment gate and next implementation frontier"
+  },
+  "objective": "Add one narrow Concordia Entity implementation of the existing ActiveSystemImplementation protocol and preserve the canonical physical-access outcome, evidence, checkpoint, and replay through a minimal provider-free entity using the pinned Concordia API without granting it world authority.",
+  "objective_sha256": "9571ee8ca06072ad97c51b9a9505d965e57ff2f1e83765a0b4a8eb17fb765f0f",
+  "audience_or_actor": "the next implementation agent after explicit product-owner adoption",
+  "current_state_ref": {
+    "path": "docs/research/026-foundation-comparison.md",
+    "revision": "slice-26-research-2026-07-31",
+    "concern": "source audit, Candidate C recommendation, authority map, and migration disposition"
+  },
+  "desired_outcome": "The existing typed active-system boundary hosts a minimal provider-free entity using the pinned Concordia API end to end in the retained physical-access vertical without moving state, time, adjudication, observations, evidence, or replay out of Cybernetic Influence or creating a second cognition abstraction.",
+  "success_or_readout": "C27-1 through C27-6 in docs/handoffs/027-foundation-implementation.md pass with focused tests and exact retained-trace inspection.",
+  "evidence_target": {
+    "claim": "A minimal provider-free entity using the pinned Concordia API can use the existing active-system boundary while the Cybernetic Influence causal runtime remains the sole world authority and invalid cognition output cannot mutate it.",
+    "evidence_class": "observed"
+  },
+  "owner_or_owner_decision": {
+    "kind": "human_decision",
+    "owner_role": "product owner",
+    "decision": "Adopt Candidate C before this handoff becomes executable."
+  },
+  "recommended_design_profile": "development",
+  "recommended_overlays": [
+    "runtime_state",
+    "migration",
+    "repository_governance"
+  ],
+  "selection_purpose": "blocked_next_frontier",
+  "selected_at": "2026-07-31T17:04:11-07:00",
+  "applicable_decision_refs": [
+    {
+      "path": "docs/adr/013-generalized-simulator-foundation.md",
+      "revision": "proposed-2026-07-31",
+      "concern": "must be adopted before execution"
+    },
+    {
+      "path": "docs/adr/008-separate-spatial-topology-from-routing-and-permission.md",
+      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+      "concern": "authorized observation input"
+    },
+    {
+      "path": "docs/adr/010-autonomous-multirate-process-time.md",
+      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+      "concern": "runtime scheduling authority"
+    }
+  ],
+  "required_capability_refs": [
+    {
+      "path": "docs/GOAL.md",
+      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
+      "concern": "canonical analyst outcome and causal evidence"
+    },
+    {
+      "path": "docs/handoffs/027-foundation-implementation.md",
+      "revision": "handoff-2026-07-31",
+      "concern": "bounded scope, acceptance, and stop conditions"
+    }
+  ],
+  "typed_dependencies": [
+    {
+      "dependency_type": "blocked_by",
+      "target_ref": {
+        "path": "docs/adr/013-generalized-simulator-foundation.md",
+        "revision": "proposed-2026-07-31",
+        "concern": "product-owner adoption of Candidate C"
+      },
+      "condition": "ADR status is accepted and Candidate C authority boundaries are unchanged."
+    },
+    {
+      "dependency_type": "informs",
+      "target_ref": {
+        "path": "https://github.com/google-deepmind/concordia",
+        "revision": "bdb449ab384adf203b09004049184b9176be808f",
+        "concern": "optional adapter/test use of the exact Entity and ActionSpec API"
+      },
+      "condition": "The immutable pin is confined to the optional adapter/test boundary; no Concordia engine authority is introduced."
+    }
+  ],
+  "material_unknowns": [
+    {
+      "unknown_id": "adapter-mapping",
+      "question": "Can the pinned Concordia Entity observe/act/state lifecycle map to the existing participant input/result and checkpoint shapes without a parallel abstraction hierarchy?",
+      "treatment": "implement_and_test"
+    },
+    {
+      "unknown_id": "adapter-failure",
+      "question": "Can invalid free-form output be retained as a typed failure with zero world mutation?",
+      "treatment": "negative_control"
+    }
+  ],
+  "non_goals": [
+    "Adopt Concordia's engine/component lifecycle or data_contracts.composition.",
+    "Replace or wrap the existing active-system protocol with another cognition port.",
+    "Change the causal engine, scheduler, observation router, or analysis.",
+    "Add a scenario or component family.",
+    "Call a provider-backed model or compare model quality.",
+    "Migrate historical retained runs.",
+    "Complete the separate MVP stakeholder-comprehension judgment."
+  ],
+  "non_claims": [
+    "Concordia's engine or component lifecycle is required or selected.",
+    "The compatibility adapter generalizes every framework or model.",
+    "Architecture compatibility establishes predictive validity."
+  ]
+}

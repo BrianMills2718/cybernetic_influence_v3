@@ -25,13 +25,15 @@ Delivery maturity is a private functional PoC. Capability ambition is an
 advanced but bounded multiscale social simulator, not a production platform.
 
 The MVP acceptance contract remains
-[Configurable Waltzman–Levin Research MVP Goal](GOAL.md). The operator has reset
-the next architecture outcome to an evidence-backed foundation decision. That
-work is owned by [Slice 26](plans/026-concordia-foundation-research.md).
-[Slice 25](plans/025-typed-component-composition.md) Packets 25A–25C are
-retained evidence, but further expansion is paused until the foundation is
-selected. Neither architecture research nor later implementation may weaken
-the MVP's evidence and non-claim boundaries.
+[Configurable Waltzman–Levin Research MVP Goal](GOAL.md). [Slice 26](plans/026-concordia-foundation-research.md)
+research is complete and recommends keeping Cybernetic Influence's causal
+runtime authoritative behind compatibility adapters. [ADR-013](adr/013-generalized-simulator-foundation.md)
+and the bounded [Slice 27 handoff](handoffs/027-foundation-implementation.md)
+await product-owner adoption; implementation is stopped at that judgment.
+[Slice 25](plans/025-typed-component-composition.md) Packets 25A–25C remain
+retained evidence and further expansion remains paused. Neither architecture
+research nor later implementation may weaken the MVP's evidence and non-claim
+boundaries.
 
 ## Canonical Outcome Probe
 
@@ -195,13 +197,17 @@ The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
 
 There are two explicit tracks rather than one blended implementation queue:
 
-1. **Product-architecture research — selected engineering frontier.** Execute
-   [Slice 26](plans/026-concordia-foundation-research.md). Compare Concordia,
-   the current runtime, layered integration, and an independent adapter design
-   from source and the same three cases. Do not expand Slice 25 first.
-2. **Architecture decision — next engineering boundary.** Record which system
-   owns cognition, world state, scheduling, adjudication, evidence, authoring,
-   and analysis; then issue one bounded implementation handoff.
+1. **Architecture judgment — current engineering boundary.** Review the
+   [Slice 26 evidence](research/026-foundation-comparison.md) and adopt, reject,
+   or revise proposed [ADR-013](adr/013-generalized-simulator-foundation.md).
+   Research recommends Candidate C; Candidate B is the strongest rejected
+   alternative. Do not begin product implementation before this judgment.
+2. **Concordia-compatible cognition adapter — blocked next implementation frontier.** If
+   Candidate C is adopted, execute the bounded [Slice 27 handoff](handoffs/027-foundation-implementation.md):
+   preserve one physical-access vertical through the existing provider-neutral
+   active-system protocol while proving an adapter against a minimal
+   provider-free entity using the pinned Concordia API. If another architecture
+   is selected, replace the handoff.
 3. **Stakeholder readout — separate MVP boundary.** Review corrected run
    `run_eded0f70b15f` and decide whether its situation, trajectory, Waltzman
    readout, Levin readout, evidence, and limitations are understandable without
@@ -230,7 +236,9 @@ claims.
 | [Slice 22](plans/022-composite-agency-perturbation-assay.md) | Packets 22A0–22A2 technically complete; stakeholder readout pending | Five zero-cost scripted rows, retained exact readouts, and one comparison/step-down UI are verified; live repetitions remain unauthorized |
 | [Slice 24](plans/024-configurable-theory-analysis-mvp.md) | active MVP authority | Owns the separate MVP acceptance contract and M7 boundary |
 | [Slice 25](plans/025-typed-component-composition.md) | 25A–25C retained; 25D paused | Useful local composition evidence, but not authority for choosing the generalized product foundation |
-| [Slice 26](plans/026-concordia-foundation-research.md) | selected research frontier | Decides the foundation before further simulator construction |
+| [Slice 26](plans/026-concordia-foundation-research.md) | research complete; owner judgment pending | Evidence recommends Candidate C and fairly rejects Candidate B; implementation remains stopped |
+| [ADR 013](adr/013-generalized-simulator-foundation.md) | proposed/awaiting product owner | Would keep one CI causal authority behind provider-neutral compatibility adapters |
+| [Slice 27](handoffs/027-foundation-implementation.md) | blocked/awaiting ADR adoption | Smaller-than-rewrite implementation handoff; not executable until Candidate C is adopted |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |
 | [Waltzman source note](research/001-from-minds-to-coordination.md) | amend | Separates scenario inputs, per-run measurements, and experiments |
@@ -251,6 +259,9 @@ remain evidence. They do not own current direction.
 - [ADR 012](adr/012-decision-environment-measures-are-derived.md): theoretical
   measurements are derived analyst views and never hidden causal state.
 
+Proposed [ADR 013](adr/013-generalized-simulator-foundation.md) is not binding
+until product-owner adoption.
+
 ## Planning Frontier
 
 - `MVP-C1` through `MVP-C5` are satisfied on retained canonical evidence.
@@ -266,17 +277,22 @@ remain evidence. They do not own current direction.
 - Slice 25 Packets 25A–25C prove a bounded local registry, composition receipt,
   mixed scenario, and authoring path. They do not prove that the current
   runtime is the optimal generalized foundation.
-- Slice 26 begins from the fact that Concordia and Cybernetic Influence can
-  both host prose and typed causal state. It decides architecture from authority
-  boundaries, concrete implementation paths, reuse, evidence, and maintenance
-  rather than representation labels or defaults.
+- Slice 26A–26D are complete. The pinned source audit and three same-case
+  walkthroughs recommend Candidate C: retain one Cybernetic Influence causal
+  authority and put cognition behind compatibility adapters. Candidate B is
+  the strongest rejected alternative. No disposable spike was needed because
+  the decision-changing seams were observable in source.
+- ADR-013, rather than the research recommendation, owns adoption. Slice 27 is
+  validated and bounded but remains `awaiting_owner_adoption`.
 
 ## Continue, Reset, Scale, Stop
 
-- **Decision:** pause further simulator construction and research the product
-  foundation before expanding composition.
-- **Continue:** execute Slice 26A–26D, then obtain the product owner's adoption
-  of the architecture decision. The independent M7 readout remains open.
+- **Decision:** keep simulator construction paused at the product-owner
+  architecture judgment. The research recommendation is Candidate C, not yet
+  an adopted architecture.
+- **Continue:** obtain the product owner's judgment on ADR-013. Only after
+  Candidate C is adopted may Slice 27 begin. The independent M7 readout remains
+  open.
 - **Reset:** after two substantive increments or four hours without a new
   user-visible part of the canonical flow, or if configuration requires
   arbitrary generated mechanism code/a second runtime.
