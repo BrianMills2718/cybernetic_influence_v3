@@ -94,7 +94,8 @@ def main() -> None:
     if args.run_id:
         response = httpx.get(f"{base_url}/api/runs/{args.run_id}", timeout=30)
         response.raise_for_status()
-        if response.json().get("status") != "completed":
+        run_payload = response.json()
+        if run_payload.get("status") != "completed":
             raise RuntimeError("the supplied browser-verification run is not completed")
         run_id = args.run_id
     else:
@@ -108,6 +109,7 @@ def main() -> None:
             timeout=240,
         )
         response.raise_for_status()
+        run_payload = response.json()
         run_id = response.json()["run_id"]
     config_response = httpx.get(f"{base_url}/api/config", timeout=30)
     config_response.raise_for_status()
@@ -146,6 +148,34 @@ def main() -> None:
         assert_launch_controls_do_not_overlap(page)
         assert page.locator("#map-section").is_visible()
         assert page.locator("#narrative-section").is_visible()
+        if run_payload.get("theory_analysis"):
+            walkthrough = page.locator(".waltzman-demonstration")
+            assert walkthrough.is_visible()
+            walkthrough_text = walkthrough.inner_text().casefold()
+            for expected in (
+                "Trust structure",
+                "Perceived risk",
+                "Coordination readiness",
+                "Information pressure",
+                "Individual response",
+                "Coordination rule",
+                "Collective result",
+                "What this does not establish",
+            ):
+                assert expected.casefold() in walkthrough_text
+            assert page.locator("#theory-analysis-section").evaluate(
+                "section => section.compareDocumentPosition(document.querySelector('#coordination-measurement-section')) & Node.DOCUMENT_POSITION_FOLLOWING"
+            )
+            first_evidence_group = walkthrough.locator(".measurement-evidence").first
+            first_evidence_group.locator("summary").click()
+            first_evidence = first_evidence_group.locator(
+                ".measurement-evidence-button"
+            ).first
+            expected_event = first_evidence.get_attribute("data-measure-event-id")
+            first_evidence.click()
+            assert page.locator("details.advanced").get_attribute("open") is not None
+            assert page.locator("details.moment-inspector").get_attribute("open") is not None
+            assert page.locator("#event-detail small").inner_text() == expected_event
         assert page.locator("#analytical-scale-control").is_visible()
         assert page.locator("#analytical-boundary option").count() == 2
         assert page.locator("#analytical-scale-toggle").inner_text().startswith(

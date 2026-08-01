@@ -25,13 +25,12 @@ Delivery maturity is a private functional PoC. Capability ambition is an
 advanced but bounded multiscale social simulator, not a production platform.
 
 The MVP acceptance contract remains
-[Configurable Waltzman–Levin Research MVP Goal](GOAL.md). The operator has reset
-the next architecture outcome to an evidence-backed foundation decision. That
-work is owned by [Slice 26](plans/026-concordia-foundation-research.md).
-[Slice 25](plans/025-typed-component-composition.md) Packets 25A–25C are
-retained evidence, but further expansion is paused until the foundation is
-selected. Neither architecture research nor later implementation may weaken
-the MVP's evidence and non-claim boundaries.
+[Configurable Waltzman–Levin Research MVP Goal](GOAL.md). On 2026-07-31 the
+operator placed a hard 24-hour limit on finishing the Waltzman-facing demo.
+Packet 24E is therefore the only active delivery frontier. Slice 26 foundation
+research and further Slice 25 expansion are paused until the operator reviews
+that demo. Their retained evidence remains valid, and later work may not weaken
+the MVP's evidence and nonclaim boundaries.
 
 ## Canonical Outcome Probe
 
@@ -190,23 +189,22 @@ cross-run comparisons. It is explicitly outside the current MVP.
 | `POST-C2` | Perturbation, robustness, and persuadability assays | optional | Packets 22A0–22A2 technically satisfied; stakeholder readout pending | Five matched provider-free rows distinguish concrete pathways and step down through one comparison UI to exact retained evidence |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
+Packet 24E supplies the candidate surface for that judgment; it does not mark
+the judgment passed on the operator's behalf.
 
 ## Shortest Critical Path
 
-There are two explicit tracks rather than one blended implementation queue:
-
-1. **Product-architecture research — selected engineering frontier.** Execute
-   [Slice 26](plans/026-concordia-foundation-research.md). Compare Concordia,
-   the current runtime, layered integration, and an independent adapter design
-   from source and the same three cases. Do not expand Slice 25 first.
-2. **Architecture decision — next engineering boundary.** Record which system
-   owns cognition, world state, scheduling, adjudication, evidence, authoring,
-   and analysis; then issue one bounded implementation handoff.
-3. **Stakeholder readout — separate MVP boundary.** Review corrected run
-   `run_eded0f70b15f` and decide whether its situation, trajectory, Waltzman
-   readout, Levin readout, evidence, and limitations are understandable without
-   raw JSON. This judgment can close M7 but does not decide the generalized
-   product architecture.
+1. **Finish and deploy the Waltzman demo within 24 hours.** Packet 24E must make
+   the implemented trust-structure, perceived-risk, and
+   coordination-readiness ideas understandable from one screen, preserve the
+   complete findings and evidence step-down, and keep limitations visible.
+2. **Stakeholder readout.** Review corrected run `run_eded0f70b15f` and decide
+   whether its situation, trajectory, Waltzman readout, evidence, and
+   limitations are understandable without raw JSON. Only the operator can
+   close M7.
+3. **Resume the architecture decision after the demo review.** Use the retained
+   Slice 26 research to decide ownership of cognition, world state, scheduling,
+   adjudication, evidence, authoring, and analysis before product migration.
 
 Detailed MVP implementation authority:
 [Slice 24](plans/024-configurable-theory-analysis-mvp.md).

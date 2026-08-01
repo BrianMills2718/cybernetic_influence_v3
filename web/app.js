@@ -2821,6 +2821,76 @@ function theoryFindingCard(finding, compact = false) {
   </article>`
 }
 
+function findingById(findings, findingId) {
+  return findings.find((item) => item.finding_id === findingId)
+}
+
+function findingObjectValue(findings, findingId) {
+  const value = findingById(findings, findingId)?.value
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+}
+
+function readableTheoryToken(value, fallback = 'not recorded') {
+  if (value === null || value === undefined || value === '') return fallback
+  return String(value).replaceAll('_', ' ')
+}
+
+function waltzmanEvidenceStep(number, label, finding, text) {
+  return `<article class="waltzman-trajectory-step">
+    <span class="trajectory-step-number">${number}</span>
+    <div><small>${html(label)}</small><strong>${html(text)}</strong>${theoryEvidenceButtons(finding?.evidence_refs)}</div>
+  </article>`
+}
+
+function renderWaltzmanDemonstration(findings) {
+  const finalStatus = findingById(findings, 'waltzman_final_deployment_status')
+  const finalScope = findingById(findings, 'waltzman_final_approved_scope')
+  const partners = findingObjectValue(findings, 'waltzman_partners_retained')
+  const verification = findingObjectValue(findings, 'waltzman_verification_requests')
+  const reliance = findingObjectValue(findings, 'waltzman_source_reliance_topology')
+  const bypass = findingObjectValue(findings, 'waltzman_intermediary_bypass')
+  const risk = findingObjectValue(findings, 'waltzman_risk_register_expansion')
+  const thresholdFinding = findingById(findings, 'waltzman_action_threshold_change')
+  const threshold = findingObjectValue(findings, 'waltzman_action_threshold_change')
+  const unresolved = findingObjectValue(findings, 'waltzman_unresolved_risk_load')
+  const deliberation = findingObjectValue(findings, 'waltzman_deliberation_load')
+  const latency = findingObjectValue(findings, 'waltzman_decision_latency')
+  const retainedCount = Number(partners.count || 0)
+  const scope = readableTheoryToken(finalScope?.value || finalStatus?.value)
+  const finalResult = `${scope} scope accepted with ${retainedCount} partner${retainedCount === 1 ? '' : 's'} retained`
+
+  return `<section class="waltzman-demonstration" aria-label="Waltzman implementation walkthrough">
+    <div class="waltzman-takeaway">
+      <span class="eyebrow">Modeled result</span>
+      <h4>The decision environment changed without breaking the partnership</h4>
+      <p>In this trajectory, the group registered ${risk.distinct_risks || 0} new risk, requested ${verification.total || 0} independent verification, and changed its action threshold before approving a ${scope} deployment. All ${retainedCount} participants remained engaged.</p>
+    </div>
+    <div class="waltzman-constructs" aria-label="Waltzman constructs in this run">
+      <article><span>Trust structure</span><strong>${verification.total || 0} verification request · ${reliance.edge_count || 0} explicit source-reliance link</strong><p>${bypass.count || 0} intermediary bypasses were recorded.</p></article>
+      <article><span>Perceived risk</span><strong>${risk.distinct_risks || 0} risk added · threshold changed ${threshold.count || 0} time${threshold.count === 1 ? '' : 's'}</strong><p>The final rule required ${readableTheoryToken(threshold.final_threshold)}; ${unresolved.final_open_count || 0} risks remained open.</p></article>
+      <article><span>Coordination readiness</span><strong>${deliberation.meeting_cycles || 0} review cycles · ${deliberation.external_action_attempts || 0} recorded action attempts</strong><p>The accepted proposal cleared the final gate in ${latency.scenario_minutes || 0} scenario minutes.</p></article>
+    </div>
+    <div class="waltzman-trajectory" aria-label="Observed micro-to-macro trajectory">
+      ${waltzmanEvidenceStep(1, 'Information pressure', findingById(findings, 'waltzman_risk_register_expansion'), `${risk.distinct_risks || 0} material risk entered the retained issue record`)}
+      ${waltzmanEvidenceStep(2, 'Individual response', findingById(findings, 'waltzman_verification_requests'), `${verification.total || 0} independent verification request changed the review path`)}
+      ${waltzmanEvidenceStep(3, 'Coordination rule', thresholdFinding, `The action threshold became ${readableTheoryToken(threshold.final_threshold)}`)}
+      ${waltzmanEvidenceStep(4, 'Collective result', finalStatus, finalResult)}
+    </div>
+    <p class="waltzman-nonclaim"><strong>What this does not establish:</strong> This synthetic run demonstrates an implementation and an inspectable mechanism chain. It does not validate a detector, prove real-world causation, or predict how an actual institution would behave.</p>
+  </section>`
+}
+
+function inspectTheoryEvent(eventId) {
+  const index = current.timeline.findIndex((event) => event.event_id === eventId)
+  if (index < 0) return
+  selectEvent(index)
+  const advanced = document.querySelector('details.advanced')
+  const inspector = document.querySelector('details.moment-inspector')
+  if (advanced) advanced.open = true
+  if (inspector) inspector.open = true
+  $('#event-detail').scrollIntoView({behavior:'smooth', block:'center'})
+}
+
 function renderTheoryModule(moduleId, selector, headlineIds) {
   const module = current.theory_analysis?.modules?.[moduleId]
   const container = $(selector)
@@ -2835,6 +2905,7 @@ function renderTheoryModule(moduleId, selector, headlineIds) {
   const findings = module.readout?.findings || []
   const headline = headlineIds.map((id) => findings.find((item) => item.finding_id === id)).filter(Boolean)
   container.innerHTML = `
+    ${moduleId === 'decision_environment' ? renderWaltzmanDemonstration(findings) : ''}
     <div class="theory-snapshot">${headline.map((item) => theoryFindingCard(item, true)).join('')}</div>
     <details class="theory-all-findings">
       <summary>Review all ${html(findings.length)} findings and their evidence</summary>
@@ -2845,10 +2916,7 @@ function renderTheoryModule(moduleId, selector, headlineIds) {
       <ul>${(module.readout?.limitations || []).map((item) => `<li>${html(item)}</li>`).join('')}</ul>
     </details>`
   container.querySelectorAll('.measurement-evidence-button').forEach((button) => {
-    button.onclick = () => {
-      const index = current.timeline.findIndex((event) => event.event_id === button.dataset.measureEventId)
-      if (index >= 0) selectEvent(index)
-    }
+    button.onclick = () => inspectTheoryEvent(button.dataset.measureEventId)
   })
   applyButtonTooltips(container)
 }
@@ -2857,6 +2925,10 @@ function renderTheoryAnalysis(run) {
   const section = $('#theory-analysis-section')
   section.hidden = !run.theory_analysis
   if (section.hidden) return
+  const measurementSection = $('#coordination-measurement-section')
+  if (measurementSection && section.nextElementSibling !== measurementSection) {
+    section.parentNode.insertBefore(section, measurementSection)
+  }
   renderTheoryModule(
     'decision_environment',
     '#decision-environment-content',

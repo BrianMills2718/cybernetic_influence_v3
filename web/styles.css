@@ -281,8 +281,28 @@ summary { cursor:pointer; font-weight:700; }
 .theory-analysis-section > h2 { margin:0; }
 .theory-analysis-section > p { max-width:88ch; margin:0; line-height:1.55; }
 .theory-module { display:grid; grid-template-columns:minmax(230px,.55fr) minmax(0,1.45fr); gap:18px; padding:18px; border:1px solid var(--border); border-radius:12px; background:#0f1721; }
+#decision-environment-section { grid-template-columns:1fr; }
 .theory-module h3 { margin:5px 0 8px; font-size:21px; }
 .theory-module > div:first-child p { color:#b9c8da; line-height:1.5; }
+.waltzman-demonstration { display:grid; gap:12px; margin-bottom:14px; }
+.waltzman-takeaway { padding:17px 18px; border:1px solid #4c7ea9; border-radius:11px; background:linear-gradient(135deg,#19324a,#122131); }
+.waltzman-takeaway h4 { margin:5px 0 7px; color:#fff; font-size:19px; }
+.waltzman-takeaway p { max-width:80ch; margin:0; color:#d4e4f3; line-height:1.55; }
+.waltzman-constructs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.waltzman-constructs article { padding:14px; border-top:3px solid #66c4a7; border-radius:9px; background:#14231f; }
+.waltzman-constructs span { display:block; margin-bottom:7px; color:#9edbc8; font-size:11px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
+.waltzman-constructs strong { display:block; color:#f2f8f6; font-size:14px; line-height:1.4; }
+.waltzman-constructs p { margin:6px 0 0; color:#b9c8c3; font-size:12px; line-height:1.45; }
+.waltzman-trajectory { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.waltzman-trajectory-step { position:relative; display:grid; grid-template-columns:auto 1fr; gap:9px; min-width:0; padding:13px 11px; border:1px solid var(--border); border-radius:9px; background:#101923; }
+.waltzman-trajectory-step:not(:last-child)::after { content:'→'; position:absolute; z-index:1; top:18px; right:-12px; color:#7fa7ca; font-weight:900; }
+.trajectory-step-number { display:grid; width:24px; height:24px; place-items:center; border-radius:999px; background:#244d70; color:#fff; font-size:11px; font-weight:900; }
+.waltzman-trajectory-step small { display:block; color:#8fb4d4; font-size:10px; font-weight:850; letter-spacing:.05em; text-transform:uppercase; }
+.waltzman-trajectory-step strong { display:block; margin-top:4px; color:#eef5fc; font-size:12px; line-height:1.42; }
+.waltzman-trajectory-step .measurement-evidence { margin-top:7px; }
+.waltzman-trajectory-step .measurement-evidence > summary { white-space:normal; }
+.waltzman-trajectory-step .theory-config-evidence { margin-top:7px; color:#8fa0b5; font-size:10px; font-weight:500; letter-spacing:0; line-height:1.35; text-transform:none; }
+.waltzman-nonclaim { margin:0; padding:11px 13px; border-left:3px solid #e8a84d; border-radius:6px; background:#2b2117; color:#d9c6ab; font-size:12px; line-height:1.5; }
 .theory-snapshot { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:9px; }
 .theory-finding { display:grid; align-content:start; gap:8px; min-width:0; padding:14px; border:1px solid var(--border); border-left:3px solid #5ba98e; border-radius:10px; background:#101923; }
 .theory-finding h4 { margin:0; font-size:14px; }
@@ -368,4 +388,4 @@ pre { max-height:520px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywh
 .participant-reasoning { color:#c6d5e4 !important; }
 .trace-step.event-match { border-color:#fff; background:#203b56; }
 .advanced { padding:18px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
-@media (max-width:900px) { .run-card,.workspace,.settings-grid,.assumption-columns,.readme-grid,.authoring-compose-controls,.analytical-scale-control,.reviewed-example,.configuration-review,.coordination-editor-grid,.theory-module { grid-template-columns:1fr; } .run-card { grid-template-areas:"intro" "scenario" "condition" "live" "actions" "lifecycle" "settings"; } .chat-message { width:94%; } .graph { grid-template-columns:repeat(2,minmax(130px,1fr)); } .timeline-controls { grid-template-columns:auto 1fr auto; } #event-count { grid-column:1/-1; } .projection-toolbar { display:block; } .projection-toolbar p { text-align:left; } .projection-toolbar .tabs,.analytical-scale-control { margin-bottom:9px; } .trace-tab-group { grid-template-columns:1fr; gap:4px; } .initial-people ul { grid-template-columns:1fr; } header,main { padding:16px; } header { align-items:flex-start; flex-wrap:wrap; gap:10px; } .header-actions { width:100%; justify-content:space-between; gap:8px; } .app-tabs { flex:1; justify-content:space-between; } .app-tabs button { padding-inline:7px; } #run-status { display:none; } }
+@media (max-width:900px) { .run-card,.workspace,.settings-grid,.assumption-columns,.readme-grid,.authoring-compose-controls,.analytical-scale-control,.reviewed-example,.configuration-review,.coordination-editor-grid,.theory-module { grid-template-columns:1fr; } .waltzman-constructs { grid-template-columns:1fr; } .waltzman-trajectory { grid-template-columns:repeat(2,minmax(0,1fr)); } .waltzman-trajectory-step::after { display:none; } .run-card { grid-template-areas:"intro" "scenario" "condition" "live" "actions" "lifecycle" "settings"; } .chat-message { width:94%; } .graph { grid-template-columns:repeat(2,minmax(130px,1fr)); } .timeline-controls { grid-template-columns:auto 1fr auto; } #event-count { grid-column:1/-1; } .projection-toolbar { display:block; } .projection-toolbar p { text-align:left; } .projection-toolbar .tabs,.analytical-scale-control { margin-bottom:9px; } .trace-tab-group { grid-template-columns:1fr; gap:4px; } .initial-people ul { grid-template-columns:1fr; } header,main { padding:16px; } header { align-items:flex-start; flex-wrap:wrap; gap:10px; } .header-actions { width:100%; justify-content:space-between; gap:8px; } .app-tabs { flex:1; justify-content:space-between; } .app-tabs button { padding-inline:7px; } #run-status { display:none; } }

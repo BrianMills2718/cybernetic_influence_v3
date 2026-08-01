@@ -144,6 +144,12 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   without changing the approved draft, and passes the deployed desktop browser
   flow without console or request errors. M7 remains the operator's
   comprehensibility judgment on this corrected surface.
+- On 2026-07-31 the operator imposed a 24-hour limit to finish a Waltzman-facing
+  demo before further product-architecture work. Packet 24E adds an executive
+  Waltzman walkthrough over the existing retained findings: modeled result,
+  separate trust/risk/readiness readouts, an evidence-linked micro-to-macro
+  trajectory, and an explicit nonclaim. This is a presentation candidate for
+  M7, not evidence that stakeholder comprehension has already passed.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any
@@ -153,18 +159,16 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 Follow [Slice 24: Configurable theory-informed simulation
 MVP](plans/024-configurable-theory-analysis-mvp.md) for MVP acceptance. Packets
-24A0–24D are technically complete; M7 remains the stakeholder review of the
-corrected retained run. The operator has separately selected
+24A0–24D are technically complete. Packet 24E is the active 24-hour delivery
+boundary: finish and deploy one reviewable Waltzman-facing surface over the
+corrected retained run, then return control for the operator's M7 judgment.
+
 [Slice 26: Foundation decision for a generalized cybernetic
-simulator](plans/026-concordia-foundation-research.md) as the active architecture
-research path. Capability equivalence is the premise: Concordia and Cybernetic
-Influence can both combine language with typed state. Source-level research
-must decide which foundation gives the product the clearest state authority,
-least duplicated machinery, fewest compromised guarantees, and best reuse.
-[Slice 25](plans/025-typed-component-composition.md) Packets 25A–25C remain
-completed evidence; 25D and further simulator construction are paused until
-Slice 26 records an architecture decision and replacement implementation
-handoff. This reset does not change the MVP criteria or close M7.
+simulator](plans/026-concordia-foundation-research.md) and further Slice 25
+construction are explicitly paused until that demo review. Their retained
+research and implementation evidence remain valid; this time box changes work
+priority, not the eventual architecture question or the MVP's evidence and
+nonclaim boundaries.
 
 The operator separately selected and completed Packet 22A0's contract
 foundation, Packet 22A1's five provider-free scripted trajectories, and Packet

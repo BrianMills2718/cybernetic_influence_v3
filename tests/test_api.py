@@ -252,6 +252,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="authoring-causal-layout"' in page.text
     assert 'id="authoring-trajectory-layout"' in page.text
     assert 'id="theory-analysis-section"' in page.text
+    assert "What this simulation demonstrates" in page.text
     assert 'id="decision-environment-section"' in page.text
     assert 'id="collective-competence-section"' in page.text
     assert "How to read a cybernetic simulation" in page.text
