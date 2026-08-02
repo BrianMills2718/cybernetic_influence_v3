@@ -1,8 +1,8 @@
 ---
 doc_role: execution_handoff
 authority: packet_24e
-status: local_review_ready_private_deployment_pending
-updated: 2026-08-01
+status: private_deployed_verified_stakeholder_review_pending
+updated: 2026-08-02
 implementation_commit: bf20cf0f888eda1237149cbec0bc9846546e3fdb
 ---
 
@@ -30,14 +30,17 @@ prediction of institutional behavior.
   [waltzman-demo-walkthrough.webm](../assets/waltzman-demo-walkthrough.webm)
 - Shareable result card:
   [waltzman-demo-walkthrough.png](../assets/waltzman-demo-walkthrough.png)
-- Canonical private surface after deployment:
+- Canonical private surface:
   <https://brian-mac-mini.tail9c321e.ts.net:8620/?run=run_eded0f70b15f>
 
 The local service reports build
 `bf20cf0f888eda1237149cbec0bc9846546e3fdb`; its demo run is completed,
 provider-free, ended `scope_reduced`, retained both theory modules, and used
-zero model calls. The private Mac was unreachable over both HTTPS and SSH at
-handoff time, so its current service has not yet been updated.
+zero model calls. On 2026-08-02, the private Mac was deployed and reports the
+same build commit through `/api/config`. It serves the corrected retained run
+over the private HTTPS URL. The deployed service is deliberately pinned to an
+isolated worktree at this demo commit; canonical `main` may advance separately
+after this bounded delivery.
 
 ## Three-minute walkthrough
 
@@ -74,13 +77,15 @@ mechanism should be demonstrated next.
   result-card PNG from the real deep-linked run with no console or failed-request
   error. Representative frames were visually inspected at the initial
   situation, Waltzman readout, exact-event step-down, and final limitations.
+- A fresh private-Mac browser deep link rendered the three Waltzman constructs
+  and the visible nonclaim, expanded the cited evidence, and selected exact
+  `event_000050` in Advanced evidence. It reported no console or failed-request
+  error. The private API reopened `run_eded0f70b15f` as completed,
+  `scope_reduced`, zero model calls, with both theory modules available.
 
-## Private deployment resume event
+## Stakeholder review boundary
 
-When the Mac responds again, deploy canonical `main`, which contains
-implementation commit `bf20cf0f888eda1237149cbec0bc9846546e3fdb`, using
-[Mac Mini Development Host](../operations/mac-mini.md), restart the LaunchAgent
-with the exact deployed `main` commit recorded, and reopen retained run
-`run_eded0f70b15f`. Require `/api/config` to report the exact commit and rerun
-the desktop verifier against that retained run. Do not make a provider call or
-change the retained run.
+The operator can now use the private URL for the stakeholder review. The next
+substantive question is whether the implementation faithfully represents the
+theory, not whether the surface technically runs. Do not make a provider call,
+change the retained run, or resume Concordia migration as part of this review.
