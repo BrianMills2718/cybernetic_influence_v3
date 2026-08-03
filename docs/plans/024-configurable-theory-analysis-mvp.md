@@ -475,7 +475,7 @@ limitations are understandable without raw JSON.
 
 **Classification:** canonical outcome presentation.
 
-**Status:** implementation candidate verified locally; private deployment and
+**Status:** outcome- and chronology-correct instrument privately deployed;
 operator judgment pending.
 
 On 2026-07-31 the operator paused the generalized-foundation decision and set a
@@ -488,19 +488,19 @@ The completed run must lead with:
 1. a plain-language modeled result;
 2. separate trust-structure, perceived-risk, and coordination-readiness
    observations;
-3. an inspectable trajectory from information pressure through individual
-   response and coordination-rule change to collective outcome;
+3. the retained chronology without turning event order into an unsupported
+   causal chain;
 4. direct event evidence where the retained finding cites events; and
-5. an always-visible statement that the synthetic run demonstrates an
-   implementation but does not validate a detector, establish real-world
-   causation, or predict an institution.
+5. an always-visible statement that the fixed scheduled sources are not
+   adaptive influence agents and one unmatched run cannot demonstrate a
+   directional invariant, causal influence, attribution, or proportionality.
 
 The full 16-finding Waltzman readout, Levin readout, narrative, three graph
 projections, participant and boundary views, exact evidence, and pause/resume
-remain available. Local desktop verification against a completed authored
-provider-free run passed the deep link, new walkthrough content and order, all
-existing interaction checks, console, and failed-request checks. M7 remains
-open until the operator reviews the deployed corrected run.
+remain available. Private desktop verification against the retained live run
+passed exact outcome wording, day-0-before-day-1 chronology, all existing
+interaction checks, console, and failed-request checks. M7 remains open until
+the operator reviews the deployed corrected run.
 
 ## Review and Reset
 

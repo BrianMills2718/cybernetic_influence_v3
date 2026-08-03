@@ -146,10 +146,13 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   comprehensibility judgment on this corrected surface.
 - On 2026-07-31 the operator imposed a 24-hour limit to finish a Waltzman-facing
   demo before further product-architecture work. Packet 24E adds an executive
-  Waltzman walkthrough over the existing retained findings: modeled result,
-  separate trust/risk/readiness readouts, an evidence-linked micro-to-macro
-  trajectory, and an explicit nonclaim. This is a presentation candidate for
-  M7, not evidence that stakeholder comprehension has already passed.
+  Waltzman instrument over the existing retained findings: the exact modeled
+  result, separate trust/risk/readiness observations, retained chronology, and
+  an explicit nonclaim. An audit rejected the earlier causal-chain presentation
+  because verification and threshold activity preceded the scheduled outside
+  sources and the run ended without a decision. The corrected surface is a
+  presentation candidate for M7, not evidence of stakeholder comprehension,
+  adaptive influence, a directional invariant, or causal influence.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any
@@ -159,9 +162,9 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 Follow [Slice 24: Configurable theory-informed simulation
 MVP](plans/024-configurable-theory-analysis-mvp.md) for MVP acceptance. Packets
-24A0–24D are technically complete. Packet 24E is the active 24-hour delivery
-boundary: finish and deploy one reviewable Waltzman-facing surface over the
-corrected retained run, then return control for the operator's M7 judgment.
+24A0–24D are technically complete. Packet 24E is the active delivery boundary:
+deploy one outcome- and chronology-correct Waltzman-facing instrument over the
+retained live run, then return control for the operator's M7 judgment.
 
 [Slice 26: Foundation decision for a generalized cybernetic
 simulator](plans/026-concordia-foundation-research.md) and further Slice 25

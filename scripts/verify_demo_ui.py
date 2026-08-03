@@ -162,6 +162,7 @@ def main() -> None:
                 "accepted proposal cleared",
                 "approving a none deployment",
                 "none scope accepted",
+                "bypasss",
                 "demonstrates an implementation and an inspectable mechanism chain",
             ):
                 assert false_claim not in walkthrough_text

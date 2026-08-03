@@ -58,6 +58,16 @@ pass verified contiguous story days 0 through 4, all projections, both
 analytical composites, exact-evidence step-down, and live-only coordination
 launch without console or failed-request errors.
 
+Post-audit presentation correction 2026-08-03: the Waltzman-facing surface now
+renders `no_decision_by_horizon` as no deployment approved, states that
+verification began on day 0 before the scheduled concern sources acted on day
+1, and presents the measures as single-run observations rather than a causal
+chain. It visibly states that the sources are fixed scheduled processes and
+that the unmatched run does not demonstrate adaptive influence, a directional
+invariant, attribution, or proportionality. The corrected private browser pass
+preserved the full deep-link, evidence, projection, composite, and pause/resume
+flow without console or failed-request errors.
+
 ## Inspect
 
 ```bash

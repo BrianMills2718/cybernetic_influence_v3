@@ -174,6 +174,10 @@ cross-run comparisons. It is explicitly outside the current MVP.
   the run retained 51 participant calls, 46 narrator calls, daily meetings on
   modeled days 0 through 3, `no_decision_by_horizon`, and both theory readouts
   bound to one evidence bundle.
+- The Packet 24E audit narrowed the Waltzman claim: the corrected surface is a
+  single-run measurement instrument. It exposes the exact outcome and event
+  chronology and explicitly does not claim adaptive influence, a directional
+  invariant, causal influence, attribution, or proportionality.
 
 ### Process progress
 
@@ -202,10 +206,10 @@ the judgment passed on the operator's behalf.
 
 ## Shortest Critical Path
 
-1. **Finish and deploy the Waltzman demo within 24 hours.** Packet 24E must make
-   the implemented trust-structure, perceived-risk, and
-   coordination-readiness ideas understandable from one screen, preserve the
-   complete findings and evidence step-down, and keep limitations visible.
+1. **Finish and deploy the Waltzman instrument.** Packet 24E must make the
+   retained trust-, risk-, and coordination-related observations understandable
+   from one screen, preserve exact outcome and chronology, retain the complete
+   findings and evidence step-down, and keep limitations visible.
 2. **Stakeholder readout.** Review live run `run_2250cbb74f44` and decide
    whether its situation, trajectory, Waltzman readout, evidence, and
    limitations are understandable without raw JSON. Only the operator can
