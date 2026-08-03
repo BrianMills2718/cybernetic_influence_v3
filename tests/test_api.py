@@ -258,7 +258,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="authoring-causal-layout"' in page.text
     assert 'id="authoring-trajectory-layout"' in page.text
     assert 'id="theory-analysis-section"' in page.text
-    assert "What this simulation demonstrates" in page.text
+    assert "What this run lets us inspect" in page.text
+    assert "Decision-environment instrument" in page.text
     assert 'id="decision-environment-section"' in page.text
     assert 'id="collective-competence-section"' in page.text
     assert "How to read a cybernetic simulation" in page.text
@@ -328,6 +329,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function renderAuthoringPeople" in app_script.content
     assert b"function renderAuthoringConfiguration" in app_script.content
     assert b"Questions one run cannot answer" in app_script.content
+    assert b"fixed scheduled scenario processes" in app_script.content
+    assert b"no matched baseline" in app_script.content
+    assert b"accepted proposal cleared" not in app_script.content
+    assert b"none scope accepted" not in app_script.content
     assert (
         b"compiler-owned ids, routes, and mechanisms are deliberately absent"
         in page.content.lower()
@@ -370,6 +375,31 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"liveCue" in graph_script.content
     assert b"animateMotion" in graph_script.content
     assert b"prefers-reduced-motion" in graph_styles.content
+
+
+def test_waltzman_surface_is_an_outcome_correct_single_run_instrument(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+    page = api.get("/")
+    app_script = api.get("/assets/app.js")
+    styles = api.get("/assets/styles.css")
+
+    assert page.status_code == 200
+    assert app_script.status_code == 200
+    assert styles.status_code == 200
+    assert "What this run lets us inspect" in page.text
+    assert "Decision-environment instrument" in page.text
+    assert b"function waltzmanOutcome" in app_script.content
+    assert b"The group reached the deadline without a decision" in app_script.content
+    assert b"No proposal cleared the final gate" in app_script.content
+    assert b"fixed scheduled scenario processes" in app_script.content
+    assert b"no matched baseline" in app_script.content
+    assert b"waltzman-observations" in app_script.content
+    assert b".waltzman-observations" in styles.content
+    assert b"content:none" in styles.content
+    assert b"accepted proposal cleared" not in app_script.content
+    assert b"none scope accepted" not in app_script.content
 
 
 def test_production_api_rejects_scripted_coordination_execution(tmp_path: Path) -> None:

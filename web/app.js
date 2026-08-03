@@ -2877,6 +2877,73 @@ function waltzmanEvidenceStep(number, label, finding, text) {
   </article>`
 }
 
+function waltzmanEventItems(finding) {
+  const eventIds = new Set(
+    (finding?.evidence_refs || [])
+      .filter((ref) => String(ref).startsWith('event:'))
+      .map((ref) => String(ref).slice('event:'.length))
+  )
+  return (current?.timeline || []).filter((event) => eventIds.has(event.event_id))
+}
+
+function firstLogicalTime(items) {
+  const values = items.map((item) => Number(item.logical_time)).filter(Number.isFinite)
+  return values.length ? Math.min(...values) : null
+}
+
+function modeledDay(logicalTime) {
+  return Number.isFinite(logicalTime) ? Math.floor(logicalTime / (24 * 60)) : null
+}
+
+function countNoun(count, singular, plural = `${singular}s`) {
+  const value = Number(count || 0)
+  return `${value} ${value === 1 ? singular : plural}`
+}
+
+function waltzmanOutcome(status, scope, retainedCount) {
+  const partners = `${retainedCount} partner${retainedCount === 1 ? '' : 's'} retained`
+  if (status === 'deploy_on_time') {
+    return {
+      headline:'The exact gate approved deployment on time',
+      result:`${scope} deployment approved with ${partners}`,
+      sentence:`The exact gate recorded an on-time ${scope} deployment.`,
+    }
+  }
+  if (status === 'scope_reduced') {
+    return {
+      headline:'The exact gate approved a smaller deployment',
+      result:`${scope} deployment approved with ${partners}`,
+      sentence:`The exact gate recorded an approved ${scope} deployment.`,
+    }
+  }
+  if (status === 'delayed') {
+    return {
+      headline:'The exact gate delayed deployment',
+      result:`Deployment delayed with ${partners}`,
+      sentence:'The exact gate recorded a delayed deployment decision.',
+    }
+  }
+  if (status === 'partner_disengaged') {
+    return {
+      headline:'A partner disengaged before approval',
+      result:`Partner disengagement recorded; ${partners}`,
+      sentence:'The exact gate recorded partner disengagement rather than an approved deployment.',
+    }
+  }
+  if (status === 'no_decision_by_horizon') {
+    return {
+      headline:'The group reached the deadline without a decision',
+      result:`No deployment approved; ${partners}`,
+      sentence:'No proposal cleared the final gate before the modeled deadline.',
+    }
+  }
+  return {
+    headline:'The run retained an outcome for inspection',
+    result:`${readableTheoryToken(status)}; ${partners}`,
+    sentence:`The exact gate recorded ${readableTheoryToken(status)}.`,
+  }
+}
+
 function renderWaltzmanDemonstration(findings) {
   const finalStatus = findingById(findings, 'waltzman_final_deployment_status')
   const finalScope = findingById(findings, 'waltzman_final_approved_scope')
@@ -2891,27 +2958,45 @@ function renderWaltzmanDemonstration(findings) {
   const deliberation = findingObjectValue(findings, 'waltzman_deliberation_load')
   const latency = findingObjectValue(findings, 'waltzman_decision_latency')
   const retainedCount = Number(partners.count || 0)
+  const status = String(finalStatus?.value || 'not_recorded')
   const scope = readableTheoryToken(finalScope?.value || finalStatus?.value)
-  const finalResult = `${scope} scope accepted with ${retainedCount} partner${retainedCount === 1 ? '' : 's'} retained`
+  const outcome = waltzmanOutcome(status, scope, retainedCount)
+  const firstVerificationTime = firstLogicalTime(waltzmanEventItems(findingById(findings, 'waltzman_verification_requests')))
+  const firstOutsideSourceTime = firstLogicalTime(
+    (current?.timeline || []).filter((event) =>
+      event.kind === 'action_attempted'
+      && String(event.person || '').endsWith('_pressure_source')
+    )
+  )
+  const verificationDay = modeledDay(firstVerificationTime)
+  const outsideSourceDay = modeledDay(firstOutsideSourceTime)
+  const chronology = verificationDay !== null && outsideSourceDay !== null
+    ? verificationDay < outsideSourceDay
+      ? `The first verification request occurred on day ${verificationDay}; the scheduled outside concern sources first acted on day ${outsideSourceDay}. This run does not attribute the earlier response to those sources.`
+      : `The first verification request and scheduled outside concern activity are retained in their exact modeled order.`
+    : 'The exact evidence retains event order, but this summary does not infer a causal direction.'
+  const latencySentence = status === 'no_decision_by_horizon'
+    ? `${outcome.sentence} ${latency.scenario_minutes || 0} modeled minutes elapsed from the first proposal attempt to the terminal record.`
+    : `${outcome.sentence} The first proposal attempt preceded the terminal record by ${latency.scenario_minutes || 0} modeled minutes.`
 
-  return `<section class="waltzman-demonstration" aria-label="Waltzman implementation walkthrough">
+  return `<section class="waltzman-demonstration" aria-label="Waltzman-informed single-run instrument">
     <div class="waltzman-takeaway">
-      <span class="eyebrow">Modeled result</span>
-      <h4>The decision environment changed without breaking the partnership</h4>
-      <p>In this trajectory, the group registered ${risk.distinct_risks || 0} new risk, requested ${verification.total || 0} independent verification, and changed its action threshold before approving a ${scope} deployment. All ${retainedCount} participants remained engaged.</p>
+      <span class="eyebrow">Single-run instrument</span>
+      <h4>${html(outcome.headline)}</h4>
+      <p>This trajectory recorded ${countNoun(risk.distinct_risks, 'distinct issue')}, ${countNoun(verification.total, 'verification request')}, and ${countNoun(threshold.count, 'action-threshold change')}. ${html(outcome.sentence)} These records are candidate indicators, not proof that influence caused them.</p>
     </div>
     <div class="waltzman-constructs" aria-label="Waltzman constructs in this run">
-      <article><span>Trust structure</span><strong>${verification.total || 0} verification request · ${reliance.edge_count || 0} explicit source-reliance link</strong><p>${bypass.count || 0} intermediary bypasses were recorded.</p></article>
-      <article><span>Perceived risk</span><strong>${risk.distinct_risks || 0} risk added · threshold changed ${threshold.count || 0} time${threshold.count === 1 ? '' : 's'}</strong><p>The final rule required ${readableTheoryToken(threshold.final_threshold)}; ${unresolved.final_open_count || 0} risks remained open.</p></article>
-      <article><span>Coordination readiness</span><strong>${deliberation.meeting_cycles || 0} review cycles · ${deliberation.external_action_attempts || 0} recorded action attempts</strong><p>The accepted proposal cleared the final gate in ${latency.scenario_minutes || 0} scenario minutes.</p></article>
+      <article><span>Trust-structure observations</span><strong>${countNoun(verification.total, 'verification request')} · ${countNoun(reliance.edge_count, 'explicit source-reliance link')}</strong><p>${countNoun(bypass.count, 'intermediary bypass')} recorded. Counts alone do not establish that trust declined.</p></article>
+      <article><span>Perceived-risk observations</span><strong>${countNoun(risk.distinct_risks, 'distinct issue')} · threshold changed ${countNoun(threshold.count, 'time')}</strong><p>The final rule required ${readableTheoryToken(threshold.final_threshold)}; ${countNoun(unresolved.final_open_count, 'issue')} remained open. Relevance and proportionality were not coded.</p></article>
+      <article><span>Coordination-readiness observations</span><strong>${countNoun(deliberation.meeting_cycles, 'review cycle')} · ${countNoun(deliberation.external_action_attempts, 'recorded action attempt')}</strong><p>${html(latencySentence)}</p></article>
     </div>
-    <div class="waltzman-trajectory" aria-label="Observed micro-to-macro trajectory">
-      ${waltzmanEvidenceStep(1, 'Information pressure', findingById(findings, 'waltzman_risk_register_expansion'), `${risk.distinct_risks || 0} material risk entered the retained issue record`)}
-      ${waltzmanEvidenceStep(2, 'Individual response', findingById(findings, 'waltzman_verification_requests'), `${verification.total || 0} independent verification request changed the review path`)}
-      ${waltzmanEvidenceStep(3, 'Coordination rule', thresholdFinding, `The action threshold became ${readableTheoryToken(threshold.final_threshold)}`)}
-      ${waltzmanEvidenceStep(4, 'Collective result', finalStatus, finalResult)}
+    <div class="waltzman-trajectory waltzman-observations" aria-label="Retained observations, not a causal chain">
+      ${waltzmanEvidenceStep(1, 'Recorded indicators', findingById(findings, 'waltzman_risk_register_expansion'), `${countNoun(risk.distinct_risks, 'distinct issue')} and ${countNoun(verification.total, 'verification request')} were retained`)}
+      ${waltzmanEvidenceStep(2, 'Observed chronology', findingById(findings, 'waltzman_verification_requests'), chronology)}
+      ${waltzmanEvidenceStep(3, 'Decision procedure', thresholdFinding, `The retained action threshold became ${readableTheoryToken(threshold.final_threshold)}`)}
+      ${waltzmanEvidenceStep(4, 'Exact outcome', finalStatus, outcome.result)}
     </div>
-    <p class="waltzman-nonclaim"><strong>What this does not establish:</strong> This synthetic run demonstrates an implementation and an inspectable mechanism chain. It does not validate a detector, prove real-world causation, or predict how an actual institution would behave.</p>
+    <p class="waltzman-nonclaim"><strong>What this does not establish:</strong> The outside concern sources were fixed scheduled scenario processes, not adaptive AI influence agents. One trajectory with no matched baseline cannot demonstrate a directional invariant, causal influence, attribution, or whether caution was proportionate. This instrument does not predict how an actual institution would behave.</p>
   </section>`
 }
 

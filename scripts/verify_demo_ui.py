@@ -145,16 +145,66 @@ def main() -> None:
             assert walkthrough.is_visible()
             walkthrough_text = walkthrough.inner_text().casefold()
             for expected in (
-                "Trust structure",
-                "Perceived risk",
-                "Coordination readiness",
-                "Information pressure",
-                "Individual response",
-                "Coordination rule",
-                "Collective result",
+                "Single-run instrument",
+                "Trust-structure observations",
+                "Perceived-risk observations",
+                "Coordination-readiness observations",
+                "Recorded indicators",
+                "Observed chronology",
+                "Decision procedure",
+                "Exact outcome",
                 "What this does not establish",
+                "fixed scheduled scenario processes",
+                "no matched baseline",
             ):
                 assert expected.casefold() in walkthrough_text
+            for false_claim in (
+                "accepted proposal cleared",
+                "approving a none deployment",
+                "none scope accepted",
+                "demonstrates an implementation and an inspectable mechanism chain",
+            ):
+                assert false_claim not in walkthrough_text
+            final_status = run_payload.get("outcome", {}).get("final_status")
+            if final_status == "no_decision_by_horizon":
+                assert "reached the deadline without a decision" in walkthrough_text
+                assert "no proposal cleared the final gate" in walkthrough_text
+                assert "no deployment approved" in walkthrough_text
+            timeline = run_payload.get("timeline", [])
+            first_verification = min(
+                (
+                    item["logical_time"]
+                    for item in timeline
+                    if item.get("kind") == "action_attempted"
+                    and "verification" in str(item.get("summary", "")).casefold()
+                ),
+                default=None,
+            )
+            first_outside_source = min(
+                (
+                    item["logical_time"]
+                    for item in timeline
+                    if item.get("kind") == "action_attempted"
+                    and str(item.get("person", "")).endswith("_pressure_source")
+                ),
+                default=None,
+            )
+            if (
+                first_verification is not None
+                and first_outside_source is not None
+                and first_verification < first_outside_source
+            ):
+                assert "first verification request occurred on day 0" in walkthrough_text
+                assert "outside concern sources first acted on day 1" in walkthrough_text
+                assert "does not attribute the earlier response" in walkthrough_text
+            assert page.locator(".waltzman-observations").get_attribute("aria-label") == (
+                "Retained observations, not a causal chain"
+            )
+            assert page.locator(
+                ".waltzman-observations .waltzman-trajectory-step"
+            ).first.evaluate(
+                "element => getComputedStyle(element, '::after').content"
+            ) == "none"
             assert page.locator("#theory-analysis-section").evaluate(
                 "section => section.compareDocumentPosition(document.querySelector('#coordination-measurement-section')) & Node.DOCUMENT_POSITION_FOLLOWING"
             )
@@ -449,7 +499,8 @@ def main() -> None:
     assert not console_errors, console_errors
     assert not failed_requests, failed_requests
     print(
-        f"PASS {run_id}: narrative hierarchy and readable detailed story; deep link, "
+        f"PASS {run_id}: outcome- and chronology-correct Waltzman instrument; "
+        "narrative hierarchy and readable detailed story; deep link, "
         "all projections, projection-preserving spatial/causal collapse/expand, "
         "both composites, coordination live-only launch, and service-desk "
         "reference pause/resume"
