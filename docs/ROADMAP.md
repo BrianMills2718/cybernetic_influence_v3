@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-07-31
+updated: 2026-08-03
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -47,7 +47,7 @@ User operation:
 2. inspect and edit the compiled people, information, mechanisms, places,
    candidate boundary, collective goal, run termination, and assumptions;
 3. approve the configuration;
-4. play one reference or live simulation; and
+4. play one live coordination simulation; and
 5. inspect the story, maps, participant/boundary accounts, and two theoretical
    readouts.
 
@@ -152,6 +152,9 @@ cross-run comparisons. It is explicitly outside the current MVP.
 - The fixed coordination scenario supports five LLM people, recurring meetings,
   exact decision mechanisms, typed boundary activity, and Waltzman-inspired
   measurement.
+- Coordination product launch is live-agent only. Scripted person policies are
+  retained solely as explicitly enabled internal verification fixtures;
+  historical scripted runs remain readable.
 - Accepted live Terra/medium baseline, pressure, and stabilization trajectories
   remain retained evidence; see [Mac operations](operations/mac-mini.md).
 - Comparison schema version 2 and its zero-cost six-run fixture remain working
@@ -166,6 +169,11 @@ cross-run comparisons. It is explicitly outside the current MVP.
   calculated from retained configuration, terminal state, and completion
   evidence; the preview has 51 causal and 3 analytical-only nodes with no
   unexplained isolation.
+- Approved draft `draft_760f90419937` and live run `run_2250cbb74f44` provide
+  Packet 24E stakeholder-demo evidence. All five people were live LLM agents;
+  the run retained 51 participant calls, 46 narrator calls, daily meetings on
+  modeled days 0 through 3, `no_decision_by_horizon`, and both theory readouts
+  bound to one evidence bundle.
 
 ### Process progress
 
@@ -198,7 +206,7 @@ the judgment passed on the operator's behalf.
    the implemented trust-structure, perceived-risk, and
    coordination-readiness ideas understandable from one screen, preserve the
    complete findings and evidence step-down, and keep limitations visible.
-2. **Stakeholder readout.** Review corrected run `run_eded0f70b15f` and decide
+2. **Stakeholder readout.** Review live run `run_2250cbb74f44` and decide
    whether its situation, trajectory, Waltzman readout, evidence, and
    limitations are understandable without raw JSON. Only the operator can
    close M7.

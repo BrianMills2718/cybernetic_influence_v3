@@ -3,14 +3,14 @@ doc_role: execution_handoff
 authority: packet_24e
 status: private_deployed_verified_stakeholder_review_pending
 updated: 2026-08-03
-implementation_commit: 54394e025f46a26345460c779c408bc60d97ed35
+implementation_commit: 5e24d6eb3834f7094e3b5af85edd965ed4e66207
 ---
 
 # Waltzman Stakeholder Demo
 
 ## Outcome
 
-The demo now makes one modeled trajectory legible as an implementation of
+The demo now makes one live-agent trajectory legible as an implementation of
 Waltzman-relevant ideas. It leads with the result, keeps trust structure,
 perceived risk, and coordination readiness separate, connects the trajectory
 from information pressure through individual response and a changed
@@ -18,9 +18,14 @@ coordination rule to the collective outcome, and links claims to exact retained
 events. The full findings, maps, narrative, participant accounts, Levin view,
 and advanced evidence remain available.
 
-The reviewed trajectory now advances through daily activity on modeled days
+The reviewed live trajectory advances through daily activity on modeled days
 0, 1, 2, and 3, with a day-4 fallback deadline. It no longer leaves the team
 apparently inactive for several days between concerns and review meetings.
+
+Coordination is no longer offered as a separate deterministic product mode.
+The product API and UI require live LLM people; fixed person policies are
+internal deterministic test fixtures only. Exact mechanisms, the meeting clock,
+and outside concern sources remain deterministic parts of the simulated world.
 
 The surface states its boundary visibly: this is an inspectable synthetic
 implementation, not a validated detector, proof of real-world causation, or a
@@ -28,26 +33,30 @@ prediction of institutional behavior.
 
 ## Review surfaces
 
-- Shareable 28-second screen walkthrough:
-  [waltzman-demo-walkthrough.webm](../assets/waltzman-demo-walkthrough.webm)
-- Shareable result card:
-  [waltzman-demo-walkthrough.png](../assets/waltzman-demo-walkthrough.png)
 - Canonical private surface:
-  <https://brian-mac-mini.tail9c321e.ts.net:8620/?run=run_f2d6bfc31ea0>
+  <https://brian-mac-mini.tail9c321e.ts.net:8620/?run=run_2250cbb74f44>
 
-On 2026-08-03, the private Mac reported build
-`54394e025f46a26345460c779c408bc60d97ed35` through `/api/config`. Its corrected
-retained run is completed, provider-free, ended `scope_reduced`, retained both
-theory modules, used zero model calls, and contains story activity on days 0,
-1, 2, and 3. The deployed service remains pinned to the isolated Waltzman demo
-worktree at this commit.
+On 2026-08-03, live run `run_2250cbb74f44` completed from approved draft
+`draft_760f90419937`. It made 51 successful participant calls and 46 successful
+narrator calls through `codex/gpt-5.6-terra` at medium reasoning, with no failed
+call summaries. Subscription-included observed cost was `$0.00` and fully
+observable. The five people were live LLM participants. The deterministic
+meeting clock and outside concern sources are world processes, not substitute
+people. The exact day-4 decision gate recorded `no_decision_by_horizon`.
+
+The Waltzman module produced 16 findings with 106 retained evidence references;
+the Levin module produced 7 findings with 33 references. Both readouts identify
+`bundle_run_2250cbb74f44` and the same immutable bundle digest. Historical
+scripted run `run_f2d6bfc31ea0` remains reopenable as internal fixture evidence,
+but it is not the stakeholder demo.
 
 ## Three-minute walkthrough
 
 1. Read the initial situation: five participants are deciding whether and how
    to deploy a multinational bio-surveillance capability.
-2. Scan the concise trajectory and outcome: the partnership ultimately accepts
-   a smaller deployment.
+2. Scan the concise trajectory and outcome: the partnership converges toward a
+   bounded proposal but leaves oversight evidence unresolved, so the exact gate
+   records no decision by the deadline.
 3. At **What this simulation demonstrates**, read the modeled-result paragraph
    and the three construct cards.
 4. Follow the four-step trajectory: risk record, independent verification,
@@ -65,29 +74,28 @@ mechanism should be demonstrated next.
 
 ## Verification
 
-- `73 passed` across the cadence contract, authored-run reopen behavior,
-  authoring repair path, and dual-theory evidence suites after the schedule
-  change.
+- Focused API, authoring, run-configuration, type, syntax, and diff checks pass
+  for the live-only product boundary. One unrelated pre-existing static-UI test
+  assertion about `.scrollIntoView` remains failing and was not changed here.
 - `node --check web/app.js` and `git diff --check` passed.
-- The desktop browser verifier passed the authored-run deep link, walkthrough
-  content and ordering, exact-event step-down, all three graph projections,
-  concise and detailed narrative, participant and group views, both composites,
-  service-desk preview, pause/resume, console, and failed requests.
-- `scripts/capture_waltzman_demo.py` reproduced the silent 28-second WebM and
-  result-card PNG from the real deep-linked run with no console or failed-request
-  error. Representative frames were visually inspected at the initial
-  situation, Waltzman readout, exact-event step-down, and final limitations.
-- A fresh private-Mac browser deep link enforced story days `[0, 1, 2, 3]`,
-  rendered readable source labels, the three Waltzman constructs, and the
-  visible nonclaim, and stepped into exact supporting evidence. All projections,
-  group and participant views, and reference pause/resume passed without a
-  console or failed-request error. The private API reopened
-  `run_f2d6bfc31ea0` as completed `scope_reduced`, zero model calls, with both
-  theory modules available.
+- The private API shows meeting openings on modeled days `[0, 1, 2, 3]`, 51
+  person traces with 51 model calls, and zero model calls for five clock wakes
+  and six outside-source activations. All 97 participant and narrator call
+  summaries are completed.
+- Reopening the completed live run twice produced the same retained
+  identity-and-analysis digest. Its evidence bundle names the same run, approved
+  proposal digest, and bundle digest consumed by both theory modules.
+- A fresh private browser pass on the live deep link verified the readable
+  initial situation, contiguous story days `[0, 1, 2, 3, 4]`, Waltzman
+  walkthrough and exact-evidence step-down, all graph projections, both
+  analytical composites, live-only coordination launch, and provider-free
+  service-desk pause/resume. It recorded no browser-console or failed-request
+  errors; the captured narrative surface was visually inspected.
 
 ## Stakeholder review boundary
 
-The operator can now use the private URL for the stakeholder review. The next
-substantive question is whether the implementation faithfully represents the
-theory, not whether the surface technically runs. Do not make a provider call,
-change the retained run, or resume Concordia migration as part of this review.
+The operator can use the private live-run URL for the stakeholder review. The
+next substantive question is whether the implementation faithfully represents
+the theory, not whether the surface technically runs. Do not make another
+provider call, change the retained run, or resume Concordia migration as part
+of this review.

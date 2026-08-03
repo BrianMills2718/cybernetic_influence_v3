@@ -196,7 +196,9 @@ def main() -> None:
         assert "The people:" in initial_situation.inner_text()
         assert "What may change the decision:" in initial_situation.inner_text()
         assert first_story.locator("p").is_visible()
-        assert first_story.locator("p").inner_text().startswith("The schedule opened")
+        first_story_text = first_story.locator("p").inner_text()
+        assert "first meeting" in first_story_text
+        assert "modeled day 0" in first_story_text
         first_metadata = first_story.locator(".narrative-meta").inner_text()
         assert first_metadata.startswith("Day 0 ·")
         assert "scenario minutes into" not in first_metadata
@@ -210,7 +212,7 @@ def main() -> None:
                 if item.startswith("Day ")
             }
         )
-        assert story_days == [0, 1, 2, 3], story_days
+        assert story_days == [0, 1, 2, 3, 4], story_days
 
         page.locator("#narrative-detailed").click()
         detailed_story = page.locator("#detailed-narrative")
@@ -226,11 +228,15 @@ def main() -> None:
             "_pressure_source",
         ):
             assert internal_phrase not in detailed_prose
-        assert (
-            "The coordinator's request for explicit review reached 4 team members."
-            in detailed_prose
-        )
-        assert "The independent verification result was recorded." in detailed_prose
+        if live_expected:
+            assert "evidence" in detailed_prose.lower()
+            assert "review" in detailed_prose.lower()
+        else:
+            assert (
+                "The coordinator's request for explicit review reached 4 team members."
+                in detailed_prose
+            )
+            assert "The independent verification result was recorded." in detailed_prose
         assert detailed_story.locator(".causal-result").count() > 0
         assert detailed_story.locator(".detailed-narrative-moment").count() == (
             page.locator("#turn-narratives .turn-narrative").count()
@@ -290,13 +296,14 @@ def main() -> None:
         assert "took part in" in page.locator("#trace .trace-summary p").inner_text()
         assert "was activated" not in page.locator("#trace .trace-summary p").inner_text()
         first_participant_moment = page.locator("#trace .trace-step").first
-        assert first_participant_moment.locator("strong").inner_text().startswith(
+        assert first_participant_moment.locator("strong").first.inner_text().startswith(
             "Day 0"
         )
-        assert (
-            "requested explicit, reasoned review"
-            in first_participant_moment.locator("p").first.inner_text()
-        )
+        first_participant_action = first_participant_moment.locator("p").first.inner_text()
+        if live_expected:
+            assert "evidence review" in first_participant_action.lower()
+        else:
+            assert "requested explicit, reasoned review" in first_participant_action
         assert "activation_" not in first_participant_moment.inner_text()
         assert not first_participant_moment.locator("pre").is_visible()
         assert "scope_reduced" not in " ".join(

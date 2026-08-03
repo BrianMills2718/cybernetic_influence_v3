@@ -34,18 +34,29 @@ or request error occurred. Historical live draft `draft_019c16228a62` and run
 another live call.
 
 Current demo deployment 2026-08-03: the running service uses isolated worktree
-`/Users/b/code/cybernetic_influence_v3-waltzman-demo` at simulator commit
-`54394e025f46a26345460c779c408bc60d97ed35`, rather than the general canonical
-checkout. The LaunchAgent at
+`/Users/b/code/cybernetic_influence_v3-waltzman-demo` at the implementation
+commit recorded by `/api/config`, rather than the general canonical checkout.
+The LaunchAgent at
 `/Users/b/Library/LaunchAgents/com.cybernetic-influence.v3.plist` records that
 build commit and installed shared-client revision
-`28dfa9928750baefe131e25ecc97c04ede81c174`. The private HTTPS API reopened
-`run_f2d6bfc31ea0` as completed `scope_reduced`, zero model calls, with both
-theory modules and story activity on modeled days 0 through 3. A fresh private
-browser deep link rendered readable daily chronology, the Waltzman walkthrough,
-and evidence step-down; all projections and reference pause/resume passed
-without console or failed-request errors. No provider call was made during this
-deployment or verification.
+`28dfa9928750baefe131e25ecc97c04ede81c174`. Coordination launch is live-agent
+only on the product API and UI; fixed person policies remain available only to
+explicitly enabled internal verification apps. Historical scripted run
+`run_f2d6bfc31ea0` remains readable but is not stakeholder product evidence.
+
+Fresh live run `run_2250cbb74f44`, compiled from approved draft
+`draft_760f90419937`, completed with 51 successful participant calls and 46
+successful narrator calls through `codex/gpt-5.6-terra` at medium reasoning.
+Subscription-included observed cost was `$0.00` and fully observable. Its five
+people were live LLM participants; only the retained meeting clock and three
+outside concern sources were deterministic world processes. Meetings opened on
+modeled days 0, 1, 2, and 3, and the exact day-4 gate recorded
+`no_decision_by_horizon`. Both Waltzman and Levin modules are available and
+bound to the same retained run-evidence bundle. Reopening the API twice produced
+the same identity-and-analysis digest without additional calls. A fresh browser
+pass verified contiguous story days 0 through 4, all projections, both
+analytical composites, exact-evidence step-down, and live-only coordination
+launch without console or failed-request errors.
 
 ## Inspect
 
