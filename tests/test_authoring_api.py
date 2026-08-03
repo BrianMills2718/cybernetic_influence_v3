@@ -61,6 +61,7 @@ def _client(tmp_path: Path) -> TestClient:
             tmp_path / "runs",
             authoring_root=tmp_path / "drafts",
             authoring_call=_proposer,
+            allow_internal_scripted_coordination=True,
         )
     )
 
@@ -208,6 +209,36 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
         ]
         == "invalid"
     )
+
+
+def test_production_authoring_api_rejects_scripted_coordination_execution(
+    tmp_path: Path,
+) -> None:
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+        )
+    )
+    draft = api.post("/api/authoring/reviewed-coordination-drafts").json()
+    approved = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/approve",
+        json={"expected_revision": draft["revision"]},
+    )
+    assert approved.status_code == 200
+
+    response = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/runs",
+        json={"execution": "scripted"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "coordination scenarios require live agent execution; "
+        "scripted people are internal verification fixtures"
+    )
+    assert api.get("/api/runs").json()["runs"] == []
 
 
 def test_completed_authored_run_resumes_only_missing_narration(
@@ -495,6 +526,7 @@ def test_direct_coordination_edit_selects_analysis_without_an_llm_call(
             tmp_path / "runs",
             authoring_root=tmp_path / "drafts",
             authoring_call=counted,
+            allow_internal_scripted_coordination=True,
         )
     )
     draft = api.post("/api/authoring/reviewed-coordination-drafts").json()

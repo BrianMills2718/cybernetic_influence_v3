@@ -99,18 +99,10 @@ def main() -> None:
             raise RuntimeError("the supplied browser-verification run is not completed")
         run_id = args.run_id
     else:
-        response = httpx.post(
-            f"{base_url}/api/runs",
-            json={
-                "scenario": "coordination_decision",
-                "arm_id": "stabilization",
-                "execution": "scripted",
-            },
-            timeout=240,
+        raise RuntimeError(
+            "--run-id is required; stakeholder verification must inspect an "
+            "existing retained run and never create a scripted coordination run"
         )
-        response.raise_for_status()
-        run_payload = response.json()
-        run_id = response.json()["run_id"]
     config_response = httpx.get(f"{base_url}/api/config", timeout=30)
     config_response.raise_for_status()
     config = config_response.json()
@@ -412,7 +404,20 @@ def main() -> None:
             """() => document.querySelectorAll('#analytical-boundary option').length === 2
                 && document.querySelector('#spatial-layout')?.getAttribute('aria-pressed') === 'true'"""
         )
-        assert page.locator("#live").is_checked() is live_expected
+        assert page.locator("#live").is_checked()
+        assert page.locator("#live").is_disabled()
+        assert page.locator("#run").inner_text() == "Play live simulation"
+        assert page.locator("#run").is_enabled() is live_expected
+        live_help = page.locator("#live-help").inner_text()
+        if live_expected:
+            assert "Waltzman measurements are derived after the run" in live_help
+        else:
+            assert "requires live LLM-modeled people" in live_help
+
+        page.locator("#scenario").select_option("service_desk")
+        page.wait_for_function(
+            """() => document.querySelector('#scenario-title')?.textContent === 'Service desk'"""
+        )
         if live_expected:
             page.locator("#live").uncheck()
         assert page.locator("#run").inner_text() == "Play reference simulation"
@@ -439,7 +444,8 @@ def main() -> None:
     print(
         f"PASS {run_id}: narrative hierarchy and readable detailed story; deep link, "
         "all projections, projection-preserving spatial/causal collapse/expand, "
-        "both composites, service-desk preview, and coordination pause/resume"
+        "both composites, coordination live-only launch, and service-desk "
+        "reference pause/resume"
     )
 
 

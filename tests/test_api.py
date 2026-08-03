@@ -93,6 +93,7 @@ def client(
             ROOT / "web",
             run_root,
             measurement_call=measurement_call,
+            allow_internal_scripted_coordination=True,
         )
     )
 
@@ -141,6 +142,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "coordination_decision",
     }
     coordination = config.json()["scenarios"]["coordination_decision"]
+    assert coordination["execution_modes"] == ["live"]
+    assert coordination["scripted_execution"] == "internal_verification_only"
     assert coordination["supports_live"] is True
     assert coordination["live_model_ids"] == [
         "codex/gpt-5.6-terra",
@@ -364,6 +367,26 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"liveCue" in graph_script.content
     assert b"animateMotion" in graph_script.content
     assert b"prefers-reduced-motion" in graph_styles.content
+
+
+def test_production_api_rejects_scripted_coordination_execution(tmp_path: Path) -> None:
+    api = TestClient(create_app(ROOT / "web", tmp_path))
+
+    response = api.post(
+        "/api/runs",
+        json={
+            "scenario": "coordination_decision",
+            "arm_id": "stabilization",
+            "execution": "scripted",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "coordination scenarios require live agent execution; "
+        "scripted people are internal verification fixtures"
+    )
+    assert api.get("/api/runs").json()["runs"] == []
 
 
 def test_scenario_preview_exposes_the_initial_map_without_creating_a_run(tmp_path: Path) -> None:

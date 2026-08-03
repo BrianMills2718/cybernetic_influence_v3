@@ -45,7 +45,7 @@ const buttonTooltips = {
   'authoring-load-composition': 'Create a saved, already typed mixed-component example without making a model call.',
   'authoring-copy-link': 'Copy a link that reopens this automatically saved draft.',
   'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
-  'authoring-run': 'Run the approved draft with fixed zero-cost reference actions. This checks the compiled routes and exact mechanisms, not the reviewed personalities.',
+  'authoring-run': 'Run a non-coordination draft with fixed zero-cost reference actions. Coordination scenarios require live people.',
   'authoring-live-run': 'Run the approved draft with each concrete person driven by an LLM from their reviewed profile, private memory, delivered observations, and exposed interfaces.',
   'authoring-save-configuration': 'Validate these semantic fields and save a new draft revision without calling an LLM. Compiler-owned routes, mechanisms, and IDs remain unchanged.',
   'authoring-spatial-layout': 'Show the proposed places, occupants, and physical links. This does not grant access or permission.',
@@ -729,7 +729,8 @@ function renderAuthoring() {
   renderAuthoringPeople(draft)
   const approvable = !!draft.proposal && diagnostics.length === 0 && draft.status === 'ready_for_review'
   $('#authoring-approve').hidden = !approvable
-  $('#authoring-run').hidden = draft.status !== 'approved'
+  const coordination = draft.proposal?.workflow?.template_id === 'coordination_decision_v1'
+  $('#authoring-run').hidden = draft.status !== 'approved' || coordination
   const authoredLiveAvailable = runtimeConfig.live_authorized &&
     ((runtimeConfig.live_options?.models || []).length > 0) &&
     (
@@ -737,7 +738,14 @@ function renderAuthoring() {
       (runtimeConfig.scenarios?.coordination_decision?.live_model_ids || []).length > 0
     )
   configureAuthoringLiveModels()
-  $('#authoring-live-run').hidden = draft.status !== 'approved' || !authoredLiveAvailable
+  $('#authoring-live-run').hidden = draft.status !== 'approved' || (!coordination && !authoredLiveAvailable)
+  $('#authoring-live-run').disabled = coordination && !authoredLiveAvailable
+  $('#authoring-live-run').textContent = coordination && !authoredLiveAvailable
+    ? 'Live execution unavailable'
+    : 'Play with live people'
+  $('#authoring-live-run').title = coordination && !authoredLiveAvailable
+    ? 'Coordination scenarios require live agents, but this server has no authorized certified route.'
+    : ''
   $('#authoring-live-settings').hidden = draft.status !== 'approved' || !authoredLiveAvailable
   renderAuthoringProjectionControls()
   if (authoringPreview?.nodes && window.CyberneticGraph) {
@@ -960,7 +968,6 @@ async function loadConfig() {
   $('#map-help').textContent = help.map_projection || ''
   $('#moment-help').textContent = help.causal_moment || ''
   $('#narrative-help').textContent = help.narrative || ''
-  configureScenario(config.scenario)
   $('#live').disabled = !config.live_authorized || choices.length === 0
   $('#live').checked = config.live_authorized
   $('#run').textContent = config.live_authorized ? 'Play live simulation' : 'Play reference simulation'
@@ -972,7 +979,17 @@ async function loadConfig() {
   } else {
     $('#live-help').textContent = help.live_execution || 'People reason from their own memory, position, and delivered observations.'
   }
+  configureScenario(config.scenario)
   configureLiveControls()
+}
+
+function scenarioRequiresLive(scenarioId = $('#scenario').value) {
+  const modes = scenarioCatalog[scenarioId]?.execution_modes || []
+  return modes.length === 1 && modes[0] === 'live'
+}
+
+function selectedExecution() {
+  return scenarioRequiresLive() ? 'live' : ($('#live').checked ? 'live' : 'scripted')
 }
 
 function configureScenario(scenarioId) {
@@ -1016,12 +1033,28 @@ function configureScenario(scenarioId) {
     && liveChoices.length
   )
   const scenarioSupportsLive = selected.supports_live !== false
-  $('#live').disabled = !liveAvailable || !scenarioSupportsLive
-  if (!scenarioSupportsLive) {
+  const requiresLive = scenarioRequiresLive(scenarioId)
+  if (requiresLive) {
+    $('#live').checked = true
+    $('#live').disabled = true
+    $('#run').disabled = !liveAvailable
+    $('#live-help').textContent = liveAvailable
+      ? 'This scenario uses live LLM-modeled people. Exact mechanisms govern world changes; Waltzman measurements are derived after the run.'
+      : 'This scenario requires live LLM-modeled people, but this server has no authorized certified route.'
+  } else if (!scenarioSupportsLive) {
+    $('#live').disabled = true
     $('#live').checked = false
+    $('#run').disabled = false
     $('#live-help').textContent = 'This scenario currently has a zero-cost scripted implementation only.'
+  } else {
+    $('#live').disabled = !liveAvailable
+    $('#live').checked = liveAvailable
+    $('#run').disabled = false
+    $('#live-help').textContent = liveAvailable
+      ? runtimeConfig.live_options?.help?.live_execution || 'People reason from their own memory, position, and delivered observations.'
+      : 'Live execution is unavailable on this server. Reference execution remains available for this scenario.'
   }
-  $('#run').textContent = $('#live').checked ? 'Play live simulation' : 'Play reference simulation'
+  $('#run').textContent = selectedExecution() === 'live' ? 'Play live simulation' : 'Play reference simulation'
   configureLiveControls()
   updateAuthorizationPreview()
   describeCondition()
@@ -1072,7 +1105,9 @@ function fillList(selector, values = []) {
 }
 
 function configureLiveControls() {
-  const enabled = $('#live').checked && !$('#live').disabled
+  const enabled = $('#live').checked && (
+    scenarioRequiresLive() || !$('#live').disabled
+  ) && !$('#run').disabled
   for (const selector of ['#model', '#reasoning', '#max-cost']) {
     $(selector).disabled = !enabled
   }
@@ -3224,7 +3259,7 @@ $('#analytical-scale-toggle').onclick = () => {
   renderGraph()
 }
 $('#live').onchange = () => {
-  $('#run').textContent = $('#live').checked ? 'Play live simulation' : 'Play reference simulation'
+  $('#run').textContent = selectedExecution() === 'live' ? 'Play live simulation' : 'Play reference simulation'
   configureLiveControls()
 }
 $('#model').onchange = () => {
@@ -3248,6 +3283,7 @@ document.querySelectorAll('.help-button').forEach((button) => {
 })
 
 $('#run').onclick = async () => {
+  const execution = selectedExecution()
   $('#run').disabled = true
   $('#run-status').textContent = 'Running…'
   activeRunId = `run_${crypto.getRandomValues(new Uint32Array(3)).join('').slice(0, 12)}`
@@ -3268,12 +3304,12 @@ $('#run').onclick = async () => {
         scenario:$('#scenario').value,
         cognition_profile:'position_context',
         arm_id:$('#arm').value,
-        execution:$('#live').checked ? 'live' : 'scripted',
+        execution,
         run_id:activeRunId,
         ...($('#scenario').value === 'service_desk' ? {
           run_control:{modeled_time_horizon:Number($('#modeled-horizon').value)},
         } : {}),
-        ...($('#live').checked ? {
+        ...(execution === 'live' ? {
           llm_options:{
             model:$('#model').value,
             agent_reasoning_effort:$('#reasoning').value,
@@ -3282,7 +3318,7 @@ $('#run').onclick = async () => {
         } : {}),
       }),
     })
-    if (body.status === 'running' && $('#live').checked) {
+    if (body.status === 'running' && execution === 'live') {
       $('#result').hidden = false
       $('#narrative-section').hidden = true
       $('#result-status').textContent = `running · ${String(body.scenario || '').replaceAll('_',' ')}`
@@ -3302,7 +3338,7 @@ $('#run').onclick = async () => {
     await loadHistory()
   } finally {
     $('#run').disabled = false
-    if (!$('#live').checked) {
+    if (execution !== 'live') {
       $('#pause').hidden = true
       $('#stop').hidden = true
     }

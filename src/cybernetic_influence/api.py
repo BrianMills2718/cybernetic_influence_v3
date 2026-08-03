@@ -644,6 +644,7 @@ def create_app(
     authoring_root: Path | None = None,
     authoring_call: StructuredCall | None = None,
     measurement_call: MeasurementStructuredCall | None = None,
+    allow_internal_scripted_coordination: bool = False,
 ) -> FastAPI:
     """Create the visibility-safe API without any legacy workbench."""
     app = FastAPI(title="Cybernetic Influence Simulator", version=__version__)
@@ -1021,6 +1022,8 @@ def create_app(
                     "label": "Coordination decision",
                     **_scenario_explanation("coordination_decision"),
                     "profiles": ["position_context"],
+                    "execution_modes": ["live"],
+                    "scripted_execution": "internal_verification_only",
                     "supports_live": bool(coordination_live_models),
                     "live_model_ids": coordination_live_models,
                     "run_control_options": (
@@ -1358,6 +1361,21 @@ def create_app(
             ) from error
         except (ValueError, AuthoringCompilationError) as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
+        if (
+            isinstance(
+                compiled.proposal.workflow,
+                CoordinationDecisionWorkflowDraft,
+            )
+            and not live
+            and not allow_internal_scripted_coordination
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "coordination scenarios require live agent execution; "
+                    "scripted people are internal verification fixtures"
+                ),
+            )
 
         worker_execution = live and bool(
             getattr(authored_live_worker_context, "active", False)
@@ -2461,6 +2479,18 @@ def create_app(
                 detail="run_control is not available for this scenario",
             )
         live = request_body.execution == "live"
+        if (
+            request_body.scenario == "coordination_decision"
+            and not live
+            and not allow_internal_scripted_coordination
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "coordination scenarios require live agent execution; "
+                    "scripted people are internal verification fixtures"
+                ),
+            )
         if not live and request_body.llm_options is not None:
             raise HTTPException(
                 status_code=422,
