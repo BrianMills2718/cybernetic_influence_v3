@@ -361,6 +361,12 @@ def _coordination_reference_narration(
             "technical_validation_lead": "The technical lead",
             "local_public_health_liaison": "The local health liaison",
             "partner_representative": "The partner representative",
+            "Technical_pressure_source": "The technical concern source",
+            "Policy_pressure_source": "The government-oversight concern source",
+            "Local_pressure_source": "The local safety concern source",
+            "technical_pressure_source": "The technical concern source",
+            "policy_pressure_source": "The government-oversight concern source",
+            "local_pressure_source": "The local safety concern source",
             "oversight_review": "the oversight review",
             "sovereignty_concern": "the government-oversight concern",
             "validation_pending": "the local concern as awaiting verification",
@@ -1716,7 +1722,8 @@ def create_app(
                     "boundaries": raw_boundaries,
                 }
             if (
-                document.get("scenario") == "coordination_decision"
+                document.get("scenario")
+                in {"coordination_decision", "coordination_decision_v1"}
                 and document.get("execution") == "scripted"
             ):
                 # Narration is a derived read model. Reproject it from retained
@@ -3256,7 +3263,7 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
             ),
             "assumptions": [
                 "People act from retained dispositions, memories, delivered observations, and owned interfaces.",
-                "Meetings occur on modeled days 0, 3, 6, and 9; unresolved decisions reach a day-10 deadline.",
+                "Meetings occur daily on modeled days 0 through 3; unresolved decisions reach a day-4 fallback deadline.",
                 "The partnership and pressure-source ensemble are analytical views, not additional actors.",
             ],
             "known_omissions": [

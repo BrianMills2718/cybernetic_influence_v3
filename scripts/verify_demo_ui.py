@@ -208,6 +208,17 @@ def main() -> None:
         first_metadata = first_story.locator(".narrative-meta").inner_text()
         assert first_metadata.startswith("Day 0 ·")
         assert "scenario minutes into" not in first_metadata
+        story_metadata = page.locator(
+            "#turn-narratives .narrative-meta"
+        ).all_inner_texts()
+        story_days = sorted(
+            {
+                int(item.split("Day ", 1)[1].split(" ", 1)[0])
+                for item in story_metadata
+                if item.startswith("Day ")
+            }
+        )
+        assert story_days == [0, 1, 2, 3], story_days
 
         page.locator("#narrative-detailed").click()
         detailed_story = page.locator("#detailed-narrative")
@@ -220,6 +231,7 @@ def main() -> None:
             "state revision",
             '{"',
             "relied_on",
+            "_pressure_source",
         ):
             assert internal_phrase not in detailed_prose
         assert (

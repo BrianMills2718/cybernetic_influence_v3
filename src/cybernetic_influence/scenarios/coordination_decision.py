@@ -112,8 +112,8 @@ SOURCE_BOUNDARY_ID = "pressure_source_ensemble"
 CONDITION_ENTITY_ID = "coordination_condition"
 DECISION_ENTITY_ID = "decision_record"
 EXTERNAL_RECEIVER_ID = "external_decision_registry"
-MEETING_DAYS: tuple[int, ...] = (0, 3, 6, 9)
-DECISION_DEADLINE_DAY = 10
+MEETING_DAYS: tuple[int, ...] = (0, 1, 2, 3)
+DECISION_DEADLINE_DAY = 4
 MINUTES_PER_DAY = 24 * 60
 MEETING_TIMES: tuple[int, ...] = tuple(day * MINUTES_PER_DAY for day in MEETING_DAYS)
 DECISION_DEADLINE_TIME = DECISION_DEADLINE_DAY * MINUTES_PER_DAY
@@ -264,7 +264,7 @@ class MeetingSchedule(_StrictModel):
 
     schema_version: Literal[1] = 1
     slots: list[MeetingSlot] = Field(min_length=4, max_length=4)
-    deadline_day: Literal[10] = 10
+    deadline_day: Literal[4] = 4
 
     @model_validator(mode="after")
     def validate_schedule(self) -> "MeetingSchedule":
@@ -642,7 +642,7 @@ def _entities(
         "meeting_schedule": EntityState(
             entity_id="meeting_schedule",
             entity_kind="schedule_record",
-            description="Four authored decision meetings and the day-10 deadline.",
+            description="Four daily decision meetings and the day-4 fallback deadline.",
             attributes={
                 "schedule": _fact(schedule.model_dump(mode="json")),
                 "last_wake_day": _fact(None),
@@ -651,7 +651,7 @@ def _entities(
         "decision_goal": EntityState(
             entity_id="decision_goal",
             entity_kind="goal_record",
-            description="Reach a valid terminal deployment decision by day 10.",
+            description="Reach a valid terminal deployment decision by day 4.",
             attributes={
                 "capability": _fact("valid_collective_decision_by_deadline_v1")
             },
@@ -890,7 +890,7 @@ def _ports() -> dict[str, PortState]:
             "meeting_snapshot",
             f"Meeting-state snapshot delivery input for {person_id}.",
         )
-    add("deadline_transition_out", "meeting_clock", "output", "deadline_transition", "Exact day-10 deadline trigger.")
+    add("deadline_transition_out", "meeting_clock", "output", "deadline_transition", "Exact day-4 fallback deadline trigger.")
     add("verification_request_out", "technical_validation_lead", "output", "verification_request", "Request the available independent calibration review using the retained technical dossier.")
     add("verification_request_in", "verification_recorder", "input", "verification_request", "Verification recorder input.")
     add("verification_response_out", "verification_recorder", "output", "verification_response", "Exact verification response output.")
@@ -1367,11 +1367,11 @@ class PartnerWithdrawalAction(_StrictModel):
 
 class SchedulerWakeAction(_StrictModel):
     meeting_index: int = Field(ge=0, le=3)
-    modeled_day: int = Field(ge=0, le=9)
+    modeled_day: int = Field(ge=0, le=3)
 
 
 class DeadlineTransitionAction(_StrictModel):
-    modeled_day: Literal[10] = 10
+    modeled_day: Literal[4] = 4
 
 
 class TerminalDecisionRecord(_StrictModel):
@@ -2728,7 +2728,7 @@ def _scripted_meeting_clock(item: ActiveSystemInput) -> ActiveStepResult:
         action = ActionIntent(
             output_port_id="deadline_transition_out",
             payload=DeadlineTransitionAction().model_dump(mode="json"),
-            public_summary="The retained day-10 decision deadline became due.",
+            public_summary="The retained day-4 fallback decision deadline became due.",
         )
         directive = UpdateScheduleDirective(mode="dormant")
     else:
@@ -2755,7 +2755,7 @@ def _scripted_pressure_source(item: ActiveSystemInput) -> ActiveStepResult:
     }
     output_port, representation_id = output_ports[item.active_system_id]
     directive = (
-        UpdateScheduleDirective(mode="schedule", next_update_at=4 * MINUTES_PER_DAY)
+        UpdateScheduleDirective(mode="schedule", next_update_at=2 * MINUTES_PER_DAY)
         if emissions == 0
         else UpdateScheduleDirective(mode="dormant")
     )

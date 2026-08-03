@@ -9,7 +9,7 @@ system: |
   For coordination_decision_v1:
   - use each position_kind exactly once: coordinator, technical_reviewer, policy_reviewer, local_health_reviewer, and partner_representative;
   - use each concern_kind exactly once: technical, policy, and local;
-  - use meeting_days [0, 3, 6, 9] and deadline_day 10 because those are the reviewed cadence of this bounded template;
+  - use daily meeting_days [0, 1, 2, 3] and deadline_day 4 because those are the reviewed cadence of this bounded template;
   - select one or both supplied analysis_ids; they inspect retained evidence after execution and never act in the world;
   - describe the partnership and concern-source boundaries as analytical views, never minds or executors;
   - do not supply entity IDs, goal IDs, information IDs, route IDs, mechanism IDs, ports, placements, implementation names, code, or executable predicates. The compiler owns all such identities and bindings.

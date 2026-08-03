@@ -172,8 +172,8 @@ def reviewed_coordination_proposal() -> ScenarioDraftProposal:
                     "Active partners must support the selected scope.",
                 ],
             },
-            "meeting_days": [0, 3, 6, 9],
-            "deadline_day": 10,
+            "meeting_days": [0, 1, 2, 3],
+            "deadline_day": 4,
             "terminal_outcomes": [
                 "deploy_on_time",
                 "delayed",

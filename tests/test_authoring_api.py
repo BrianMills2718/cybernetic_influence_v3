@@ -119,6 +119,8 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
     assert draft["proposal"]["workflow"]["template_id"] == (
         "coordination_decision_v1"
     )
+    assert draft["proposal"]["workflow"]["meeting_days"] == [0, 1, 2, 3]
+    assert draft["proposal"]["workflow"]["deadline_day"] == 4
 
     preview = api.get(
         f"/api/authoring/drafts/{draft['draft_id']}/preview"
@@ -165,11 +167,22 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
 
     reopened = api.get(f"/api/runs/{retained['run_id']}")
     assert reopened.status_code == 200
+    reopened_body = reopened.json()
     assert (
-        reopened.json()["theory_analysis"]["bundle"]["record_digest"]
+        reopened_body["theory_analysis"]["bundle"]["record_digest"]
         == retained["theory_analysis"]["bundle"]["record_digest"]
     )
-    assert reopened.json()["model_calls"] == 0
+    assert reopened_body["model_calls"] == 0
+    assert sorted(
+        {
+            moment["logical_time"] // (24 * 60)
+            for moment in reopened_body["narration"]["moments"]
+        }
+    ) == [0, 1, 2, 3]
+    assert "_pressure_source" not in " ".join(
+        moment["concise_narrative"]
+        for moment in reopened_body["narration"]["moments"]
+    )
 
     run_path = tmp_path / "runs" / f"{retained['run_id']}.json"
     raw = json.loads(run_path.read_text(encoding="utf-8"))
@@ -430,7 +443,9 @@ def test_semantic_coordination_candidate_is_repaired_against_compiler_feedback(
         nonlocal calls, repair_prompt
         calls += 1
         if calls == 1:
-            invalid = semantic.model_copy(update={"meeting_days": [0, 2, 6, 9]})
+            invalid = semantic.model_copy(
+                update={"meeting_days": [0, 1, 2, 4], "deadline_day": 5}
+            )
             return {"proposal": invalid.model_dump(mode="json")}, _Meta()
         messages = args[1]
         assert isinstance(messages, list)
@@ -459,7 +474,7 @@ def test_semantic_coordination_candidate_is_repaired_against_compiler_feedback(
         "repair",
         "accepted",
     ]
-    assert "currently supports meeting days [0, 3, 6, 9]" in repair_prompt
+    assert "currently supports meeting days [0, 1, 2, 3]" in repair_prompt
     assert "mission_coordinator" not in repair_prompt
 
 
@@ -627,7 +642,8 @@ def test_direct_coordination_edit_rejects_invalid_cadence_and_stale_revision(
         ScenarioDraftProposal.model_validate(draft["proposal"])
     ).model_dump(mode="json")
     invalid = json.loads(json.dumps(configuration))
-    invalid["meeting_days"] = [0, 2, 6, 9]
+    invalid["meeting_days"] = [0, 1, 2, 4]
+    invalid["deadline_day"] = 5
     rejected = api.put(
         f"/api/authoring/drafts/{draft['draft_id']}/coordination-configuration",
         json={
@@ -637,7 +653,7 @@ def test_direct_coordination_edit_rejects_invalid_cadence_and_stale_revision(
         },
     )
     assert rejected.status_code == 422
-    assert "currently supports meeting days [0, 3, 6, 9]" in rejected.text
+    assert "currently supports meeting days [0, 1, 2, 3]" in rejected.text
     assert api.get(
         f"/api/authoring/drafts/{draft['draft_id']}"
     ).json()["revision"] == draft["revision"]
