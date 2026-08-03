@@ -2,8 +2,8 @@
 doc_role: execution_handoff
 authority: packet_24e
 status: private_deployed_verified_stakeholder_review_pending
-updated: 2026-08-02
-implementation_commit: bf20cf0f888eda1237149cbec0bc9846546e3fdb
+updated: 2026-08-03
+implementation_commit: 54394e025f46a26345460c779c408bc60d97ed35
 ---
 
 # Waltzman Stakeholder Demo
@@ -18,29 +18,29 @@ coordination rule to the collective outcome, and links claims to exact retained
 events. The full findings, maps, narrative, participant accounts, Levin view,
 and advanced evidence remain available.
 
+The reviewed trajectory now advances through daily activity on modeled days
+0, 1, 2, and 3, with a day-4 fallback deadline. It no longer leaves the team
+apparently inactive for several days between concerns and review meetings.
+
 The surface states its boundary visibly: this is an inspectable synthetic
 implementation, not a validated detector, proof of real-world causation, or a
 prediction of institutional behavior.
 
 ## Review surfaces
 
-- Local retained demo:
-  <http://127.0.0.1:8620/?run=run_7624eb5f9278>
 - Shareable 28-second screen walkthrough:
   [waltzman-demo-walkthrough.webm](../assets/waltzman-demo-walkthrough.webm)
 - Shareable result card:
   [waltzman-demo-walkthrough.png](../assets/waltzman-demo-walkthrough.png)
 - Canonical private surface:
-  <https://brian-mac-mini.tail9c321e.ts.net:8620/?run=run_eded0f70b15f>
+  <https://brian-mac-mini.tail9c321e.ts.net:8620/?run=run_f2d6bfc31ea0>
 
-The local service reports build
-`bf20cf0f888eda1237149cbec0bc9846546e3fdb`; its demo run is completed,
-provider-free, ended `scope_reduced`, retained both theory modules, and used
-zero model calls. On 2026-08-02, the private Mac was deployed and reports the
-same build commit through `/api/config`. It serves the corrected retained run
-over the private HTTPS URL. The deployed service is deliberately pinned to an
-isolated worktree at this demo commit; canonical `main` may advance separately
-after this bounded delivery.
+On 2026-08-03, the private Mac reported build
+`54394e025f46a26345460c779c408bc60d97ed35` through `/api/config`. Its corrected
+retained run is completed, provider-free, ended `scope_reduced`, retained both
+theory modules, used zero model calls, and contains story activity on days 0,
+1, 2, and 3. The deployed service remains pinned to the isolated Waltzman demo
+worktree at this commit.
 
 ## Three-minute walkthrough
 
@@ -65,23 +65,25 @@ mechanism should be demonstrated next.
 
 ## Verification
 
-- `37 passed` in `tests/test_api.py`.
+- `73 passed` across the cadence contract, authored-run reopen behavior,
+  authoring repair path, and dual-theory evidence suites after the schedule
+  change.
 - `node --check web/app.js` and `git diff --check` passed.
 - The desktop browser verifier passed the authored-run deep link, walkthrough
   content and ordering, exact-event step-down, all three graph projections,
   concise and detailed narrative, participant and group views, both composites,
   service-desk preview, pause/resume, console, and failed requests.
-- A fresh local canonical-service browser open showed the walkthrough with no
-  console error.
 - `scripts/capture_waltzman_demo.py` reproduced the silent 28-second WebM and
   result-card PNG from the real deep-linked run with no console or failed-request
   error. Representative frames were visually inspected at the initial
   situation, Waltzman readout, exact-event step-down, and final limitations.
-- A fresh private-Mac browser deep link rendered the three Waltzman constructs
-  and the visible nonclaim, expanded the cited evidence, and selected exact
-  `event_000050` in Advanced evidence. It reported no console or failed-request
-  error. The private API reopened `run_eded0f70b15f` as completed,
-  `scope_reduced`, zero model calls, with both theory modules available.
+- A fresh private-Mac browser deep link enforced story days `[0, 1, 2, 3]`,
+  rendered readable source labels, the three Waltzman constructs, and the
+  visible nonclaim, and stepped into exact supporting evidence. All projections,
+  group and participant views, and reference pause/resume passed without a
+  console or failed-request error. The private API reopened
+  `run_f2d6bfc31ea0` as completed `scope_reduced`, zero model calls, with both
+  theory modules available.
 
 ## Stakeholder review boundary
 

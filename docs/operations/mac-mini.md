@@ -33,17 +33,19 @@ or request error occurred. Historical live draft `draft_019c16228a62` and run
 `run_e1a91d0a47e1` remain immutable Packet 24C evidence; they do not authorize
 another live call.
 
-Current demo deployment 2026-08-02: the running service uses isolated worktree
+Current demo deployment 2026-08-03: the running service uses isolated worktree
 `/Users/b/code/cybernetic_influence_v3-waltzman-demo` at simulator commit
-`bf20cf0f888eda1237149cbec0bc9846546e3fdb`, rather than the general canonical
+`54394e025f46a26345460c779c408bc60d97ed35`, rather than the general canonical
 checkout. The LaunchAgent at
 `/Users/b/Library/LaunchAgents/com.cybernetic-influence.v3.plist` records that
 build commit and installed shared-client revision
 `28dfa9928750baefe131e25ecc97c04ede81c174`. The private HTTPS API reopened
-`run_eded0f70b15f` as completed `scope_reduced`, zero model calls, with both
-theory modules. A fresh private browser deep link rendered the Waltzman
-walkthrough and evidence step-down without console or failed-request errors.
-No provider call was made during this deployment or verification.
+`run_f2d6bfc31ea0` as completed `scope_reduced`, zero model calls, with both
+theory modules and story activity on modeled days 0 through 3. A fresh private
+browser deep link rendered readable daily chronology, the Waltzman walkthrough,
+and evidence step-down; all projections and reference pause/resume passed
+without console or failed-request errors. No provider call was made during this
+deployment or verification.
 
 ## Inspect
 
