@@ -3297,7 +3297,7 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
                 "The partnership and pressure-source ensemble are analytical views, not additional actors.",
             ],
             "known_omissions": [
-                "The reference people use fixed zero-cost behavior rather than live LLM reasoning in this slice.",
+                "The live LLM people are synthetic roles, not validated models of particular people or institutions.",
                 "The scenario represents one bounded decision and does not model broader institutions or geopolitics.",
             ],
             "fidelity_questions": [

@@ -144,6 +144,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     coordination = config.json()["scenarios"]["coordination_decision"]
     assert coordination["execution_modes"] == ["live"]
     assert coordination["scripted_execution"] == "internal_verification_only"
+    assert coordination["known_omissions"][0] == (
+        "The live LLM people are synthetic roles, not validated models of particular people or institutions."
+    )
     assert coordination["supports_live"] is True
     assert coordination["live_model_ids"] == [
         "codex/gpt-5.6-terra",
