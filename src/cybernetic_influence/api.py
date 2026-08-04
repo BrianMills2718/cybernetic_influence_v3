@@ -117,6 +117,12 @@ from cybernetic_influence.experiments.coordination_experiment import (
     EXPERIMENT_REPLICATES,
     EXPERIMENT_RUN_COUNT,
     CoordinationExperimentReadoutV1,
+    CoordinationExperimentRuntimeFixture,
+    LIVE_COORDINATION_PROBE_CONDITIONS,
+    LiveCoordinationProbeCondition,
+    coordination_experiment_fixture,
+    coordination_live_probe_bindings,
+    coordination_live_probe_fixture,
     run_scripted_coordination_experiment,
 )
 from cybernetic_influence.scenarios.service_desk import (
@@ -289,9 +295,11 @@ def _coordination_contract(condition: str) -> CoordinationDecisionFixture:
         "stabilization": stabilization_coordination_fixture,
     }
     builder = builders.get(condition)
-    if builder is None:
-        raise ValueError("unknown coordination-decision condition")
-    return builder()
+    if builder is not None:
+        return builder()
+    if condition in EXPERIMENT_CONDITIONS:
+        return coordination_experiment_fixture(condition).runtime.contract
+    raise ValueError("unknown coordination-decision condition")
 
 
 def _coordination_outcome(
@@ -1162,6 +1170,30 @@ def create_app(
                             "description": (
                                 "The same new concerns arrive, and the team can request "
                                 "independent checks and track which issues remain unresolved."
+                            ),
+                        },
+                        {
+                            "id": "fixed_heterogeneous_pressure",
+                            "label": "Experiment · fixed pressure",
+                            "description": (
+                                "Live participants receive the retained scheduled pressure "
+                                "messages; the sources do not read meeting feedback."
+                            ),
+                        },
+                        {
+                            "id": "adaptive_heterogeneous_pressure",
+                            "label": "Experiment · adaptive pressure",
+                            "description": (
+                                "Live participants face sources whose second retained message "
+                                "changes after observing public meeting feedback."
+                            ),
+                        },
+                        {
+                            "id": "adaptive_pressure_with_stabilization",
+                            "label": "Experiment · adaptive pressure + validation",
+                            "description": (
+                                "The adaptive sources remain active while an authoritative "
+                                "validation record can answer verification requests."
                             ),
                         },
                     ],
@@ -2563,6 +2595,7 @@ def create_app(
         purchase_arm = None
         coordination_contract = None
         coordination_fixture: CoordinationRuntimeFixture | None = None
+        coordination_experiment_condition: LiveCoordinationProbeCondition | None = None
         resolved_run_control: ResolvedRunControlPlan | None = None
         selected_profile: str = request_body.cognition_profile
         if request_body.scenario == "service_desk":
@@ -2621,6 +2654,8 @@ def create_app(
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error)) from error
             coordination_fixture = coordination_runtime_fixture(coordination_contract)
+            if request_body.arm_id in LIVE_COORDINATION_PROBE_CONDITIONS:
+                coordination_experiment_condition = request_body.arm_id
             resolved_run_control = coordination_run_control_plan(
                 coordination_fixture
             )
@@ -2983,14 +3018,35 @@ def create_app(
                     summary=summary,
                 )
             elif coordination_fixture is not None:
-                if effective_llm is not None:
+                live_experiment_fixture: CoordinationExperimentRuntimeFixture | None = None
+                if (
+                    effective_llm is not None
+                    and coordination_experiment_condition is not None
+                ):
+                    live_experiment_fixture = coordination_live_probe_fixture(
+                        coordination_experiment_condition,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
+                    )
+                    coordination_fixture = live_experiment_fixture.runtime
+                elif effective_llm is not None:
                     coordination_fixture = coordination_runtime_fixture(
                         coordination_fixture.contract,
                         model=effective_llm.model,
                         reasoning_effort=effective_llm.agent_reasoning_effort,
                     )
                 coordination_bindings = (
-                    coordination_native_bindings(
+                    coordination_live_probe_bindings(
+                        live_experiment_fixture,
+                        trace_id_prefix=run_id,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
+                    )
+                    if (
+                        effective_llm is not None
+                        and live_experiment_fixture is not None
+                    )
+                    else coordination_native_bindings(
                         coordination_fixture,
                         trace_id_prefix=run_id,
                         model=effective_llm.model,
@@ -3047,7 +3103,10 @@ def create_app(
                     result=result,
                     scenario="coordination_decision",
                     profile=selected_profile,
-                    arm_id=coordination_fixture.contract.condition.condition,
+                    arm_id=(
+                        coordination_experiment_condition
+                        or coordination_fixture.contract.condition.condition
+                    ),
                     execution=request_body.execution,
                     created_at=created_at,
                     outcome=coordination_outcome,

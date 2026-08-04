@@ -90,10 +90,20 @@ type CoordinationExperimentCondition = Literal[
     "adaptive_heterogeneous_pressure",
     "adaptive_pressure_with_stabilization",
 ]
+type LiveCoordinationProbeCondition = Literal[
+    "fixed_heterogeneous_pressure",
+    "adaptive_heterogeneous_pressure",
+    "adaptive_pressure_with_stabilization",
+]
 type Direction = Literal["increase", "decrease", "no_change", "unclear"]
 
 EXPERIMENT_CONDITIONS: tuple[CoordinationExperimentCondition, ...] = (
     "baseline",
+    "fixed_heterogeneous_pressure",
+    "adaptive_heterogeneous_pressure",
+    "adaptive_pressure_with_stabilization",
+)
+LIVE_COORDINATION_PROBE_CONDITIONS: tuple[LiveCoordinationProbeCondition, ...] = (
     "fixed_heterogeneous_pressure",
     "adaptive_heterogeneous_pressure",
     "adaptive_pressure_with_stabilization",
@@ -339,11 +349,7 @@ class CoordinationExperimentExecution:
 
 
 def coordination_live_probe_fixture(
-    condition: Literal[
-        "fixed_heterogeneous_pressure",
-        "adaptive_heterogeneous_pressure",
-        "adaptive_pressure_with_stabilization",
-    ],
+    condition: LiveCoordinationProbeCondition,
     *,
     model: str,
     reasoning_effort: str | None,

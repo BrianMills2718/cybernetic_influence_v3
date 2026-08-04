@@ -3099,7 +3099,6 @@ function inspectTheoryEvent(eventId) {
   const inspector = document.querySelector('details.moment-inspector')
   if (advanced) advanced.open = true
   if (inspector) inspector.open = true
-  $('#event-detail').scrollIntoView({behavior:'smooth', block:'center'})
 }
 
 function renderTheoryModule(moduleId, selector, headlineIds) {
