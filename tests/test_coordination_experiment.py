@@ -19,6 +19,8 @@ from cybernetic_influence.experiments.coordination_experiment import (
     CoordinationExperimentExecution,
     coordination_experiment_fixture,
     coordination_experiment_spec,
+    coordination_live_probe_bindings,
+    coordination_live_probe_fixture,
     run_scripted_coordination_experiment,
 )
 from cybernetic_influence.run_store import RunStore
@@ -67,6 +69,49 @@ def test_only_adaptive_conditions_expose_feedback_to_source_processes() -> None:
         assert "adaptive_followup" in " ".join(
             adaptive_specs[source_id].initial_representation_ids
         )
+
+
+def test_live_probe_changes_people_not_experiment_mechanisms() -> None:
+    model = "codex/gpt-5.6-luna"
+    fixture = coordination_live_probe_fixture(
+        "adaptive_pressure_with_stabilization",
+        model=model,
+        reasoning_effort="medium",
+    )
+    bindings = coordination_live_probe_bindings(
+        fixture,
+        trace_id_prefix="coordination-live-probe/test",
+        model=model,
+        reasoning_effort="medium",
+    )
+    specs = {item.active_system_id: item for item in fixture.runtime.active_specs}
+
+    people = (
+        "mission_coordinator",
+        "technical_validation_lead",
+        "sovereignty_policy_representative",
+        "local_public_health_liaison",
+        "partner_representative",
+    )
+    assert all(
+        bindings[person_id].implementation.provider_bound for person_id in people
+    )
+    assert all(
+        specs[person_id].implementation_id.startswith("native_coordination_")
+        for person_id in people
+    )
+    assert all(
+        getattr(bindings[person_id].implementation, "inner").model == model
+        for person_id in people
+    )
+    for source_id in (
+        "technical_pressure_source",
+        "policy_pressure_source",
+        "local_pressure_source",
+    ):
+        assert bindings[source_id].implementation.provider_bound is False
+        assert bindings[source_id].implementation_id.startswith("scripted_adaptive_")
+        assert specs[source_id].observation_port_ids == [f"{source_id}_feedback_in"]
 
 
 def test_eight_runs_are_zero_provider_retained_and_evidence_reversible(
