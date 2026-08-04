@@ -1,8 +1,9 @@
-"""Provider-free four-condition coordination experiment.
+"""Four-condition coordination experiment and bounded live-agent probe.
 
 The experiment separates pressure presence, feedback-driven adaptation, and one
-concrete authoritative-validation intervention.  It retains ordinary analyst
-run documents and never promotes a synthetic comparison to a real-world
+concrete authoritative-validation intervention.  Its reference runner remains
+provider-free; the live-probe seam replaces only concrete people with native
+LLM cognition.  Neither path promotes a synthetic comparison to a real-world
 invariant or causal claim.
 """
 
@@ -76,6 +77,7 @@ from cybernetic_influence.scenarios.coordination_decision import (
     VerificationRequestAction,
     VerificationResponseRecord,
     baseline_coordination_fixture,
+    coordination_native_bindings,
     coordination_runtime_fixture,
     coordination_scripted_bindings,
     heterogeneous_pressure_coordination_fixture,
@@ -334,6 +336,70 @@ class CoordinationExperimentExecution:
     experiment_id: str
     readout: CoordinationExperimentReadoutV1
     retained_run_ids: tuple[str, ...]
+
+
+def coordination_live_probe_fixture(
+    condition: Literal[
+        "fixed_heterogeneous_pressure",
+        "adaptive_heterogeneous_pressure",
+        "adaptive_pressure_with_stabilization",
+    ],
+    *,
+    model: str,
+    reasoning_effort: str | None,
+) -> CoordinationExperimentRuntimeFixture:
+    """Bind real cognition into one existing experiment condition.
+
+    The experiment-owned pressure and validation mechanisms stay unchanged;
+    only the five concrete people move from scripted policies to the selected
+    model.  This preserves the isolated condition contrast while exposing it
+    to authentic participant behavior.
+    """
+
+    reference = coordination_experiment_fixture(condition)
+    live = coordination_runtime_fixture(
+        reference.runtime.contract,
+        model=model,
+        reasoning_effort=reasoning_effort,
+    )
+    live_people: dict[str, ActiveSystemSpec] = {
+        spec.active_system_id: spec
+        for spec in live.active_specs
+        if spec.active_system_id in PERSON_IDS
+    }
+    active_specs = tuple(
+        live_people.get(spec.active_system_id, spec)
+        for spec in reference.runtime.active_specs
+    )
+    return CoordinationExperimentRuntimeFixture(
+        condition=condition,
+        runtime=CoordinationRuntimeFixture(
+            contract=reference.runtime.contract,
+            exact_bindings=reference.runtime.exact_bindings,
+            active_specs=active_specs,
+        ),
+    )
+
+
+def coordination_live_probe_bindings(
+    fixture: CoordinationExperimentRuntimeFixture,
+    *,
+    trace_id_prefix: str,
+    model: str,
+    reasoning_effort: str | None,
+) -> dict[str, ActiveSystemBinding]:
+    """Use model-driven people with the experiment's exact source policies."""
+
+    bindings = coordination_experiment_bindings(fixture)
+    native = coordination_native_bindings(
+        fixture.runtime,
+        trace_id_prefix=trace_id_prefix,
+        model=model,
+        reasoning_effort=reasoning_effort,
+    )
+    for person_id in PERSON_IDS:
+        bindings[person_id] = native[person_id]
+    return bindings
 
 
 def coordination_experiment_spec() -> CoordinationExperimentSpecV1:
@@ -620,8 +686,8 @@ def _instrument_contract(
                 "document_kind": "source_message",
                 "topic": "adaptive_follow_up",
                 "claim": (
-                    f"After observing continued support from {_SOURCE_TARGETS[source_id]}, "
-                    "the source introduced a narrower unresolved concern."
+                    f"After observing {_SOURCE_TARGETS[source_id]}'s updated "
+                    "commitment, the source introduced a narrower unresolved concern."
                 ),
             }
         )
@@ -721,6 +787,12 @@ def _adaptive_source_controller(
         emissions = state.get("emissions")
         if isinstance(emissions, bool) or not isinstance(emissions, int):
             raise ValueError("adaptive source emission state is invalid")
+        latest_feedback_meeting = state.get("latest_feedback_meeting")
+        if (
+            isinstance(latest_feedback_meeting, bool)
+            or not isinstance(latest_feedback_meeting, int)
+        ):
+            raise ValueError("adaptive source feedback state is invalid")
         for observation in item.observations:
             try:
                 document = json.loads(observation.apparent_content)
@@ -761,7 +833,7 @@ def _adaptive_source_controller(
 
         representation_id = _BASE_REPRESENTATIONS[source_id]
         adapted = False
-        if emissions == 1 and state.get("latest_target_commitment") == "support_full":
+        if emissions == 1 and latest_feedback_meeting >= 1:
             representation_id = _FOLLOWUP_REPRESENTATIONS[source_id]
             adapted = True
         state["emissions"] = emissions + 1

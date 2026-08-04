@@ -188,6 +188,29 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   representation. The grouped readout compares pressure presence, adaptation,
   and stabilization while reopening either exact run. This post-MVP evidence
   does not close M7 or establish a real-world invariant or causal effect.
+- The 2026-08-04 authentic Slice 27 probe ran the fixed-pressure and
+  adaptive-pressure-with-validation conditions once each with five native
+  `codex/gpt-5.6-luna` participants. Both complete traces retained 45 successful
+  participant calls with no provider errors and subscription-included observed
+  cost of $0. The validation condition produced an exact authoritative response
+  and moved all five participants from full to reduced-scope support, but both
+  runs ultimately reached no decision at the modeled horizon. This is not a
+  valid adaptation comparison: after feedback had already moved targets away
+  from `support_full`, the narrow scripted source rule repeated its initial
+  messages and emitted no adaptive follow-up. The run therefore identifies a
+  real mechanism-boundary defect rather than supporting an adaptation effect.
+  Independent execution-based sign-off accepted that bounded decision and also
+  rejected the two-run result as an adaptation estimate because the compared
+  rows changed adaptation and validation together and had no repetitions or
+  held-out scenario variation.
+- The direct source-policy blocker was then repaired so the second message
+  responds to any observed updated commitment rather than only continued full
+  support. An isolated live adaptive-without-validation run,
+  `run_ecb38b0e3cea`, retained 42 successful participant calls, 35 adaptive
+  follow-up event references, and no validation event. Against the one fixed
+  run it showed 7 versus 6 verification requests, 3 versus 2 distinct risks,
+  and 3 versus 2 final open risks; both ended with no decision. These are
+  exact-run candidate directions, not an effect estimate or invariant.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any
