@@ -2,7 +2,7 @@
 doc_role: context_handoff
 status: ready
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-03
 machine_contract: 026-concordia-foundation-research.json
 ---
 
@@ -19,7 +19,12 @@ machine_contract: 026-concordia-foundation-research.json
 > production integration before the architecture decision. Use a disposable
 > adapter probe only if the plan's explicit trigger is met. At 26D, present the
 > recommendation and strongest rejected alternative for my judgment before
-> beginning product implementation.
+> beginning product implementation. Hold the accepted product identity fixed:
+> a general executable laboratory that models decision environments, runs
+> matched conditions, compares directional changes, diagnoses candidate
+> mechanisms, and tests stabilizing interventions. Waltzman is the first theory
+> module; wargaming is an exemplar; an operational detector is not yet a
+> supportable claim.
 
 ## Read in this order
 
@@ -48,6 +53,10 @@ machine_contract: 026-concordia-foundation-research.json
   resolution/compilation, facts, transitions, and conformance. It does not by
   itself discover or execute domain implementations.
 - No live LLM spending is needed or authorized for Slice 26.
+- The foundation must support a later matched baseline, heterogeneous adaptive
+  pressure, and stabilization experiment with repetitions, subgroup/time
+  comparisons, and evidence step-down. Slice 26 evaluates that support but does
+  not implement the experiment.
 
 ## Required terminal result
 

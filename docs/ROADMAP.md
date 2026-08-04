@@ -11,18 +11,27 @@ supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f
 
 ## Outcome
 
-For an analyst studying influence and multiscale agency, turn a bounded
-organizational decision problem into a reviewable simulation configuration,
-run one meaningful trajectory, and inspect:
+For an analyst studying influence and multiscale agency, provide an executable
+laboratory for bounded socio-technical decision environments. The mature
+workflow is:
 
-- what happened;
-- how the decision environment changed under Waltzman's framework;
-- what collective goal-directed competence was observed under a Levin-informed
-  framework; and
-- which retained evidence supports or limits every finding.
+```text
+model a decision environment
+  -> run controlled conditions
+  -> compare directional changes
+  -> diagnose candidate mechanisms
+  -> test stabilization interventions
+```
 
-Delivery maturity is a private functional PoC. Capability ambition is an
-advanced but bounded multiscale social simulator, not a production platform.
+Waltzman- and Levin-informed analyses are replaceable theory modules over the
+general simulation and evidence system. Waltzman supplies the first canonical
+experimental question; wargaming, economic modeling, and organizational
+analysis are exemplar applications rather than separate product definitions.
+
+Delivery maturity remains a private functional PoC. The current product can
+author, execute, retain, and inspect one meaningful trajectory. Capability
+ambition is a general decision-environment laboratory, not a production
+platform or operational influence detector.
 
 The MVP acceptance contract remains
 [Configurable Waltzman–Levin Research MVP Goal](GOAL.md). On 2026-07-31 the
@@ -31,6 +40,14 @@ Packet 24E is therefore the only active delivery frontier. Slice 26 foundation
 research and further Slice 25 expansion are paused until the operator reviews
 that demo. Their retained evidence remains valid, and later work may not weaken
 the MVP's evidence and nonclaim boundaries.
+
+The accepted post-MVP direction is a matched experiment over one reviewed
+decision problem: ordinary decision-making, heterogeneous adaptive pressure,
+and the same pressure plus a stabilization intervention. The analyst must be
+able to compare trust, risk, and coordination trajectories across time and
+subgroups and step every candidate pattern down to retained evidence. The
+architecture decision is downstream of this product identity and must support
+that workflow without making unvalidated real-world detection claims.
 
 ## Canonical Outcome Probe
 
@@ -121,7 +138,20 @@ The modules share evidence but do not share conclusions or mutate execution.
 ### Experiment specification
 
 Owns post-MVP conditions, perturbations, repetitions, matching rules, and
-cross-run comparisons. It is explicitly outside the current MVP.
+cross-run comparisons. It is explicitly outside the current MVP but is the
+first missing product boundary after the architecture decision. Its first
+representative vertical is:
+
+- a matched ordinary-decision baseline;
+- heterogeneous influence sources that can adapt to local reactions while
+  retaining a shared objective;
+- the same pressure with one reviewed stabilization intervention;
+- repeated trajectories sufficient to expose variability; and
+- time-, subgroup-, and evidence-resolved comparison of trust structure,
+  perceived risk, and coordination readiness.
+
+The output is a candidate directional pattern under declared simulated
+conditions, not evidence of hostile attribution or an operational detector.
 
 ## Current Truth
 
@@ -197,7 +227,7 @@ cross-run comparisons. It is explicitly outside the current MVP.
 | `MVP-C4` | Waltzman per-run module over the evidence bundle | hard | satisfied | Existing exact/coded measures consume the common bundle and render with method/provenance |
 | `MVP-C5` | Levin per-run module over the evidence bundle | hard | satisfied | Candidate goal/boundary, glue, activity, correction, persistence, adaptation, and limits render without an aggregate executor or scalar |
 | `MVP-C6` | One integrated private review flow | evidence | technical execution passed; stakeholder judgment pending | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
-| `POST-C1` | `ExperimentSpec` and repeated comparison | optional | deferred | Explicit post-MVP selection |
+| `POST-C1` | `ExperimentSpec` and matched decision-environment experiment | hard after foundation decision | selected direction; not authorized for implementation | Baseline, heterogeneous adaptive pressure, and stabilization conditions can be repeated and compared across time and subgroups with evidence step-down |
 | `POST-C2` | Perturbation, robustness, and persuadability assays | optional | Packets 22A0–22A2 technically satisfied; stakeholder readout pending | Five matched provider-free rows distinguish concrete pathways and step down through one comparison UI to exact retained evidence |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
@@ -216,7 +246,9 @@ the judgment passed on the operator's behalf.
    close M7.
 3. **Resume the architecture decision after the demo review.** Use the retained
    Slice 26 research to decide ownership of cognition, world state, scheduling,
-   adjudication, evidence, authoring, and analysis before product migration.
+   adjudication, evidence, authoring, analysis, and experiments before product
+   migration. The selected foundation must support the accepted laboratory
+   workflow; the foundation does not redefine that workflow.
 
 Detailed MVP implementation authority:
 [Slice 24](plans/024-configurable-theory-analysis-mvp.md).
@@ -286,7 +318,8 @@ remain evidence. They do not own current direction.
 - **Decision:** pause further simulator construction and research the product
   foundation before expanding composition.
 - **Continue:** execute Slice 26A–26D, then obtain the product owner's adoption
-  of the architecture decision. The independent M7 readout remains open.
+  of the architecture decision against the accepted decision-environment
+  laboratory workflow. The independent M7 readout remains open.
 - **Reset:** after two substantive increments or four hours without a new
   user-visible part of the canonical flow, or if configuration requires
   arbitrary generated mechanism code/a second runtime.
@@ -298,12 +331,14 @@ remain evidence. They do not own current direction.
 
 ## Post-MVP Options
 
-After the canonical flow is observed, select rather than automatically execute:
+After the architecture decision, bound the selected matched
+baseline/pressure/stabilization experiment before implementation. Later options
+remain conditional rather than automatic:
 
-- repeated baseline/pressure/stabilization comparisons;
 - Waltzman's candidate directional invariants and evasion dimensions;
 - Levin-style perturbation, member replacement, recovery, robustness, and
   persuadability assays;
 - generalized component composition and additional scenario families;
-- empirical calibration, attribution, and predictive evaluation; and
+- empirical calibration, attribution, operational detection, and predictive
+  evaluation only when representative real-world evidence exists; and
 - production or public deployment.

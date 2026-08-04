@@ -3,7 +3,7 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-07-31
+updated: 2026-08-03
 supersedes: comparison-centered research MVP goal at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -23,6 +23,34 @@ Deliver a reviewable private PoC in which an analyst can:
 The MVP proves a configurable simulation-and-analysis workflow. It does not
 require a perturbation assay, repeated comparison, counterfactual attribution,
 or predictive validation.
+
+## Accepted product direction beyond the MVP
+
+The product is a general **executable laboratory for decision environments**.
+An analyst should be able to model a bounded socio-technical environment, run
+controlled conditions, compare directional changes, diagnose candidate
+mechanisms, and test stabilizing interventions. Waltzman's framework is one
+theory module over that general simulation system; it does not define the whole
+product, and wargaming is only an exemplar use case.
+
+The first representative post-MVP experiment is the same organizational
+decision problem under matched conditions:
+
+1. ordinary decision-making without the selected pressure;
+2. heterogeneous, adaptive, persistent pressure; and
+3. the same pressure plus a reviewed stabilization intervention.
+
+The analyst compares trust structure, perceived risk, and coordination
+readiness over time and across subgroups, with every candidate pattern stepping
+down to retained interactions and evidence. Repetitions expose variability;
+they do not by themselves establish a real-world causal effect.
+
+This direction does **not** make the product an operational influence detector.
+That would require real organizational data, empirically validated measures,
+calibration, and prospective evaluation that Waltzman's conceptual paper does
+not supply. Until then, the bounded claim is theory development and controlled
+scenario experimentation. The foundation decision must be evaluated against
+this laboratory workflow rather than determining the product identity first.
 
 ## Canonical Example
 
@@ -206,11 +234,18 @@ arbitrary generated mechanism code or a second simulation runtime.
 
 The following are preserved but not required for MVP completion:
 
-- repeated baseline/pressure/stabilization comparisons;
-- directional-invariant claims across runs;
+- an explicit `ExperimentSpec` for matched baseline, heterogeneous adaptive
+  pressure, and stabilization conditions;
+- repeated comparisons of directional changes, subgroup differences, and
+  uncertainty with evidence step-down;
+- adaptive influence actors that remain distinct from the target participants
+  and can respond locally while pursuing a shared objective;
+- candidate directional-pattern findings across runs, without prematurely
+  labeling them validated invariants;
 - perturbation and member-replacement assays;
 - recovery, robustness, and axis-of-persuadability experiments;
 - Waltzman's evasion dimensions;
-- causal attribution and predictive or empirical calibration; and
+- later empirical calibration, causal attribution, and operational detection
+  only after representative real-world evidence exists; and
 - generalized reusable component composition beyond the canonical scenario
   family.
