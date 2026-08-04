@@ -252,8 +252,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Compare pressure, adaptation, and validation" in page.text
     assert 'id="run-coordination-experiment"' in page.text
     assert 'id="live-probe-title"' in page.text
+    assert 'id="live-coordination-comparisons"' in page.text
     assert "Run the same conditions with LLM-modeled participants" in page.text
-    assert "live-coordination-probe-v1" in page.text
+    assert "live-coordination-comparison-v1" in page.text
     assert "Read me" in page.text
     assert "Author scenario" in page.text
     assert "Describe what you want" in page.text
@@ -338,6 +339,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function renderCompositeAssaySelection" in app_script.content
     assert b"/api/coordination-experiments" in app_script.content
     assert b"function renderCoordinationExperiment" in app_script.content
+    assert b"function renderLiveCoordinationComparison" in app_script.content
+    assert b"Authentic LLM comparison" in app_script.content
     assert b"What reached the group" in app_script.content
     assert b"What the group sent out" in app_script.content
     assert b"function renderAuthoring" in app_script.content
@@ -391,6 +394,56 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"liveCue" in graph_script.content
     assert b"animateMotion" in graph_script.content
     assert b"prefers-reduced-motion" in graph_styles.content
+
+
+def test_history_projects_exact_live_coordination_probe_evidence(
+    tmp_path: Path,
+) -> None:
+    store = RunStore(tmp_path)
+    for index, condition in enumerate(
+        ["fixed_heterogeneous_pressure", "adaptive_heterogeneous_pressure"]
+    ):
+        store.save(
+            {
+                "run_id": f"run_{index + 1:012x}",
+                "created_at": f"2026-08-04T17:0{index}:00+00:00",
+                "status": "completed",
+                "scenario": "coordination_decision",
+                "arm": condition,
+                "execution": "live",
+                "model_calls": 42 + index,
+                "trace_id_prefix": f"coordination-live-probe/{condition}",
+                "total_observed_cost": 0.0,
+                "llm_configuration": {
+                    "model": "codex/gpt-5.6-luna",
+                    "reasoning_effort": "medium",
+                },
+                "exact_coordination_values": {
+                    "final_deployment_status": "no_decision_by_horizon",
+                    "verification_requests": {"total": 6 + index},
+                    "risk_register_expansion": {"distinct_risks": 2 + index},
+                    "unresolved_risk_load": {"final_open_count": 2 + index},
+                    "modeled_time_to_terminal": {"scenario_minutes": 5768},
+                },
+            }
+        )
+
+    response = client(tmp_path).get("/api/runs")
+
+    assert response.status_code == 200
+    probes = [item["live_coordination_probe"] for item in response.json()["runs"]]
+    assert [probe["condition"] for probe in probes] == [
+        "adaptive_heterogeneous_pressure",
+        "fixed_heterogeneous_pressure",
+    ]
+    assert probes[0]["model"] == "codex/gpt-5.6-luna"
+    assert probes[0]["model_calls"] == 43
+    assert probes[0]["metrics"] == {
+        "verification_requests": 7,
+        "risk_register_expansion": 3,
+        "unresolved_risk_load": 3,
+        "modeled_time_to_terminal": 5768,
+    }
 
 
 def test_waltzman_surface_is_an_outcome_correct_single_run_instrument(
