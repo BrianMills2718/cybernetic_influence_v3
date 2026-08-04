@@ -347,7 +347,7 @@ def test_exact_calculators_read_typed_pressure_trace_and_state() -> None:
     assert _object_value(values, "issue_reopening")["count"] == 1
     assert _object_value(values, "disengagement")["count"] == 1
     assert _object_value(values, "deliberation_load")["meeting_cycles"] == 4
-    assert _object_value(values, "modeled_time_to_terminal")["scenario_minutes"] == 14408
+    assert _object_value(values, "modeled_time_to_terminal")["scenario_minutes"] == 5768
 
 
 def test_exact_calculators_preserve_distinct_scripted_outcomes() -> None:

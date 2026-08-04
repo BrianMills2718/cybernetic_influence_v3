@@ -34,6 +34,7 @@ let selectedBoundaryActivities = null
 let selectedBoundaryScope = 'full'
 let boundaryActivityRequestSerial = 0
 const compositeAssayCache = new Map()
+const coordinationExperimentCache = new Map()
 
 const buttonTooltips = {
   'simulation-tab': 'Choose and run a configured simulation.',
@@ -64,6 +65,7 @@ const buttonTooltips = {
   'narrative-concise': 'Read the one-sentence account for each causal step.',
   'narrative-detailed': 'Read how each participant action changed the world, with exact evidence available on demand.',
   'run-composite-assay': 'Run the reviewed five-condition scripted comparison. It makes no model calls and retains five independently inspectable runs.',
+  'run-coordination-experiment': 'Run the reviewed four-condition scripted experiment. It makes no model calls and retains two exact runs per condition.',
 }
 
 function explainButton(button) {
@@ -78,6 +80,8 @@ function explainButton(button) {
   if (!explanation && button.classList.contains('open-assay-run')) explanation = 'Open the full retained run, including its maps, story, people, measures, and exact evidence.'
   if (!explanation && button.classList.contains('trash-run')) explanation = 'Move this retained run to recoverable server trash.'
   if (!explanation && button.classList.contains('trash-assay')) explanation = 'Move all five retained rows in this comparison to recoverable server trash.'
+  if (!explanation && button.classList.contains('trash-coordination-experiment')) explanation = 'Move all eight retained runs in this experiment to recoverable server trash.'
+  if (!explanation && button.classList.contains('open-coordination-run')) explanation = 'Open this exact retained replicate for evidence inspection.'
   if (!explanation && button.classList.contains('measurement-evidence-button')) explanation = 'Select the cited exact event on the simulation map and in Advanced evidence.'
   if (!explanation && button.classList.contains('turn-narrative')) explanation = 'Select this causal step and inspect its grounded evidence.'
   if (!explanation && button.classList.contains('timeline-marker')) explanation = 'Select this causal step.'
@@ -1427,6 +1431,66 @@ function renderCompositeAssay(assay) {
   </section>`
 }
 
+const coordinationConditionPresentation = {
+  baseline: {
+    label:'Baseline',
+    change:'No heterogeneous pressure source is enabled.',
+  },
+  fixed_heterogeneous_pressure: {
+    label:'Fixed pressure',
+    change:'Three retained sources emit the same scheduled messages without reading feedback.',
+  },
+  adaptive_heterogeneous_pressure: {
+    label:'Adaptive pressure',
+    change:'The sources observe public meeting snapshots and may change their second message.',
+  },
+  adaptive_pressure_with_stabilization: {
+    label:'Adaptive pressure + validation',
+    change:'The adaptive sources remain active while one retained authoritative validation record can answer verification.',
+  },
+}
+
+function coordinationMetricLabel(metricId) {
+  return {
+    verification_requests:'Verification requests',
+    risk_register_expansion:'Distinct risks',
+    unresolved_risk_load:'Open risks at end',
+    modeled_time_to_terminal:'Modeled minutes to outcome',
+    issue_reopening:'Issue reopenings',
+    informal_alignment:'Informal alignment messages',
+    disengagement:'Disengagement events',
+  }[metricId] || String(metricId).replaceAll('_',' ')
+}
+
+function renderCoordinationExperiment(experiment) {
+  if (experiment.error) return `<section class="composite-assay assay-unavailable"><span class="eyebrow">Retained coordination experiment unavailable</span><h3>${html(experiment.error)}</h3><p>The experiment must retain all eight mutually consistent runs before it can be compared.</p></section>`
+  const runById = new Map((experiment.runs || []).map((run) => [run.run_id, run]))
+  return `<section class="composite-assay coordination-experiment" data-coordination-experiment-id="${html(experiment.experiment_id)}">
+    <header><div><span class="eyebrow">Retained four-condition experiment</span><h3>How do pressure, adaptation, and authoritative validation change this synthetic coordination trajectory?</h3></div><div class="assay-header-actions"><small>${html(new Date(experiment.created_at).toLocaleString())} · ${experiment.runs.length} exact runs · 0 model calls</small><button class="trash-coordination-experiment" data-experiment-id="${html(experiment.experiment_id)}">Move experiment to trash</button></div></header>
+    <p class="assay-question">Each condition has two deterministic lifecycle replicates. Means and directions describe only this batch; open either replicate to inspect the exact events, participant traces, and theory evidence.</p>
+    <small class="table-scroll-hint">Scroll the comparison table horizontally to inspect all measures and exact-run controls.</small>
+    <div class="assay-table-wrap"><table class="assay-table coordination-experiment-table"><thead><tr><th>Condition</th><th>Terminal outcomes</th><th>Verification</th><th>Distinct risks</th><th>Open risks</th><th>Time</th><th>Exact evidence</th></tr></thead><tbody>
+      ${(experiment.conditions || []).map((condition) => {
+        const presentation = coordinationConditionPresentation[condition.condition] || {label:condition.condition.replaceAll('_',' '), change:'Reviewed condition.'}
+        const exactRows = condition.run_ids.map((runId) => runById.get(runId)).filter(Boolean)
+        const adaptiveCount = exactRows.reduce((total, row) => total + (row.adaptive_followup_event_ids || []).length, 0)
+        const validationCount = exactRows.reduce((total, row) => total + (row.authoritative_validation_event_ids || []).length, 0)
+        return `<tr><td><strong>${html(presentation.label)}</strong><small>${html(presentation.change)}</small></td>
+          <td>${condition.terminal_outcomes.map(compositeOutcomeLabel).map(html).join(' · ')}</td>
+          <td>${Number(condition.metric_means.verification_requests).toLocaleString()}</td>
+          <td>${Number(condition.metric_means.risk_register_expansion).toLocaleString()}</td>
+          <td>${Number(condition.metric_means.unresolved_risk_load).toLocaleString()}</td>
+          <td>${Number(condition.metric_means.modeled_time_to_terminal).toLocaleString()} min</td>
+          <td>${condition.run_ids.map((runId, index) => `<button class="open-coordination-run" data-run-id="${html(runId)}">Replicate ${index + 1}</button>`).join(' ')}<small>${adaptiveCount} adaptive follow-up event${adaptiveCount === 1 ? '' : 's'} · ${validationCount} authoritative validation event${validationCount === 1 ? '' : 's'}</small></td></tr>`
+      }).join('')}
+    </tbody></table></div>
+    <section class="coordination-contrasts"><span class="eyebrow">Directional contrasts within this batch</span>
+      ${(experiment.contrasts || []).map((contrast) => `<article><strong>${html(contrast.contrast_id.replaceAll('_',' '))}</strong><p>${contrast.metrics.map((metric) => `${html(coordinationMetricLabel(metric.metric_id))}: <b>${html(metric.direction.replaceAll('_',' '))}</b> (${metric.difference > 0 ? '+' : ''}${Number(metric.difference).toLocaleString()})`).join(' · ')}</p></article>`).join('')}
+    </section>
+    <details class="assay-evidence-details"><summary>Experiment limits</summary><ul>${(experiment.limitations || []).map((item) => `<li>${html(item)}</li>`).join('')}</ul></details>
+  </section>`
+}
+
 async function loadHistory() {
   const result = await request('/api/runs')
   const assayIds = [...new Set(result.runs.map((run) => run.composite_assay?.assay_id).filter(Boolean))]
@@ -1459,8 +1523,35 @@ async function loadHistory() {
       }
     }
   })
-  const ordinaryRuns = result.runs.filter((run) => !run.composite_assay)
-  $('#history-empty').hidden = ordinaryRuns.length > 0 || assays.length > 0
+  const experimentIds = [...new Set(result.runs.map((run) => run.coordination_experiment?.experiment_id).filter(Boolean))]
+  const coordinationExperiments = await Promise.all(experimentIds.map(async (experimentId) => {
+    try {
+      if (!coordinationExperimentCache.has(experimentId)) {
+        coordinationExperimentCache.set(experimentId, await request(`/api/coordination-experiments/${experimentId}`))
+      }
+      return coordinationExperimentCache.get(experimentId)
+    } catch (error) {
+      return {experiment_id:experimentId, error:error.message}
+    }
+  }))
+  $('#coordination-experiments').innerHTML = coordinationExperiments.map(renderCoordinationExperiment).join('')
+  document.querySelectorAll('.open-coordination-run').forEach((button) => {
+    button.onclick = () => openRetained(button.dataset.runId)
+  })
+  document.querySelectorAll('.trash-coordination-experiment').forEach((button) => {
+    button.onclick = async () => {
+      if (!confirm('Move all eight retained runs in this experiment to recoverable server trash?')) return
+      try {
+        await request(`/api/coordination-experiments/${button.dataset.experimentId}`, {method:'DELETE'})
+        coordinationExperimentCache.delete(button.dataset.experimentId)
+        await loadHistory()
+      } catch (error) {
+        $('#coordination-experiment-status').textContent = error.message
+      }
+    }
+  })
+  const ordinaryRuns = result.runs.filter((run) => !run.composite_assay && !run.coordination_experiment)
+  $('#history-empty').hidden = ordinaryRuns.length > 0 || assays.length > 0 || coordinationExperiments.length > 0
   $('#storage-warning').hidden = result.corrupt_files.length === 0
   $('#storage-warning').textContent = result.corrupt_files.length
     ? `${result.corrupt_files.length} unreadable retained run file(s) require operator attention.`
@@ -3154,6 +3245,15 @@ function render(run) {
     $('#scenario-description').textContent = 'Five people must reach a valid deployment decision while concrete changes test member continuity, rerouting, feedback, and response to relevant outside information.'
     $('#arm').innerHTML = `<option value="${html(current.arm)}">${html(compositeRowPresentation[current.arm]?.label || String(current.arm).replaceAll('_', ' '))}</option>`
     $('#arm-help').textContent = compositeRowPresentation[current.arm]?.change || 'This is one retained row in the reviewed five-condition comparison.'
+  } else if (current.coordination_experiment) {
+    const presentation = coordinationConditionPresentation[current.arm] || {
+      label:String(current.arm).replaceAll('_', ' '),
+      change:'This is one retained condition in the coordination experiment.',
+    }
+    $('#scenario-title').textContent = 'Coordination dynamics experiment'
+    $('#scenario-description').textContent = 'A retained four-condition comparison separates heterogeneous pressure, feedback-driven adaptation, and authoritative validation.'
+    $('#arm').innerHTML = `<option value="${html(current.arm)}">${html(presentation.label)}</option>`
+    $('#arm-help').textContent = presentation.change
   }
   $('#result').hidden = false
   $('#result-summary-status').textContent = current.status === 'completed'
@@ -3271,6 +3371,21 @@ $('#run-composite-assay').onclick = async () => {
     renderCompositeAssaySelection(assay.assay_id, assay.rows[0].row_id)
   } catch (error) {
     $('#assay-status').textContent = error.message
+  } finally {
+    button.disabled = false
+  }
+}
+$('#run-coordination-experiment').onclick = async () => {
+  const button = $('#run-coordination-experiment')
+  button.disabled = true
+  $('#coordination-experiment-status').textContent = 'Running eight fixed-policy reference simulations and retaining their exact evidence…'
+  try {
+    const experiment = await request('/api/coordination-experiments', {method:'POST'})
+    coordinationExperimentCache.set(experiment.experiment_id, experiment)
+    await loadHistory()
+    $('#coordination-experiment-status').textContent = 'Experiment complete. Compare the four conditions or open either exact replicate.'
+  } catch (error) {
+    $('#coordination-experiment-status').textContent = error.message
   } finally {
     button.disabled = false
   }

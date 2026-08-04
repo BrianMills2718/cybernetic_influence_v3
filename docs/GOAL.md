@@ -181,6 +181,13 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   sources and the run ended without a decision. The corrected surface is a
   presentation candidate for M7, not evidence of stakeholder comprehension,
   adaptive influence, a directional invariant, or causal influence.
+- The separately authorized Slice 27 mechanism proof now retains a strict
+  four-condition, eight-run provider-free experiment. Concrete pressure sources
+  can observe meeting feedback and change a later message; one narrowed
+  stabilization condition reads an authoritative-validation fact and retained
+  representation. The grouped readout compares pressure presence, adaptation,
+  and stabilization while reopening either exact run. This post-MVP evidence
+  does not close M7 or establish a real-world invariant or causal effect.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any
@@ -205,6 +212,11 @@ The operator separately selected and completed Packet 22A0's contract
 foundation, Packet 22A1's five provider-free scripted trajectories, and Packet
 22A2's comparison/step-down UI. Those post-MVP packets do not mark M7 complete,
 change this MVP, or authorize Packet 22B's live repetitions.
+
+The operator separately authorized
+[Slice 27](plans/027-coordination-dynamics-experiment.md). Its provider-free
+mechanism proof does not change Packet 24E's stakeholder boundary or authorize
+live repetitions, calibration, attribution, or detection.
 
 Execute one packet at a time from a clean linked worktree. For each packet:
 

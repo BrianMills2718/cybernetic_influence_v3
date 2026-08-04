@@ -292,6 +292,7 @@ class RunStore:
                 )
             )
         composite_assay = document.get("composite_assay")
+        coordination_experiment = document.get("coordination_experiment")
         return {
             "run_id": document.get("run_id"),
             "created_at": document.get("created_at"),
@@ -308,6 +309,11 @@ class RunStore:
             "composite_assay": (
                 dict(composite_assay)
                 if isinstance(composite_assay, Mapping)
+                else None
+            ),
+            "coordination_experiment": (
+                dict(coordination_experiment)
+                if isinstance(coordination_experiment, Mapping)
                 else None
             ),
         }

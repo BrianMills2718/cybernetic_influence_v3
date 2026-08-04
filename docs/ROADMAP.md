@@ -42,12 +42,14 @@ that demo. Their retained evidence remains valid, and later work may not weaken
 the MVP's evidence and nonclaim boundaries.
 
 The accepted post-MVP direction is a matched experiment over one reviewed
-decision problem: ordinary decision-making, heterogeneous adaptive pressure,
-and the same pressure plus a stabilization intervention. The analyst must be
-able to compare trust, risk, and coordination trajectories across time and
-subgroups and step every candidate pattern down to retained evidence. The
-architecture decision is downstream of this product identity and must support
-that workflow without making unvalidated real-world detection claims.
+decision problem. Its first mechanism proof separates ordinary decision-making,
+the existing fixed heterogeneous-pressure arm, feedback-adaptive pressure, and
+the same adaptive pressure plus one authoritative-validation intervention. The
+analyst must be able to compare trust, risk, and coordination trajectories
+across time and subgroups and step every candidate pattern down to retained
+evidence. The architecture decision is downstream of this product identity and
+must support that workflow without making unvalidated real-world detection
+claims.
 
 ## Canonical Outcome Probe
 
@@ -143,10 +145,12 @@ first missing product boundary after the architecture decision. Its first
 representative vertical is:
 
 - a matched ordinary-decision baseline;
+- the existing fixed heterogeneous-pressure behavior as a control;
 - heterogeneous influence sources that can adapt to local reactions while
   retaining a shared objective;
 - the same pressure with one reviewed stabilization intervention;
-- repeated trajectories sufficient to expose variability; and
+- two deterministic lifecycle replicates per condition for the first mechanism
+  proof, without treating them as an uncertainty estimate; and
 - time-, subgroup-, and evidence-resolved comparison of trust structure,
   perceived risk, and coordination readiness.
 
@@ -208,6 +212,15 @@ conditions, not evidence of hostile attribution or an operational detector.
   single-run measurement instrument. It exposes the exact outcome and event
   chronology and explicitly does not claim adaptive influence, a directional
   invariant, causal influence, attribution, or proportionality.
+- Slice 27 now supplies the first provider-free `ExperimentSpec` vertical: four
+  ordered conditions, two retained runs per condition, concrete feedback into
+  adaptive source processes, one authoritative-validation intervention, three
+  cross-condition contrasts, strict complete-matrix reopening, and UI
+  step-down to either exact run. The observed scripted batch produced full
+  deployment in baseline, no decision under both pressure variants, and reduced
+  scope with validation. Adaptation changed retained source messages but did
+  not change the selected exact metrics in this batch; that null contrast is
+  retained rather than promoted to an invariant.
 
 ### Process progress
 
@@ -227,7 +240,7 @@ conditions, not evidence of hostile attribution or an operational detector.
 | `MVP-C4` | Waltzman per-run module over the evidence bundle | hard | satisfied | Existing exact/coded measures consume the common bundle and render with method/provenance |
 | `MVP-C5` | Levin per-run module over the evidence bundle | hard | satisfied | Candidate goal/boundary, glue, activity, correction, persistence, adaptation, and limits render without an aggregate executor or scalar |
 | `MVP-C6` | One integrated private review flow | evidence | technical execution passed; stakeholder judgment pending | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
-| `POST-C1` | `ExperimentSpec` and matched decision-environment experiment | hard after foundation decision | selected direction; not authorized for implementation | Baseline, heterogeneous adaptive pressure, and stabilization conditions can be repeated and compared across time and subgroups with evidence step-down |
+| `POST-C1` | `ExperimentSpec` and matched decision-environment experiment | hard after foundation decision | provider-free mechanism proof technically satisfied; stakeholder readout pending | Baseline, fixed pressure, adaptive pressure, and authoritative validation have two retained runs each, cross-condition contrasts, time/subgroup measures, and exact evidence step-down |
 | `POST-C2` | Perturbation, robustness, and persuadability assays | optional | Packets 22A0–22A2 technically satisfied; stakeholder readout pending | Five matched provider-free rows distinguish concrete pathways and step down through one comparison UI to exact retained evidence |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
@@ -261,6 +274,11 @@ and present one matched comparison with exact run and boundary step-down. This
 does not authorize live repetitions, scalar agency scores, or causal/predictive
 claims.
 
+The operator also authorized
+[Slice 27](plans/027-coordination-dynamics-experiment.md) as a reversible
+post-MVP mechanism proof. It does not authorize live repetitions, empirical
+calibration, causal attribution, or operational detection.
+
 ## Artifact Dispositions
 
 | Artifact | Disposition | Reason |
@@ -273,6 +291,7 @@ claims.
 | [Slice 24](plans/024-configurable-theory-analysis-mvp.md) | active MVP authority | Owns the separate MVP acceptance contract and M7 boundary |
 | [Slice 25](plans/025-typed-component-composition.md) | 25A–25C retained; 25D paused | Useful local composition evidence, but not authority for choosing the generalized product foundation |
 | [Slice 26](plans/026-concordia-foundation-research.md) | selected research frontier | Decides the foundation before further simulator construction |
+| [Slice 27](plans/027-coordination-dynamics-experiment.md) | provider-free mechanism proof technically complete; stakeholder readout pending | Four conditions and eight ordinary retained runs isolate pressure presence, adaptation, and authoritative validation with evidence step-down |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |
 | [Waltzman source note](research/001-from-minds-to-coordination.md) | amend | Separates scenario inputs, per-run measurements, and experiments |
@@ -305,6 +324,11 @@ remain evidence. They do not own current direction.
   satisfied. Stakeholder comprehension is unobserved; live repetitions,
   robustness claims, evasion, attribution, calibration, and prediction remain
   deferred.
+- Slice 27's eight-run provider-free experiment and strict retained readout are
+  technically observed. The adaptation contrast is flat on the selected exact
+  metrics in the reference batch even though adaptive follow-up events are
+  retained; broader adaptive semantics and stochastic/live repetitions remain
+  separate future decisions.
 - Slice 25 Packets 25A–25C prove a bounded local registry, composition receipt,
   mixed scenario, and authoring path. They do not prove that the current
   runtime is the optimal generalized foundation.
@@ -331,9 +355,9 @@ remain evidence. They do not own current direction.
 
 ## Post-MVP Options
 
-After the architecture decision, bound the selected matched
-baseline/pressure/stabilization experiment before implementation. Later options
-remain conditional rather than automatic:
+After the provider-free mechanism proof, decide whether its flat adaptation
+contrast justifies richer recipient response semantics before any live or
+stochastic repetition. Later options remain conditional rather than automatic:
 
 - Waltzman's candidate directional invariants and evasion dimensions;
 - Levin-style perturbation, member replacement, recovery, robustness, and

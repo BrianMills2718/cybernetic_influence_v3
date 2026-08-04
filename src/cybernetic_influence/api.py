@@ -112,6 +112,13 @@ from cybernetic_influence.experiments.composite_agency import (
     PerturbationRowId,
     run_scripted_composite_assay,
 )
+from cybernetic_influence.experiments.coordination_experiment import (
+    EXPERIMENT_CONDITIONS,
+    EXPERIMENT_REPLICATES,
+    EXPERIMENT_RUN_COUNT,
+    CoordinationExperimentReadoutV1,
+    run_scripted_coordination_experiment,
+)
 from cybernetic_influence.scenarios.service_desk import (
     RuntimePaused,
     SERVICE_DESK_MODEL,
@@ -266,6 +273,13 @@ class CompositeAssayTrashResponse(BaseModel):
 
     assay_id: str
     trashed_run_count: Literal[5]
+
+
+class CoordinationExperimentTrashResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    experiment_id: str
+    trashed_run_count: Literal[8]
 
 
 def _coordination_contract(condition: str) -> CoordinationDecisionFixture:
@@ -667,6 +681,7 @@ def create_app(
     pause_lock = Lock()
     progress_lock = Lock()
     composite_assay_lock = Lock()
+    coordination_experiment_lock = Lock()
 
     def composite_assay_readout(assay_id: str) -> CompositeAssayResponse:
         """Project one retained five-row assay without rerunning its simulations."""
@@ -753,6 +768,100 @@ def create_app(
                 )
             )
         return CompositeAssayResponse(assay_id=assay_id, rows=rows)
+
+    def coordination_experiment_readout(
+        experiment_id: str,
+    ) -> CoordinationExperimentReadoutV1:
+        """Revalidate one retained eight-run experiment without rerunning it."""
+
+        if re.fullmatch(r"coordexp_[0-9a-f]{12}", experiment_id) is None:
+            raise HTTPException(
+                status_code=422,
+                detail="invalid coordination experiment ID",
+            )
+        summaries, _ = runs.list_runs()
+        matching = [
+            item
+            for item in summaries
+            if isinstance((metadata := item.get("coordination_experiment")), dict)
+            and metadata.get("experiment_id") == experiment_id
+        ]
+        if not matching:
+            raise HTTPException(
+                status_code=404,
+                detail="coordination experiment not found",
+            )
+        documents = [runs.get(cast(str, item["run_id"])) for item in matching]
+        indexed: dict[tuple[str, int], dict[str, object]] = {}
+        for document in documents:
+            metadata = document.get("coordination_experiment")
+            if not isinstance(metadata, dict):
+                raise HTTPException(
+                    status_code=409,
+                    detail="retained coordination experiment metadata is malformed",
+                )
+            condition = metadata.get("condition")
+            replicate = metadata.get("replicate")
+            slot = (condition, replicate)
+            if (
+                condition not in EXPERIMENT_CONDITIONS
+                or isinstance(replicate, bool)
+                or not isinstance(replicate, int)
+                or replicate < 1
+                or replicate > EXPERIMENT_REPLICATES
+                or metadata.get("row_count") != EXPERIMENT_RUN_COUNT
+                or metadata.get("provider_calls") != 0
+                or metadata.get("experiment_id") != experiment_id
+                or slot in indexed
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="retained coordination experiment matrix is malformed",
+                )
+            indexed[cast(tuple[str, int], slot)] = document
+        expected_slots = [
+            (condition, replicate)
+            for condition in EXPERIMENT_CONDITIONS
+            for replicate in range(1, EXPERIMENT_REPLICATES + 1)
+        ]
+        if set(indexed) != set(expected_slots):
+            raise HTTPException(
+                status_code=409,
+                detail="retained coordination experiment is incomplete",
+            )
+
+        validated: list[CoordinationExperimentReadoutV1] = []
+        for slot in expected_slots:
+            document = indexed[slot]
+            try:
+                readout = CoordinationExperimentReadoutV1.model_validate(
+                    document["coordination_experiment_readout"]
+                )
+                own_row = document["coordination_experiment_run_readout"]
+                expected_row = next(
+                    item
+                    for item in readout.runs
+                    if (item.condition, item.replicate) == slot
+                )
+                if (
+                    own_row != expected_row.model_dump(mode="json")
+                    or document.get("run_id") != expected_row.run_id
+                    or readout.experiment_id != experiment_id
+                ):
+                    raise ValueError("retained row does not match the experiment readout")
+            except (KeyError, StopIteration, TypeError, ValueError) as error:
+                raise HTTPException(
+                    status_code=409,
+                    detail="retained coordination experiment evidence is malformed",
+                ) from error
+            validated.append(readout)
+        reference = validated[0].model_dump(mode="json")
+        if any(item.model_dump(mode="json") != reference for item in validated[1:]):
+            raise HTTPException(
+                status_code=409,
+                detail="retained coordination experiment readouts disagree",
+            )
+        return validated[0]
 
     def retain_progress(
         run_id: str,
@@ -1147,6 +1256,49 @@ def create_app(
         return CompositeAssayTrashResponse(
             assay_id=assay_id,
             trashed_run_count=5,
+        )
+
+    @app.post("/api/coordination-experiments")
+    def create_coordination_experiment(
+        request: Request,
+    ) -> CoordinationExperimentReadoutV1:
+        """Run the frozen four-condition, eight-run provider-free experiment."""
+
+        _require_access(request)
+        if not coordination_experiment_lock.acquire(blocking=False):
+            raise HTTPException(
+                status_code=409,
+                detail="a coordination experiment is already running",
+            )
+        try:
+            execution = run_scripted_coordination_experiment(runs.root)
+            return coordination_experiment_readout(execution.experiment_id)
+        finally:
+            coordination_experiment_lock.release()
+
+    @app.get("/api/coordination-experiments/{experiment_id}")
+    def retained_coordination_experiment(
+        experiment_id: str,
+        request: Request,
+    ) -> CoordinationExperimentReadoutV1:
+        """Reopen one complete experiment without executing any simulation."""
+
+        _require_access(request)
+        return coordination_experiment_readout(experiment_id)
+
+    @app.delete("/api/coordination-experiments/{experiment_id}")
+    def trash_coordination_experiment(
+        experiment_id: str,
+        request: Request,
+    ) -> CoordinationExperimentTrashResponse:
+        """Move all eight retained runs to recoverable server trash."""
+
+        _require_access(request)
+        experiment = coordination_experiment_readout(experiment_id)
+        runs.trash_many([item.run_id for item in experiment.runs])
+        return CoordinationExperimentTrashResponse(
+            experiment_id=experiment_id,
+            trashed_run_count=8,
         )
 
     @app.post("/api/authoring/drafts")

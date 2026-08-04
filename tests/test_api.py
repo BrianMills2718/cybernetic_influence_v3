@@ -240,6 +240,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Each entry includes its exact run ID." in page.text
     assert "Compare five matched conditions" in page.text
     assert 'id="run-composite-assay"' in page.text
+    assert "Compare pressure, adaptation, and validation" in page.text
+    assert 'id="run-coordination-experiment"' in page.text
     assert "Read me" in page.text
     assert "Author scenario" in page.text
     assert "Describe what you want" in page.text
@@ -322,6 +324,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"renderTheoryAnalysis" in app_script.content
     assert b"/api/composite-assays" in app_script.content
     assert b"function renderCompositeAssaySelection" in app_script.content
+    assert b"/api/coordination-experiments" in app_script.content
+    assert b"function renderCoordinationExperiment" in app_script.content
     assert b"What reached the group" in app_script.content
     assert b"What the group sent out" in app_script.content
     assert b"function renderAuthoring" in app_script.content

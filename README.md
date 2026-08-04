@@ -8,7 +8,10 @@ those concrete members, not another mind or world executor.
 The current MVP is to configure a bounded coordination scenario and obtain
 separate, evidence-bound findings relevant to Waltzman's coordination ideas
 and Levin-style composite agency. It is not a prediction engine and it does not
-yet make robustness or perturbation comparisons part of a normal run.
+make robustness or perturbation comparisons part of a normal run. A separate
+provider-free experiment surface now compares pressure, feedback-driven
+adaptation, and authoritative validation without making a real-world causal
+claim.
 
 ## Start here
 
@@ -18,6 +21,9 @@ yet make robustness or perturbation comparisons part of a normal run.
   — the canonical MVP closeout plan.
 - [Post-MVP perturbation design: Slice 22](docs/plans/022-composite-agency-perturbation-assay.md)
   — completed scripted assay foundation and separately gated next packets.
+- [Coordination dynamics experiment: Slice 27](docs/plans/027-coordination-dynamics-experiment.md)
+  — four matched conditions, two retained exact replicates per condition, and
+  evidence-reversible directional contrasts.
 - [Architectural decisions](docs/adr/README.md) — binding ontology and runtime
   constraints.
 - [Research basis](docs/research/001-from-minds-to-coordination.md) — what the
@@ -47,7 +53,10 @@ Do not infer current route availability from historical documentation.
 - concise and detailed causal narratives grounded in retained evidence;
 - person, process, and execution-inert composite accounts;
 - a retained five-condition composite-capability comparison with exact row,
-  boundary, graph, narrative, measurement, and event step-down; and
+  boundary, graph, narrative, measurement, and event step-down;
+- a retained four-condition coordination experiment separating pressure,
+  feedback adaptation, and authoritative validation, with two exact runs per
+  condition; and
 - scenario assumptions, exact mechanisms, and analyst-safe trace step-down.
 
 For a private Mac development host, use the concise
