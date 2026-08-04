@@ -1491,8 +1491,69 @@ function renderCoordinationExperiment(experiment) {
   </section>`
 }
 
+const liveProbeOrder = [
+  'fixed_heterogeneous_pressure',
+  'adaptive_heterogeneous_pressure',
+  'adaptive_pressure_with_stabilization',
+]
+
+function latestLiveCoordinationProbeGroup(runs) {
+  const groups = new Map()
+  runs.forEach((run) => {
+    const probe = run.live_coordination_probe
+    if (!probe) return
+    const key = `${probe.model || 'unknown'}|${probe.reasoning_effort || 'default'}`
+    if (!groups.has(key)) groups.set(key, new Map())
+    const conditions = groups.get(key)
+    if (!conditions.has(probe.condition)) conditions.set(probe.condition, run)
+  })
+  return [...groups.values()]
+    .filter((conditions) => conditions.size >= 2)
+    .sort((left, right) => right.size - left.size)[0] || null
+}
+
+function liveProbeDifference(reference, treatment, metricId) {
+  const before = reference?.live_coordination_probe?.metrics?.[metricId]
+  const after = treatment?.live_coordination_probe?.metrics?.[metricId]
+  if (!Number.isFinite(before) || !Number.isFinite(after)) return null
+  return after - before
+}
+
+function renderLiveCoordinationComparison(runs) {
+  const group = latestLiveCoordinationProbeGroup(runs)
+  if (!group) return ''
+  const rows = liveProbeOrder.map((condition) => group.get(condition)).filter(Boolean)
+  const fixed = group.get('fixed_heterogeneous_pressure')
+  const adaptive = group.get('adaptive_heterogeneous_pressure')
+  const validation = group.get('adaptive_pressure_with_stabilization')
+  const contrasts = [
+    ['Adaptation', fixed, adaptive],
+    ['Authoritative validation', adaptive, validation],
+  ].filter(([, reference, treatment]) => reference && treatment)
+  const model = rows[0].live_coordination_probe.model || 'retained model'
+  const effort = rows[0].live_coordination_probe.reasoning_effort || 'default reasoning'
+  return `<section class="composite-assay live-coordination-comparison">
+    <header><div><span class="eyebrow">Authentic LLM comparison</span><h3>How did model-driven participants coordinate under different decision environments?</h3></div><small>${html(model)} · ${html(effort)} · ${rows.reduce((total, row) => total + row.live_coordination_probe.model_calls, 0)} traced calls</small></header>
+    <p class="assay-question">These are separate authentic trajectories with the same model configuration, grouped from retained evidence. They are not a controlled batch and may span mechanism revisions; use the differences to choose the next experiment, not as effect estimates.</p>
+    <div class="assay-table-wrap"><table class="assay-table coordination-experiment-table"><thead><tr><th>Condition</th><th>Outcome</th><th>Verification</th><th>Distinct risks</th><th>Open risks</th><th>Time</th><th>Evidence</th></tr></thead><tbody>
+      ${rows.map((row) => {
+        const probe = row.live_coordination_probe
+        const presentation = coordinationConditionPresentation[probe.condition] || {label:probe.condition.replaceAll('_',' ')}
+        return `<tr><td><strong>${html(presentation.label)}</strong><small>${html(new Date(row.created_at).toLocaleString())}</small></td><td>${html(compositeOutcomeLabel(probe.terminal_outcome))}</td><td>${html(probe.metrics.verification_requests ?? '—')}</td><td>${html(probe.metrics.risk_register_expansion ?? '—')}</td><td>${html(probe.metrics.unresolved_risk_load ?? '—')}</td><td>${html(probe.metrics.modeled_time_to_terminal == null ? '—' : `${Number(probe.metrics.modeled_time_to_terminal).toLocaleString()} min`)}</td><td><button class="open-live-coordination-run" data-run-id="${html(row.run_id)}">Open ${html(row.run_id)}</button><small>${probe.model_calls} traced calls</small></td></tr>`
+      }).join('')}
+    </tbody></table></div>
+    <section class="coordination-contrasts"><span class="eyebrow">Exploratory differences between retained runs</span>
+      ${contrasts.map(([label, reference, treatment]) => `<article><strong>${html(label)}</strong><p>${['verification_requests','risk_register_expansion','unresolved_risk_load'].map((metricId) => { const difference = liveProbeDifference(reference, treatment, metricId); return `${html(coordinationMetricLabel(metricId))}: <b>${difference == null ? 'unavailable' : difference === 0 ? 'no change' : `${difference > 0 ? '+' : ''}${difference}`}</b>` }).join(' · ')}</p></article>`).join('')}
+    </section>
+  </section>`
+}
+
 async function loadHistory() {
   const result = await request('/api/runs')
+  $('#live-coordination-comparisons').innerHTML = renderLiveCoordinationComparison(result.runs)
+  document.querySelectorAll('.open-live-coordination-run').forEach((button) => {
+    button.onclick = () => openRetained(button.dataset.runId)
+  })
   const assayIds = [...new Set(result.runs.map((run) => run.composite_assay?.assay_id).filter(Boolean))]
   const assays = await Promise.all(assayIds.map(async (assayId) => {
     try {

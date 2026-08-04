@@ -293,6 +293,10 @@ class RunStore:
             )
         composite_assay = document.get("composite_assay")
         coordination_experiment = document.get("coordination_experiment")
+        live_coordination_probe = RunStore._live_coordination_probe_summary(document)
+        model_calls = document.get("model_calls", 0)
+        if isinstance(model_calls, Sequence) and not isinstance(model_calls, str):
+            model_calls = len(model_calls)
         return {
             "run_id": document.get("run_id"),
             "created_at": document.get("created_at"),
@@ -302,7 +306,7 @@ class RunStore:
             "profile": document.get("profile"),
             "arm": document.get("arm"),
             "execution": document.get("execution"),
-            "model_calls": document.get("model_calls", 0),
+            "model_calls": model_calls,
             "cost": document.get("cost", 0.0),
             "headline": headline,
             "coordination_measurement_status": measurement_status,
@@ -316,6 +320,73 @@ class RunStore:
                 if isinstance(coordination_experiment, Mapping)
                 else None
             ),
+            "live_coordination_probe": live_coordination_probe,
+        }
+
+    @staticmethod
+    def _live_coordination_probe_summary(
+        document: Mapping[str, object],
+    ) -> dict[str, object] | None:
+        """Project enough exact evidence to compare authentic theory probes."""
+
+        conditions = {
+            "fixed_heterogeneous_pressure",
+            "adaptive_heterogeneous_pressure",
+            "adaptive_pressure_with_stabilization",
+        }
+        arm = document.get("arm")
+        if (
+            document.get("scenario")
+            not in {"coordination_decision", "coordination_live_probe"}
+            or document.get("execution") != "live"
+            or document.get("status") != "completed"
+            or arm not in conditions
+        ):
+            return None
+        exact = document.get("exact_coordination_values")
+        llm = document.get("llm_configuration")
+        if not isinstance(exact, Mapping) or not isinstance(llm, Mapping):
+            return None
+
+        def metric(group: str, field: str) -> int | float | None:
+            value = exact.get(group)
+            candidate = value.get(field) if isinstance(value, Mapping) else None
+            if isinstance(candidate, bool) or not isinstance(candidate, (int, float)):
+                return None
+            return candidate
+
+        model_calls = document.get("model_calls", 0)
+        if isinstance(model_calls, Sequence) and not isinstance(model_calls, str):
+            model_calls = len(model_calls)
+        if isinstance(model_calls, bool) or not isinstance(model_calls, int):
+            model_calls = 0
+
+        return {
+            "condition": arm,
+            "model": llm.get("model"),
+            "reasoning_effort": llm.get("reasoning_effort"),
+            "trace_id_prefix": document.get("trace_id_prefix"),
+            "model_calls": model_calls,
+            "observed_cost": document.get(
+                "total_observed_cost", document.get("cost", 0.0)
+            ),
+            "terminal_outcome": (
+                exact.get("final_deployment_status")
+                if isinstance(exact.get("final_deployment_status"), str)
+                else None
+            ),
+            "metrics": {
+                "verification_requests": metric("verification_requests", "total"),
+                "risk_register_expansion": metric(
+                    "risk_register_expansion", "distinct_risks"
+                ),
+                "unresolved_risk_load": metric(
+                    "unresolved_risk_load", "final_open_count"
+                ),
+                "modeled_time_to_terminal": metric(
+                    "modeled_time_to_terminal", "scenario_minutes"
+                ),
+            },
         }
 
     @staticmethod

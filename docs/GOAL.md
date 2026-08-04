@@ -220,6 +220,11 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   observe the complete selector and an explicit unavailable state when no
   freshly certified live route exists. This makes the authentic probe
   operator-accessible but does not itself add a repetition or effect estimate.
+- Run history now groups compatible retained live conditions by model and
+  reasoning configuration, shows their exact verification and risk differences,
+  and opens every underlying trajectory. The grouping is explicitly exploratory:
+  separately retained probes may span mechanism revisions and are not promoted
+  to a controlled live experiment or effect estimate.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any
