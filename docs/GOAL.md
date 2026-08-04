@@ -211,6 +211,15 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   run it showed 7 versus 6 verification requests, 3 versus 2 distinct risks,
   and 3 versus 2 final open risks; both ended with no decision. These are
   exact-run candidate directions, not an effect estimate or invariant.
+- An analyst can now launch the fixed-pressure, adaptive-pressure, or
+  adaptive-pressure-with-validation live condition from the canonical
+  simulation controls. These conditions reuse the existing model and spend
+  authorization, progress, pause/stop, retained-run, and evidence-inspection
+  surfaces. API integration tests observe provider-bound participants and the
+  selected adaptive/validation mechanism; desktop and mobile browser checks
+  observe the complete selector and an explicit unavailable state when no
+  freshly certified live route exists. This makes the authentic probe
+  operator-accessible but does not itself add a repetition or effect estimate.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any

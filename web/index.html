@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cybernetic Influence Simulator</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=coordination-experiment-v1">
+  <link rel="stylesheet" href="/assets/styles.css?v=live-coordination-probe-v1">
   <link rel="stylesheet" href="/assets/graph-canvas.css?v=readable-run-v2">
 </head>
 <body>
@@ -358,6 +358,14 @@
         </div>
         <button id="run-coordination-experiment" type="button">Run four-condition experiment</button>
       </section>
+      <section class="live-probe-callout" aria-labelledby="live-probe-title">
+        <div>
+          <span class="eyebrow">Live theory probe</span>
+          <h3 id="live-probe-title">Run the same conditions with LLM-modeled participants</h3>
+          <p>Select <strong>Coordination decision</strong> in the simulation controls, then choose a condition labeled <strong>Experiment</strong>. The existing model, spend authorization, progress, pause/stop, and retained-run controls all apply.</p>
+          <small>Run one condition at a time. A single trajectory is inspectable mechanism evidence, not an effect estimate; use the provider-free matrix below as the lifecycle control.</small>
+        </div>
+      </section>
       <p id="coordination-experiment-status" class="muted" aria-live="polite"></p>
       <div id="coordination-experiments" class="composite-assays"></div>
       <p id="history-empty" class="muted">No retained runs yet.</p>
@@ -378,6 +386,6 @@
     </section>
   </main>
   <script src="/assets/graph-canvas.js?v=spatial-scale-v1"></script>
-  <script src="/assets/app.js?v=coordination-experiment-v1"></script>
+  <script src="/assets/app.js?v=live-coordination-probe-v1"></script>
 </body>
 </html>

@@ -72,6 +72,10 @@ summary { cursor:pointer; font-weight:700; }
 .assay-launch h3 { margin:5px 0 7px; font-size:20px; }
 .assay-launch p { max-width:86ch; margin-bottom:7px; line-height:1.5; }
 .assay-launch small { color:var(--muted); }
+.live-probe-callout { margin:12px 0 0; padding:16px 18px; border:1px solid #3d617d; border-radius:12px; background:#101c27; }
+.live-probe-callout h3 { margin:5px 0 7px; font-size:18px; }
+.live-probe-callout p { max-width:90ch; margin-bottom:7px; line-height:1.5; }
+.live-probe-callout small { color:var(--muted); }
 .composite-assays { display:grid; gap:18px; }
 .composite-assay { display:grid; grid-template-columns:minmax(0,1fr); min-width:0; gap:16px; padding:18px; border:1px solid #416482; border-radius:12px; background:#0f1721; }
 .composite-assay > header { position:static; display:flex; align-items:start; gap:20px; padding:0; border:0; background:transparent; backdrop-filter:none; }

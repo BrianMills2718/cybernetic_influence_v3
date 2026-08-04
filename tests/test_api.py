@@ -22,10 +22,16 @@ from cybernetic_influence.active_runtime import (
 )
 from cybernetic_influence.api import create_app
 from cybernetic_influence.analysis.coordination_measurement import CoderOutput
+from cybernetic_influence.experiments.coordination_experiment import (
+    LiveCoordinationProbeCondition,
+    coordination_experiment_bindings,
+    coordination_experiment_fixture,
+)
 from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 from cybernetic_influence.run_store import RunStore
 from cybernetic_influence.scenarios.coordination_decision import (
     PERSON_IDS,
+    PRESSURE_SOURCE_IDS,
     CoordinationRuntimePaused,
     baseline_coordination_fixture,
     coordination_runtime_fixture,
@@ -158,6 +164,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "baseline",
         "heterogeneous_pressure",
         "stabilization",
+        "fixed_heterogeneous_pressure",
+        "adaptive_heterogeneous_pressure",
+        "adaptive_pressure_with_stabilization",
     }
     assert coordination["run_control_options"]["max_participant_calls_cap"] == 150
     assert config.json()["maximum_live_calls"] == 150
@@ -242,6 +251,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="run-composite-assay"' in page.text
     assert "Compare pressure, adaptation, and validation" in page.text
     assert 'id="run-coordination-experiment"' in page.text
+    assert 'id="live-probe-title"' in page.text
+    assert "Run the same conditions with LLM-modeled participants" in page.text
+    assert "live-coordination-probe-v1" in page.text
     assert "Read me" in page.text
     assert "Author scenario" in page.text
     assert "Describe what you want" in page.text
@@ -2098,8 +2110,18 @@ def test_coordination_live_execution_requires_scenario_schema_certification(
     assert "coordination participant schemas" in response.json()["detail"]
 
 
+@pytest.mark.parametrize(
+    ("arm_id", "adaptive_sources", "authoritative_validation"),
+    [
+        ("baseline", False, None),
+        ("adaptive_pressure_with_stabilization", True, True),
+    ],
+)
 def test_coordination_live_api_selects_provider_people_and_live_narration(
     tmp_path: Path,
+    arm_id: str,
+    adaptive_sources: bool,
+    authoritative_validation: bool | None,
 ) -> None:
     captured: list[dict[str, object]] = []
 
@@ -2111,10 +2133,33 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
                     for person_id in PERSON_IDS
                     if bindings[person_id].implementation.provider_bound
                 },
+                "adaptive_sources": all(
+                    bindings[source_id].implementation_id.startswith(
+                        "scripted_adaptive_"
+                    )
+                    for source_id in PRESSURE_SOURCE_IDS
+                ),
+                "authoritative_validation": (
+                    fixture.scenario.initial_state.fact(
+                        "authoritative_validation_record.available"
+                    ).value
+                    if "authoritative_validation_record"
+                    in fixture.scenario.initial_state.entities
+                    else None
+                ),
                 "per_call_budget": kwargs["runtime_config"].per_call_budget,
                 "per_run_budget": kwargs["runtime_config"].per_run_budget,
             }
         )
+        if arm_id == "adaptive_pressure_with_stabilization":
+            reference = coordination_experiment_fixture(
+                cast(LiveCoordinationProbeCondition, arm_id)
+            )
+            return original_run_coordination(
+                reference.runtime,
+                coordination_experiment_bindings(reference),
+                run_id=kwargs["run_id"],
+            )
         return run_scripted_coordination(
             coordination_runtime_fixture(baseline_coordination_fixture()),
             run_id=kwargs["run_id"],
@@ -2156,7 +2201,7 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
             "/api/runs",
             json={
                 "scenario": "coordination_decision",
-                "arm_id": "baseline",
+                "arm_id": arm_id,
                 "execution": "live",
                 "llm_options": {
                     "model": "openrouter/deepseek/deepseek-v4-flash",
@@ -2168,7 +2213,7 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
         assert response.status_code == 202, response.text
         run_id = response.json()["run_id"]
         retained: dict[str, object] | None = None
-        for _ in range(200):
+        for _ in range(5_000):
             candidate = api.get(f"/api/runs/{run_id}").json()
             if candidate["status"] == "failed" or (
                 candidate["status"] == "completed"
@@ -2184,6 +2229,7 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
     assert retained is not None
     assert retained["status"] == "completed"
     assert retained["execution"] == "live"
+    assert retained["arm"] == arm_id
     measurement_readout = cast(
         dict[str, Any], retained["coordination_measurement_readout"]
     )
@@ -2199,6 +2245,8 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
     assert captured == [
         {
             "provider_people": set(PERSON_IDS),
+            "adaptive_sources": adaptive_sources,
+            "authoritative_validation": authoritative_validation,
             "per_call_budget": 0.05,
             "per_run_budget": 0.20,
         }
