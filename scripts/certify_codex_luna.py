@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from pathlib import Path
 from typing import cast
 
+import httpx
 from llm_client import (
     call_llm_structured,
     compile_codex_structured_success,
@@ -109,11 +111,18 @@ def _certify(
         )
         store.append(observation)
     else:
-        observation = observe_openrouter_native_success_from_runtime(
-            result=result,
-            provider_schema=openrouter_native_provider_schema(schema),
-            schema_class=schema.__name__,
-        )
+        for metadata_attempt in range(3):
+            try:
+                observation = observe_openrouter_native_success_from_runtime(
+                    result=result,
+                    provider_schema=openrouter_native_provider_schema(schema),
+                    schema_class=schema.__name__,
+                )
+                break
+            except httpx.HTTPStatusError as error:
+                if error.response.status_code != 404 or metadata_attempt == 2:
+                    raise
+                time.sleep(8 * (metadata_attempt + 1))
     return cast(str, observation.observation_id)
 
 
