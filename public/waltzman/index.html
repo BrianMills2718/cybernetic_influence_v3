@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="An interactive laboratory for simulating how changing decision environments reshape collective action.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=tool-overview-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=guided-example-v1">
 </head>
 <body>
   <header class="topbar">
@@ -198,43 +198,65 @@
       </section>
 
       <section id="mechanism-view" class="workspace-view" aria-labelledby="mechanism-title" hidden>
-        <header class="workspace-header result-header">
+        <header class="workspace-header case-header">
           <div>
-            <div class="artifact-type"><strong>Interactive AI simulation</strong><span>Demonstrates model behavior—not human or institutional behavior.</span></div>
-            <h2 id="mechanism-title">The same 12 AI agents approved a response plan—until its requirements became impossible to satisfy.</h2>
-            <p class="hero-question">What does this reveal about coordination under institutional pressure?</p>
-            <p class="hero-stakes">The agents had to decide whether to approve a simulated outbreak-response plan while satisfying their assigned institutional requirements. The “coalition” is simply the group of twelve agents voting on that plan.</p>
+            <div class="artifact-type"><strong>Included example</strong><span>Fictional regional outbreak · twelve autonomous AI agents · three decision rounds</span></div>
+            <h2 id="mechanism-title">Can three countries still launch a joint outbreak response when each faces a different operational constraint?</h2>
+            <p>This example uses the laboratory to change the coalition’s operating environment without changing its agents or telling them how to vote.</p>
           </div>
         </header>
-        <section class="experiment-in-one-line" aria-labelledby="experiment-model-title">
-          <div>
-            <span id="experiment-model-title">Kept identical</span>
-            <strong>Same agents + same instructions + same starting scenario + same AI model + same voting rule</strong>
-          </div>
-          <div class="changed-variable"><span>Changed between runs</span><strong>Only the available resources and operating constraints</strong></div>
-        </section>
-        <section class="outcome-strip" aria-label="Three-run result summary">
-          <article><span>No added constraints</span><strong><b aria-hidden="true">✓</b> Approved</strong></article>
-          <article><span>Conflicting requirements</span><strong><b aria-hidden="true">×</b> Not approved</strong></article>
-          <article><span>Verified resources supplied</span><strong><b aria-hidden="true">✓</b> Approved again</strong></article>
-        </section>
-        <div class="hero-actions">
-          <a class="primary-cta" href="#result-sequence-title">Compare the three runs</a>
-          <button class="secondary-cta" type="button" data-view="run">Run the simulation yourself</button>
-        </div>
-        <section class="result-frame" aria-labelledby="result-sequence-title">
-          <div class="result-frame-heading">
-            <span class="eyebrow">Run-by-run comparison</span>
-            <h3 id="result-sequence-title">Only the resources and constraints changed</h3>
-          </div>
-          <div id="result-sequence" class="result-sequence"></div>
-          <article id="result-takeaway" class="result-takeaway"></article>
+
+        <section class="case-orientation" aria-label="Example scenario">
+          <article><span>The decision</span><h3>Launch a joint regional response—or wait</h3><p>A novel respiratory outbreak is growing across the fictional countries of Alba, Borin, and Cyrenia. The proposed response shares de-identified case data, laboratory capacity, mixed investigation teams, and regional supplies.</p></article>
+          <article><span>Who decides</span><h3>Twelve agents with different responsibilities</h3><p>Each country contributes an epidemiologist, policy delegate, and operations lead. A regional coordinator, scientific adviser, and logistics coordinator represent the shared institution.</p></article>
+          <article><span>Built-in safeguards</span><h3>The initial plan is ready to execute</h3><p>Patient records and clinical command remain national, data access is logged, laboratories have validated the outbreak, resources are precommitted, and national review boards have endorsed launch.</p></article>
         </section>
 
-        <section class="result-meaning">
-          <span class="eyebrow">Why this matters</span>
-          <h3>The agents were not persuaded that the outbreak was fake.</h3>
-          <p>They stopped supporting the plan when their assigned requirements could no longer all be met. They supported it again after verified resources made those requirements compatible. The decision environment changed; nobody dictated an agent’s vote.</p>
+        <section class="decision-rule">
+          <div><span>How each round works</span><strong>Every agent independently chooses support, conditional support, defer, or oppose—and explains its concern and requested next step.</strong></div>
+          <div><span>When the coalition approves</span><strong>After round three: at least 6 support, at least 9 support-or-conditional, and no more than 1 opposition.</strong></div>
+        </section>
+
+        <section class="case-comparison" aria-labelledby="case-comparison-title">
+          <div class="case-comparison-heading"><span class="section-kicker">What changed across the three runs</span><h3 id="case-comparison-title">The agents stayed the same. Their operating environment did not.</h3></div>
+          <div class="case-runs">
+            <article class="case-run case-run-baseline">
+              <span class="case-run-number">Run 1 · Baseline</span>
+              <h3>The launch plan remains feasible</h3>
+              <p>No new external development changes the staffing, testing, supply, or reserve commitments.</p>
+              <div id="case-baseline-result" class="case-result"></div>
+            </article>
+            <article class="case-run case-run-pressure">
+              <span class="case-run-number">Run 2 · Capacity pressure</span>
+              <h3>Four concrete constraints arrive</h3>
+              <ul>
+                <li><strong>Alba:</strong> an equipment failure forces its strongest laboratory to reserve half its capacity for domestic confirmation.</li>
+                <li><strong>Borin:</strong> its transport hub can remain open only if regional partners immediately supply clinical staff.</li>
+                <li><strong>Cyrenia:</strong> it will release field teams only after receiving diagnostics and protective equipment.</li>
+                <li><strong>Region:</strong> available staff and supplies cannot satisfy all three requests within 48 hours.</li>
+              </ul>
+              <div id="case-pressure-result" class="case-result"></div>
+            </article>
+            <article class="case-run case-run-stabilized">
+              <span class="case-run-number">Run 3 · Same pressure plus intervention</span>
+              <h3>A verified package resolves all three minimums</h3>
+              <ul>
+                <li>Alba keeps half its laboratory for domestic confirmation and receives a mobile unit for shared testing.</li>
+                <li>Borin receives 24 regional clinicians before its transport-hub surge.</li>
+                <li>Cyrenia receives its named diagnostics and protective-equipment shipment.</li>
+                <li>A 10% regional reserve remains after the allocations.</li>
+              </ul>
+              <div id="case-stabilization-result" class="case-result"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="result-takeaway" class="case-interpretation"></section>
+
+        <section class="case-meaning">
+          <span class="section-kicker">Connection to <em>From Minds to Coordination</em></span>
+          <h3>Coordination failed without anyone needing to reject the outbreak or the value of joint action.</h3>
+          <p>The capacity shock changed what the agents required before acting. Locally reasonable requirements became jointly infeasible. The verified package restored coordination by changing the decision environment—not by changing the agents’ mandates or dictating their votes.</p>
         </section>
 
         <details class="advanced-evidence">
@@ -353,6 +375,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=tool-overview-v1" defer></script>
+  <script src="assets/app.js?v=guided-example-v1" defer></script>
 </body>
 </html>

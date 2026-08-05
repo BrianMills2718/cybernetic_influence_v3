@@ -301,27 +301,28 @@ function renderMechanism() {
     renderMechanism()
     syncUrl()
   }
-  $('#result-sequence').innerHTML = dataset.runs.map((run) => {
-    const story = conditionStory(run)
-    const final = run.rounds.at(-1).decision_counts
-    const approved = run.outcome === 'joint_response_approved'
-    return `<article class="result-card ${approved ? 'result-approved' : 'result-blocked'}">
-      <div class="result-step">Run ${escapeHtml(story.step)}</div>
-      <h4>${escapeHtml(story.title)}</h4>
-      <strong class="result-change">${escapeHtml(story.change)}</strong>
-      <p>${escapeHtml(story.explanation)}</p>
-      <div class="result-vote"><span>Final vote</span><strong>${escapeHtml(countsText(final))}</strong></div>
-      <div class="result-verdict"><span>Outcome</span>${outcomeBadge(run)}</div>
-    </article>`
-  }).join('')
   const baseline = dataset.runs.find((run) => run.condition === 'baseline')
   const pressure = dataset.runs.find((run) => run.condition === 'responsive_exercise_injects')
   const stabilized = dataset.runs.find((run) => run.condition === 'capacity_inject_replay_with_stabilization')
+
+  const renderCaseResult = (target, run) => {
+    if (!run) {
+      $(target).innerHTML = '<strong>Run evidence unavailable</strong>'
+      return
+    }
+    const path = run.rounds.map((round) => `<span><b>Round ${round.round}</b>${escapeHtml(countsText(round.decision_counts))}</span>`).join('')
+    $(target).innerHTML = `<div class="case-vote-path">${path}</div><div class="case-final"><span>Final outcome</span>${outcomeBadge(run)}</div>`
+  }
+  renderCaseResult('#case-baseline-result', baseline)
+  renderCaseResult('#case-pressure-result', pressure)
+  renderCaseResult('#case-stabilization-result', stabilized)
+
   $('#result-takeaway').innerHTML = baseline && pressure && stabilized ? `
-    <span>The result in one sentence</span>
-    <strong>The same configured coalition approved the plan without new pressure, failed to approve it when capacity requirements became incompatible, and approved it again after a verified package resolved those requirements.</strong>
+    <span>What happened</span>
+    <h3>All three runs began with unanimous support. Only the decision environment changed what happened next.</h3>
+    <p>With no shock, support remained unanimous. Under the four capacity constraints, the final vote became ${escapeHtml(countsText(pressure.rounds.at(-1).decision_counts))}. When the verified package made the minimum requirements compatible, the vote returned to ${escapeHtml(countsText(stabilized.rounds.at(-1).decision_counts))}.</p>
     <p>This is one synthetic demonstration, not an estimate of how people or real institutions would behave.</p>` : `
-    <span>The result</span><strong>${dataset.runs.length} retained trajectories are loaded.</strong><p>Open the evidence below to compare their exact decisions.</p>`
+    <span>What happened</span><h3>${dataset.runs.length} retained trajectories are loaded.</h3><p>Open the evidence below to compare their exact decisions.</p>`
 
   const finalStances = dataset.runs.map((run) => ({run, stance:personStance(run, 3, state.mechanismPersonId)})).filter((item) => item.stance)
   $('#waltzman-lens').innerHTML = finalStances.map(({run, stance}) => {

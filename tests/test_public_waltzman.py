@@ -73,8 +73,14 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Run autonomous decisions" in page
     assert "Inspect the evidence" in page
     assert "Explore the evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=tool-overview-v1"]
-    assert shape.scripts == ["assets/app.js?v=tool-overview-v1"]
+    assert "Can three countries still launch a joint outbreak response" in page
+    assert "Launch a joint regional response—or wait" in page
+    assert "Twelve agents with different responsibilities" in page
+    assert "Four concrete constraints arrive" in page
+    assert "24 regional clinicians" in page
+    assert "10% regional reserve" in page
+    assert shape.stylesheets == ["assets/styles.css?v=guided-example-v1"]
+    assert shape.scripts == ["assets/app.js?v=guided-example-v1"]
     assert {
         "overview-view",
         "run-view",
@@ -90,7 +96,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "trajectory-grid",
         "run-matrix",
         "mechanism-view",
-        "result-sequence",
+        "case-baseline-result",
+        "case-pressure-result",
+        "case-stabilization-result",
         "result-takeaway",
         "waltzman-lens",
         "mechanism-table",
