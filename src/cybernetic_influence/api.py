@@ -177,6 +177,15 @@ from cybernetic_influence.scenarios.coordination_decision import (
     run_coordination,
     stabilization_coordination_fixture,
 )
+from cybernetic_influence.scenarios.regional_outbreak import (
+    OutbreakCondition,
+    OutbreakFixture,
+    outbreak_bindings,
+    outbreak_fixture as regional_outbreak_fixture,
+    outbreak_readout,
+    outbreak_runtime_config,
+    run_outbreak,
+)
 
 
 class RunRequest(BaseModel):
@@ -189,6 +198,7 @@ class RunRequest(BaseModel):
         "physical_access",
         "purchase_payment",
         "coordination_decision",
+        "regional_outbreak",
     ] = "service_desk"
     cognition_profile: ServiceDeskCognitionProfile = "position_context"
     arm_id: str = "baseline"
@@ -625,6 +635,12 @@ def _scenario_preview(
         compiled_scenario = purchase_payment_fixture(purchase_arm).scenario
     elif scenario == "coordination_decision":
         compiled_scenario = _coordination_contract(arm_id).scenario
+    elif scenario == "regional_outbreak":
+        if arm_id not in {"baseline", "responsive_exercise_injects"}:
+            raise ValueError("unknown Regional Outbreak condition")
+        compiled_scenario = regional_outbreak_fixture(
+            cast(OutbreakCondition, arm_id)
+        ).scenario
     else:
         raise ValueError("unknown scenario")
 
@@ -652,7 +668,11 @@ def _scenario_preview(
             temporal_states,
             edges,
             [],
-            events=([] if scenario == "coordination_decision" else None),
+            events=(
+                []
+                if scenario in {"coordination_decision", "regional_outbreak"}
+                else None
+            ),
         ),
         "timeline": [],
         "trajectory": {"nodes": [], "edges": []},
@@ -1198,6 +1218,33 @@ def create_app(
                         },
                     ],
                 },
+                "regional_outbreak": {
+                    "label": "Regional outbreak response",
+                    **_scenario_explanation("regional_outbreak"),
+                    "profiles": ["position_context"],
+                    "execution_modes": ["live"],
+                    "supports_live": bool(coordination_live_models),
+                    "live_model_ids": coordination_live_models,
+                    "maximum_live_calls": 36,
+                    "arms": [
+                        {
+                            "id": "baseline",
+                            "label": "Baseline",
+                            "description": (
+                                "Twelve autonomous coalition roles receive only the common "
+                                "results of each prior decision round."
+                            ),
+                        },
+                        {
+                            "id": "responsive_exercise_injects",
+                            "label": "Responsive exercise injects",
+                            "description": (
+                                "Exercise control observes aggregate reported risks and "
+                                "selects a predeclared external development between rounds."
+                            ),
+                        },
+                    ],
+                },
             },
             "profiles": ["position_context", "procedural_control"],
             "arms": [arm.arm_id for arm in service_desk_arm_configurations()],
@@ -1248,6 +1295,38 @@ def create_app(
                     coordination_measurement_readout(runs.get(run_id)).status
                 )
         return {"runs": retained, "corrupt_files": corrupt}
+
+    @app.get("/api/regional-outbreak-comparison")
+    def regional_outbreak_comparison(request: Request) -> dict[str, object]:
+        """Project compact outcome evidence from completed authentic outbreak runs."""
+
+        _require_access(request)
+        retained, _ = runs.list_runs()
+        rows: list[dict[str, object]] = []
+        for summary in retained:
+            if (
+                summary.get("scenario") != "regional_outbreak"
+                or summary.get("status") != "completed"
+            ):
+                continue
+            run_id = summary.get("run_id")
+            if not isinstance(run_id, str):
+                continue
+            document = runs.get(run_id)
+            outcome = document.get("outcome")
+            configuration = document.get("llm_configuration")
+            rows.append(
+                {
+                    **summary,
+                    "outcome": dict(outcome) if isinstance(outcome, dict) else None,
+                    "llm_configuration": (
+                        dict(configuration)
+                        if isinstance(configuration, dict)
+                        else None
+                    ),
+                }
+            )
+        return {"rows": rows}
 
     @app.post("/api/composite-assays")
     def create_composite_assay(request: Request) -> CompositeAssayResponse:
@@ -1836,6 +1915,7 @@ def create_app(
             "physical_access",
             "purchase_payment",
             "coordination_decision",
+            "regional_outbreak",
         ],
         arm_id: str,
         cognition_profile: str = "position_context",
@@ -2596,6 +2676,8 @@ def create_app(
         coordination_contract = None
         coordination_fixture: CoordinationRuntimeFixture | None = None
         coordination_experiment_condition: LiveCoordinationProbeCondition | None = None
+        outbreak_condition: OutbreakCondition | None = None
+        outbreak_runtime: OutbreakFixture | None = None
         resolved_run_control: ResolvedRunControlPlan | None = None
         selected_profile: str = request_body.cognition_profile
         if request_body.scenario == "service_desk":
@@ -2648,7 +2730,7 @@ def create_app(
                     detail="unknown purchase-payment intervention arm",
                 )
             selected_profile = "position_context"
-        else:
+        elif request_body.scenario == "coordination_decision":
             try:
                 coordination_contract = _coordination_contract(request_body.arm_id)
             except ValueError as error:
@@ -2660,6 +2742,18 @@ def create_app(
                 coordination_fixture
             )
             selected_profile = "position_context"
+        else:
+            if request_body.arm_id not in {
+                "baseline",
+                "responsive_exercise_injects",
+            }:
+                raise HTTPException(
+                    status_code=422,
+                    detail="unknown regional-outbreak condition",
+                )
+            outbreak_condition = cast(OutbreakCondition, request_body.arm_id)
+            outbreak_runtime = regional_outbreak_fixture(outbreak_condition)
+            selected_profile = "position_context"
         if request_body.scenario != "service_desk" and request_body.run_control is not None:
             raise HTTPException(
                 status_code=422,
@@ -2667,7 +2761,7 @@ def create_app(
             )
         live = request_body.execution == "live"
         if (
-            request_body.scenario == "coordination_decision"
+            request_body.scenario in {"coordination_decision", "regional_outbreak"}
             and not live
             and not allow_internal_scripted_coordination
         ):
@@ -2697,7 +2791,7 @@ def create_app(
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error)) from error
             if (
-                request_body.scenario == "coordination_decision"
+                request_body.scenario in {"coordination_decision", "regional_outbreak"}
                 and effective_llm.model not in coordination_live_model_ids()
             ):
                 raise HTTPException(
@@ -3017,6 +3111,60 @@ def create_app(
                     headline=headline,
                     summary=summary,
                 )
+            elif outbreak_runtime is not None:
+                if effective_llm is None:  # pragma: no cover - live-only validation
+                    raise AssertionError("regional outbreak run lacks LLM config")
+                outbreak_runtime = regional_outbreak_fixture(
+                    cast(OutbreakCondition, outbreak_condition),
+                    model=effective_llm.model,
+                    reasoning_effort=effective_llm.agent_reasoning_effort,
+                )
+                result = run_outbreak(
+                    outbreak_runtime,
+                    outbreak_bindings(
+                        outbreak_runtime,
+                        trace_id_prefix=run_id,
+                        model=effective_llm.model,
+                        reasoning_effort=effective_llm.agent_reasoning_effort,
+                    ),
+                    run_id=run_id,
+                    runtime_config=outbreak_runtime_config(
+                        per_call_budget=effective_llm.participant_per_call_ceiling,
+                        per_run_budget=effective_llm.max_total_cost,
+                    ),
+                    checkpoint_observer=retain_checkpoint,
+                    progress_observer=lambda update, checkpoint: retain_progress(
+                        run_id,
+                        update,
+                        checkpoint,
+                        initial_state=outbreak_runtime.scenario.initial_state,
+                        analytical_boundaries=(
+                            outbreak_runtime.scenario.analytical_boundaries
+                        ),
+                    ),
+                )
+                outbreak_outcome, headline, summary = outbreak_readout(result)
+                document = build_analyst_document(
+                    initial_state=outbreak_runtime.scenario.initial_state,
+                    analytical_boundaries=(
+                        outbreak_runtime.scenario.analytical_boundaries
+                    ),
+                    result=result,
+                    scenario="regional_outbreak",
+                    profile=selected_profile,
+                    arm_id=cast(str, outbreak_condition),
+                    execution=request_body.execution,
+                    created_at=created_at,
+                    outcome=outbreak_outcome,
+                    headline=headline,
+                    summary=summary,
+                    include_boundary_activity=True,
+                )
+                document["completion"] = (
+                    result.completion.model_dump(mode="json")
+                    if result.completion is not None
+                    else None
+                )
             elif coordination_fixture is not None:
                 live_experiment_fixture: CoordinationExperimentRuntimeFixture | None = None
                 if (
@@ -3126,7 +3274,7 @@ def create_app(
                 raise RuntimeError("validated request has no scenario arm")
             narrated = _attach_narration(
                 document,
-                live=live,
+                live=live and outbreak_runtime is None,
                 run_id=run_id,
                 effective_llm=effective_llm,
             )
@@ -3515,6 +3663,31 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
                 "Which outside information crossed into the partnership?",
                 "Which people and exact mechanisms contributed before an output crossed back out?",
                 "Was external acceptance retained separately from the partnership's attempted output?",
+            ],
+        },
+        "regional_outbreak": {
+            "help": (
+                "Compare whether a multinational coalition preserves joint action "
+                "when exercise control responds to the risks participants themselves report."
+            ),
+            "representation_summary": (
+                "Twelve autonomous synthetic roles across three countries and a regional "
+                "institution make three successive outbreak-response decisions."
+            ),
+            "assumptions": [
+                "Participant roles receive identical initial conditions across arms.",
+                "Exercise injects are predeclared external developments, not commands to participants.",
+                "The exact decision rule requires six executable-now support positions, nine support or conditional positions, and at most one opposition after round three.",
+            ],
+            "known_omissions": [
+                "The synthetic roles are not validated models of real people or governments.",
+                "The first comparison is one run per condition and cannot establish a general causal effect.",
+                "Epidemic transmission, media, and response implementation are outside this slice.",
+            ],
+            "fidelity_questions": [
+                "Did participants remain autonomous while exercise control changed only external information?",
+                "Which risk and request patterns changed between rounds and conditions?",
+                "Does the observed contrast warrant replicated runs or a larger coalition?",
             ],
         },
     }

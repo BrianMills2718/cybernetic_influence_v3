@@ -1,0 +1,757 @@
+"""Twelve-agent outbreak coordination experiment with optional exercise injects."""
+
+from __future__ import annotations
+
+from collections import Counter
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+import json
+from typing import Literal, TypeAlias, cast
+
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
+
+from cybernetic_influence.active_runtime import (
+    ActiveProposal,
+    ActiveRuntimeCheckpoint,
+    ActiveRuntimeConfig,
+    ActiveRuntimeResult,
+    ActiveRuntimeSession,
+    ActiveStepResult,
+    ActiveSystemBinding,
+    ActiveSystemExecutionError,
+    ActiveSystemInput,
+    ActiveSystemSpec,
+    NativeLlmActiveSystem,
+    RuntimeProgressObserver,
+    UpdateScheduleDirective,
+)
+from cybernetic_influence.active_runtime.run_control import CompletionRecord
+from cybernetic_influence.causal_core.engine import ExactMechanismBinding, MechanismContext
+from cybernetic_influence.causal_core.models import (
+    AnalyticalBoundary,
+    CausalScenario,
+    CausalState,
+    ConnectionState,
+    EntityState,
+    FactState,
+    FactUpdate,
+    FidelityNote,
+    MechanismOutcome,
+    MechanismSpec,
+    ObservationDraft,
+    PlacementState,
+    PlaceState,
+    PortState,
+)
+
+OutbreakCondition: TypeAlias = Literal["baseline", "responsive_exercise_injects"]
+Decision: TypeAlias = Literal["support", "conditional", "defer", "oppose"]
+Risk: TypeAlias = Literal[
+    "none", "evidence_quality", "sovereignty", "capacity", "legitimacy"
+]
+Request: TypeAlias = Literal["none", "data", "validation", "safeguards", "resources"]
+
+SCENARIO_ID = "regional_outbreak_v1"
+TASK = "regional_outbreak_coordination_step"
+MAX_ROUNDS = 3
+
+AGENT_IDS: tuple[str, ...] = (
+    "alba_epidemiologist",
+    "alba_policy_delegate",
+    "alba_operations_lead",
+    "borin_epidemiologist",
+    "borin_policy_delegate",
+    "borin_operations_lead",
+    "cyrenia_epidemiologist",
+    "cyrenia_policy_delegate",
+    "cyrenia_operations_lead",
+    "regional_coordinator",
+    "regional_scientific_advisor",
+    "regional_logistics_coordinator",
+)
+
+_ROLE_BRIEFS: dict[str, str] = {
+    "epidemiologist": (
+        "You are accountable for evidentiary quality and epidemic control. You prefer "
+        "fast action when evidence is sufficient, but will demand validation when it is not."
+    ),
+    "policy_delegate": (
+        "You are accountable for national authority, public legitimacy, and a defensible "
+        "agreement. You can support shared action with credible safeguards."
+    ),
+    "operations_lead": (
+        "You are accountable for executable staffing, supplies, and field delivery. You "
+        "favor a joint response that matches real capacity and names resource gaps."
+    ),
+    "regional_coordinator": (
+        "You are accountable for a legitimate coalition decision, not agreement at any cost. "
+        "You surface unresolved dependencies and can support a bounded joint response."
+    ),
+    "regional_scientific_advisor": (
+        "You are accountable for cross-country interpretation of incomplete outbreak data. "
+        "You distinguish actionable uncertainty from evidence that is too weak to use."
+    ),
+    "regional_logistics_coordinator": (
+        "You are accountable for regional surge capacity and fair allocation. You support "
+        "plans that can be supplied and will flag hidden implementation dependencies."
+    ),
+}
+
+_COUNTRY_CONTEXT: dict[str, str] = {
+    "alba": (
+        "Alba has the earliest detected cluster and strong laboratories, but its cabinet "
+        "will reject unrestricted foreign access to identifiable patient records."
+    ),
+    "borin": (
+        "Borin has the largest transport hub and can deploy teams quickly, but hospital "
+        "staffing is already strained and parliament is watching regional cost sharing."
+    ),
+    "cyrenia": (
+        "Cyrenia has sparse surveillance outside its capital and high public distrust after "
+        "a prior false alarm; local validation and visibly reciprocal aid matter."
+    ),
+}
+
+_INITIAL_SITUATION = (
+    "A novel respiratory outbreak is growing across Alba, Borin, and Cyrenia. The proposed "
+    "joint response pools de-identified case data, deploys mixed investigation teams, shares "
+    "laboratory capacity, and releases supplies through a regional allocation cell. A signed "
+    "compact keeps line-level records under national control, forbids unapproved export, and "
+    "logs all access. Cross-laboratory validation has confirmed the initial signal. National "
+    "authorities retain clinical command. Reserve staff, diagnostics, reciprocal aid shipments, "
+    "and equal regional cost shares are precommitted, and local validation boards in all three "
+    "countries endorsed the launch. The plan is reviewed after 72 hours. "
+    "The coalition has three decision rounds. In every round you must independently state your "
+    "current decision, primary risk, requested next step, and concise rationale."
+)
+
+
+class OutbreakStance(BaseModel):
+    """Strict participant payload; actor identity is inferred from the owned port."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    decision: Decision
+    risk: Risk
+    request: Request
+    rationale: str = Field(min_length=1, max_length=600)
+
+
+@dataclass(frozen=True)
+class OutbreakFixture:
+    condition: OutbreakCondition
+    scenario: CausalScenario
+    active_specs: tuple[ActiveSystemSpec, ...]
+    exact_bindings: Mapping[str, ExactMechanismBinding]
+
+
+@dataclass(frozen=True)
+class RequiredStanceSystem:
+    """Apply the meeting's one-stance participation rule without choosing its content."""
+
+    active_system_id: str
+    output_port_id: str
+    implementation_id: str
+    inner: NativeLlmActiveSystem
+
+    @property
+    def provider_bound(self) -> bool:
+        return True
+
+    def step(self, active_input: ActiveSystemInput) -> object:
+        raw = self.inner.step(active_input)
+        result = ActiveStepResult.model_validate(raw)
+        actions = result.proposal.actions
+        if len(actions) != 1:
+            raise ValueError(
+                f"{self.active_system_id} must submit exactly one stance per round"
+            )
+        action = actions[0]
+        if action.output_port_id != self.output_port_id:
+            raise ValueError(f"{self.active_system_id} used another participant's port")
+        OutbreakStance.model_validate(action.payload)
+        return result.model_copy(
+            update={
+                "proposal": ActiveProposal(
+                    active_system_id=result.proposal.active_system_id,
+                    implementation_id=result.proposal.implementation_id,
+                    private_state=result.proposal.private_state,
+                    actions=actions,
+                    update_schedule=UpdateScheduleDirective(mode="dormant"),
+                )
+            }
+        )
+
+
+def outbreak_fixture(
+    condition: OutbreakCondition,
+    *,
+    model: str = "codex/gpt-5.6-luna",
+    reasoning_effort: str | None = "medium",
+) -> OutbreakFixture:
+    """Build one closed, three-round coalition experiment."""
+
+    entities: dict[str, EntityState] = {
+        agent_id: EntityState(
+            entity_id=agent_id,
+            entity_kind="autonomous_participant",
+            description=_agent_label(agent_id),
+            attributes={
+                "country": FactState(value=_country(agent_id)),
+                "role": FactState(value=_role(agent_id)),
+            },
+        )
+        for agent_id in AGENT_IDS
+    }
+    entities["outbreak_decision"] = EntityState(
+        entity_id="outbreak_decision",
+        entity_kind="decision_register",
+        description="Exact register of round stances and the coalition outcome.",
+        attributes={
+            "condition": FactState(value=condition),
+            "current_round": FactState(value=0),
+            "stances": FactState(value={}),
+            "history": FactState(value=[]),
+            "outcome": FactState(value="pending"),
+            "injects_delivered": FactState(value=[]),
+        },
+    )
+    entities["exercise_control"] = EntityState(
+        entity_id="exercise_control",
+        entity_kind="exercise_control",
+        description=(
+            "A wargame control function that may select from predeclared exogenous "
+            "developments; it cannot choose participant stances."
+        ),
+    )
+
+    ports: dict[str, PortState] = {
+        "coalition_round_in": PortState(
+            port_id="coalition_round_in",
+            owner_ref="outbreak_stance_recorder",
+            direction="input",
+            effect_type="outbreak_stance",
+            description="Shared exact intake and feedback channel for the coalition round.",
+        )
+    }
+    connections: dict[str, ConnectionState] = {}
+    for agent_id in AGENT_IDS:
+        out_id = f"stance_{agent_id}_out"
+        ports[out_id] = PortState(
+            port_id=out_id,
+            owner_ref=agent_id,
+            direction="output",
+            effect_type="outbreak_stance",
+            description=(
+                "Submit exactly one payload with decision=support|conditional|defer|oppose, "
+                "risk=none|evidence_quality|sovereignty|capacity|legitimacy, "
+                "request=none|data|validation|safeguards|resources, and a rationale string."
+            ),
+        )
+        connections[f"route_{agent_id}_stance"] = ConnectionState(
+            connection_id=f"route_{agent_id}_stance",
+            source_port_id=out_id,
+            target_port_id="coalition_round_in",
+            delay=1,
+            description="A participant's stated position enters the exact round register.",
+        )
+
+    mechanism = MechanismSpec(
+        mechanism_id="outbreak_stance_recorder",
+        mechanism_kind="round_stance_recorder",
+        implementation_id="outbreak_stance_recorder_v1",
+        description="Records autonomous stances, closes rounds, and distributes common feedback.",
+        input_port_ids=["coalition_round_in"],
+        read_fact_ids=[
+            "outbreak_decision.condition",
+            "outbreak_decision.current_round",
+            "outbreak_decision.stances",
+            "outbreak_decision.history",
+            "outbreak_decision.outcome",
+            "outbreak_decision.injects_delivered",
+        ],
+        write_fact_ids=[
+            "outbreak_decision.current_round",
+            "outbreak_decision.stances",
+            "outbreak_decision.history",
+            "outbreak_decision.outcome",
+            "outbreak_decision.injects_delivered",
+        ],
+        observation_target_ids=list(AGENT_IDS),
+        substrate_refs=["outbreak_decision", "exercise_control"],
+        invariant_ids=["valid_outbreak_round_transition"],
+        fidelity=FidelityNote(
+            abstraction="A bounded three-round multinational outbreak decision exercise.",
+            assumptions=[
+                "Each synthetic participant owns one institutional role and one stance interface.",
+                "A joint response requires at least six executable-now support positions, nine support or conditional positions, and no more than one opposition.",
+                "Responsive injects are selected only from predeclared exercise developments after observing aggregate risks.",
+            ],
+            known_omissions=[
+                "No epidemiological transmission model or real government is represented.",
+                "The exercise does not model media, public behavior, or implementation after the decision.",
+            ],
+            validation_basis=[
+                "Strict stance schema, exact round accounting, retained participant calls, and identical initial conditions across arms."
+            ],
+        ),
+    )
+
+    state = CausalState(
+        entities=entities,
+        places={
+            "regional_center": PlaceState(
+                place_id="regional_center",
+                place_kind="coordination_site",
+                description="Shared virtual regional coordination center.",
+            )
+        },
+        placements={
+            agent_id: PlacementState(entity_id=agent_id, place_id="regional_center")
+            for agent_id in AGENT_IDS
+        },
+        ports=ports,
+        connections=connections,
+        mechanisms={mechanism.mechanism_id: mechanism},
+    )
+    scenario = CausalScenario(
+        scenario_id=SCENARIO_ID,
+        description=(
+            "Twelve autonomous LLM participants decide whether to mount a joint outbreak "
+            "response under either common feedback alone or responsive exercise injects."
+        ),
+        time_unit="outbreak_hour",
+        timing_contract="legacy",
+        initial_state=state,
+        analytical_boundaries=[
+            AnalyticalBoundary(
+                boundary_id="regional_coalition",
+                label="Regional coalition",
+                description="All twelve participating institutional roles.",
+                member_refs=list(AGENT_IDS),
+            ),
+            *[
+                AnalyticalBoundary(
+                    boundary_id=f"{country}_delegation",
+                    label=f"{country.title()} delegation",
+                    description=f"The three national roles representing {country.title()}.",
+                    member_refs=[agent for agent in AGENT_IDS if agent.startswith(country)],
+                )
+                for country in ("alba", "borin", "cyrenia")
+            ],
+        ],
+        fidelity_questions=[
+            "Do responsive injects change coalition decisions without directly controlling participants?",
+            "Which reported risks and requests precede failure or preservation of coordination?",
+            "Are any apparent effects robust enough to justify replicated follow-up runs?",
+        ],
+    )
+
+    specs: list[ActiveSystemSpec] = []
+    for agent_id in AGENT_IDS:
+        policy = _native_policy(
+            agent_id,
+            condition=condition,
+            model=model,
+            reasoning_effort=reasoning_effort,
+            trace_id_prefix="fixture",
+        )
+        specs.append(
+            ActiveSystemSpec(
+                active_system_id=agent_id,
+                entity_id=agent_id,
+                implementation_id=policy.implementation_id,
+                description=f"Autonomous synthetic role: {_agent_label(agent_id)}.",
+                observation_port_ids=["coalition_round_in"],
+                output_port_ids=[f"stance_{agent_id}_out"],
+                initial_private_state={
+                    "memory": [
+                        {
+                            "logical_time": 0,
+                            "kind": "autobiographical_memory",
+                            "content": _initial_memory(agent_id),
+                        }
+                    ]
+                },
+                initial_next_update_at=0,
+            )
+        )
+
+    exact = ExactMechanismBinding(
+        implementation_id="outbreak_stance_recorder_v1",
+        handler=_record_stance,
+        invariant_checkers={
+            "valid_outbreak_round_transition": _valid_outbreak_round_transition
+        },
+    )
+    return OutbreakFixture(
+        condition=condition,
+        scenario=scenario,
+        active_specs=tuple(specs),
+        exact_bindings={mechanism.mechanism_id: exact},
+    )
+
+
+def outbreak_bindings(
+    fixture: OutbreakFixture,
+    *,
+    trace_id_prefix: str,
+    model: str,
+    reasoning_effort: str | None,
+) -> dict[str, ActiveSystemBinding]:
+    bindings: dict[str, ActiveSystemBinding] = {}
+    for agent_id in AGENT_IDS:
+        inner = _native_policy(
+            agent_id,
+            condition=fixture.condition,
+            model=model,
+            reasoning_effort=reasoning_effort,
+            trace_id_prefix=trace_id_prefix,
+        )
+        wrapped = RequiredStanceSystem(
+            active_system_id=agent_id,
+            output_port_id=f"stance_{agent_id}_out",
+            implementation_id=inner.implementation_id,
+            inner=inner,
+        )
+        bindings[agent_id] = ActiveSystemBinding(wrapped.implementation_id, wrapped)
+    return bindings
+
+
+def outbreak_runtime_config(*, per_call_budget: float, per_run_budget: float) -> ActiveRuntimeConfig:
+    return ActiveRuntimeConfig(
+        per_call_budget=per_call_budget,
+        per_run_budget=per_run_budget,
+        max_actions_per_system=1,
+        max_observations_per_system=6,
+        max_private_state_bytes=32_768,
+    )
+
+
+def run_outbreak(
+    fixture: OutbreakFixture,
+    bindings: Mapping[str, ActiveSystemBinding],
+    *,
+    run_id: str,
+    runtime_config: ActiveRuntimeConfig,
+    checkpoint_observer: Callable[[ActiveRuntimeCheckpoint], None] | None = None,
+    progress_observer: RuntimeProgressObserver | None = None,
+) -> ActiveRuntimeResult:
+    session = ActiveRuntimeSession(
+        fixture.scenario,
+        fixture.exact_bindings,
+        fixture.active_specs,
+        bindings,
+        run_id=run_id,
+        config=runtime_config,
+        progress_observer=progress_observer,
+        participant_concurrency=3,
+    )
+    timeout_retries = 0
+    while session.core_state.fact("outbreak_decision.outcome").value == "pending":
+        due = session.next_due_activation()
+        if session.core_state.fact("outbreak_decision.outcome").value != "pending":
+            break
+        if due is None:
+            raise RuntimeError("outbreak run became quiescent before a decision")
+        committed_rounds = sum(
+            attempt.status == "committed" for attempt in session.attempts
+        )
+        if committed_rounds >= MAX_ROUNDS:
+            raise RuntimeError("outbreak run exceeded the three-round limit")
+        try:
+            session.activate(
+                due.active_system_ids,
+                logical_time=due.logical_time,
+                activation_causes=due.causes,
+            )
+        except ActiveSystemExecutionError as error:
+            if not _caused_by_timeout(error) or timeout_retries >= 2:
+                raise
+            timeout_retries += 1
+            continue
+        if checkpoint_observer is not None:
+            checkpoint_observer(session.checkpoint())
+    session.drain_pending_exact_work()
+    outcome = str(session.core_state.fact("outbreak_decision.outcome").value)
+    return session.complete(
+        completion=CompletionRecord(
+            reason="terminal_condition_met",
+            condition_ids=[f"outbreak_{outcome}"],
+            causal_time=len(session.attempts),
+            logical_time=session.core_state.logical_time,
+            public_summary=f"The three-round coalition outcome was {outcome.replace('_', ' ')}.",
+            evidence_event_ids=[session.checkpoint().core_checkpoint.events[-1].event_id],
+        )
+    )
+
+
+def _caused_by_timeout(error: BaseException) -> bool:
+    current: BaseException | None = error
+    while current is not None:
+        if isinstance(current, TimeoutError):
+            return True
+        current = current.__cause__
+    return False
+
+
+def outbreak_readout(result: ActiveRuntimeResult) -> tuple[dict[str, object], str, str]:
+    state = result.core_result.final_state
+    history = cast(list[dict[str, object]], state.fact("outbreak_decision.history").value)
+    final_stances = cast(dict[str, dict[str, str]], history[-1]["stances"])
+    decisions = Counter(item["decision"] for item in final_stances.values())
+    risks = Counter(item["risk"] for item in final_stances.values())
+    requests = Counter(item["request"] for item in final_stances.values())
+    outcome = str(state.fact("outbreak_decision.outcome").value)
+    condition = str(state.fact("outbreak_decision.condition").value)
+    readout: dict[str, object] = {
+        "condition": condition,
+        "outcome": outcome,
+        "rounds_completed": len(history),
+        "agent_count": len(AGENT_IDS),
+        "final_decisions": dict(sorted(decisions.items())),
+        "final_risks": dict(sorted(risks.items())),
+        "final_requests": dict(sorted(requests.items())),
+        "round_history": history,
+        "exercise_injects": state.fact("outbreak_decision.injects_delivered").value,
+        "model_calls": result.model_calls,
+        "known_cost": result.total_observed_cost,
+        "cost_fully_observable": result.cost_fully_observable,
+    }
+    headline = (
+        "The coalition approved a joint outbreak response"
+        if outcome == "joint_response_approved"
+        else "The coalition failed to approve a joint outbreak response"
+    )
+    summary = (
+        f"Across three rounds, {decisions['support'] + decisions['conditional']} of 12 "
+        f"participants ended in support or conditional support, with {decisions['oppose']} "
+        f"opposed. The {condition.replace('_', ' ')} condition ended in "
+        f"{outcome.replace('_', ' ')}."
+    )
+    return readout, headline, summary
+
+
+def _record_stance(context: MechanismContext) -> MechanismOutcome:
+    if context.read("outbreak_decision.outcome") != "pending":
+        return MechanismOutcome(outcome_code="stance_ignored_after_decision")
+    stance = OutbreakStance.model_validate(context.effect.payload)
+    agent_id = context.effect.source_port_id.removeprefix("stance_").removesuffix("_out")
+    if agent_id not in AGENT_IDS:
+        raise ValueError("stance entered through an unknown participant port")
+    stances = cast(dict[str, JsonValue], context.read("outbreak_decision.stances"))
+    if agent_id in stances:
+        return MechanismOutcome(outcome_code="duplicate_round_stance_rejected")
+    updated_stances = {**stances, agent_id: stance.model_dump(mode="json")}
+    if len(updated_stances) < len(AGENT_IDS):
+        return MechanismOutcome(
+            outcome_code="round_stance_recorded",
+            updates=[FactUpdate(fact_id="outbreak_decision.stances", value=updated_stances)],
+        )
+
+    round_index = cast(int, context.read("outbreak_decision.current_round"))
+    history = cast(list[JsonValue], context.read("outbreak_decision.history"))
+    completed_round = cast(
+        JsonValue,
+        {"round": round_index + 1, "stances": updated_stances},
+    )
+    next_history = [*history, completed_round]
+    if round_index == MAX_ROUNDS - 1:
+        decisions = Counter(
+            cast(dict[str, str], item)["decision"] for item in updated_stances.values()
+        )
+        approved = (
+            decisions["support"] >= 6
+            and decisions["support"] + decisions["conditional"] >= 9
+            and decisions["oppose"] <= 1
+        )
+        return MechanismOutcome(
+            outcome_code="coalition_decision_recorded",
+            updates=[
+                FactUpdate(fact_id="outbreak_decision.history", value=next_history),
+                FactUpdate(
+                    fact_id="outbreak_decision.outcome",
+                    value=("joint_response_approved" if approved else "no_joint_response"),
+                ),
+            ],
+        )
+
+    observations: list[ObservationDraft] = []
+    snapshot = json.dumps(
+        {
+            "document_kind": "coalition_round_snapshot",
+            "completed_round": round_index + 1,
+            "next_round": round_index + 2,
+            "stances": updated_stances,
+        },
+        sort_keys=True,
+    )
+    for target in AGENT_IDS:
+        observations.append(
+            ObservationDraft(
+                target_entity_id=target,
+                via_port_id=context.target_port.port_id,
+                apparent_content=snapshot,
+                apparent_source_ref="outbreak_decision",
+            )
+        )
+
+    delivered = cast(list[str], context.read("outbreak_decision.injects_delivered"))
+    updates = [
+        FactUpdate(fact_id="outbreak_decision.current_round", value=round_index + 1),
+        FactUpdate(fact_id="outbreak_decision.stances", value={}),
+        FactUpdate(fact_id="outbreak_decision.history", value=next_history),
+    ]
+    if context.read("outbreak_decision.condition") == "responsive_exercise_injects":
+        inject_id, inject_variants = _select_inject(updated_stances, round_index)
+        for target in AGENT_IDS:
+            observations.append(
+                ObservationDraft(
+                    target_entity_id=target,
+                    via_port_id=context.target_port.port_id,
+                    apparent_content=json.dumps(
+                        {
+                            "document_kind": "exercise_development",
+                            "inject_id": inject_id,
+                            "after_round": round_index + 1,
+                            "content": inject_variants[_country(target)],
+                            "instruction": (
+                                "Treat this as new external information, not a command. "
+                                "Other delegations may have received different developments."
+                            ),
+                        },
+                        sort_keys=True,
+                    ),
+                    apparent_source_ref="exercise_control",
+                )
+            )
+        delivered = [*delivered, inject_id]
+        updates.append(
+            FactUpdate(
+                fact_id="outbreak_decision.injects_delivered",
+                value=cast(JsonValue, delivered),
+            )
+        )
+    return MechanismOutcome(
+        outcome_code="coalition_round_completed",
+        updates=updates,
+        observations=observations,
+    )
+
+
+def _select_inject(
+    stances: Mapping[str, JsonValue], round_index: int
+) -> tuple[str, Mapping[str, str]]:
+    risks = Counter(cast(dict[str, str], item)["risk"] for item in stances.values())
+    dominant = max(
+        ("evidence_quality", "sovereignty", "capacity", "legitimacy"),
+        key=lambda risk: (risks[risk], risk),
+    )
+    options: dict[str, tuple[str, dict[str, str]]] = {
+        "evidence_quality": (
+            "evidence_conflict",
+            {
+                "alba": "Alba's laboratory finds a high-risk lineage but cannot release raw sequences until its national review is complete.",
+                "borin": "Borin's hub surveillance finds rapid spread inconsistent with Alba's preliminary lineage report and requests immediate operational action.",
+                "cyrenia": "Cyrenia's local laboratories cannot reproduce either regional finding and public-health leaders demand local validation before escalation.",
+                "regional": "The regional analysis cell receives three non-comparable datasets and must decide whether any common finding is actionable.",
+            },
+        ),
+        "sovereignty": (
+            "sovereignty_conflict",
+            {
+                "alba": "An Alba court temporarily bars line-level data export and unescorted foreign investigation teams pending national review.",
+                "borin": "New cases at Borin's transport hub require named cross-border contact lists within six hours to preserve the containment window.",
+                "cyrenia": "Cyrenian civil-society monitors demand independent regional access because they distrust data filtered only through national authorities.",
+                "regional": "The regional secretariat must reconcile incompatible demands for immediate named tracing, national data control, and independent access.",
+            },
+        ),
+        "capacity": (
+            "capacity_conflict",
+            {
+                "alba": "An equipment failure forces Alba's strongest laboratory to reserve half its capacity for domestic confirmation testing.",
+                "borin": "Borin can keep the transport hub open only if regional partners immediately supply clinical staff to its strained hospitals.",
+                "cyrenia": "Cyrenia will release its field teams only with a visible reciprocal shipment of diagnostics and protective equipment.",
+                "regional": "The regional roster and supply stock cannot satisfy all three national requests during the next 48 hours.",
+            },
+        ),
+        "legitimacy": (
+            "legitimacy_conflict",
+            {
+                "alba": "Alba's cabinet will defend the response publicly only if national authorities visibly retain command and foreign access stays bounded.",
+                "borin": "Borin's parliament threatens to withhold surge funding unless regional cost shares and operational burdens are published immediately.",
+                "cyrenia": "Cyrenian local leaders reject another capital-led assurance and demand an independent regional validation event before cooperation.",
+                "regional": "No single public assurance currently satisfies national command, burden transparency, and independent-validation demands together.",
+            },
+        ),
+    }
+    inject_id, variants = options[dominant]
+    return f"round_{round_index + 1}_{inject_id}", variants
+
+
+def _valid_outbreak_round_transition(
+    context: MechanismContext, outcome: MechanismOutcome
+) -> bool:
+    if outcome.outcome_code.startswith(
+        "duplicate"
+    ) or outcome.outcome_code.endswith("ignored_after_decision"):
+        return not outcome.updates and not outcome.observations
+    return all(update.fact_id.startswith("outbreak_decision.") for update in outcome.updates)
+
+
+def _native_policy(
+    agent_id: str,
+    *,
+    condition: OutbreakCondition,
+    model: str,
+    reasoning_effort: str | None,
+    trace_id_prefix: str,
+) -> NativeLlmActiveSystem:
+    persona = (
+        f"You are {_agent_label(agent_id)} in a fictional multinational outbreak exercise. "
+        f"{_ROLE_BRIEFS[_role(agent_id)]} {_country_context(agent_id)} "
+        "Decide autonomously from your mandate, private memory, and delivered evidence. "
+        "You are not required to agree. Use support only when the retained plan is executable "
+        "now under your mandate. Use conditional only for a specific unmet prerequisite that "
+        "can plausibly be completed before launch; use defer when a required prerequisite is "
+        "unresolved or incompatible with another coalition requirement, and oppose when the "
+        "proposal conflicts with your mandate. The institutional meeting rule requires exactly one "
+        f"action through stance_{agent_id}_out on every activation. Use only the exact payload "
+        "keys and enum values described by that interface. Do not add actor or round fields. "
+        f"The exercise condition label is {condition}; this label carries no behavioral instruction."
+    )
+    return NativeLlmActiveSystem.from_bound_configuration(
+        implementation_family_id=f"native_outbreak_{agent_id}_v1",
+        persona=persona,
+        model=model,
+        task=TASK,
+        trace_id_prefix=trace_id_prefix,
+        reasoning_effort=reasoning_effort,
+        max_memory_entries=12,
+        max_output_tokens=1200,
+    )
+
+
+def _role(agent_id: str) -> str:
+    if agent_id.startswith("regional_"):
+        return agent_id
+    return agent_id.split("_", 1)[1]
+
+
+def _country(agent_id: str) -> str:
+    return "regional" if agent_id.startswith("regional_") else agent_id.split("_", 1)[0]
+
+
+def _country_context(agent_id: str) -> str:
+    country = _country(agent_id)
+    return _COUNTRY_CONTEXT.get(
+        country,
+        "You serve the regional institution and must consider all three national contexts without pretending to represent them.",
+    )
+
+
+def _agent_label(agent_id: str) -> str:
+    return agent_id.replace("_", " ").title()
+
+
+def _initial_memory(agent_id: str) -> str:
+    return f"{_INITIAL_SITUATION} Your private institutional context: {_country_context(agent_id)}"

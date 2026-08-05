@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 import threading
 
@@ -103,7 +104,10 @@ class ActiveRuntimeSession:
         config: ActiveRuntimeConfig,
         causal_limits: CausalLimits | None = None,
         progress_observer: RuntimeProgressObserver | None = None,
+        participant_concurrency: int = 1,
     ) -> None:
+        if participant_concurrency < 1 or participant_concurrency > 64:
+            raise ValueError("participant_concurrency must be between 1 and 64")
         self._scenario = CausalScenario.model_validate(
             scenario.model_dump(mode="json")
         )
@@ -119,6 +123,7 @@ class ActiveRuntimeSession:
         self._config = ActiveRuntimeConfig.model_validate(
             config.model_dump(mode="json")
         )
+        self._participant_concurrency = participant_concurrency
         self._validate_registry(self._scenario.initial_state)
         self._states = {
             active_system_id: ActiveSystemState(
@@ -447,8 +452,13 @@ class ActiveRuntimeSession:
                 activation_id=activation_id,
             )
 
-            collection_error: Exception | None = None
-            for active_system_id in supplied_ids:
+            def collect_participant(
+                active_system_id: str,
+            ) -> tuple[
+                ActiveStepResult | None,
+                tuple[ModelCallEvidence, ...],
+                Exception | None,
+            ]:
                 item = collected[active_system_id]
                 binding = self._active_bindings[active_system_id]
                 try:
@@ -456,21 +466,47 @@ class ActiveRuntimeSession:
                         item.active_input.model_copy(deep=True)
                     )
                     result = self._validate_step_result(raw)
-                    item.proposal = result.proposal.model_copy(deep=True)
-                    item.evidence = [
-                        evidence.model_copy(deep=True)
-                        for evidence in result.call_evidence
-                    ]
+                    return result, tuple(result.call_evidence), None
                 except ActiveSystemExecutionError as error:
-                    item.evidence = [
-                        evidence.model_copy(deep=True)
-                        for evidence in error.call_evidence
-                    ]
-                    collection_error = error
-                    break
+                    return None, tuple(error.call_evidence), error
                 except Exception as error:
-                    collection_error = error
+                    return None, (), error
+
+            if self._participant_concurrency == 1 or len(supplied_ids) == 1:
+                participant_results = {}
+                for active_system_id in supplied_ids:
+                    participant_results[active_system_id] = collect_participant(
+                        active_system_id
+                    )
+                    if participant_results[active_system_id][2] is not None:
+                        break
+            else:
+                with ThreadPoolExecutor(
+                    max_workers=min(self._participant_concurrency, len(supplied_ids)),
+                    thread_name_prefix="active-participant",
+                ) as executor:
+                    futures = {
+                        active_system_id: executor.submit(
+                            collect_participant, active_system_id
+                        )
+                        for active_system_id in supplied_ids
+                    }
+                    participant_results = {
+                        active_system_id: future.result()
+                        for active_system_id, future in futures.items()
+                    }
+
+            collection_error: Exception | None = None
+            for active_system_id in supplied_ids:
+                if active_system_id not in participant_results:
                     break
+                result, evidence, error = participant_results[active_system_id]
+                item = collected[active_system_id]
+                item.evidence = [call.model_copy(deep=True) for call in evidence]
+                if result is not None:
+                    item.proposal = result.proposal.model_copy(deep=True)
+                if error is not None and collection_error is None:
+                    collection_error = error
 
             if collection_error is None:
                 try:

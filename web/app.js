@@ -1548,10 +1548,38 @@ function renderLiveCoordinationComparison(runs) {
   </section>`
 }
 
+function renderRegionalOutbreakComparison(rows) {
+  if (!rows?.length) return ''
+  const latest = new Map()
+  rows.forEach((row) => { if (!latest.has(row.arm)) latest.set(row.arm, row) })
+  const ordered = ['baseline', 'responsive_exercise_injects'].map((arm) => latest.get(arm)).filter(Boolean)
+  const calls = ordered.reduce((total, row) => total + Number(row.outcome?.model_calls || 0), 0)
+  return `<section class="composite-assay live-coordination-comparison">
+    <header><div><span class="eyebrow">Waltzman coordination probe</span><h3>Can responsive disruption prevent joint action without overturning the outbreak assessment?</h3></div><small>12 autonomous agents · 3 rounds · ${html(calls)} traced calls</small></header>
+    <p class="assay-question">The baseline receives common round feedback. The responsive condition adds only predeclared external exercise developments selected from risks the coalition reports. One trajectory per condition is a demonstration, not an effect estimate.</p>
+    <div class="assay-table-wrap"><table class="assay-table"><thead><tr><th>Condition</th><th>Outcome</th><th>Support / conditional</th><th>Defer</th><th>Leading risks</th><th>Injects</th><th>Evidence</th></tr></thead><tbody>
+      ${ordered.map((row) => {
+        const outcome = row.outcome || {}
+        const decisions = outcome.final_decisions || {}
+        const risks = Object.entries(outcome.final_risks || {}).sort((a,b) => b[1]-a[1]).slice(0,2).map(([risk,count]) => `${risk.replaceAll('_',' ')} (${count})`).join(', ') || '—'
+        const condition = row.arm === 'baseline' ? 'Baseline' : 'Responsive exercise injects'
+        return `<tr><td><strong>${html(condition)}</strong><small>${html(new Date(row.created_at).toLocaleString())}</small></td><td>${html(String(outcome.outcome || 'unknown').replaceAll('_',' '))}</td><td>${html(Number(decisions.support || 0) + Number(decisions.conditional || 0))} / 12</td><td>${html(decisions.defer || 0)}</td><td>${html(risks)}</td><td>${html(outcome.exercise_injects?.length || 0)}</td><td><button class="open-outbreak-run" data-run-id="${html(row.run_id)}">Open ${html(row.run_id)}</button></td></tr>`
+      }).join('')}
+    </tbody></table></div>
+  </section>`
+}
+
 async function loadHistory() {
-  const result = await request('/api/runs')
+  const [result, outbreak] = await Promise.all([
+    request('/api/runs'),
+    request('/api/regional-outbreak-comparison').catch(() => ({rows:[]})),
+  ])
   $('#live-coordination-comparisons').innerHTML = renderLiveCoordinationComparison(result.runs)
+  $('#regional-outbreak-comparisons').innerHTML = renderRegionalOutbreakComparison(outbreak.rows)
   document.querySelectorAll('.open-live-coordination-run').forEach((button) => {
+    button.onclick = () => openRetained(button.dataset.runId)
+  })
+  document.querySelectorAll('.open-outbreak-run').forEach((button) => {
     button.onclick = () => openRetained(button.dataset.runId)
   })
   const assayIds = [...new Set(result.runs.map((run) => run.composite_assay?.assay_id).filter(Boolean))]

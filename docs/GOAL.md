@@ -225,6 +225,23 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   and opens every underlying trajectory. The grouping is explicitly exploratory:
   separately retained probes may span mechanism revisions and are not promoted
   to a controlled live experiment or effect estimate.
+- The accepted Waltzman-facing next experiment is **Disrupting Coordination
+  Without Winning Belief**: twelve autonomous LLM roles across Alba, Borin,
+  Cyrenia, and a regional institution make three outbreak-response decisions.
+  The matched baseline receives common round feedback; the treatment adds only
+  predeclared exogenous exercise developments selected from risks participants
+  report. Exercise control cannot choose participant stances. The matched
+  authentic runs each completed 36 traced `codex/gpt-5.6-luna` calls with no
+  provider failures or observed cost. In `run_593ca1c425f2`, all twelve roles
+  independently supported the executable baseline and the joint response was
+  approved. In `run_c688aa8121fe`, two rounds of responsive, country-specific
+  capacity developments moved the coalition from twelve support positions to
+  five conditional positions and seven deferrals; all twelve requested
+  resources and the joint response was not approved. Several final rationales
+  explicitly retained the validated outbreak signal and safeguards while
+  withholding execution for unresolved capacity allocation. This is a
+  demonstration and candidate mechanism from one matched pair, not an effect
+  estimate.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any
@@ -232,11 +249,11 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 ## Active Plan
 
-Follow [Slice 24: Configurable theory-informed simulation
-MVP](plans/024-configurable-theory-analysis-mvp.md) for MVP acceptance. Packets
-24A0–24D are technically complete. Packet 24E is the active delivery boundary:
-deploy one outcome- and chronology-correct Waltzman-facing instrument over the
-retained live run, then return control for the operator's M7 judgment.
+Turn the retained matched pair into a concise Waltzman-facing paper and demo,
+while treating the observed contrast as a candidate mechanism only. Replicate
+the two conditions across fresh runs before making a causal or general claim;
+then decide whether the evidence justifies a 26-agent coalition and an
+autonomous influence-source condition.
 
 [Slice 26: Foundation decision for a generalized cybernetic
 simulator](plans/026-concordia-foundation-research.md) and further Slice 25
