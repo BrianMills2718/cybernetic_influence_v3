@@ -397,6 +397,9 @@ def _current_coordination_schema_digests(
         from cybernetic_influence.analysis.coordination_measurement import (
             CoderOutput,
         )
+        from cybernetic_influence.experiments.coordination_experiment import (
+            PRESSURE_SOURCE_DECISION_MODELS,
+        )
         from cybernetic_influence.scenarios.coordination_decision import (
             COORDINATION_PERSON_DECISION_MODELS,
         )
@@ -404,7 +407,10 @@ def _current_coordination_schema_digests(
         return None
     schemas = {
         schema.__name__: schema
-        for schema in COORDINATION_PERSON_DECISION_MODELS.values()
+        for schema in (
+            *COORDINATION_PERSON_DECISION_MODELS.values(),
+            *PRESSURE_SOURCE_DECISION_MODELS.values(),
+        )
     }
     schemas[CoderOutput.__name__] = CoderOutput
     projector = (

@@ -275,6 +275,11 @@ def test_coordination_requires_every_current_execution_and_analysis_schema(
     assert "CoderOutput" in {
         item.schema_class.rsplit(".", maxsplit=1)[-1] for item in coordination
     }
+    assert {
+        "TechnicalPressureSourceDecision",
+        "PolicyPressureSourceDecision",
+        "LocalPressureSourceDecision",
+    }.issubset({item.schema_class for item in coordination})
     for observation in [participant, narrator, *coordination]:
         store.append(observation)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")

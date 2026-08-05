@@ -143,8 +143,10 @@ _BASE_REPRESENTATIONS: dict[str, str] = dict(
 AUTONOMOUS_PRESSURE_SOURCE_TASK = "cybernetic_influence_v3_pressure_source_step"
 
 
-class _EmptySourcePayload(_ProducedModel):
-    """Source messages are retained representations, not arbitrary side effects."""
+class _SourceMessagePayload(_ProducedModel):
+    """Explicit structural marker; the retained representation owns content."""
+
+    message_kind: Literal["retained_source_message"] = "retained_source_message"
 
 
 class TechnicalPressureSourceAction(_ProducedModel):
@@ -152,7 +154,7 @@ class TechnicalPressureSourceAction(_ProducedModel):
     representation_id: Literal[
         "technical_pressure_message", "technical_adaptive_followup"
     ]
-    payload: _EmptySourcePayload = Field(default_factory=_EmptySourcePayload)
+    payload: _SourceMessagePayload = Field(default_factory=_SourceMessagePayload)
     public_summary: str = Field(min_length=1)
 
 
@@ -161,7 +163,7 @@ class PolicyPressureSourceAction(_ProducedModel):
     representation_id: Literal[
         "policy_pressure_message", "policy_adaptive_followup"
     ]
-    payload: _EmptySourcePayload = Field(default_factory=_EmptySourcePayload)
+    payload: _SourceMessagePayload = Field(default_factory=_SourceMessagePayload)
     public_summary: str = Field(min_length=1)
 
 
@@ -170,7 +172,7 @@ class LocalPressureSourceAction(_ProducedModel):
     representation_id: Literal[
         "local_pressure_message", "local_adaptive_followup"
     ]
-    payload: _EmptySourcePayload = Field(default_factory=_EmptySourcePayload)
+    payload: _SourceMessagePayload = Field(default_factory=_SourceMessagePayload)
     public_summary: str = Field(min_length=1)
 
 
@@ -201,7 +203,7 @@ class LocalPressureSourceDecision(_PressureSourceDecisionBase):
     actions: list[LocalPressureSourceAction]
 
 
-_PRESSURE_SOURCE_DECISION_MODELS: dict[str, type[BaseModel]] = {
+PRESSURE_SOURCE_DECISION_MODELS: dict[str, type[BaseModel]] = {
     "technical_pressure_source": TechnicalPressureSourceDecision,
     "policy_pressure_source": PolicyPressureSourceDecision,
     "local_pressure_source": LocalPressureSourceDecision,
@@ -254,7 +256,7 @@ def _pressure_source_implementation_id(
         model=model,
         task=AUTONOMOUS_PRESSURE_SOURCE_TASK,
         reasoning_effort=reasoning_effort,
-        decision_model=_PRESSURE_SOURCE_DECISION_MODELS[source_id],
+        decision_model=PRESSURE_SOURCE_DECISION_MODELS[source_id],
     )
 
 
@@ -602,7 +604,7 @@ def coordination_live_probe_bindings(
                 task=AUTONOMOUS_PRESSURE_SOURCE_TASK,
                 trace_id_prefix=trace_id_prefix,
                 reasoning_effort=reasoning_effort,
-                decision_model=_PRESSURE_SOURCE_DECISION_MODELS[source_id],
+                decision_model=PRESSURE_SOURCE_DECISION_MODELS[source_id],
             )
             source = CoordinationNativePressureSource(
                 source_id=source_id,

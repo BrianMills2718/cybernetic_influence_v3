@@ -12,14 +12,23 @@ from llm_client import (
     call_llm_structured,
     compile_codex_structured_success,
 )
+from llm_client.route_certification_runtime import (
+    observe_openrouter_native_success_from_runtime,
+    openrouter_native_provider_schema,
+)
 from llm_client.route_certification import RouteCertificationStore
 from pydantic import BaseModel
 
 from cybernetic_influence.active_runtime.llm import LlmDecision
 from cybernetic_influence.analysis.coordination_measurement import CoderOutput
+from cybernetic_influence.experiments.coordination_experiment import (
+    PRESSURE_SOURCE_DECISION_MODELS,
+)
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
     CODEX_TERRA_MODEL,
+    OPENROUTER_TERRA_MODEL,
+    is_codex_subscription_model,
     structured_backend_options,
 )
 from cybernetic_influence.narration import CausalMomentNarration
@@ -88,16 +97,23 @@ def _certify(
     logical_call_id = result.logical_call_id
     if not logical_call_id:
         raise RuntimeError(f"{schema.__name__} call retained no logical_call_id")
-    observation = compile_codex_structured_success(
-        result=result,
-        response_model=schema,
-        trace_id=trace_id,
-        llm_client_revision=llm_client_revision_value,
-        evidence_ref=(
-            f"sqlite://{evidence_root.resolve()}#logical_call_id={logical_call_id}"
-        ),
-    )
-    store.append(observation)
+    if is_codex_subscription_model(model):
+        observation = compile_codex_structured_success(
+            result=result,
+            response_model=schema,
+            trace_id=trace_id,
+            llm_client_revision=llm_client_revision_value,
+            evidence_ref=(
+                f"sqlite://{evidence_root.resolve()}#logical_call_id={logical_call_id}"
+            ),
+        )
+        store.append(observation)
+    else:
+        observation = observe_openrouter_native_success_from_runtime(
+            result=result,
+            provider_schema=openrouter_native_provider_schema(schema),
+            schema_class=schema.__name__,
+        )
     return cast(str, observation.observation_id)
 
 
@@ -114,11 +130,18 @@ def main() -> None:
             "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA",
             "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_TERRA",
         ),
+        "openrouter-terra": (
+            OPENROUTER_TERRA_MODEL,
+            "CYBERNETIC_INFLUENCE_CERT_TERRA",
+            "CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA",
+        ),
     }
     try:
         model, global_env, coordination_env = routes[route]
     except KeyError as error:
-        raise SystemExit("usage: certify_codex_luna.py [luna|terra]") from error
+        raise SystemExit(
+            "usage: certify_codex_luna.py [luna|terra|openrouter-terra]"
+        ) from error
     revision = llm_client_revision()
     data_root = Path(
         os.environ.get("LLM_CLIENT_DATA_ROOT", "~/projects/data")
@@ -144,6 +167,7 @@ def main() -> None:
     ]
     coordination_schemas: tuple[type[BaseModel], ...] = (
         *COORDINATION_PERSON_DECISION_MODELS.values(),
+        *PRESSURE_SOURCE_DECISION_MODELS.values(),
         CoderOutput,
     )
     coordination_ids = [
