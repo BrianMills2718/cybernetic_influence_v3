@@ -3,7 +3,7 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-08-03
+updated: 2026-08-04
 supersedes: comparison-centered research MVP goal at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -129,19 +129,20 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 - No general public hosting, mobile requirement, production hardening,
   arbitrary world language, generalized game master, universal fidelity score,
   trust score, coordination score, or agency score. User-approved exception,
-  2026-08-04: one read-only public stakeholder page may present the bounded
-  synthetic outbreak result; the simulator, APIs, run store, and internal trace
-  workbench remain private.
+  2026-08-04: one read-only public retained-evidence workbench may expose the
+  bounded synthetic outbreak experiment; the simulator, APIs, run store, and
+  internal trace workbench remain private.
 
 ## Current Truth
 
-- The user-approved public stakeholder page for the retained outbreak probe is
-  deployed at <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>. It presents
-  the three-condition result, all five exact run identifiers and round paths,
-  representative retained statements, method, and non-claims without exposing
-  the internal simulator or run APIs. The reviewed page bytes match the deployed
-  artifact; external-relay desktop and mobile browser checks passed at source
-  revision `79a30bfd038df905f885875699150dbb39d914fd`.
+- The user-approved public retained-evidence workbench for the outbreak probe is
+  deployed at <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>. A user can
+  compare all five authentic trajectories, inspect any round and participant,
+  distinguish exogenous developments from model-generated stances, and inspect
+  the exact terminal gate. It does not expose the simulator or run APIs and
+  cannot launch model calls. The deployed HTML, CSS, JavaScript, and five-run
+  dataset match reviewed source revision
+  `2c4bd3db2440b2e8f57f73403bf3ed71fd94c675`.
 
 - The causal runtime, maps, narrative, pause/resume, analytical boundaries, and
   exact evidence inspection are technically observed.

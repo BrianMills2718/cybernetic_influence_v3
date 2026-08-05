@@ -91,42 +91,54 @@ backups remain at
 `~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-c435450` and
 `~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-8e43e6e`.
 
-## Public Waltzman stakeholder page
+## Public Waltzman retained-evidence workbench
 
 Public URL: <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>
 
-This is a read-only static stakeholder page, not the internal simulator. It is
-served on `127.0.0.1:8621` by LaunchAgent
-`com.cybernetic-influence.waltzman-public` from
-`public/waltzman/index.html`; Tailscale Funnel maps only `/waltzman` to that
-listener. The private simulator remains tailnet-only on port 8620.
+This is a read-only static experiment workbench, not the internal simulator. It
+compares five retained authentic runs and supports run, round, delegation, and
+participant drill-down. New model execution is unavailable. LaunchAgent
+`com.cybernetic-influence.waltzman-public` serves `public/waltzman/` on
+`127.0.0.1:8621`; Tailscale Funnel maps only `/waltzman` to that listener. The
+private simulator remains tailnet-only on port 8620.
 
-Report-only deployment certification observed 2026-08-04 at source revision
-`79a30bfd038df905f885875699150dbb39d914fd`:
+Report-only deployment certification observed at `2026-08-05T03:05:15Z` for
+source revision `2c4bd3db2440b2e8f57f73403bf3ed71fd94c675`:
 
-- capability: `cybernetic-influence.waltzman-public-page`;
+- capability: `cybernetic-influence.waltzman-public-workbench`;
 - profile and level: read-only service/UI, `deployment_verified`;
-- deployed artifact SHA-256:
-  `27dd86c617265ae85458d1966a511172a298980b8cc2756fe8b7cd5aaf99901e`;
-- positive control: public-relay `GET /waltzman/` returned 200 and the deployed
-  bytes matched the reviewed source; clean Chromium contexts at 1440×1000 and
-  390×844 rendered the headline, three result cards, five evidence rows, and
-  discussion question with no console or failed-request errors;
-- evidence reconciliation: the five source run documents produced the displayed
-  three-round stance counts and 180 completed participant calls;
-- invalid input: public-relay `GET /waltzman/does-not-exist` returned 404;
-- missing page dependency: the same static runtime pointed at an absent page root
-  returned 404 rather than unrelated or fallback content;
-- lifecycle: unique request `cert-019fca9a-20260804T1943` produced one 200 and
-  exactly one terminal server-log entry;
+- deployed artifact SHA-256: HTML
+  `2c37d832cc2836ed4b7563629f6ff2c732c644b885f1fafad4ee14bd94f77a5b`,
+  CSS `2a5ed48b96ca4cfa9cd7af346077e9485b47920907f351455bbe8084aa40564b`,
+  JavaScript
+  `653e9097b24983a47e58d30f51e40a04749a573dbe1146b77c593bdb7bea00ac`,
+  and dataset
+  `e11a2d311590047b70a83d5a4bfec0c8fab510f2891af5e164a31b74dab46537`;
+- positive control: the public-relay browser loaded all five runs, selected the
+  stabilization trajectory and round three, and rendered its allocation,
+  terminal gate, and twelve participant stances without console or request
+  failures. Local Chromium flows at 1440×1000 and 390×844 also exercised run,
+  round, group, participant, deep-link, and method navigation without overflow;
+- evidence reconciliation: generator digest
+  `d0afba85a7f8a14697d2eee5ecd607edb695ebc2d22458f6e1b5edf9395dbe93`
+  binds the five source documents to 180 exact structured participant stances;
+- invalid input: a malformed public dataset contract displayed `Evidence
+  unavailable` and kept the workbench hidden without fallback data;
+- missing dependency: an aborted public dataset request produced the same
+  explicit unavailable state without exposing a partial workbench;
+- invalid path: public-relay `GET /waltzman/does-not-exist` returned 404;
+- lifecycle: unique request
+  `cert-waltzman-workbench-20260805T0305Z` produced one 200 and exactly one
+  terminal server-log entry;
 - isolation: public-relay `GET /waltzman/api/config` returned 404 and the public
   relay could not connect to port 8620;
-- server state: LaunchAgent running with no traceback, exception, or bind error.
+- server state: LaunchAgent running at PID 94728 with no traceback, exception,
+  or bind error.
 
-The report-only verdict is `verified`. It becomes stale if the page bytes,
+The report-only verdict is `verified`. It becomes stale if any workbench bytes,
 source revision, Python runtime, LaunchAgent arguments, Funnel mapping, public
 DNS/TLS route, or retained evidence changes. This is not a hard enforcement
-record and does not establish stakeholder comprehension; Brian's cold review is
+record and does not establish stakeholder usefulness; Brian's cold review is
 the next outcome check.
 
 ## Inspect
