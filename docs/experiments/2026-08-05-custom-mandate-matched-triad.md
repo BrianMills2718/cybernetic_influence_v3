@@ -1,6 +1,6 @@
 ---
 doc_role: experiment_record
-status: preregistered
+status: completed_signed_off
 created: 2026-08-05
 ---
 
@@ -104,3 +104,76 @@ risks or requests, but they cannot replace the primary decision rule.
 
 Before the readout determines the paper claim, hand the completed artifacts to
 `eval-decision-signoff` for a fresh execution-based validity check.
+
+## Executed readout
+
+The two missing rows were launched only after preregistration commit `92544b8`.
+The canonical configuration projection is UTF-8 JSON produced with recursively
+sorted object keys, no insignificant whitespace, no trailing newline, and the
+agent list in configured order. Its SHA-256 is
+`67f350acc92f5c9a27fa7fa3efe3f1932297b3614f2e0ca0b989675d6536a6a3`
+for all three runs.
+
+| Condition | Run | Round 1 | Round 2 | Round 3 | Gate |
+| --- | --- | ---: | ---: | ---: | --- |
+| Baseline | `run_3cf434f148e7` | 12 support | 12 support | 12 support | Approved |
+| Responsive pressure | `run_4da81a355f28` | 12 support | 11 conditional, 1 defer | 2 conditional, 10 defer | Not approved |
+| Pressure + stabilization | `run_40490a742a25` | 12 support | 11 conditional, 1 defer | 12 support | Approved |
+
+The focal Alba epidemiologist moved `support → support → support`,
+`support → conditional → defer`, and `support → conditional → support`
+respectively. Pressure and stabilization delivered the same eight
+country/delegation-level developments and produced the same round-two aggregate
+state before the package: 11 conditional, 1 defer; 9 capacity risks, 3
+legitimacy risks; and 12 resource requests. The stabilized condition then added
+the verified binding minimum-capacity package and no participant stance command.
+
+Canonical retained-document SHA-256 values:
+
+- baseline: `f0eedd0578820b1ca381f2e8f9c56114457aa74f52e1da92217e6d1c19ec8a08`;
+- responsive pressure: `5df16346fce7d9b7b3cb9d0af2ee5824daf0927bddedecab980b5e7f34f12a75`;
+- stabilization: `a63f3b026bd4befc409bcf5af700a7d74fa65a0efc6e56c66f95c3e0d0e38517`.
+
+Each run retained 36 completed call records, 36 unique trace IDs, 36
+committed participant traces, one run completion, zero provider errors, and
+zero schema-validation errors. The shared-client lifecycle store contains one
+`started` and one `completed` event for every call; baseline and pressure also
+contain one and five nonterminal heartbeats respectively.
+
+Public reproduction:
+
+- [role-aligned mechanism comparison](https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist)
+- [baseline](https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=inspect&run=run_3cf434f148e7&round=3&person=alba_epidemiologist)
+- [pressure](https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=inspect&run=run_4da81a355f28&round=3&person=alba_epidemiologist)
+- [stabilization](https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=inspect&run=run_40490a742a25&round=3&person=alba_epidemiologist)
+
+## Independent eval-decision sign-off
+
+**Decision:** use the triad as the empirical center of the concise note, limited
+to the one-configuration qualitative demonstration.
+
+**Verdict: SIGNED-OFF.**
+
+1. **Validity — PASS.** The fresh verifier re-fetched all three public run
+   documents, reproduced semantic identity with the retained artifacts,
+   checked the exact deployed revision, recomputed configuration identity and
+   gates, inspected raw shared-client records and lifecycle events, and reran
+   the 11-agent typed negative control without creating a run.
+2. **Representativeness — PASS for the declared unit only.** The full configured
+   12-role synthetic population is present. This would fail for any claim about
+   repeatability, broader synthetic populations, humans, institutions, or the
+   real world.
+3. **Diagnosis — PASS.** The gate results, identical pre-stabilization aggregate
+   state, and focal dependency-specific rationales were independently
+   reconstructed.
+4. **Generalization — NOT APPLICABLE.** No generalizing fix, effect estimate, or
+   transferable restoration claim is accepted.
+5. **Decision — PASS.** The comparison was warranted to observe irreducibly
+   empirical model-generated stances, and the decision preserves the
+   preregistered non-claims.
+
+The signed-off statement is therefore: **in this configured synthetic
+coalition**, capacity shocks were followed by dependency-specific stance
+changes and failed approval, while a verified package resolved the stated
+dependency and was followed by restored approval; exercise control never
+selected a participant stance.

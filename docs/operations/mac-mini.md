@@ -104,11 +104,11 @@ read the private service's runs on port 8620.
 
 The workbench loads the immutable five-run comparison, lets a user edit the 12
 role configurations and common situation, launches an authentic three-round
-trajectory, then reloads completed public runs after refresh. A public deep
-link to the first custom run is
-<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=inspect&run=run_4da81a355f28&round=3&person=alba_epidemiologist>.
+trajectory, then reloads completed public runs after refresh. The public store
+currently adds a matched three-run custom triad. Its role-aligned comparison is
+<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist>.
 
-Report-only deployment certification observed at `2026-08-05T03:57:34Z`:
+Report-only deployment certification refreshed at `2026-08-05T04:19:15Z`:
 
 - capability: `cybernetic-influence.waltzman-public-executable-workbench`;
 - profile and level: service plus UI action, `deployment_verified`;
@@ -122,26 +122,36 @@ Report-only deployment certification observed at `2026-08-05T03:57:34Z`:
   `cc242cd597ac6f36121c1b5a6c3d1321134772e92fed155bf9bf2e803dddb9ac`,
   and immutable five-run dataset
   `e11a2d311590047b70a83d5a4bfec0c8fab510f2891af5e164a31b74dab46537`;
-- valid composed action: public Chromium edited the Alba epidemiologist mandate,
-  selected `responsive_exercise_injects`, submitted the typed 12-agent request,
-  and completed `run_4da81a355f28` through
-  `codex/gpt-5.6-terra` with 36 calls and one exact `no_joint_response`
-  completion;
-- retained evidence: run document SHA-256
-  `4feb83831109b5b8b7c56625e9489bafc03bd9261236ef3fd53220657386ff53`;
-  all 36 call summaries are completed, all 36 participant traces are committed,
-  and the shared-client lifecycle store has 36 unique calls with one `started`
-  and one `completed` event each plus five heartbeats;
-- downstream consumption: a fresh deep-link browser loaded the retained custom
-  run from the isolated API, displayed 6 trajectories and 216 participant
-  calls, preserved the edited mandate, and rendered the exact environment,
-  gate, and participant evidence with no console errors;
-- typed invalid input: an 11-agent public request returned HTTP 422 with the
-  declared minimum-length error and created no run;
+- valid composed actions: the public UI completed pressure run
+  `run_4da81a355f28`; the same public API then completed baseline
+  `run_3cf434f148e7` and stabilized replay `run_40490a742a25` from the exact
+  retained configuration. Each used `codex/gpt-5.6-terra`, medium reasoning,
+  36 calls, one terminal completion, and `$0.00` observed marginal cost;
+- configuration identity: all three canonical projections have SHA-256
+  `67f350acc92f5c9a27fa7fa3efe3f1932297b3614f2e0ca0b989675d6536a6a3`;
+  canonical run-document SHA-256 values are
+  `f0eedd0578820b1ca381f2e8f9c56114457aa74f52e1da92217e6d1c19ec8a08`,
+  `5df16346fce7d9b7b3cb9d0af2ee5824daf0927bddedecab980b5e7f34f12a75`,
+  and `a63f3b026bd4befc409bcf5af700a7d74fa65a0efc6e56c66f95c3e0d0e38517`;
+- retained trace evidence: all 108 call summaries are completed, all 108
+  participant traces are committed, and the raw shared-client lifecycle store
+  has 108 unique calls with one `started` and one `completed` event each, zero
+  provider or validation errors, and six total nonterminal heartbeats;
+- downstream consumption: fresh public Chromium loaded 8 trajectories and 288
+  participant calls, rendered all three custom rows in the role-aligned
+  mechanism table, reopened each deep link, and produced no console error;
+- typed invalid input: the independent verifier reran an 11-agent public request,
+  received HTTP 422 with the declared minimum-length error, and confirmed the
+  public inventory still contained only the three valid custom run IDs;
 - missing unique dependency: the exact target revision with the route
   certification variables removed advertised no coordination model;
 - current route: `/waltzman/api/config` reports the exact build revision and
   advertises only the freshly eligible `codex/gpt-5.6-terra` coordination route.
+- independent decision sign-off: a fresh verifier re-fetched the public
+  artifacts, reproduced configuration identity, gates, role evidence, and raw
+  lifecycle integrity, then signed off only the one-configuration qualitative
+  claim. Representativeness, effect-size, human, real-world, and generalization
+  claims remain explicitly unsupported.
 
 The report-only verdict is `verified`. It is not an independent hard-enforcement
 record and does not establish stakeholder usefulness or empirical validity. It

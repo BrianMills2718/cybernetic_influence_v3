@@ -146,14 +146,19 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   readiness without inventing a trust or coordination score. The public process
   uses an isolated run store and currently advertises the freshly eligible
   `codex/gpt-5.6-terra` route.
-- Public run `run_4da81a355f28` is the first end-to-end execution from that UI.
-  Its edited Alba epidemiologist mandate required preserving a domestic
-  confirmation reserve. Under responsive capacity injects, that role moved
-  `support → conditional → defer`; the coalition ended with no joint response.
-  The retained evidence contains 36 completed model calls, 36 committed
-  participant traces, four selected predeclared developments after round two,
-  and one terminal completion. The public deep link reopens the retained run
-  after refresh without new model calls.
+- The public store now contains a matched triad completed under a preregistered
+  protocol around the frozen pressure trajectory, using the same edited Alba
+  epidemiologist mandate, all twelve agent configurations, shared situation,
+  Terra model route, reasoning setting, and exact coalition gate.
+  Baseline `run_3cf434f148e7` stayed at twelve support positions and approved;
+  responsive pressure `run_4da81a355f28` moved to two conditional and ten defer
+  and did not approve; matched stabilization run `run_40490a742a25` reached the same
+  round-two state as pressure before a verified binding allocation package,
+  then returned to twelve support and approved. Across the three rows, 108
+  unique participant calls completed with no provider or validation error.
+  Independent execution-based sign-off accepted only the configuration-specific
+  qualitative mechanism claim and rejected any implied effect estimate,
+  generalization, human-belief inference, or real-world causal attribution.
 
 - The causal runtime, maps, narrative, pause/resume, analytical boundaries, and
   exact evidence inspection are technically observed.
@@ -273,14 +278,15 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 ## Active Plan
 
-Use the executable public workbench and retained custom run for cold review,
-then write the concise Waltzman-facing note around the demonstrated mechanism:
-a configured institutional dependency became decision-relevant after an
-exogenous capacity shock without any controller selecting participant stances.
-Treat the disruption and restoration as a candidate mechanism only. If the
-review is compelling, repeat the custom mandate under baseline and
-stabilization before deciding whether a 26-agent coalition is worth the added
-complexity.
+Use the executable public workbench, signed-off matched triad, and concise
+Waltzman-facing note for cold review. The bounded demonstrated mechanism is that
+a configured institutional dependency became decision-relevant after exogenous
+capacity shocks without any controller selecting participant stances, while a
+verified allocation package satisfied the stated dependency and approval
+returned. Treat this as a configuration-specific synthetic mechanism only. If
+the review is compelling, vary sources, role configurations, and scenario
+context before deciding whether a 26-agent coalition or autonomous
+influence-source ensemble is worth the added complexity.
 
 [Slice 26: Foundation decision for a generalized cybernetic
 simulator](plans/026-concordia-foundation-research.md) and further Slice 25
