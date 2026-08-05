@@ -2202,8 +2202,9 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
                     if bindings[person_id].implementation.provider_bound
                 },
                 "adaptive_sources": all(
-                    bindings[source_id].implementation_id.startswith(
-                        "scripted_adaptive_"
+                    bindings[source_id].implementation.provider_bound
+                    and bindings[source_id].implementation_id.startswith(
+                        "native_coordination_pressure_"
                     )
                     for source_id in PRESSURE_SOURCE_IDS
                 ),
@@ -2245,12 +2246,12 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
     with (
         patch.dict(
             "os.environ",
-            {
-                "OPENROUTER_API_KEY": "test-key",
-                "CYBERNETIC_INFLUENCE_LIVE": "1",
-                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
-                "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH": "test-coordination-canary",
-                "LLM_CLIENT_REVISION": CLIENT_REVISION,
+                {
+                    "OPENROUTER_API_KEY": "test-key",
+                    "CYBERNETIC_INFLUENCE_LIVE": "1",
+                    "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
+                    "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_TERRA": "test-coordination-codex-terra",
+                    "LLM_CLIENT_REVISION": CLIENT_REVISION,
             },
         ),
         patch(
@@ -2272,8 +2273,8 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
                 "arm_id": arm_id,
                 "execution": "live",
                 "llm_options": {
-                    "model": "openrouter/deepseek/deepseek-v4-flash",
-                    "agent_reasoning_effort": "none",
+                    "model": "codex/gpt-5.6-terra",
+                    "agent_reasoning_effort": "medium",
                     "max_total_cost": 0.20,
                 },
             },

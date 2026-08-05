@@ -71,7 +71,7 @@ def test_only_adaptive_conditions_expose_feedback_to_source_processes() -> None:
         )
 
 
-def test_live_probe_changes_people_not_experiment_mechanisms() -> None:
+def test_live_probe_binds_people_and_adaptive_sources_without_changing_mechanisms() -> None:
     model = "codex/gpt-5.6-luna"
     fixture = coordination_live_probe_fixture(
         "adaptive_pressure_with_stabilization",
@@ -109,9 +109,20 @@ def test_live_probe_changes_people_not_experiment_mechanisms() -> None:
         "policy_pressure_source",
         "local_pressure_source",
     ):
-        assert bindings[source_id].implementation.provider_bound is False
-        assert bindings[source_id].implementation_id.startswith("scripted_adaptive_")
+        assert bindings[source_id].implementation.provider_bound is True
+        assert bindings[source_id].implementation_id.startswith(
+            "native_coordination_pressure_"
+        )
+        assert specs[source_id].implementation_id == bindings[source_id].implementation_id
+        assert getattr(bindings[source_id].implementation, "inner").model == model
         assert specs[source_id].observation_port_ids == [f"{source_id}_feedback_in"]
+        assert set(specs[source_id].output_port_initial_representation_ids) == {
+            {
+                "technical_pressure_source": "technical_source_out",
+                "policy_pressure_source": "policy_source_out",
+                "local_pressure_source": "local_source_out",
+            }[source_id]
+        }
 
 
 def test_eight_runs_are_zero_provider_retained_and_evidence_reversible(
