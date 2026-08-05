@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="An executable demonstration of how external pressure can disrupt coordination—and how resolving shared constraints can restore it.">
-  <title>Can Pressure Break Coordination?</title>
-  <link rel="stylesheet" href="assets/styles.css?v=landing-orientation-v1">
+  <meta name="description" content="An interactive laboratory for configuring, running, comparing, and inspecting multi-agent coordination simulations.">
+  <title>Coordination Environment Lab</title>
+  <link rel="stylesheet" href="assets/styles.css?v=tool-overview-v1">
 </head>
 <body>
   <header class="topbar">
@@ -13,12 +13,13 @@
       <span class="product-mark" aria-hidden="true">CI</span>
       <div>
         <strong>Coordination Environment Lab</strong>
-        <small>Executable coordination experiment</small>
+        <small>Configure, run, and inspect multi-agent coordination</small>
       </div>
     </div>
     <nav class="view-tabs" aria-label="Workbench views">
-      <button type="button" data-view="mechanism">Overview</button>
+      <button type="button" data-view="overview">Overview</button>
       <button type="button" data-view="run">Run the simulation</button>
+      <button type="button" data-view="mechanism">Example experiment</button>
       <button type="button" data-view="compare">Compare runs</button>
       <button type="button" data-view="inspect">Agent decisions</button>
       <button type="button" data-view="method">How it works</button>
@@ -61,6 +62,55 @@
     </aside>
 
     <section class="workspace">
+      <section id="overview-view" class="workspace-view" aria-labelledby="overview-title" hidden>
+        <header class="overview-hero">
+          <div class="artifact-type"><strong>Interactive AI coordination laboratory</strong><span>A research and prototyping tool—not a model of human behavior.</span></div>
+          <h2 id="overview-title">Build and inspect simulations of how groups reach—or fail to reach—joint decisions.</h2>
+          <p>Configure AI agents with different roles and institutional requirements. Change the information, resources, constraints, or outside interventions they receive. Run their decisions over multiple rounds, compare outcomes, and inspect exactly why each agent acted.</p>
+          <div class="hero-actions">
+            <button class="primary-cta" type="button" data-view="run">Configure a simulation</button>
+            <button class="secondary-cta" type="button" data-featured-example>Explore the example experiment</button>
+          </div>
+        </header>
+
+        <section class="overview-purpose">
+          <div>
+            <span class="section-kicker">What this tool is for</span>
+            <h3>Turn a theory about coordination into an executable scenario.</h3>
+          </div>
+          <p>The laboratory represents participants, their different mandates, the information available to them, changes in their operating environment, and an explicit rule for collective action. It makes the resulting decisions observable instead of reducing coordination to a single score.</p>
+        </section>
+
+        <section class="capability-grid" aria-label="Laboratory capabilities">
+          <article><span>01</span><h3>Configure the group</h3><p>Define each agent’s role, mandate, private institutional context, and common starting situation.</p></article>
+          <article><span>02</span><h3>Change the environment</h3><p>Introduce outside information, resource conflicts, institutional constraints, or stabilizing interventions without dictating agent decisions.</p></article>
+          <article><span>03</span><h3>Run autonomous decisions</h3><p>LLM agents independently report their stance, primary concern, requested next step, and rationale in each round.</p></article>
+          <article><span>04</span><h3>Inspect the evidence</h3><p>Compare trajectories and step down to every retained prompt, model call, outside development, agent rationale, and collective decision gate.</p></article>
+        </section>
+
+        <section class="theory-bridge">
+          <div>
+            <span class="section-kicker">Coordination theory made testable</span>
+            <h3>Study changes in the decision environment—not only changes in belief.</h3>
+          </div>
+          <p>Inspired by <em>From Minds to Coordination</em>, the tool can probe whether fragmented information, incompatible local requirements, external pressure, or authoritative interventions change a group’s readiness to act. It produces inspectable synthetic trajectories, not real-world effect estimates.</p>
+        </section>
+
+        <section class="featured-example">
+          <div class="featured-example-copy">
+            <span class="section-kicker">Included example</span>
+            <h3>A twelve-agent regional outbreak coalition</h3>
+            <p>The same configured coalition decides whether to launch a joint response under three environments: no added pressure, conflicting capacity requirements, and the same requirements plus verified resources.</p>
+            <button class="secondary-cta" type="button" data-featured-example>Open the full example and evidence</button>
+          </div>
+          <div class="featured-outcomes" aria-label="Example experiment outcomes">
+            <article><span>No added constraints</span><strong><b aria-hidden="true">✓</b> Approved</strong></article>
+            <article><span>Conflicting requirements</span><strong><b aria-hidden="true">×</b> Not approved</strong></article>
+            <article><span>Verified resources supplied</span><strong><b aria-hidden="true">✓</b> Approved again</strong></article>
+          </div>
+        </section>
+      </section>
+
       <section id="run-view" class="workspace-view" aria-labelledby="run-title" hidden>
         <header class="workspace-header">
           <div>
@@ -303,6 +353,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=landing-orientation-v1" defer></script>
+  <script src="assets/app.js?v=tool-overview-v1" defer></script>
 </body>
 </html>

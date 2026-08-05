@@ -65,14 +65,18 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Overview" in page
     assert "Agent decisions" in page
     assert "How it works" in page
-    assert "Interactive AI simulation" in page
-    assert "The same 12 AI agents approved a response plan" in page
-    assert "Same agents + same instructions + same starting scenario" in page
-    assert "Compare the three runs" in page
+    assert "Interactive AI coordination laboratory" in page
+    assert "Build and inspect simulations of how groups reach" in page
+    assert "Turn a theory about coordination into an executable scenario" in page
+    assert "Configure the group" in page
+    assert "Change the environment" in page
+    assert "Run autonomous decisions" in page
+    assert "Inspect the evidence" in page
     assert "Explore the evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=landing-orientation-v1"]
-    assert shape.scripts == ["assets/app.js?v=landing-orientation-v1"]
+    assert shape.stylesheets == ["assets/styles.css?v=tool-overview-v1"]
+    assert shape.scripts == ["assets/app.js?v=tool-overview-v1"]
     assert {
+        "overview-view",
         "run-view",
         "condition-options",
         "agent-config-select",
@@ -163,6 +167,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "readStateFromUrl",
         "applyRunScopeFromUrl",
         "syncUrl",
+        "view:'overview'",
+        "featuredRunIds",
         "fetch('assets/data.json'",
         "apiRequest('api/runs'",
         "regional_outbreak_configuration:editableConfiguration",

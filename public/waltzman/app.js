@@ -4,6 +4,7 @@ const decisionOrder = ['support', 'conditional', 'defer', 'oppose']
 const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'regional']
 const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', regional:'Regional'}
 const preferredModel = 'codex/gpt-5.6-luna'
+const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
 
 let dataset = null
 let runtimeConfig = null
@@ -17,7 +18,7 @@ let activeRunId = null
 let pollHandle = null
 
 const state = {
-  view:'run',
+  view:'overview',
   runId:null,
   round:3,
   personId:'regional_scientific_advisor',
@@ -119,7 +120,7 @@ function configurationAgent(configuration, personId) {
 function readStateFromUrl() {
   const params = new URLSearchParams(window.location.search)
   const requestedView = params.get('view')
-  if (['run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
+  if (['overview', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
   const requestedRun = params.get('run')
   if (requestedRun && dataset.runs.some((run) => run.run_id === requestedRun)) state.runId = requestedRun
   const requestedRound = Number(params.get('round'))
@@ -464,8 +465,8 @@ function renderMethod() {
 }
 
 function renderView() {
-  document.body.classList.toggle('guided-result', state.view === 'mechanism' && Boolean(state.runScopeIds))
-  for (const view of ['run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
+  document.body.classList.toggle('guided-result', state.view === 'overview' || (state.view === 'mechanism' && Boolean(state.runScopeIds)))
+  for (const view of ['overview', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
   all('[data-view]').forEach((button) => {
     const active = button.dataset.view === state.view
     button.classList.toggle('active', active)
@@ -494,6 +495,18 @@ function configureControls() {
   $('#run-select').onchange = (event) => openRun(event.target.value)
   all('[data-view]').forEach((button) => {
     button.onclick = () => { state.view = button.dataset.view; renderView(); syncUrl() }
+  })
+  all('[data-featured-example]').forEach((button) => {
+    button.onclick = () => {
+      const available = new Set(dataset.runs.map((run) => run.run_id))
+      const missing = featuredRunIds.filter((runId) => !available.has(runId))
+      if (missing.length) throw new Error(`featured example is unavailable: ${missing.join(', ')}`)
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', 'mechanism')
+      url.searchParams.set('mechanism_person', 'alba_epidemiologist')
+      url.searchParams.set('runs', featuredRunIds.join(','))
+      window.location.assign(url)
+    }
   })
   $('#reset-configuration').onclick = () => {
     editableConfiguration = clone(defaultConfiguration)
