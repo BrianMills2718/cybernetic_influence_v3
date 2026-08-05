@@ -80,7 +80,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What each stance means" in page
     assert "Twenty-four regional clinicians" in page
     assert "10% regional reserve" in page
-    assert shape.stylesheets == ["assets/styles.css?v=outcome-first-v1"]
+    assert shape.stylesheets == ["assets/styles.css?v=desktop-width-v1"]
     assert shape.scripts == ["assets/app.js?v=outcome-first-v1"]
     assert {
         "overview-view",
