@@ -24,6 +24,7 @@ const state = {
   personId:'regional_scientific_advisor',
   group:'all',
   mechanismPersonId:'regional_scientific_advisor',
+  labSection:'overview',
   runScopeIds:null,
 }
 
@@ -131,6 +132,8 @@ function readStateFromUrl() {
   if (requestedMechanismPerson && dataset.people.some((person) => person.person_id === requestedMechanismPerson)) state.mechanismPersonId = requestedMechanismPerson
   const requestedGroup = params.get('group')
   if (groupOrder.includes(requestedGroup)) state.group = requestedGroup
+  const requestedSection = params.get('section')
+  if (['overview', 'environments', 'participants', 'gate', 'evidence'].includes(requestedSection)) state.labSection = requestedSection
 }
 
 function applyRunScopeFromUrl() {
@@ -149,7 +152,7 @@ function applyRunScopeFromUrl() {
 function syncUrl() {
   const url = new URL(window.location.href)
   url.searchParams.set('view', state.view)
-  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person']) url.searchParams.delete(key)
+  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section']) url.searchParams.delete(key)
   if (state.view === 'inspect') {
     url.searchParams.set('run', state.runId)
     url.searchParams.set('round', String(state.round))
@@ -157,6 +160,7 @@ function syncUrl() {
     if (state.group !== 'all') url.searchParams.set('group', state.group)
   }
   if (state.view === 'mechanism') url.searchParams.set('mechanism_person', state.mechanismPersonId)
+  if (['compare', 'inspect'].includes(state.view)) url.searchParams.set('section', state.labSection)
   window.history.replaceState({}, '', url)
 }
 
@@ -305,6 +309,10 @@ function renderMechanism() {
   const pressure = dataset.runs.find((run) => run.condition === 'responsive_exercise_injects')
   const stabilized = dataset.runs.find((run) => run.condition === 'capacity_inject_replay_with_stabilization')
   const exampleRuns = [baseline, pressure, stabilized].filter(Boolean)
+  $('#case-trajectories').innerHTML = exampleRuns.map((run) => {
+    const story = conditionStory(run)
+    return `<article><header><span>Environment ${escapeHtml(story.step)}</span><strong>${escapeHtml(story.title)}</strong>${outcomeBadge(run)}</header><div>${run.rounds.map((round) => `<div class="case-trajectory-round"><b>R${round.round}</b>${stackedBar(round.decision_counts, 'case-trajectory-bar')}<span>${escapeHtml(countsText(round.decision_counts))}</span></div>`).join('')}</div></article>`
+  }).join('')
   $('#case-overview-table').innerHTML = exampleRuns.map((run) => {
     const story = conditionStory(run)
     return `<tr><th scope="row"><span>Environment ${escapeHtml(story.step)}</span>${escapeHtml(story.title)}</th>${run.rounds.map((round) => `<td>${escapeHtml(countsText(round.decision_counts))}</td>`).join('')}<td>${outcomeBadge(run)}</td></tr>`
@@ -469,12 +477,23 @@ function renderMethod() {
 }
 
 function renderView() {
-  document.body.classList.toggle('guided-result', state.view === 'overview' || (state.view === 'mechanism' && Boolean(state.runScopeIds)))
+  const publicView = state.view === 'overview' || state.view === 'mechanism'
+  document.body.classList.toggle('guided-result', publicView)
+  document.body.classList.toggle('public-shell', publicView)
+  document.body.classList.toggle('lab-shell', !publicView)
   for (const view of ['overview', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
   all('[data-view]').forEach((button) => {
     const active = button.dataset.view === state.view
     button.classList.toggle('active', active)
     button.setAttribute('aria-pressed', String(active))
+  })
+  $('[data-open-lab]').classList.toggle('active', !publicView)
+  $('[data-open-lab]').setAttribute('aria-pressed', String(!publicView))
+  all('[data-lab-view]').forEach((button) => {
+    const sameView = button.dataset.labView === state.view
+    const active = sameView && (!button.dataset.labSection || button.dataset.labSection === state.labSection)
+    button.classList.toggle('active', active)
+    button.setAttribute('aria-current', active ? 'page' : 'false')
   })
   if (state.view === 'run') renderRunSetup()
   if (state.view === 'compare') renderComparison()
@@ -483,12 +502,24 @@ function renderView() {
   if (state.view === 'method') renderMethod()
 }
 
+function navigateLab(view, section = 'overview') {
+  state.view = view
+  state.labSection = section
+  renderView()
+  syncUrl()
+  const targets = {environments:'#environment-results', participants:'#participant-results', gate:'#decision-gate-results', evidence:'#raw-evidence-results'}
+  if (section === 'evidence') $('#raw-evidence-results').open = true
+  const target = targets[section]
+  window.requestAnimationFrame(() => target ? $(target).scrollIntoView({behavior:'auto', block:'start'}) : window.scrollTo({top:0, behavior:'auto'}))
+}
+
 function openRun(runId, resetPerson = true) {
   state.runId = runId
   state.round = 3
   if (resetPerson) state.personId = 'regional_scientific_advisor'
   state.group = 'all'
   state.view = 'inspect'
+  state.labSection = 'participants'
   renderView()
   syncUrl()
   window.scrollTo({top:0, behavior:'auto'})
@@ -499,6 +530,10 @@ function configureControls() {
   $('#run-select').onchange = (event) => openRun(event.target.value)
   all('[data-view]').forEach((button) => {
     button.onclick = () => { state.view = button.dataset.view; renderView(); syncUrl() }
+  })
+  $('[data-open-lab]').onclick = () => navigateLab('run')
+  all('[data-lab-view]').forEach((button) => {
+    button.onclick = () => navigateLab(button.dataset.labView, button.dataset.labSection || 'overview')
   })
   all('[data-featured-example]').forEach((button) => {
     button.onclick = () => {

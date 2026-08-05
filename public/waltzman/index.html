@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=desktop-width-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=app-shell-v1">
 </head>
-<body>
+<body class="public-shell">
   <header class="topbar">
     <div class="product-identity">
       <span class="product-mark" aria-hidden="true">CE</span>
@@ -16,27 +16,36 @@
         <small>AI coordination simulation workbench</small>
       </div>
     </div>
-    <nav class="view-tabs" aria-label="Workbench views">
+    <nav class="view-tabs" aria-label="Primary navigation">
       <button type="button" data-view="overview">Overview</button>
       <button type="button" data-view="mechanism">Example</button>
-      <button type="button" data-view="run">Build a simulation</button>
-      <button type="button" data-view="compare">Compare results</button>
-      <button type="button" data-view="inspect">Inspect decisions</button>
-      <button type="button" data-view="method">How it works</button>
+      <button type="button" data-open-lab>Open Lab</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
   </header>
 
-  <div id="loading" class="loading-state" role="status">Loading retained experiment evidence…</div>
+  <div id="loading" class="loading-state" role="status">Opening Coordination Environment Lab…</div>
   <section id="load-error" class="load-error" hidden>
     <strong>Evidence unavailable</strong>
     <p>The retained public dataset could not be loaded. No fallback result is being shown.</p>
   </section>
 
   <main id="workbench" hidden>
-    <aside class="experiment-rail">
+    <aside class="experiment-rail" aria-label="Lab navigation">
+      <div class="lab-rail-heading"><span class="eyebrow">Lab workspace</span><strong>Regional outbreak experiment</strong><small>Example dataset · authentic retained runs</small></div>
+      <nav class="lab-navigation" aria-label="Experiment workspace">
+        <button type="button" data-lab-view="run"><span>Build</span><small>Configure a new simulation</small></button>
+        <div class="lab-nav-group"><span>Results</span>
+          <button type="button" data-lab-view="compare" data-lab-section="overview">Overview</button>
+          <button type="button" data-lab-view="compare" data-lab-section="environments">Environments</button>
+          <button type="button" data-lab-view="inspect" data-lab-section="participants">Participants</button>
+          <button type="button" data-lab-view="inspect" data-lab-section="gate">Decision gate</button>
+          <button type="button" data-lab-view="inspect" data-lab-section="evidence">Evidence</button>
+        </div>
+        <button type="button" data-lab-view="method"><span>Method</span><small>Contract and limitations</small></button>
+      </nav>
       <div class="rail-heading">
-        <span class="eyebrow">Loaded experiment</span>
+        <span class="eyebrow">Selected experiment</span>
         <h1 id="scenario-title">Regional outbreak response</h1>
         <p id="scenario-summary"></p>
       </div>
@@ -45,19 +54,7 @@
         <span><b id="fact-agents">12</b> autonomous roles</span>
         <span><b id="fact-calls">180</b> participant calls</span>
       </div>
-      <section class="rail-section">
-        <h2>Experiment controls</h2>
-        <dl>
-          <div><dt>Scenario</dt><dd>Held constant</dd></div>
-          <div><dt>Core five-run model</dt><dd>Held constant</dd></div>
-          <div><dt>External environment</dt><dd>Varied by condition</dd></div>
-          <div><dt>Participant stances</dt><dd>Model-generated</dd></div>
-        </dl>
-      </section>
-      <section class="rail-section boundary-note">
-        <h2>Execution boundary</h2>
-        <p>A live run uses the reviewed three-round runtime and retains every model call. The five comparison runs remain immutable.</p>
-      </section>
+      <details class="rail-details"><summary>Experiment details</summary><section class="rail-section"><dl><div><dt>Scenario</dt><dd>Held constant</dd></div><div><dt>External environment</dt><dd>Varied</dd></div><div><dt>Participant stances</dt><dd>Model-generated</dd></div></dl></section><p>A new run retains every model call. Comparison runs remain immutable.</p></details>
       <div class="dataset-id">Dataset <code id="dataset-id"></code></div>
     </aside>
 
@@ -84,27 +81,8 @@
           <button class="text-action" type="button" data-featured-example>See what changed and why →</button>
         </section>
 
-        <section class="capability-grid" aria-label="Laboratory capabilities">
-          <article><span>01 · Define participants</span><h3>Give every agent a distinct position</h3><p>Assign a role, mandate, private information, operational constraints, and starting position.</p></article>
-          <article><span>02 · Change the environment</span><h3>Introduce a controlled difference</h3><p>Add information, shortages, institutional requirements, deadlines, or a stabilizing intervention.</p></article>
-          <article><span>03 · Run independent decisions</span><h3>Observe each round</h3><p>Every agent selects a stance and reports its main concern, required next step, and structured rationale.</p></article>
-          <article><span>04 · Compare and inspect</span><h3>Audit the collective outcome</h3><p>Compare vote trajectories, unresolved requirements, exact structured outputs, and approval-gate calculations.</p></article>
-        </section>
-
-        <section class="overview-purpose">
-          <div>
-            <span class="section-kicker">What one experiment contains</span>
-            <h3>One experiment compares environments; each environment contains repeated decision rounds.</h3>
-          </div>
-          <div class="experiment-hierarchy"><strong>1 experiment</strong><i>→</i><strong>3 environments</strong><i>→</i><strong>3 rounds each</strong><i>→</i><strong>12 agent decisions per round</strong></div>
-        </section>
-
-        <section class="theory-bridge">
-          <div>
-            <span class="section-kicker">Research use</span>
-            <h3>Turn coordination hypotheses into reproducible, inspectable simulations.</h3>
-          </div>
-          <p>Inspired by <em>From Minds to Coordination</em>, the workbench can examine—within controlled synthetic scenarios—whether fragmented information, incompatible local requirements, external pressure, or authoritative interventions change a group’s ability to act.</p>
+        <section class="overview-causal" aria-label="Product mechanism">
+          <span>Environment changes</span><i>↓</i><span>Agent requirements change</span><i>↓</i><span>Requirements align or conflict</span><i>↓</i><strong>Collective decision gate passes or fails</strong>
         </section>
       </section>
 
@@ -180,7 +158,7 @@
         </header>
         <div id="comparison-summary" class="comparison-summary"></div>
         <div id="trajectory-grid" class="trajectory-grid"></div>
-        <section class="matrix-section">
+        <section id="environment-results" class="matrix-section">
           <div class="section-title-row">
             <div><span class="eyebrow">All retained evidence</span><h3>Run matrix</h3></div>
             <small>Counts are exact structured participant outputs.</small>
@@ -209,6 +187,7 @@
 
         <section class="case-overview" aria-labelledby="case-overview-title">
           <div class="case-comparison-heading"><span class="section-kicker">Result first</span><h3 id="case-overview-title">How the coalition moved across the three environments</h3></div>
+          <div id="case-trajectories" class="case-trajectories"></div>
           <div class="table-scroll" role="region" aria-label="Three environment result comparison" tabindex="0">
             <table class="case-overview-table">
               <thead><tr><th>Environment</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Outcome</th></tr></thead>
@@ -309,7 +288,7 @@
             </div>
             <div id="environment-events"></div>
           </section>
-          <section class="gate-panel" aria-labelledby="gate-title">
+          <section id="decision-gate-results" class="gate-panel" aria-labelledby="gate-title">
             <div class="section-title-row">
               <div><span class="eyebrow">Exact mechanism</span><h3 id="gate-title">Terminal decision gate</h3></div>
             </div>
@@ -318,12 +297,12 @@
           </section>
         </div>
 
-        <details class="run-inputs-panel">
+        <details id="raw-evidence-results" class="run-inputs-panel">
           <summary>Inspect the exact initial agent and control configuration</summary>
           <div id="run-inputs"></div>
         </details>
 
-        <section class="agent-workbench" aria-labelledby="agents-title">
+        <section id="participant-results" class="agent-workbench" aria-labelledby="agents-title">
           <div class="section-title-row agent-title-row">
             <div><span class="eyebrow">Endogenous decisions</span><h3 id="agents-title">Participant evidence</h3></div>
             <div id="group-filters" class="group-filters" aria-label="Filter participants by delegation"></div>
@@ -371,6 +350,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=outcome-first-v1" defer></script>
+  <script src="assets/app.js?v=app-shell-v1" defer></script>
 </body>
 </html>

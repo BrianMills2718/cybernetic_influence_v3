@@ -61,17 +61,17 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
     assert "Build a simulation" in page
-    assert "Compare results" in page
+    assert "Open Lab" in page
+    assert "Lab workspace" in page
+    assert "Configure a new simulation" in page
     assert "Overview" in page
-    assert "Inspect decisions" in page
-    assert "How it works" in page
+    assert "Decision gate" in page
+    assert "Method" in page
     assert "AI coordination simulation workbench" in page
     assert "Test whether a group can still act" in page
-    assert "Turn coordination hypotheses into reproducible" in page
-    assert "Define participants" in page
-    assert "Change the environment" in page
-    assert "Run independent decisions" in page
-    assert "Compare and inspect" in page
+    assert "Environment changes" in page
+    assert "Agent requirements change" in page
+    assert "Collective decision gate passes or fails" in page
     assert "Inspect all agent decisions" in page
     assert "One coalition. Three environments. Three outcomes." in page
     assert "1 experiment" in page
@@ -80,8 +80,8 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What each stance means" in page
     assert "Twenty-four regional clinicians" in page
     assert "10% regional reserve" in page
-    assert shape.stylesheets == ["assets/styles.css?v=desktop-width-v1"]
-    assert shape.scripts == ["assets/app.js?v=outcome-first-v1"]
+    assert shape.stylesheets == ["assets/styles.css?v=app-shell-v1"]
+    assert shape.scripts == ["assets/app.js?v=app-shell-v1"]
     assert {
         "overview-view",
         "run-view",
@@ -97,6 +97,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "trajectory-grid",
         "run-matrix",
         "mechanism-view",
+        "case-trajectories",
         "case-overview-table",
         "case-gate-table",
         "agent-evidence-preview",
@@ -104,6 +105,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "waltzman-lens",
         "mechanism-table",
         "run-select",
+        "environment-results",
+        "decision-gate-results",
+        "raw-evidence-results",
+        "participant-results",
         "round-buttons",
         "environment-events",
         "gate-checks",
