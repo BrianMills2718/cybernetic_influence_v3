@@ -66,10 +66,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Agent decisions" in page
     assert "How it works" in page
     assert "Interactive AI coordination laboratory" in page
-    assert "Build and inspect simulations of how groups reach" in page
-    assert "Turn a theory about coordination into an executable scenario" in page
+    assert "Simulate how changing decision environments reshape collective action" in page
+    assert "Turn theories of influence and coordination into executable scenarios" in page
     assert "Configure the group" in page
-    assert "Change the environment" in page
+    assert "Change the decision environment" in page
     assert "Run autonomous decisions" in page
     assert "Inspect the evidence" in page
     assert "Explore the evidence" in page
