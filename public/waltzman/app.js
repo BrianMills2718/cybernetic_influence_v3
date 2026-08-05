@@ -25,6 +25,8 @@ const state = {
   group:'all',
   mechanismPersonId:'regional_scientific_advisor',
   labSection:'overview',
+  buildStep:'environment',
+  exampleEnvironment:0,
   runScopeIds:null,
 }
 
@@ -214,6 +216,20 @@ function renderRunSetup() {
   $('#agent-mandate').oninput = persistEditor
   $('#agent-context').oninput = persistEditor
   $('#shared-situation').oninput = persistEditor
+  renderBuildStep()
+}
+
+function renderBuildStep(step = state.buildStep) {
+  state.buildStep = step
+  all('[data-build-panel]').forEach((panel) => { panel.hidden = panel.dataset.buildPanel !== step })
+  all('[data-build-step]').forEach((button) => {
+    const order = ['environment', 'coalition', 'review']
+    const active = button.dataset.buildStep === step
+    button.classList.toggle('active', active)
+    button.classList.toggle('complete', order.indexOf(button.dataset.buildStep) < order.indexOf(step))
+    button.setAttribute('aria-current', active ? 'step' : 'false')
+  })
+  $('.run-workbench').classList.toggle('review-step', step === 'review')
 }
 
 function persistEditor() {
@@ -309,6 +325,25 @@ function renderMechanism() {
   const pressure = dataset.runs.find((run) => run.condition === 'responsive_exercise_injects')
   const stabilized = dataset.runs.find((run) => run.condition === 'capacity_inject_replay_with_stabilization')
   const exampleRuns = [baseline, pressure, stabilized].filter(Boolean)
+  const stageStories = {
+    baseline:{prompt:'No new disruption', development:'The reviewed plan remains feasible. Staffing, testing, supplies, and reserve commitments are unchanged.'},
+    responsive_exercise_injects:{prompt:'Capacity shock', development:'Laboratory failure, clinical staffing demand, and supply requirements cannot all be satisfied within 48 hours.'},
+    capacity_inject_replay_with_stabilization:{prompt:'Verified intervention', development:'A mobile laboratory, 24 clinicians, named supplies, and a 10% reserve make every minimum requirement compatible.'},
+  }
+  const renderExampleStage = () => {
+    const index = Math.min(state.exampleEnvironment, exampleRuns.length - 1)
+    const run = exampleRuns[index]
+    if (!run) return
+    const story = conditionStory(run)
+    const stage = stageStories[run.condition] || {prompt:story.title, development:story.explanation}
+    $('#example-environment-select').innerHTML = exampleRuns.map((candidate, candidateIndex) => `<button type="button" data-example-environment="${candidateIndex}" class="${candidateIndex === index ? 'active' : ''}"><b>${candidateIndex + 1}</b><span>${escapeHtml(conditionStory(candidate).title)}</span></button>`).join('')
+    $('#example-stage').innerHTML = `<header><div><span>Environment ${index + 1} of ${exampleRuns.length}</span><h3>${escapeHtml(stage.prompt)}</h3></div>${outcomeBadge(run)}</header><p>${escapeHtml(stage.development)}</p><div class="stage-trajectory">${run.rounds.map((round) => `<div><b>Round ${round.round}</b>${stackedBar(round.decision_counts, 'stage-bar')}<strong>${escapeHtml(countsText(round.decision_counts))}</strong></div>`).join('')}</div><footer><span>Final coalition decision</span><strong>${escapeHtml(countsText(run.rounds.at(-1).decision_counts))}</strong></footer>`
+    all('[data-example-environment]').forEach((button) => { button.onclick = () => { state.exampleEnvironment = Number(button.dataset.exampleEnvironment); renderExampleStage() } })
+    $('#example-next').textContent = index === exampleRuns.length - 1 ? 'Restart example ↻' : 'Next environment →'
+  }
+  renderExampleStage()
+  $('#example-next').onclick = () => { state.exampleEnvironment = (state.exampleEnvironment + 1) % exampleRuns.length; renderExampleStage() }
+  $('#open-full-analysis').onclick = () => { const details = $('#full-example-analysis'); details.open = true; details.scrollIntoView({behavior:'smooth', block:'start'}) }
   $('#case-trajectories').innerHTML = exampleRuns.map((run) => {
     const story = conditionStory(run)
     return `<article><header><span>Environment ${escapeHtml(story.step)}</span><strong>${escapeHtml(story.title)}</strong>${outcomeBadge(run)}</header><div>${run.rounds.map((round) => `<div class="case-trajectory-round"><b>R${round.round}</b>${stackedBar(round.decision_counts, 'case-trajectory-bar')}<span>${escapeHtml(countsText(round.decision_counts))}</span></div>`).join('')}</div></article>`
@@ -487,8 +522,7 @@ function renderView() {
     button.classList.toggle('active', active)
     button.setAttribute('aria-pressed', String(active))
   })
-  $('[data-open-lab]').classList.toggle('active', !publicView)
-  $('[data-open-lab]').setAttribute('aria-pressed', String(!publicView))
+  all('[data-open-lab]').forEach((button) => { button.classList.toggle('active', !publicView); button.setAttribute('aria-pressed', String(!publicView)) })
   all('[data-lab-view]').forEach((button) => {
     const sameView = button.dataset.labView === state.view
     const active = sameView && (!button.dataset.labSection || button.dataset.labSection === state.labSection)
@@ -531,9 +565,12 @@ function configureControls() {
   all('[data-view]').forEach((button) => {
     button.onclick = () => { state.view = button.dataset.view; renderView(); syncUrl() }
   })
-  $('[data-open-lab]').onclick = () => navigateLab('run')
+  all('[data-open-lab]').forEach((button) => { button.onclick = () => navigateLab('run') })
   all('[data-lab-view]').forEach((button) => {
     button.onclick = () => navigateLab(button.dataset.labView, button.dataset.labSection || 'overview')
+  })
+  all('[data-build-step], [data-build-next]').forEach((button) => {
+    button.onclick = () => renderBuildStep(button.dataset.buildStep || button.dataset.buildNext)
   })
   all('[data-featured-example]').forEach((button) => {
     button.onclick = () => {

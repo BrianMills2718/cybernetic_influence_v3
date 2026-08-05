@@ -63,10 +63,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Build a simulation" in page
     assert "Open Lab" in page
     assert "Lab workspace" in page
-    assert "Configure a new simulation" in page
+    assert "Choose, configure, run" in page
     assert "Overview" in page
-    assert "Decision gate" in page
-    assert "Method" in page
+    assert "Terminal decision gate" in page
+    assert "Open method" in page
     assert "AI coordination simulation workbench" in page
     assert "Test whether a group can still act" in page
     assert "Environment changes" in page
@@ -80,8 +80,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What each stance means" in page
     assert "Twenty-four regional clinicians" in page
     assert "10% regional reserve" in page
-    assert shape.stylesheets == ["assets/styles.css?v=app-shell-v1"]
-    assert shape.scripts == ["assets/app.js?v=app-shell-v1"]
+    assert "What changes between rounds?" in page
+    assert "Edit one role—or keep the reviewed coalition" in page
+    assert "Full experiment analysis and evidence" in page
+    assert shape.stylesheets == ["assets/styles.css?v=game-ux-v1"]
+    assert shape.scripts == ["assets/app.js?v=game-ux-v1"]
     assert {
         "overview-view",
         "run-view",
@@ -97,6 +100,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "trajectory-grid",
         "run-matrix",
         "mechanism-view",
+        "example-environment-select",
+        "example-stage",
+        "full-example-analysis",
         "case-trajectories",
         "case-overview-table",
         "case-gate-table",

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=app-shell-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=game-ux-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -34,15 +34,9 @@
     <aside class="experiment-rail" aria-label="Lab navigation">
       <div class="lab-rail-heading"><span class="eyebrow">Lab workspace</span><strong>Regional outbreak experiment</strong><small>Example dataset · authentic retained runs</small></div>
       <nav class="lab-navigation" aria-label="Experiment workspace">
-        <button type="button" data-lab-view="run"><span>Build</span><small>Configure a new simulation</small></button>
-        <div class="lab-nav-group"><span>Results</span>
-          <button type="button" data-lab-view="compare" data-lab-section="overview">Overview</button>
-          <button type="button" data-lab-view="compare" data-lab-section="environments">Environments</button>
-          <button type="button" data-lab-view="inspect" data-lab-section="participants">Participants</button>
-          <button type="button" data-lab-view="inspect" data-lab-section="gate">Decision gate</button>
-          <button type="button" data-lab-view="inspect" data-lab-section="evidence">Evidence</button>
-        </div>
-        <button type="button" data-lab-view="method"><span>Method</span><small>Contract and limitations</small></button>
+        <button type="button" data-lab-view="run"><span>New simulation</span><small>Choose, configure, run</small></button>
+        <button type="button" data-lab-view="compare" data-lab-section="overview"><span>Results</span><small>Compare environments</small></button>
+        <button type="button" data-lab-view="inspect" data-lab-section="participants"><span>Evidence</span><small>Inspect agent decisions</small></button>
       </nav>
       <div class="rail-heading">
         <span class="eyebrow">Selected experiment</span>
@@ -54,7 +48,7 @@
         <span><b id="fact-agents">12</b> autonomous roles</span>
         <span><b id="fact-calls">180</b> participant calls</span>
       </div>
-      <details class="rail-details"><summary>Experiment details</summary><section class="rail-section"><dl><div><dt>Scenario</dt><dd>Held constant</dd></div><div><dt>External environment</dt><dd>Varied</dd></div><div><dt>Participant stances</dt><dd>Model-generated</dd></div></dl></section><p>A new run retains every model call. Comparison runs remain immutable.</p></details>
+      <details class="rail-details"><summary>Details and method</summary><section class="rail-section"><dl><div><dt>Scenario</dt><dd>Held constant</dd></div><div><dt>Environment</dt><dd>Varied</dd></div><div><dt>Decisions</dt><dd>Model-generated</dd></div></dl></section><button type="button" data-lab-view="method">Open method</button></details>
       <div class="dataset-id">Dataset <code id="dataset-id"></code></div>
     </aside>
 
@@ -89,38 +83,37 @@
       <section id="run-view" class="workspace-view" aria-labelledby="run-title" hidden>
         <header class="workspace-header">
           <div>
-            <span class="eyebrow">Executable experiment</span>
-            <h2 id="run-title">Configure and run one authentic trajectory</h2>
-            <p>Change a participant's initial mandate or context, choose the external environment, then observe twelve autonomous LLM roles make three successive decisions.</p>
+            <span class="eyebrow">New simulation</span>
+            <h2 id="run-title">Set the environment. Configure the coalition. Run.</h2>
           </div>
           <span id="live-capability" class="capability-badge">Checking live route…</span>
         </header>
 
+        <nav class="build-progress" aria-label="Simulation setup">
+          <button type="button" data-build-step="environment"><b>1</b><span>Environment</span></button>
+          <i></i><button type="button" data-build-step="coalition"><b>2</b><span>Coalition</span></button>
+          <i></i><button type="button" data-build-step="review"><b>3</b><span>Run</span></button>
+        </nav>
+
         <div class="run-workbench">
           <section class="configuration-panel" aria-labelledby="condition-title">
-            <div class="section-title-row"><div><span class="eyebrow">Step 1</span><h3 id="condition-title">Choose the decision environment</h3></div></div>
-            <div id="condition-options" class="condition-options"></div>
-
-            <div class="section-title-row config-heading"><div><span class="eyebrow">Step 2</span><h3>Edit one participant</h3></div><button id="reset-configuration" type="button" class="quiet-button">Reset all inputs</button></div>
-            <label class="field-label" for="agent-config-select">Participant
-              <select id="agent-config-select"></select>
-            </label>
-            <label class="field-label" for="agent-mandate">Initial mandate
-              <textarea id="agent-mandate" rows="5"></textarea>
-            </label>
-            <label class="field-label" for="agent-context">Private institutional context
-              <textarea id="agent-context" rows="5"></textarea>
-            </label>
-            <details class="shared-situation-editor">
-              <summary>Review or edit the common starting situation</summary>
-              <label class="field-label" for="shared-situation">Shared situation
-                <textarea id="shared-situation" rows="12"></textarea>
-              </label>
-            </details>
+            <section data-build-panel="environment">
+              <div class="build-screen-title"><span>Choose one</span><h3 id="condition-title">What changes between rounds?</h3></div>
+              <div id="condition-options" class="condition-options"></div>
+              <button class="build-next" type="button" data-build-next="coalition">Configure coalition →</button>
+            </section>
+            <section data-build-panel="coalition" hidden>
+              <div class="build-screen-title"><span>Configure the players</span><h3>Edit one role—or keep the reviewed coalition</h3></div>
+              <div class="coalition-editor-heading"><label class="field-label" for="agent-config-select">Participant<select id="agent-config-select"></select></label><button id="reset-configuration" type="button" class="quiet-button">Reset</button></div>
+              <label class="field-label" for="agent-mandate">Initial mandate<textarea id="agent-mandate" rows="5"></textarea></label>
+              <label class="field-label" for="agent-context">Private institutional context<textarea id="agent-context" rows="5"></textarea></label>
+              <details class="shared-situation-editor"><summary>Edit the common starting situation</summary><label class="field-label" for="shared-situation">Shared situation<textarea id="shared-situation" rows="12"></textarea></label></details>
+              <div class="build-screen-actions"><button type="button" data-build-next="environment">← Back</button><button class="build-next" type="button" data-build-next="review">Review run →</button></div>
+            </section>
           </section>
 
-          <aside class="execution-panel" aria-labelledby="execution-title">
-            <div class="section-title-row"><div><span class="eyebrow">Step 3</span><h3 id="execution-title">Review and execute</h3></div></div>
+          <aside class="execution-panel" data-build-panel="review" hidden aria-labelledby="execution-title">
+            <div class="build-screen-title"><span>Ready</span><h3 id="execution-title">Review and run</h3></div>
             <div id="control-preview" class="control-preview"></div>
             <dl class="execution-facts">
               <div><dt>Participants</dt><dd>12 autonomous roles</dd></div>
@@ -130,6 +123,7 @@
               <div><dt>Decision rule</dt><dd>Exact coalition gate</dd></div>
             </dl>
             <button id="run-experiment" class="primary-action" type="button" disabled>Run authentic simulation</button>
+            <button class="build-back" type="button" data-build-next="coalition">← Back to coalition</button>
             <p id="run-availability" class="availability-note">Waiting for the live simulator contract.</p>
 
             <section id="live-run-status" class="live-run-status" hidden aria-live="polite">
@@ -181,6 +175,16 @@
           </div>
         </header>
 
+        <section class="example-game" aria-label="Example simulation">
+          <div class="mission-objective"><span>Objective</span><strong>Launch a joint outbreak response without violating any country’s minimum operational requirements.</strong></div>
+          <nav id="example-environment-select" class="environment-select" aria-label="Choose environment"></nav>
+          <div id="example-stage" class="example-stage" aria-live="polite"></div>
+          <div class="example-actions"><button id="example-next" class="primary-cta" type="button">Next environment →</button><button id="open-full-analysis" class="secondary-cta" type="button">Open analysis</button><button class="quiet-button" type="button" data-open-lab>Run your own</button></div>
+        </section>
+
+        <details id="full-example-analysis" class="full-analysis">
+          <summary>Full experiment analysis and evidence</summary>
+          <div class="full-analysis-body">
         <section class="experiment-structure" aria-label="Experiment structure">
           <span>Experiment structure</span><strong>1 experiment</strong><i>→</i><strong>3 environments</strong><i>→</i><strong>3 decision rounds per environment</strong><i>→</i><strong>12 independent agent decisions per round</strong>
         </section>
@@ -251,6 +255,8 @@
               </table>
             </div>
             <p class="advanced-paths">Use <strong>Inspect decisions</strong> to read every structured rationale and outside development, or <strong>How it works</strong> for the experiment contract and limitations.</p>
+          </div>
+        </details>
           </div>
         </details>
       </section>
@@ -350,6 +356,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=app-shell-v1" defer></script>
+  <script src="assets/app.js?v=game-ux-v1" defer></script>
 </body>
 </html>
