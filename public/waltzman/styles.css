@@ -761,6 +761,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .mission-objective { align-items: baseline; border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); display: grid; gap: 18px; grid-template-columns: auto 1fr; padding: 16px 0; }
 .mission-objective span { color: var(--accent); font-size: 0.65rem; font-weight: 850; letter-spacing: 0.1em; text-transform: uppercase; }
 .mission-objective strong { font-size: 0.88rem; }
+.probe-boundary { color: var(--faint); font-size: 0.76rem; line-height: 1.55; margin: 12px 0 0; max-width: 920px; }
 .environment-select { display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); margin: 22px 0 10px; }
 .environment-select button { align-items: center; background: transparent; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); cursor: pointer; display: flex; gap: 10px; padding: 12px; text-align: left; }
 .environment-select button b { align-items: center; border: 1px solid var(--line); border-radius: 50%; display: flex; font-size: 0.65rem; height: 24px; justify-content: center; width: 24px; }
@@ -771,6 +772,9 @@ tbody tr:last-child td { border-bottom: 0; }
 .example-stage > header span { color: var(--accent); font-size: 0.66rem; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
 .example-stage h3 { font-size: 1.8rem; margin: 7px 0 0; }
 .example-stage > p { color: var(--muted); font-size: 0.9rem; line-height: 1.65; max-width: 760px; }
+.probe-chain { align-items: center; display: flex; gap: 12px; margin: 22px 0; }
+.probe-chain span { background: var(--panel-3); border: 1px solid var(--line); border-radius: 7px; flex: 1; font-size: 0.75rem; font-weight: 750; padding: 10px 12px; text-align: center; }
+.probe-chain i { color: var(--accent); font-style: normal; }
 .stage-trajectory { margin: 28px 0; }
 .stage-trajectory > div { align-items: center; display: grid; gap: 15px; grid-template-columns: 64px minmax(240px, 1fr) minmax(160px, auto); }
 .stage-trajectory > div + div { margin-top: 13px; }
@@ -778,8 +782,10 @@ tbody tr:last-child td { border-bottom: 0; }
 .stage-trajectory strong { font-size: 0.76rem; text-align: right; }
 .stage-bar { background: #07111a; border-radius: 999px; display: flex; height: 18px; overflow: hidden; }
 .stage-bar span { display: block; height: 100%; }
-.example-stage footer { align-items: center; border-top: 1px solid var(--line); display: flex; justify-content: space-between; padding-top: 16px; }
-.example-stage footer span { color: var(--faint); font-size: 0.72rem; }
+.decision-environment-readout { border-top: 1px solid var(--line); display: grid; gap: 18px; grid-template-columns: repeat(3, 1fr); margin: 0; padding-top: 16px; }
+.decision-environment-readout div { min-width: 0; }
+.decision-environment-readout dt { color: var(--accent); font-size: 0.62rem; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
+.decision-environment-readout dd { font-size: 0.73rem; line-height: 1.45; margin: 6px 0 0; }
 .example-actions { align-items: center; display: flex; gap: 10px; margin-top: 14px; }
 .full-analysis { border-top: 1px solid var(--line); margin: 28px auto 0; max-width: 1400px; }
 .full-analysis > summary { color: var(--muted); cursor: pointer; font-size: 0.8rem; padding: 18px 0; }
@@ -847,6 +853,9 @@ tbody tr:last-child td { border-bottom: 0; }
   #overview-view:not([hidden]) { display: block; min-height: 0; }
   .overview-result-preview { margin-top: 36px; }
   .environment-select { grid-template-columns: 1fr; }
+  .probe-chain { align-items: stretch; flex-direction: column; }
+  .probe-chain i { text-align: center; transform: rotate(90deg); }
+  .decision-environment-readout { grid-template-columns: 1fr; }
   .stage-trajectory > div { grid-template-columns: 54px minmax(100px, 1fr); }
   .stage-trajectory strong { grid-column: 2; text-align: left; }
   .example-actions { align-items: stretch; flex-direction: column; }

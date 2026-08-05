@@ -73,18 +73,20 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Configure the coalition" in page
     assert "Current demo template" in page
     assert "Inspect all agent decisions" in page
-    assert "One coalition. Three environments. Three outcomes." in page
+    assert "Waltzman mechanism probe" in page
+    assert "Can different local pressures push a coalition" in page
+    assert "bounded exercise controller" in page
     assert "1 experiment" in page
-    assert "3 decision rounds per environment" in page
+    assert "3 decision rounds per condition" in page
     assert "Launch a joint regional response—or wait" in page
     assert "What each stance means" in page
     assert "Twenty-four regional clinicians" in page
     assert "10% regional reserve" in page
-    assert "What changes between rounds?" in page
+    assert "What enters the decision environment?" in page
     assert "Edit one role—or keep the reviewed coalition" in page
-    assert "Full experiment analysis and evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=product-first-v1"]
-    assert shape.scripts == ["assets/app.js?v=game-ux-v1"]
+    assert "Mechanism analysis and retained evidence" in page
+    assert shape.stylesheets == ["assets/styles.css?v=waltzman-probe-v1"]
+    assert shape.scripts == ["assets/app.js?v=waltzman-probe-v1"]
     assert {
         "overview-view",
         "run-view",

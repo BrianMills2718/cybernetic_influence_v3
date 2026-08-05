@@ -181,10 +181,18 @@ function renderRunSetup() {
     {id:'responsive_exercise_injects', label:'Responsive capacity pressure', description:'Exercise control selects a preauthored development from reported risks.'},
     {id:'capacity_inject_replay_with_stabilization', label:'Pressure + allocation stabilization', description:'Pressure is replayed and a verified capacity package is added.'},
   ]
-  $('#condition-options').innerHTML = contracts.map((condition) => `
+  const publicConditionCopy = {
+    baseline:{label:'Baseline', description:'No additional pressure enters between rounds.'},
+    responsive_exercise_injects:{label:'Heterogeneous local pressure', description:'Different locally relevant developments enter the coalition as reported concerns emerge.'},
+    capacity_inject_replay_with_stabilization:{label:'Pressure + stabilization', description:'The same pressures remain, then an authoritative package bounds uncertainty and resolves dependencies.'},
+  }
+  $('#condition-options').innerHTML = contracts.map((condition) => {
+    const copy = publicConditionCopy[condition.id] || condition
+    return `
     <button type="button" class="condition-option ${condition.id === selectedCondition ? 'active' : ''}" data-condition="${escapeHtml(condition.id)}" aria-pressed="${condition.id === selectedCondition}">
-      <strong>${escapeHtml(condition.label)}</strong><span>${escapeHtml(condition.description)}</span>
-    </button>`).join('')
+      <strong>${escapeHtml(copy.label)}</strong><span>${escapeHtml(copy.description)}</span>
+    </button>`
+  }).join('')
   all('[data-condition]').forEach((button) => {
     button.onclick = () => {
       selectedCondition = button.dataset.condition
@@ -200,7 +208,7 @@ function renderRunSetup() {
   $('#agent-context').value = selected?.institutional_context || ''
   $('#shared-situation').value = editableConfiguration?.shared_situation || ''
 
-  const condition = conditionContract(selectedCondition)
+  const condition = publicConditionCopy[selectedCondition] || conditionContract(selectedCondition)
   const controlNote = selectedCondition === 'baseline'
     ? 'No exercise-control development is introduced between rounds.'
     : selectedCondition === 'responsive_exercise_injects'
@@ -306,9 +314,9 @@ function personStance(run, roundNumber, personId) {
 
 function conditionStory(run) {
   const stories = {
-    baseline:{step:'1', title:'Baseline', change:'The starting plan remained feasible.', explanation:'The agents received no new resource conflicts.'},
-    responsive_exercise_injects:{step:'2', title:'Capacity constraints', change:'New resource demands could not all be met.', explanation:'Location-specific staffing, testing, supply, and reserve requirements made the shared plan impossible to execute as written.'},
-    capacity_inject_replay_with_stabilization:{step:'3', title:'Capacity constraints + verified resources', change:'The stated requirements became compatible.', explanation:'A verified package supplied the staff, laboratory capacity, equipment, and reserve the agents had requested.'},
+    baseline:{step:'1', title:'Baseline', change:'No pressure enters the coalition.', explanation:'The agents receive only common round results and remain ready to act.'},
+    responsive_exercise_injects:{step:'2', title:'Heterogeneous local pressure', change:'Different subgroups receive different locally relevant developments.', explanation:'The content varies by location, while reported risk and coordination move in the same direction.'},
+    capacity_inject_replay_with_stabilization:{step:'3', title:'Pressure + stabilization', change:'The same pressure remains and an authoritative intervention is added.', explanation:'Verified allocations bound uncertainty and make the coalition’s commitments compatible.'},
   }
   return stories[run.condition] || {step:'•', title:run.condition_label, change:'External environment varied', explanation:'Inspect the retained run for its exact developments.'}
 }
@@ -326,9 +334,9 @@ function renderMechanism() {
   const stabilized = dataset.runs.find((run) => run.condition === 'capacity_inject_replay_with_stabilization')
   const exampleRuns = [baseline, pressure, stabilized].filter(Boolean)
   const stageStories = {
-    baseline:{prompt:'No new disruption', development:'The reviewed plan remains feasible. Staffing, testing, supplies, and reserve commitments are unchanged.'},
-    responsive_exercise_injects:{prompt:'Capacity shock', development:'Laboratory failure, clinical staffing demand, and supply requirements cannot all be satisfied within 48 hours.'},
-    capacity_inject_replay_with_stabilization:{prompt:'Verified intervention', development:'A mobile laboratory, 24 clinicians, named supplies, and a 10% reserve make every minimum requirement compatible.'},
+    baseline:{prompt:'No external pressure', development:'The coalition receives only its shared decision history.', chain:['Common information','Risks remain bounded','Coordination remains ready'], trust:'Not measured in this probe', risk:'No new risk enters the coalition'},
+    responsive_exercise_injects:{prompt:'Different local signals. Same directional effect.', development:'Alba receives a laboratory failure, Borin a staffing demand, Cyrenia a supply condition, and the regional institution an infeasibility warning.', chain:['Heterogeneous local inputs','Capacity or legitimacy becomes primary','Coordination collapses'], trust:'Not measured in this probe', risk:'12 of 12 report capacity or legitimacy and request action'},
+    capacity_inject_replay_with_stabilization:{prompt:'Detect → diagnose → stabilize', development:'The same local pressures remain. A verified allocation then supplies testing, clinicians, equipment, and reserve capacity.', chain:['Same heterogeneous pressure','Authoritative facts bound uncertainty','Coordination returns'], trust:'Reliance on the verified authority is observable; private trust is not measured', risk:'Named concerns receive concrete answers'},
   }
   const renderExampleStage = () => {
     const index = Math.min(state.exampleEnvironment, exampleRuns.length - 1)
@@ -337,9 +345,11 @@ function renderMechanism() {
     const story = conditionStory(run)
     const stage = stageStories[run.condition] || {prompt:story.title, development:story.explanation}
     $('#example-environment-select').innerHTML = exampleRuns.map((candidate, candidateIndex) => `<button type="button" data-example-environment="${candidateIndex}" class="${candidateIndex === index ? 'active' : ''}"><b>${candidateIndex + 1}</b><span>${escapeHtml(conditionStory(candidate).title)}</span></button>`).join('')
-    $('#example-stage').innerHTML = `<header><div><span>Environment ${index + 1} of ${exampleRuns.length}</span><h3>${escapeHtml(stage.prompt)}</h3></div>${outcomeBadge(run)}</header><p>${escapeHtml(stage.development)}</p><div class="stage-trajectory">${run.rounds.map((round) => `<div><b>Round ${round.round}</b>${stackedBar(round.decision_counts, 'stage-bar')}<strong>${escapeHtml(countsText(round.decision_counts))}</strong></div>`).join('')}</div><footer><span>Final coalition decision</span><strong>${escapeHtml(countsText(run.rounds.at(-1).decision_counts))}</strong></footer>`
+    const finalCounts = countsText(run.rounds.at(-1).decision_counts)
+    const gateResult = run.outcome === 'joint_response_approved' ? 'gate passes' : 'gate fails'
+    $('#example-stage').innerHTML = `<header><div><span>Condition ${index + 1} of ${exampleRuns.length}</span><h3>${escapeHtml(stage.prompt)}</h3></div>${outcomeBadge(run)}</header><p>${escapeHtml(stage.development)}</p><div class="probe-chain">${stage.chain.map((item) => `<span>${escapeHtml(item)}</span>`).join('<i>→</i>')}</div><div class="stage-trajectory">${run.rounds.map((round) => `<div><b>Round ${round.round}</b>${stackedBar(round.decision_counts, 'stage-bar')}<strong>${escapeHtml(countsText(round.decision_counts))}</strong></div>`).join('')}</div><dl class="decision-environment-readout"><div><dt>Trust structure</dt><dd>${escapeHtml(stage.trust)}</dd></div><div><dt>Perceived risk</dt><dd>${escapeHtml(stage.risk)}</dd></div><div><dt>Coordination readiness</dt><dd>${escapeHtml(`${finalCounts} · ${gateResult}`)}</dd></div></dl>`
     all('[data-example-environment]').forEach((button) => { button.onclick = () => { state.exampleEnvironment = Number(button.dataset.exampleEnvironment); renderExampleStage() } })
-    $('#example-next').textContent = index === exampleRuns.length - 1 ? 'Restart example ↻' : 'Next environment →'
+    $('#example-next').textContent = index === exampleRuns.length - 1 ? 'Restart probe ↻' : 'Next condition →'
   }
   renderExampleStage()
   $('#example-next').onclick = () => { state.exampleEnvironment = (state.exampleEnvironment + 1) % exampleRuns.length; renderExampleStage() }

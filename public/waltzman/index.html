@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=product-first-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=waltzman-probe-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -67,7 +67,7 @@
 
         <section class="overview-builder-preview" aria-labelledby="overview-builder-title">
           <span class="section-kicker">Your simulation</span><h3 id="overview-builder-title">Three decisions, then run</h3>
-          <ol><li><b>1</b><div><strong>Choose the environment</strong><p>Baseline, capacity pressure, or pressure plus verified resources.</p></div></li><li><b>2</b><div><strong>Configure the coalition</strong><p>Edit the shared situation and any participant’s mandate or context.</p></div></li><li><b>3</b><div><strong>Run and inspect</strong><p>Twelve autonomous roles decide across three rounds; every structured decision is retained.</p></div></li></ol>
+          <ol><li><b>1</b><div><strong>Choose the decision environment</strong><p>Baseline, heterogeneous local pressure, or pressure plus stabilization.</p></div></li><li><b>2</b><div><strong>Configure the coalition</strong><p>Edit the shared situation and any participant’s mandate or context.</p></div></li><li><b>3</b><div><strong>Run and inspect</strong><p>Twelve autonomous roles decide across three rounds; every structured decision is retained.</p></div></li></ol>
           <p class="template-boundary">Current demo template · regional outbreak · 12 roles · 3 rounds · up to 36 authentic model calls</p>
         </section>
       </section>
@@ -90,7 +90,7 @@
         <div class="run-workbench">
           <section class="configuration-panel" aria-labelledby="condition-title">
             <section data-build-panel="environment">
-              <div class="build-screen-title"><span>Choose one</span><h3 id="condition-title">What changes between rounds?</h3></div>
+              <div class="build-screen-title"><span>Choose one</span><h3 id="condition-title">What enters the decision environment?</h3></div>
               <div id="condition-options" class="condition-options"></div>
               <button class="build-next" type="button" data-build-next="coalition">Configure coalition →</button>
             </section>
@@ -161,28 +161,29 @@
       <section id="mechanism-view" class="workspace-view" aria-labelledby="mechanism-title" hidden>
         <header class="workspace-header case-header">
           <div>
-            <div class="artifact-type"><strong>Included experiment</strong><span>Authentic retained model decisions · fictional scenario</span></div>
-            <h2 id="mechanism-title">One coalition. Three environments. Three outcomes.</h2>
-            <p>Twelve AI agents decide whether to launch a joint outbreak response. Their roles, mandates, starting information, model, and approval rule remain fixed. Only operational constraints and resource availability change.</p>
+            <div class="artifact-type"><strong>Waltzman mechanism probe</strong><span>Authentic retained model decisions · fictional scenario</span></div>
+            <h2 id="mechanism-title">Can different local pressures push a coalition toward the same failure?</h2>
+            <p>Twelve AI agents receive different, locally relevant developments. The signals do not share one narrative, but their accumulated effect may still change perceived risk and the coalition’s readiness to act.</p>
           </div>
         </header>
 
         <section class="example-game" aria-label="Example simulation">
-          <div class="mission-objective"><span>Objective</span><strong>Launch a joint outbreak response without violating any country’s minimum operational requirements.</strong></div>
+          <div class="mission-objective"><span>Question</span><strong>Does heterogeneous pressure degrade the decision environment—and can a stabilizing intervention restore coordinated action?</strong></div>
+          <p class="probe-boundary">This probe isolates one mechanism from <em>From Minds to Coordination</em>. The participants are autonomous LLM agents; the pressure source is a bounded exercise controller, not yet an autonomous influence swarm.</p>
           <nav id="example-environment-select" class="environment-select" aria-label="Choose environment"></nav>
           <div id="example-stage" class="example-stage" aria-live="polite"></div>
-          <div class="example-actions"><button id="example-next" class="primary-cta" type="button">Next environment →</button><button id="open-full-analysis" class="secondary-cta" type="button">Open analysis</button><button class="quiet-button" type="button" data-open-lab>Run your own</button></div>
+          <div class="example-actions"><button id="example-next" class="primary-cta" type="button">Next condition →</button><button id="open-full-analysis" class="secondary-cta" type="button">Inspect the mechanism</button><button class="quiet-button" type="button" data-open-lab>Run your own</button></div>
         </section>
 
         <details id="full-example-analysis" class="full-analysis">
-          <summary>Full experiment analysis and evidence</summary>
+          <summary>Mechanism analysis and retained evidence</summary>
           <div class="full-analysis-body">
         <section class="experiment-structure" aria-label="Experiment structure">
-          <span>Experiment structure</span><strong>1 experiment</strong><i>→</i><strong>3 environments</strong><i>→</i><strong>3 decision rounds per environment</strong><i>→</i><strong>12 independent agent decisions per round</strong>
+          <span>Experiment structure</span><strong>1 experiment</strong><i>→</i><strong>3 conditions</strong><i>→</i><strong>3 decision rounds per condition</strong><i>→</i><strong>12 independent agent decisions per round</strong>
         </section>
 
         <section class="case-overview" aria-labelledby="case-overview-title">
-          <div class="case-comparison-heading"><span class="section-kicker">Result first</span><h3 id="case-overview-title">How the coalition moved across the three environments</h3></div>
+          <div class="case-comparison-heading"><span class="section-kicker">Result first</span><h3 id="case-overview-title">How the decision environment changed across three conditions</h3></div>
           <div id="case-trajectories" class="case-trajectories"></div>
           <div class="table-scroll" role="region" aria-label="Three environment result comparison" tabindex="0">
             <table class="case-overview-table">
@@ -222,10 +223,10 @@
         </section>
 
         <section class="causal-comparison" aria-labelledby="causal-title">
-          <div class="case-comparison-heading"><span class="section-kicker">Causal chain within the simulation</span><h3 id="causal-title">Why coordination failed—and why it returned</h3></div>
-          <div class="causal-path causal-failed"><strong>Capacity failures</strong><i>→</i><span>Agents acquire minimum operational requirements</span><i>→</i><span>Requirements become jointly infeasible</span><i>→</i><span>Agents defer</span><i>→</i><b>Approval gates fail</b></div>
-          <div class="causal-path causal-restored"><strong>Verified allocation</strong><i>→</i><span>Every minimum requirement is covered</span><i>→</i><span>Dependencies become compatible</span><i>→</i><span>Agents return to support</span><i>→</i><b>Approval gates pass</b></div>
-          <p>The intervention changes the environment; it does not alter agent mandates or dictate votes. This is the mechanism suggested by <em>From Minds to Coordination</em> that the example makes executable and inspectable.</p>
+          <div class="case-comparison-heading"><span class="section-kicker">Causal chain within the simulation</span><h3 id="causal-title">Different inputs, one directional change</h3></div>
+          <div class="causal-path causal-failed"><strong>Locally different pressures</strong><i>→</i><span>Capacity and legitimacy become salient risks</span><i>→</i><span>Verification and resource requests accumulate</span><i>→</i><span>Readiness falls</span><i>→</i><b>Decision gate fails</b></div>
+          <div class="causal-path causal-restored"><strong>Authoritative stabilization</strong><i>→</i><span>Uncertainty and allocations become bounded</span><i>→</i><span>Commitments become compatible</span><i>→</i><span>Readiness returns</span><i>→</i><b>Decision gate passes</b></div>
+          <p>The intervention changes the decision environment; it does not alter participant mandates or dictate votes. This probe directly tests coordination readiness and perceived risk. It does not claim to measure private trust or reproduce a fully autonomous influence swarm.</p>
         </section>
 
         <section id="agent-evidence-preview" class="agent-evidence-preview" aria-labelledby="agent-preview-title"></section>
@@ -348,6 +349,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=game-ux-v1" defer></script>
+  <script src="assets/app.js?v=waltzman-probe-v1" defer></script>
 </body>
 </html>
