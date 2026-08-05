@@ -11,6 +11,7 @@ PUBLIC_ROOT = ROOT / "public" / "waltzman"
 PAGE = PUBLIC_ROOT / "index.html"
 DATA = PUBLIC_ROOT / "data.json"
 SCRIPT = PUBLIC_ROOT / "app.js"
+STYLE = PUBLIC_ROOT / "styles.css"
 PLIST = ROOT / "deploy" / "com.cybernetic-influence.waltzman-public.plist"
 
 RUN_IDS = {
@@ -125,6 +126,7 @@ def test_public_dataset_retains_all_five_runs_and_180_agent_stances() -> None:
 
 def test_public_client_exposes_inspection_without_execution() -> None:
     script = SCRIPT.read_text(encoding="utf-8")
+    style = STYLE.read_text(encoding="utf-8")
 
     for capability in (
         "renderComparison",
@@ -141,6 +143,7 @@ def test_public_client_exposes_inspection_without_execution() -> None:
     lowered = script.lower()
     for execution_surface in ("/api/", "eventsource", "websocket", "openrouter"):
         assert execution_surface not in lowered
+    assert "[hidden] { display: none !important; }" in style
 
 
 def test_public_launch_agent_serves_only_the_static_workbench() -> None:
