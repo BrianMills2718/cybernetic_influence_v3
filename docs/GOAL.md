@@ -3,7 +3,7 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-08-04
+updated: 2026-08-05
 supersedes: comparison-centered research MVP goal at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -126,23 +126,34 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 - Use the existing shared `llm_client`; every call retains `task`, `trace_id`,
   `max_budget`, native `json_schema`, raw lifecycle evidence, and observed
   accounting.
-- No general public hosting, mobile requirement, production hardening,
-  arbitrary world language, generalized game master, universal fidelity score,
-  trust score, coordination score, or agency score. User-approved exception,
-  2026-08-04: one read-only public retained-evidence workbench may expose the
-  bounded synthetic outbreak experiment; the simulator, APIs, run store, and
-  internal trace workbench remain private.
+- No generalized game master, universal fidelity score, trust score,
+  coordination score, or agency score. User-approved exception, 2026-08-05:
+  one public workbench may configure and execute the bounded synthetic outbreak
+  experiment. Its simulator API and run store are isolated from the private
+  simulator and private retained evidence; this is a development tool, not a
+  general public-hosting or production-hardening commitment.
 
 ## Current Truth
 
-- The user-approved public retained-evidence workbench for the outbreak probe is
-  deployed at <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>. A user can
-  compare all five authentic trajectories, inspect any round and participant,
-  distinguish exogenous developments from model-generated stances, and inspect
-  the exact terminal gate. It does not expose the simulator or run APIs and
-  cannot launch model calls. The deployed HTML, CSS, JavaScript, and five-run
-  dataset match reviewed source revision
-  `2c4bd3db2440b2e8f57f73403bf3ed71fd94c675`.
+- The user-approved public outbreak workbench is deployed at
+  <https://brian-mac-mini.tail9c321e.ts.net/waltzman/> from source revision
+  `08e4fc82e2ed373b275f970d9f9a2e5f9b8d8bf1`. A user can edit the shared
+  situation plus each role's mandate and private institutional context; choose
+  baseline, responsive exercise injects, or inject replay plus stabilization;
+  execute one authentic 12-role, three-round model trajectory; and inspect or
+  compare the retained result. The mechanism view aligns one role across
+  conditions and reports dependency evidence, stated risk, and exact gate
+  readiness without inventing a trust or coordination score. The public process
+  uses an isolated run store and currently advertises the freshly eligible
+  `codex/gpt-5.6-terra` route.
+- Public run `run_4da81a355f28` is the first end-to-end execution from that UI.
+  Its edited Alba epidemiologist mandate required preserving a domestic
+  confirmation reserve. Under responsive capacity injects, that role moved
+  `support → conditional → defer`; the coalition ended with no joint response.
+  The retained evidence contains 36 completed model calls, 36 committed
+  participant traces, four selected predeclared developments after round two,
+  and one terminal completion. The public deep link reopens the retained run
+  after refresh without new model calls.
 
 - The causal runtime, maps, narrative, pause/resume, analytical boundaries, and
   exact evidence inspection are technically observed.
@@ -262,11 +273,14 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 ## Active Plan
 
-Deploy the concise Waltzman-facing paper and three-condition comparison for
-private review, while treating the observed disruption and restoration as a
-candidate mechanism only. If the review passes, repeat the stabilization arm
-once, then decide whether the evidence justifies a 26-agent coalition and an
-autonomous influence-source condition.
+Use the executable public workbench and retained custom run for cold review,
+then write the concise Waltzman-facing note around the demonstrated mechanism:
+a configured institutional dependency became decision-relevant after an
+exogenous capacity shock without any controller selecting participant stances.
+Treat the disruption and restoration as a candidate mechanism only. If the
+review is compelling, repeat the custom mandate under baseline and
+stabilization before deciding whether a 26-agent coalition is worth the added
+complexity.
 
 [Slice 26: Foundation decision for a generalized cybernetic
 simulator](plans/026-concordia-foundation-research.md) and further Slice 25
