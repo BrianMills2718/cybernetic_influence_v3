@@ -68,6 +68,22 @@ invariant, attribution, or proportionality. The corrected private browser pass
 preserved the full deep-link, evidence, projection, composite, and pause/resume
 flow without console or failed-request errors.
 
+Current outbreak-comparison deployment 2026-08-04: the same private service now
+serves commit `8e43e6ec64a4661629fce9e332386aa09d05003b`. Run History exposes
+the fresh authentic baseline `run_0b5e20260805`, responsive capacity-pressure
+run `run_7eae20260805`, and matched allocation-stabilization replay
+`run_ca9a20260805`. Their final positions are respectively 12 support;
+12 defer; and 11 support plus 1 conditional. The exact outcomes are approval,
+no approval, and restored approval. Each run retained 36 completed
+`codex/gpt-5.6-luna` participant calls with no observed cost. A private Chromium
+pass opened all three comparison rows and the stabilized deep link with no
+console or failed-request errors. The live launch catalog currently advertises
+the freshly eligible `codex/gpt-5.6-terra` route; retained Luna evidence remains
+readable without implying present Luna launch availability. The pre-cutover
+LaunchAgent is retained at
+`~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-8e43e6e` for
+rollback.
+
 ## Inspect
 
 ```bash
