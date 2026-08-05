@@ -60,7 +60,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
 
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
-    assert "Build a simulation" in page
+    assert "Create a simulation" in page
     assert "Open Lab" in page
     assert "Lab workspace" in page
     assert "Choose, configure, run" in page
@@ -68,10 +68,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Terminal decision gate" in page
     assert "Open method" in page
     assert "AI coordination simulation workbench" in page
-    assert "Test whether a group can still act" in page
-    assert "Environment changes" in page
-    assert "Agent requirements change" in page
-    assert "Collective decision gate passes or fails" in page
+    assert "Build a group. Change its environment." in page
+    assert "Three decisions, then run" in page
+    assert "Configure the coalition" in page
+    assert "Current demo template" in page
     assert "Inspect all agent decisions" in page
     assert "One coalition. Three environments. Three outcomes." in page
     assert "1 experiment" in page
@@ -83,7 +83,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What changes between rounds?" in page
     assert "Edit one role—or keep the reviewed coalition" in page
     assert "Full experiment analysis and evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=game-ux-v1"]
+    assert shape.stylesheets == ["assets/styles.css?v=product-first-v1"]
     assert shape.scripts == ["assets/app.js?v=game-ux-v1"]
     assert {
         "overview-view",

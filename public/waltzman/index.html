@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=game-ux-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=product-first-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -55,28 +55,20 @@
     <section class="workspace">
       <section id="overview-view" class="workspace-view" aria-labelledby="overview-title" hidden>
         <header class="overview-hero">
-          <div class="artifact-type"><strong>AI coordination simulation workbench</strong><span>Controlled synthetic scenarios with inspectable model decisions</span></div>
-          <h2 id="overview-title">Test whether a group can still act when its information, resources, or constraints change.</h2>
-          <p>Configure AI agents with different roles and institutional requirements. Compare how the same group responds across changing environments, then inspect each decision, concern, request, and structured rationale.</p>
+          <div class="artifact-type"><strong>Create your own simulation</strong><span>Authentic multi-agent execution with inspectable decisions</span></div>
+          <h2 id="overview-title">Build a group. Change its environment. See whether it can act.</h2>
+          <p>Start from a reviewed twelve-role outbreak template. Rewrite the shared situation and any role’s mandate or institutional context, choose what happens between rounds, then run the agents and inspect the result.</p>
           <div class="hero-actions">
-            <button class="primary-cta" type="button" data-featured-example>View the three-environment example</button>
-            <button class="secondary-cta" type="button" data-view="run">Build a simulation</button>
+            <button class="primary-cta" type="button" data-view="run">Create a simulation</button>
+            <button class="secondary-cta" type="button" data-featured-example>View an example</button>
           </div>
           <p class="scope-note">Produces synthetic AI-agent behavior for research and prototyping. It does not estimate how people or institutions will behave.</p>
         </header>
 
-        <section class="overview-result-preview" aria-labelledby="overview-result-title">
-          <div class="overview-result-heading"><span class="section-kicker">See what the workbench produces</span><h3 id="overview-result-title">The same twelve-agent coalition. Three environments. Three different trajectories.</h3><p>Only operational constraints and verified resources changed.</p></div>
-          <div class="overview-result-grid">
-            <article><span>Environment 1 · Baseline</span><strong>12 support</strong><b class="preview-approved">✓ Approved</b></article>
-            <article><span>Environment 2 · Capacity constraints</span><strong>1 conditional · 11 defer</strong><b class="preview-failed">× Not approved</b></article>
-            <article><span>Environment 3 · Constraints + verified resources</span><strong>12 support</strong><b class="preview-approved">✓ Approved</b></article>
-          </div>
-          <button class="text-action" type="button" data-featured-example>See what changed and why →</button>
-        </section>
-
-        <section class="overview-causal" aria-label="Product mechanism">
-          <span>Environment changes</span><i>↓</i><span>Agent requirements change</span><i>↓</i><span>Requirements align or conflict</span><i>↓</i><strong>Collective decision gate passes or fails</strong>
+        <section class="overview-builder-preview" aria-labelledby="overview-builder-title">
+          <span class="section-kicker">Your simulation</span><h3 id="overview-builder-title">Three decisions, then run</h3>
+          <ol><li><b>1</b><div><strong>Choose the environment</strong><p>Baseline, capacity pressure, or pressure plus verified resources.</p></div></li><li><b>2</b><div><strong>Configure the coalition</strong><p>Edit the shared situation and any participant’s mandate or context.</p></div></li><li><b>3</b><div><strong>Run and inspect</strong><p>Twelve autonomous roles decide across three rounds; every structured decision is retained.</p></div></li></ol>
+          <p class="template-boundary">Current demo template · regional outbreak · 12 roles · 3 rounds · up to 36 authentic model calls</p>
         </section>
       </section>
 
