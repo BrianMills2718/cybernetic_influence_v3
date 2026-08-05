@@ -148,9 +148,9 @@ function syncUrl() {
 function renderRail() {
   $('#scenario-title').textContent = dataset.scenario_title
   $('#scenario-summary').textContent = dataset.scenario_summary
-  $('#fact-runs').textContent = dataset.runs.filter((run) => !run.is_live).length
+  $('#fact-runs').textContent = dataset.runs.length
   $('#fact-agents').textContent = dataset.agent_count
-  $('#fact-calls').textContent = dataset.total_model_calls
+  $('#fact-calls').textContent = dataset.runs.reduce((total, run) => total + Number(run.model_calls || 0), 0)
   $('#dataset-id').textContent = dataset.dataset_id
 }
 
@@ -610,6 +610,31 @@ async function pollLiveRun() {
   }
 }
 
+async function loadRetainedLiveRuns() {
+  let history
+  try {
+    history = await apiRequest('api/runs')
+  } catch (error) {
+    console.warn(`retained live runs unavailable: ${error.message}`)
+    return
+  }
+  const summaries = (history.runs || []).filter((run) =>
+    run.scenario === 'regional_outbreak' && run.execution === 'live' && run.status === 'completed'
+  )
+  const retained = []
+  for (const summary of summaries) {
+    try {
+      retained.push(projectLiveRun(await apiRequest(`api/runs/${encodeURIComponent(summary.run_id)}`)))
+    } catch (error) {
+      console.warn(`retained run ${summary.run_id} unavailable: ${error.message}`)
+    }
+  }
+  dataset.runs = [
+    ...retained,
+    ...dataset.runs.filter((run) => !retained.some((candidate) => candidate.run_id === run.run_id)),
+  ]
+}
+
 async function loadWorkbench() {
   try {
     const response = await fetch('assets/data.json', {cache:'no-store'})
@@ -620,6 +645,7 @@ async function loadWorkbench() {
     state.runId = dataset.runs[0].run_id
     try { runtimeConfig = await apiRequest('api/config') } catch (error) { console.warn(`live simulator unavailable: ${error.message}`) }
     configureRuntime()
+    await loadRetainedLiveRuns()
     readStateFromUrl()
     renderRail()
     configureControls()

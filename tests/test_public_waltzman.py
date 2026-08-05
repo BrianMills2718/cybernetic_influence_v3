@@ -144,6 +144,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "renderRunSetup",
         "startLiveRun",
         "pollLiveRun",
+        "loadRetainedLiveRuns",
         "projectLiveRun",
         "renderComparison",
         "renderMechanism",
