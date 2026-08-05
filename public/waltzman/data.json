@@ -2580,8 +2580,8 @@
   ],
   "limitations": [
     "The roles are synthetic and are not validated models of real people or governments.",
-    "Five trajectories demonstrate inspectable mechanisms; they do not estimate a real-world effect.",
+    "These trajectories demonstrate inspectable mechanisms; they do not estimate a real-world effect.",
     "Retained rationales expose stated reasons, not private beliefs.",
-    "The public workbench can inspect retained evidence but cannot launch new model runs."
+    "Live execution depends on the currently advertised certified route; completed public runs are retained separately from the immutable snapshot."
   ]
 }

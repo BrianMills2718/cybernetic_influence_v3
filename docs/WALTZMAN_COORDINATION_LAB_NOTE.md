@@ -4,6 +4,12 @@
 
 Brian Mills · August 2026
 
+> **Draft withdrawn pending a clean rerun.** An audit found that the retained
+> triad disclosed its condition identifier in participant system prompts before
+> round one. The public laboratory remains useful, but the matched-condition
+> interpretation and run IDs below are historical and must not be sent as the
+> current result. This notice will be replaced with the condition-blind readout.
+
 ### Abstract
 
 *From Minds to Coordination* proposes that influence may be visible less in a

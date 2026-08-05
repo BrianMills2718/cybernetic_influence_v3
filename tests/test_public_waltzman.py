@@ -66,7 +66,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Inspect run" in page
     assert "Scenario &amp; method" in page
     assert shape.stylesheets == ["assets/styles.css?v=live-workbench-v1"]
-    assert shape.scripts == ["assets/app.js?v=live-workbench-v1"]
+    assert shape.scripts == ["assets/app.js?v=clean-triad-v2"]
     assert {
         "run-view",
         "condition-options",
@@ -153,6 +153,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "renderGate",
         "renderAgents",
         "readStateFromUrl",
+        "applyRunScopeFromUrl",
         "syncUrl",
         "fetch('assets/data.json'",
         "apiRequest('api/runs'",
@@ -163,6 +164,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "eventsource" not in script.lower()
     assert "websocket" not in script.lower()
     assert "openrouter" not in script.lower()
+    assert "for (const run of dataset.runs) run.configuration" not in script
+    assert "cannot launch new model runs" not in json.dumps(_dataset())
     assert "[hidden] { display: none !important; }" in style
 
 

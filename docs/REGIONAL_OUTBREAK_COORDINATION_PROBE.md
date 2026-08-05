@@ -1,5 +1,12 @@
 # Disrupting Coordination Without Winning Belief
 
+> **Historical, not matched-condition evidence.** A later audit found that this
+> implementation disclosed the condition identifier in participant prompts
+> before round one. The trajectories remain authentic demonstrations of the
+> tool, but they do not establish that the arms differed only through
+> between-round developments. Use the clean condition-blind experiment record
+> for current claims.
+
 ## A twelve-agent outbreak-response probe inspired by Waltzman's decision-environment framework
 
 ### Abstract

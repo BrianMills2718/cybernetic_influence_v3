@@ -428,7 +428,6 @@ def outbreak_fixture(
     for agent_id in AGENT_IDS:
         policy = _native_policy(
             agent_id,
-            condition=condition,
             configuration=resolved_configuration,
             model=model,
             reasoning_effort=reasoning_effort,
@@ -484,7 +483,6 @@ def outbreak_bindings(
     for agent_id in AGENT_IDS:
         inner = _native_policy(
             agent_id,
-            condition=fixture.condition,
             configuration=fixture.configuration,
             model=model,
             reasoning_effort=reasoning_effort,
@@ -855,7 +853,6 @@ def _valid_outbreak_round_transition(
 def _native_policy(
     agent_id: str,
     *,
-    condition: OutbreakCondition,
     configuration: OutbreakScenarioConfiguration,
     model: str,
     reasoning_effort: str | None,
@@ -872,8 +869,7 @@ def _native_policy(
         "unresolved or incompatible with another coalition requirement, and oppose when the "
         "proposal conflicts with your mandate. The institutional meeting rule requires exactly one "
         f"action through stance_{agent_id}_out on every activation. Use only the exact payload "
-        "keys and enum values described by that interface. Do not add actor or round fields. "
-        f"The exercise condition label is {condition}; this label carries no behavioral instruction."
+        "keys and enum values described by that interface. Do not add actor or round fields."
     )
     return NativeLlmActiveSystem.from_bound_configuration(
         implementation_family_id=f"native_outbreak_{agent_id}_v1",

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A public evidence workbench for inspecting a five-run coordination simulation.">
+  <meta name="description" content="A public workbench for configuring, executing, and comparing retained coordination simulations.">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/styles.css?v=live-workbench-v1">
 </head>
@@ -257,7 +257,7 @@
         </section>
         <section class="provenance-panel">
           <div><span>Dataset</span><code id="provenance-dataset"></code></div>
-          <div><span>Source digest</span><code id="provenance-digest"></code></div>
+          <div><span id="provenance-source-label">Source digest</span><code id="provenance-digest"></code></div>
           <div><span>Latest retained evidence</span><time id="provenance-time"></time></div>
           <div><span>Execution</span><strong>Authentic retained LLM runs</strong></div>
         </section>
@@ -265,6 +265,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=live-workbench-v1" defer></script>
+  <script src="assets/app.js?v=clean-triad-v2" defer></script>
 </body>
 </html>

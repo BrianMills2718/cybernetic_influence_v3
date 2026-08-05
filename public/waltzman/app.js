@@ -23,6 +23,7 @@ const state = {
   personId:'regional_scientific_advisor',
   group:'all',
   mechanismPersonId:'regional_scientific_advisor',
+  runScopeIds:null,
 }
 
 const $ = (selector) => document.querySelector(selector)
@@ -108,7 +109,7 @@ function conditionContract(conditionId) {
 }
 
 function configurationForRun(run) {
-  return run.configuration || defaultConfiguration
+  return run.configuration || null
 }
 
 function configurationAgent(configuration, personId) {
@@ -131,6 +132,19 @@ function readStateFromUrl() {
   if (groupOrder.includes(requestedGroup)) state.group = requestedGroup
 }
 
+function applyRunScopeFromUrl() {
+  const rawScope = new URLSearchParams(window.location.search).get('runs')
+  if (!rawScope) return
+  const requested = rawScope.split(',').map((item) => item.trim()).filter(Boolean)
+  if (!requested.length || new Set(requested).size !== requested.length) throw new Error('requested run scope is invalid')
+  const indexed = new Map(dataset.runs.map((run) => [run.run_id, run]))
+  const missing = requested.filter((runId) => !indexed.has(runId))
+  if (missing.length) throw new Error(`requested retained run scope is unavailable: ${missing.join(', ')}`)
+  dataset.runs = requested.map((runId) => indexed.get(runId))
+  state.runScopeIds = requested
+  state.runId = requested[0]
+}
+
 function syncUrl() {
   const url = new URL(window.location.href)
   url.searchParams.set('view', state.view)
@@ -151,7 +165,7 @@ function renderRail() {
   $('#fact-runs').textContent = dataset.runs.length
   $('#fact-agents').textContent = dataset.agent_count
   $('#fact-calls').textContent = dataset.runs.reduce((total, run) => total + Number(run.model_calls || 0), 0)
-  $('#dataset-id').textContent = dataset.dataset_id
+  $('#dataset-id').textContent = state.runScopeIds ? `pinned · ${state.runScopeIds.join(' · ')}` : dataset.dataset_id
 }
 
 function renderRunSetup() {
@@ -211,9 +225,6 @@ function configureRuntime() {
   const scenario = runtimeConfig?.scenarios?.regional_outbreak
   defaultConfiguration = clone(scenario?.editable_configuration || dataset.default_configuration || null)
   editableConfiguration = clone(defaultConfiguration)
-  if (defaultConfiguration) {
-    for (const run of dataset.runs) run.configuration = clone(defaultConfiguration)
-  }
   const models = runtimeConfig?.live_options?.models || []
   const allowed = new Set(scenario?.live_model_ids || [])
   const eligible = models.filter((item) => allowed.has(item.model))
@@ -239,10 +250,16 @@ function configureRuntime() {
 function renderComparison() {
   const approved = dataset.runs.filter((run) => run.outcome === 'joint_response_approved').length
   const notApproved = dataset.runs.length - approved
-  const retained = dataset.runs.filter((run) => !run.is_live).length
+  const snapshotCount = dataset.runs.filter((run) => !run.is_live).length
+  const configuredCount = dataset.runs.length - snapshotCount
+  const sourceDescription = [
+    snapshotCount ? `${snapshotCount} immutable snapshot ${snapshotCount === 1 ? 'trajectory' : 'trajectories'}` : '',
+    configuredCount ? `${configuredCount} configured public ${configuredCount === 1 ? 'trajectory' : 'trajectories'}` : '',
+  ].filter(Boolean).join(' and ')
+  const scopeDescription = state.runScopeIds ? ' This URL is pinned to this exact run set.' : ''
   $('#comparison-summary').innerHTML = `
     <span class="comparison-icon" aria-hidden="true">${dataset.runs.length}×</span>
-    <div><strong>${dataset.runs.length} authentic trajectories are loaded for comparison</strong><p>${approved} ended in approval and ${notApproved} ended without approval. ${retained} are immutable matched evidence${dataset.runs.length > retained ? '; the newest is this session’s configured run' : ''}.</p></div>
+    <div><strong>${dataset.runs.length} authentic trajectories are loaded for comparison</strong><p>${approved} ended in approval and ${notApproved} ended without approval. Loaded evidence: ${sourceDescription}.${scopeDescription}</p></div>
     <small>${dataset.runs.reduce((total, run) => total + run.model_calls, 0)} retained participant calls</small>`
 
   $('#trajectory-grid').innerHTML = dataset.runs.map((run) => `
@@ -408,10 +425,14 @@ function renderInspector() {
 function renderMethod() {
   $('#initial-plan').innerHTML = dataset.initial_plan.map((item) => `<li>${escapeHtml(item)}</li>`).join('')
   $('#limitations').innerHTML = dataset.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join('')
-  $('#provenance-dataset').textContent = dataset.dataset_id
-  $('#provenance-digest').textContent = dataset.source_sha256
-  $('#provenance-time').textContent = new Date(dataset.evidence_latest_at).toLocaleString()
-  $('#provenance-time').dateTime = dataset.evidence_latest_at
+  const latest = state.runScopeIds
+    ? dataset.runs.map((run) => run.created_at).sort().at(-1)
+    : dataset.evidence_latest_at
+  $('#provenance-dataset').textContent = state.runScopeIds ? 'Pinned retained-run comparison' : dataset.dataset_id
+  $('#provenance-source-label').textContent = state.runScopeIds ? 'Retained run IDs' : 'Source digest'
+  $('#provenance-digest').textContent = state.runScopeIds ? state.runScopeIds.join(' · ') : dataset.source_sha256
+  $('#provenance-time').textContent = new Date(latest).toLocaleString()
+  $('#provenance-time').dateTime = latest
 }
 
 function renderView() {
@@ -534,7 +555,7 @@ function projectLiveRun(raw) {
     gate_checks:gateChecks(finalCounts),
     rounds,
     developments:projectDevelopments(raw),
-    configuration:raw.regional_outbreak_configuration || clone(editableConfiguration),
+    configuration:raw.regional_outbreak_configuration || null,
     is_live:true,
   }
 }
@@ -646,6 +667,7 @@ async function loadWorkbench() {
     try { runtimeConfig = await apiRequest('api/config') } catch (error) { console.warn(`live simulator unavailable: ${error.message}`) }
     configureRuntime()
     await loadRetainedLiveRuns()
+    applyRunScopeFromUrl()
     readStateFromUrl()
     renderRail()
     configureControls()

@@ -130,6 +130,28 @@ def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy()
     assert "You are Alba Epidemiologist" in policy.persona
 
 
+def test_participant_policy_is_blind_to_experiment_condition() -> None:
+    personas: dict[str, str] = {}
+    for condition in (
+        "baseline",
+        "responsive_exercise_injects",
+        "capacity_inject_replay_with_stabilization",
+    ):
+        fixture = outbreak_fixture(condition)
+        bindings = outbreak_bindings(
+            fixture,
+            trace_id_prefix="condition_blindness_test",
+            model="codex/gpt-5.6-terra",
+            reasoning_effort="medium",
+        )
+        personas[condition] = bindings["alba_epidemiologist"].implementation.inner.persona
+
+    assert len(set(personas.values())) == 1
+    assert "condition label" not in personas["baseline"]
+    assert "responsive_exercise_injects" not in personas["baseline"]
+    assert "capacity_inject_replay_with_stabilization" not in personas["baseline"]
+
+
 def test_responsive_condition_selects_declared_injects_from_reported_risk() -> None:
     _, result, readout = _run("responsive_exercise_injects")
 

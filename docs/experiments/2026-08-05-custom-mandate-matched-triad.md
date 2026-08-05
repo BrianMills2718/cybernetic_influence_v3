@@ -1,10 +1,29 @@
 ---
 doc_role: experiment_record
-status: completed_signed_off
+status: superseded_invalid
 created: 2026-08-05
 ---
 
 # Custom-mandate matched outbreak triad
+
+> **Audit correction (2026-08-05): invalid for matched-condition inference.**
+> The participant system prompt included the experiment condition identifier,
+> so the three arms were not condition-blind before round one. The retained
+> trajectories remain authentic historical artifacts, but the sign-off and
+> mechanism claim below are withdrawn. A clean replacement must use identical
+> participant personas across arms and vary only delivered exogenous events.
+
+## Clean replacement protocol
+
+The replacement freezes the same twelve-role configuration, situation, model,
+reasoning setting, budget, three-round structure, and exact gate. Participant
+personas must be byte-identical across `baseline`,
+`responsive_exercise_injects`, and
+`capacity_inject_replay_with_stabilization`; condition names and descriptions
+must not appear in participant system prompts. One fresh trajectory per arm is
+run from the corrected deployed revision. The public comparison is pinned to
+those three exact run IDs. Results are reported as observed, including a null or
+reversed pattern, without substituting the invalidated trajectories.
 
 ## Decision and claim
 
@@ -34,7 +53,7 @@ narrower observed pattern or stop the mechanism claim.
 
 ## Frozen system and comparison contract
 
-The existing pressure run `run_4da81a355f28` is the preregistered treatment.
+The existing pressure run `run_4da81a355f28` was treated as the preregistered treatment.
 Its exact `regional_outbreak_configuration` is the only allowed configuration
 for the two new runs. The configuration contains twelve unique roles, the same
 shared situation, and this edited Alba epidemiologist mandate:

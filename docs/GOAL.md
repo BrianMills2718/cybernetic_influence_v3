@@ -146,10 +146,15 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   readiness without inventing a trust or coordination score. The public process
   uses an isolated run store and currently advertises the freshly eligible
   `codex/gpt-5.6-terra` route.
-- The public store now contains a matched triad completed under a preregistered
-  protocol around the frozen pressure trajectory, using the same edited Alba
-  epidemiologist mandate, all twelve agent configurations, shared situation,
-  Terra model route, reasoning setting, and exact coalition gate.
+- An audit invalidated the prior public triad as matched-condition evidence:
+  participant system prompts disclosed the arm identifier before round one.
+  The retained runs remain authentic historical tool demonstrations, but the
+  prior sign-off and mechanism inference are withdrawn. The active replacement
+  is one fresh condition-blind trajectory per arm, with byte-identical
+  participant personas and an exact three-run public URL.
+  Historically, the invalidated triad used the same edited Alba epidemiologist
+  mandate, all twelve agent configurations, shared situation, Terra model
+  route, reasoning setting, and exact coalition gate.
   Baseline `run_3cf434f148e7` stayed at twelve support positions and approved;
   responsive pressure `run_4da81a355f28` moved to two conditional and ten defer
   and did not approve; matched stabilization run `run_40490a742a25` reached the same
@@ -278,8 +283,8 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 ## Active Plan
 
-Use the executable public workbench, signed-off matched triad, and concise
-Waltzman-facing note for cold review. The bounded demonstrated mechanism is that
+Use the executable public workbench and a fresh condition-blind triad to replace
+the withdrawn Waltzman-facing note before cold review. The mechanism under test is that
 a configured institutional dependency became decision-relevant after exogenous
 capacity shocks without any controller selecting participant stances, while a
 verified allocation package satisfied the stated dependency and approval

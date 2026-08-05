@@ -230,6 +230,11 @@ conditions, not evidence of hostile attribution or an operational detector.
   `codex/gpt-5.6-luna` at medium reasoning with 36 completed calls each and no
   observed cost. These are candidate-mechanism demonstrations, not effect
   estimates or invariants.
+- A 2026-08-05 audit found that participant system prompts in those outbreak
+  runs disclosed the condition identifier before round one. They remain useful
+  product artifacts but no longer support matched-condition inference. The
+  shortest path is now a corrected deployment, one clean condition-blind triad,
+  and an exact run-scoped public comparison.
 
 ### Process progress
 
@@ -258,12 +263,13 @@ the judgment passed on the operator's behalf.
 
 ## Shortest Critical Path
 
-1. **Deploy the outbreak comparison.** Put the five authentic trajectories,
-   compact paper, exact round transitions, and evidence step-down on the private
-   demo without weakening the nonclaim boundary.
-2. **Waltzman-facing readout.** Confirm that the disruption and matched
-   stabilization mechanism are understandable and interesting without raw JSON.
-3. **Scale only after that review.** Repeat stabilization once, then decide on
+1. **Replace the invalidated triad.** Deploy condition-blind participant prompts
+   and run one fresh authentic trajectory in each of the three arms.
+2. **Waltzman-facing readout.** Pin the public URL to those exact runs, update
+   the concise note with the observed result, and confirm it is understandable
+   without raw JSON.
+3. **Scale only after that review.** Decide whether a repeat, 26-agent coalition,
+   or autonomous influence-source condition has the highest value, then decide on
    the 26-agent coalition and autonomous influence-source condition.
 4. **Resume the architecture decision after the demo review.** Use the retained
    Slice 26 research to decide ownership of cognition, world state, scheduling,
