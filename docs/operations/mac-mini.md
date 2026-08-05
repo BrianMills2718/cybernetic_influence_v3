@@ -69,20 +69,25 @@ preserved the full deep-link, evidence, projection, composite, and pause/resume
 flow without console or failed-request errors.
 
 Current outbreak-comparison deployment 2026-08-04: the same private service now
-serves commit `8e43e6ec64a4661629fce9e332386aa09d05003b`. Run History exposes
-the fresh authentic baseline `run_0b5e20260805`, responsive capacity-pressure
-run `run_7eae20260805`, and matched allocation-stabilization replay
-`run_ca9a20260805`. Their final positions are respectively 12 support;
-12 defer; and 11 support plus 1 conditional. The exact outcomes are approval,
-no approval, and restored approval. Each run retained 36 completed
-`codex/gpt-5.6-luna` participant calls with no observed cost. A private Chromium
-pass opened all three comparison rows and the stabilized deep link with no
-console or failed-request errors. The live launch catalog currently advertises
-the freshly eligible `codex/gpt-5.6-terra` route; retained Luna evidence remains
-readable without implying present Luna launch availability. The pre-cutover
-LaunchAgent is retained at
-`~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-8e43e6e` for
-rollback.
+serves commit `c435450d7b68d61acff5d2a512d1cc0f682252da`. Run History exposes
+two authentic baselines (`run_593ca1c425f2`, `run_0b5e20260805`), two
+responsive capacity-pressure trajectories (`run_c688aa8121fe`,
+`run_7eae20260805`), and the matched allocation-stabilization replay
+`run_ca9a20260805`. Their final positions are respectively 12 support; 12
+support; 5 conditional plus 7 defer; 12 defer; and 11 support plus 1
+conditional. The exact outcomes are two approvals, two failures to approve, and
+restored approval. Each run retained 36 completed `codex/gpt-5.6-luna`
+participant calls with no observed cost. The comparison now shows all five
+trajectories and separates final support, conditional, and defer counts. A
+private Chromium pass opened all five exact rows and confirmed their summaries
+and retained participant evidence with no console or failed-request errors. The
+live launch catalog currently advertises the freshly eligible
+`codex/gpt-5.6-terra` route; retained Luna evidence remains readable without
+implying present Luna launch availability. The immediately prior LaunchAgent is
+retained at
+`~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-c435450`; the
+earlier pre-demo backup remains at
+`~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-8e43e6e`.
 
 ## Inspect
 
