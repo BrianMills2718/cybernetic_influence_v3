@@ -135,12 +135,13 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 ## Current Truth
 
-- A user-approved public stakeholder-page slice is active for the retained
-  outbreak probe. It presents the three-condition result, all five exact run
-  identifiers and round paths, representative retained statements, method, and
-  non-claims without exposing the internal simulator or run APIs. Public runtime
-  availability remains unproven until the exact Funnel URL passes its deployment
-  checks.
+- The user-approved public stakeholder page for the retained outbreak probe is
+  deployed at <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>. It presents
+  the three-condition result, all five exact run identifiers and round paths,
+  representative retained statements, method, and non-claims without exposing
+  the internal simulator or run APIs. The reviewed page bytes match the deployed
+  artifact; external-relay desktop and mobile browser checks passed at source
+  revision `79a30bfd038df905f885875699150dbb39d914fd`.
 
 - The causal runtime, maps, narrative, pause/resume, analytical boundaries, and
   exact evidence inspection are technically observed.

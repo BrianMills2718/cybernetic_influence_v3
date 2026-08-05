@@ -91,6 +91,44 @@ backups remain at
 `~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-c435450` and
 `~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-8e43e6e`.
 
+## Public Waltzman stakeholder page
+
+Public URL: <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>
+
+This is a read-only static stakeholder page, not the internal simulator. It is
+served on `127.0.0.1:8621` by LaunchAgent
+`com.cybernetic-influence.waltzman-public` from
+`public/waltzman/index.html`; Tailscale Funnel maps only `/waltzman` to that
+listener. The private simulator remains tailnet-only on port 8620.
+
+Report-only deployment certification observed 2026-08-04 at source revision
+`79a30bfd038df905f885875699150dbb39d914fd`:
+
+- capability: `cybernetic-influence.waltzman-public-page`;
+- profile and level: read-only service/UI, `deployment_verified`;
+- deployed artifact SHA-256:
+  `27dd86c617265ae85458d1966a511172a298980b8cc2756fe8b7cd5aaf99901e`;
+- positive control: public-relay `GET /waltzman/` returned 200 and the deployed
+  bytes matched the reviewed source; clean Chromium contexts at 1440×1000 and
+  390×844 rendered the headline, three result cards, five evidence rows, and
+  discussion question with no console or failed-request errors;
+- evidence reconciliation: the five source run documents produced the displayed
+  three-round stance counts and 180 completed participant calls;
+- invalid input: public-relay `GET /waltzman/does-not-exist` returned 404;
+- missing page dependency: the same static runtime pointed at an absent page root
+  returned 404 rather than unrelated or fallback content;
+- lifecycle: unique request `cert-019fca9a-20260804T1943` produced one 200 and
+  exactly one terminal server-log entry;
+- isolation: public-relay `GET /waltzman/api/config` returned 404 and the public
+  relay could not connect to port 8620;
+- server state: LaunchAgent running with no traceback, exception, or bind error.
+
+The report-only verdict is `verified`. It becomes stale if the page bytes,
+source revision, Python runtime, LaunchAgent arguments, Funnel mapping, public
+DNS/TLS route, or retained evidence changes. This is not a hard enforcement
+record and does not establish stakeholder comprehension; Brian's cold review is
+the next outcome check.
+
 ## Inspect
 
 ```bash
