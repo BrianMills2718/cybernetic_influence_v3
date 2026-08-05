@@ -69,7 +69,8 @@ preserved the full deep-link, evidence, projection, composite, and pause/resume
 flow without console or failed-request errors.
 
 Current outbreak-comparison deployment 2026-08-04: the same private service now
-serves commit `c435450d7b68d61acff5d2a512d1cc0f682252da`. Run History exposes
+serves commit `859ac6a5dc9f1c299c0c2fdc5b0eed5c70cac653`. The shareable
+`?view=history` URL opens Run History directly, which exposes
 two authentic baselines (`run_593ca1c425f2`, `run_0b5e20260805`), two
 responsive capacity-pressure trajectories (`run_c688aa8121fe`,
 `run_7eae20260805`), and the matched allocation-stabilization replay
@@ -85,8 +86,9 @@ live launch catalog currently advertises the freshly eligible
 `codex/gpt-5.6-terra` route; retained Luna evidence remains readable without
 implying present Luna launch availability. The immediately prior LaunchAgent is
 retained at
-`~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-c435450`; the
-earlier pre-demo backup remains at
+`~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-859ac6a`; earlier
+backups remain at
+`~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-c435450` and
 `~/Library/LaunchAgents/com.cybernetic-influence.v3.plist.pre-8e43e6e`.
 
 ## Inspect
