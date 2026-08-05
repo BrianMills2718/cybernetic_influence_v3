@@ -76,6 +76,7 @@ def test_public_launch_agent_serves_only_the_static_page() -> None:
     assert "http.server" in plist
     assert "8621" in plist
     assert "127.0.0.1" in plist
+    assert "__PYTHON__" in plist
     assert "__PROJECT_ROOT__/public/waltzman" in plist
     assert "CYBERNETIC_INFLUENCE_LIVE" not in plist
     assert "OPENROUTER" not in plist

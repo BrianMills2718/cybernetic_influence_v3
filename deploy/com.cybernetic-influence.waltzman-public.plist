@@ -6,7 +6,7 @@
   <string>com.cybernetic-influence.waltzman-public</string>
   <key>ProgramArguments</key>
   <array>
-    <string>__PROJECT_ROOT__/.venv/bin/python</string>
+    <string>__PYTHON__</string>
     <string>-m</string>
     <string>http.server</string>
     <string>8621</string>
