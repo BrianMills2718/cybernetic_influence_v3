@@ -3,25 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="An interactive laboratory for simulating how changing decision environments reshape collective action.">
+  <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=guided-example-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=outcome-first-v1">
 </head>
 <body>
   <header class="topbar">
     <div class="product-identity">
-      <span class="product-mark" aria-hidden="true">CI</span>
+      <span class="product-mark" aria-hidden="true">CE</span>
       <div>
         <strong>Coordination Environment Lab</strong>
-        <small>Simulate changing decision environments and collective action</small>
+        <small>AI coordination simulation workbench</small>
       </div>
     </div>
     <nav class="view-tabs" aria-label="Workbench views">
       <button type="button" data-view="overview">Overview</button>
-      <button type="button" data-view="run">Run the simulation</button>
-      <button type="button" data-view="mechanism">Example experiment</button>
-      <button type="button" data-view="compare">Compare runs</button>
-      <button type="button" data-view="inspect">Agent decisions</button>
+      <button type="button" data-view="mechanism">Example</button>
+      <button type="button" data-view="run">Build a simulation</button>
+      <button type="button" data-view="compare">Compare results</button>
+      <button type="button" data-view="inspect">Inspect decisions</button>
       <button type="button" data-view="method">How it works</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
@@ -64,50 +64,47 @@
     <section class="workspace">
       <section id="overview-view" class="workspace-view" aria-labelledby="overview-title" hidden>
         <header class="overview-hero">
-          <div class="artifact-type"><strong>Interactive AI coordination laboratory</strong><span>A research and prototyping tool—not a model of human behavior.</span></div>
-          <h2 id="overview-title">Simulate how changing decision environments reshape collective action.</h2>
-          <p>Configure heterogeneous AI agents, their information, institutional constraints, and external pressures. Observe how these changes affect perceived risk, unresolved dependencies, and the group’s readiness to coordinate action over time.</p>
+          <div class="artifact-type"><strong>AI coordination simulation workbench</strong><span>Controlled synthetic scenarios with inspectable model decisions</span></div>
+          <h2 id="overview-title">Test whether a group can still act when its information, resources, or constraints change.</h2>
+          <p>Configure AI agents with different roles and institutional requirements. Compare how the same group responds across changing environments, then inspect each decision, concern, request, and structured rationale.</p>
           <div class="hero-actions">
-            <button class="primary-cta" type="button" data-view="run">Configure a simulation</button>
-            <button class="secondary-cta" type="button" data-featured-example>Explore the example experiment</button>
+            <button class="primary-cta" type="button" data-featured-example>View the three-environment example</button>
+            <button class="secondary-cta" type="button" data-view="run">Build a simulation</button>
           </div>
+          <p class="scope-note">Produces synthetic AI-agent behavior for research and prototyping. It does not estimate how people or institutions will behave.</p>
         </header>
 
-        <section class="overview-purpose">
-          <div>
-            <span class="section-kicker">What this tool is for</span>
-            <h3>Turn theories of influence and coordination into executable scenarios.</h3>
+        <section class="overview-result-preview" aria-labelledby="overview-result-title">
+          <div class="overview-result-heading"><span class="section-kicker">See what the workbench produces</span><h3 id="overview-result-title">The same twelve-agent coalition. Three environments. Three different trajectories.</h3><p>Only operational constraints and verified resources changed.</p></div>
+          <div class="overview-result-grid">
+            <article><span>Environment 1 · Baseline</span><strong>12 support</strong><b class="preview-approved">✓ Approved</b></article>
+            <article><span>Environment 2 · Capacity constraints</span><strong>1 conditional · 11 defer</strong><b class="preview-failed">× Not approved</b></article>
+            <article><span>Environment 3 · Constraints + verified resources</span><strong>12 support</strong><b class="preview-approved">✓ Approved</b></article>
           </div>
-          <p>The laboratory represents heterogeneous participants, information flows, institutional dependencies, external pressure, and an explicit rule for collective action. It makes changes in risk, prerequisites, and coordination readiness observable instead of reducing the group to a single mind or score.</p>
+          <button class="text-action" type="button" data-featured-example>See what changed and why →</button>
         </section>
 
         <section class="capability-grid" aria-label="Laboratory capabilities">
-          <article><span>01</span><h3>Configure the group</h3><p>Define each agent’s role, mandate, private institutional context, and common starting situation.</p></article>
-          <article><span>02</span><h3>Change the decision environment</h3><p>Introduce outside information, resource conflicts, institutional constraints, or stabilizing interventions without dictating agent decisions.</p></article>
-          <article><span>03</span><h3>Run autonomous decisions</h3><p>LLM agents independently report their stance, primary concern, requested next step, and rationale in each round.</p></article>
-          <article><span>04</span><h3>Inspect the evidence</h3><p>Compare trajectories and step down to every retained prompt, model call, outside development, agent rationale, and collective decision gate.</p></article>
+          <article><span>01 · Define participants</span><h3>Give every agent a distinct position</h3><p>Assign a role, mandate, private information, operational constraints, and starting position.</p></article>
+          <article><span>02 · Change the environment</span><h3>Introduce a controlled difference</h3><p>Add information, shortages, institutional requirements, deadlines, or a stabilizing intervention.</p></article>
+          <article><span>03 · Run independent decisions</span><h3>Observe each round</h3><p>Every agent selects a stance and reports its main concern, required next step, and structured rationale.</p></article>
+          <article><span>04 · Compare and inspect</span><h3>Audit the collective outcome</h3><p>Compare vote trajectories, unresolved requirements, exact structured outputs, and approval-gate calculations.</p></article>
+        </section>
+
+        <section class="overview-purpose">
+          <div>
+            <span class="section-kicker">What one experiment contains</span>
+            <h3>One experiment compares environments; each environment contains repeated decision rounds.</h3>
+          </div>
+          <div class="experiment-hierarchy"><strong>1 experiment</strong><i>→</i><strong>3 environments</strong><i>→</i><strong>3 rounds each</strong><i>→</i><strong>12 agent decisions per round</strong></div>
         </section>
 
         <section class="theory-bridge">
           <div>
-            <span class="section-kicker">Coordination theory made testable</span>
-            <h3>Study changes in the decision environment—not only changes in belief.</h3>
+            <span class="section-kicker">Research use</span>
+            <h3>Turn coordination hypotheses into reproducible, inspectable simulations.</h3>
           </div>
-          <p>Inspired by <em>From Minds to Coordination</em>, the tool can probe whether fragmented information, incompatible local requirements, external pressure, or authoritative interventions change a group’s readiness to act. It produces inspectable synthetic trajectories, not real-world effect estimates.</p>
-        </section>
-
-        <section class="featured-example">
-          <div class="featured-example-copy">
-            <span class="section-kicker">Included example</span>
-            <h3>A twelve-agent regional outbreak coalition</h3>
-            <p>The same configured coalition decides whether to launch a joint response under three environments: no added pressure, conflicting capacity requirements, and the same requirements plus verified resources.</p>
-            <button class="secondary-cta" type="button" data-featured-example>Open the full example and evidence</button>
-          </div>
-          <div class="featured-outcomes" aria-label="Example experiment outcomes">
-            <article><span>No added constraints</span><strong><b aria-hidden="true">✓</b> Approved</strong></article>
-            <article><span>Conflicting requirements</span><strong><b aria-hidden="true">×</b> Not approved</strong></article>
-            <article><span>Verified resources supplied</span><strong><b aria-hidden="true">✓</b> Approved again</strong></article>
-          </div>
+          <p>Inspired by <em>From Minds to Coordination</em>, the workbench can examine—within controlled synthetic scenarios—whether fragmented information, incompatible local requirements, external pressure, or authoritative interventions change a group’s ability to act.</p>
         </section>
       </section>
 
@@ -200,67 +197,66 @@
       <section id="mechanism-view" class="workspace-view" aria-labelledby="mechanism-title" hidden>
         <header class="workspace-header case-header">
           <div>
-            <div class="artifact-type"><strong>Included example</strong><span>Fictional regional outbreak · twelve autonomous AI agents · three decision rounds</span></div>
-            <h2 id="mechanism-title">Can three countries still launch a joint outbreak response when each faces a different operational constraint?</h2>
-            <p>This example uses the laboratory to change the coalition’s operating environment without changing its agents or telling them how to vote.</p>
+            <div class="artifact-type"><strong>Included experiment</strong><span>Authentic retained model decisions · fictional scenario</span></div>
+            <h2 id="mechanism-title">One coalition. Three environments. Three outcomes.</h2>
+            <p>Twelve AI agents decide whether to launch a joint outbreak response. Their roles, mandates, starting information, model, and approval rule remain fixed. Only operational constraints and resource availability change.</p>
           </div>
         </header>
 
-        <section class="case-orientation" aria-label="Example scenario">
-          <article><span>The decision</span><h3>Launch a joint regional response—or wait</h3><p>A novel respiratory outbreak is growing across the fictional countries of Alba, Borin, and Cyrenia. The proposed response shares de-identified case data, laboratory capacity, mixed investigation teams, and regional supplies.</p></article>
-          <article><span>Who decides</span><h3>Twelve agents with different responsibilities</h3><p>Each country contributes an epidemiologist, policy delegate, and operations lead. A regional coordinator, scientific adviser, and logistics coordinator represent the shared institution.</p></article>
-          <article><span>Built-in safeguards</span><h3>The initial plan is ready to execute</h3><p>Patient records and clinical command remain national, data access is logged, laboratories have validated the outbreak, resources are precommitted, and national review boards have endorsed launch.</p></article>
+        <section class="experiment-structure" aria-label="Experiment structure">
+          <span>Experiment structure</span><strong>1 experiment</strong><i>→</i><strong>3 environments</strong><i>→</i><strong>3 decision rounds per environment</strong><i>→</i><strong>12 independent agent decisions per round</strong>
         </section>
 
-        <section class="decision-rule">
-          <div><span>How each round works</span><strong>Every agent independently chooses support, conditional support, defer, or oppose—and explains its concern and requested next step.</strong></div>
-          <div><span>When the coalition approves</span><strong>After round three: at least 6 support, at least 9 support-or-conditional, and no more than 1 opposition.</strong></div>
-        </section>
-
-        <section class="case-comparison" aria-labelledby="case-comparison-title">
-          <div class="case-comparison-heading"><span class="section-kicker">What changed across the three runs</span><h3 id="case-comparison-title">The agents stayed the same. Their operating environment did not.</h3></div>
-          <div class="case-runs">
-            <article class="case-run case-run-baseline">
-              <span class="case-run-number">Run 1 · Baseline</span>
-              <h3>The launch plan remains feasible</h3>
-              <p>No new external development changes the staffing, testing, supply, or reserve commitments.</p>
-              <div id="case-baseline-result" class="case-result"></div>
-            </article>
-            <article class="case-run case-run-pressure">
-              <span class="case-run-number">Run 2 · Capacity pressure</span>
-              <h3>Four concrete constraints arrive</h3>
-              <ul>
-                <li><strong>Alba:</strong> an equipment failure forces its strongest laboratory to reserve half its capacity for domestic confirmation.</li>
-                <li><strong>Borin:</strong> its transport hub can remain open only if regional partners immediately supply clinical staff.</li>
-                <li><strong>Cyrenia:</strong> it will release field teams only after receiving diagnostics and protective equipment.</li>
-                <li><strong>Region:</strong> available staff and supplies cannot satisfy all three requests within 48 hours.</li>
-              </ul>
-              <div id="case-pressure-result" class="case-result"></div>
-            </article>
-            <article class="case-run case-run-stabilized">
-              <span class="case-run-number">Run 3 · Same pressure plus intervention</span>
-              <h3>A verified package resolves all three minimums</h3>
-              <ul>
-                <li>Alba keeps half its laboratory for domestic confirmation and receives a mobile unit for shared testing.</li>
-                <li>Borin receives 24 regional clinicians before its transport-hub surge.</li>
-                <li>Cyrenia receives its named diagnostics and protective-equipment shipment.</li>
-                <li>A 10% regional reserve remains after the allocations.</li>
-              </ul>
-              <div id="case-stabilization-result" class="case-result"></div>
-            </article>
+        <section class="case-overview" aria-labelledby="case-overview-title">
+          <div class="case-comparison-heading"><span class="section-kicker">Result first</span><h3 id="case-overview-title">How the coalition moved across the three environments</h3></div>
+          <div class="table-scroll" role="region" aria-label="Three environment result comparison" tabindex="0">
+            <table class="case-overview-table">
+              <thead><tr><th>Environment</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Outcome</th></tr></thead>
+              <tbody id="case-overview-table"></tbody>
+            </table>
           </div>
         </section>
 
-        <section id="result-takeaway" class="case-interpretation"></section>
-
-        <section class="case-meaning">
-          <span class="section-kicker">Connection to <em>From Minds to Coordination</em></span>
-          <h3>Coordination failed without anyone needing to reject the outbreak or the value of joint action.</h3>
-          <p>The capacity shock changed what the agents required before acting. Locally reasonable requirements became jointly infeasible. The verified package restored coordination by changing the decision environment—not by changing the agents’ mandates or dictating their votes.</p>
+        <section class="case-setup" aria-label="Scenario setup">
+          <div><span>The decision</span><h3>Launch a joint regional response—or wait</h3><p>A respiratory outbreak is growing across the fictional countries of Alba, Borin, and Cyrenia. The plan shares de-identified case data, laboratory capacity, mixed investigation teams, and supplies.</p></div>
+          <div><span>Participants and baseline conditions</span><h3>Twelve roles begin with an executable plan</h3><p>Each country contributes an epidemiologist, policy delegate, and operations lead; three regional roles coordinate shared action. Legal, scientific, privacy, and initial resource prerequisites are already satisfied.</p></div>
         </section>
 
-        <details class="advanced-evidence">
-          <summary><span>Explore the evidence</span><small>See one participant’s decisions, risks, requests, and exact retained runs</small></summary>
+        <section class="decision-contract" aria-labelledby="decision-contract-title">
+          <div class="case-comparison-heading"><span class="section-kicker">Decision contract</span><h3 id="decision-contract-title">What each stance means—and exactly how approval is calculated</h3></div>
+          <div class="decision-definitions">
+            <article><b class="decision-support">Support</b><p>Ready to proceed now.</p></article>
+            <article><b class="decision-conditional">Conditional</b><p>Ready if a named requirement is satisfied.</p></article>
+            <article><b class="decision-defer">Defer</b><p>Insufficient basis or capacity to proceed now.</p></article>
+            <article><b class="decision-oppose">Oppose</b><p>Recommends not proceeding.</p></article>
+          </div>
+          <p class="gate-rule">The coalition approves after round three only when all three gates pass.</p>
+          <div class="table-scroll" role="region" aria-label="Approval gate calculations" tabindex="0">
+            <table class="gate-audit-table"><thead><tr><th>Environment</th><th>Approval condition</th><th>Required</th><th>Observed</th><th>Status</th></tr></thead><tbody id="case-gate-table"></tbody></table>
+          </div>
+        </section>
+
+        <section class="dependency-comparison" aria-labelledby="dependency-title">
+          <div class="case-comparison-heading"><span class="section-kicker">What changed</span><h3 id="dependency-title">Each constraint creates a dependency; the verified package resolves it in place</h3></div>
+          <div class="dependency-grid">
+            <article><span>Alba</span><h4>Laboratory capacity</h4><p><b>Constraint</b> Equipment failure removes half of the strongest laboratory’s capacity.</p><p><b>Minimum</b> Preserve domestic confirmation capacity.</p><p class="resolution"><b>Verified resolution</b> A mobile unit restores shared testing while Alba retains half its laboratory.</p></article>
+            <article><span>Borin</span><h4>Clinical staffing</h4><p><b>Constraint</b> The transport hub cannot handle the surge without more clinicians.</p><p><b>Minimum</b> Receive staff before keeping the hub open.</p><p class="resolution"><b>Verified resolution</b> Twenty-four regional clinicians are assigned before the surge.</p></article>
+            <article><span>Cyrenia</span><h4>Field-team supplies</h4><p><b>Constraint</b> Field teams lack diagnostics and protective equipment.</p><p><b>Minimum</b> Receive a named shipment before deployment.</p><p class="resolution"><b>Verified resolution</b> Diagnostics and protective equipment are confirmed for delivery.</p></article>
+            <article class="regional-dependency"><span>Regional conflict</span><h4>The minimum requirements cannot all be met within 48 hours</h4><p class="resolution"><b>Verified resolution</b> The complete allocation satisfies all three minimums and retains a 10% regional reserve.</p></article>
+          </div>
+        </section>
+
+        <section class="causal-comparison" aria-labelledby="causal-title">
+          <div class="case-comparison-heading"><span class="section-kicker">Causal chain within the simulation</span><h3 id="causal-title">Why coordination failed—and why it returned</h3></div>
+          <div class="causal-path causal-failed"><strong>Capacity failures</strong><i>→</i><span>Agents acquire minimum operational requirements</span><i>→</i><span>Requirements become jointly infeasible</span><i>→</i><span>Agents defer</span><i>→</i><b>Approval gates fail</b></div>
+          <div class="causal-path causal-restored"><strong>Verified allocation</strong><i>→</i><span>Every minimum requirement is covered</span><i>→</i><span>Dependencies become compatible</span><i>→</i><span>Agents return to support</span><i>→</i><b>Approval gates pass</b></div>
+          <p>The intervention changes the environment; it does not alter agent mandates or dictate votes. This is the mechanism suggested by <em>From Minds to Coordination</em> that the example makes executable and inspectable.</p>
+        </section>
+
+        <section id="agent-evidence-preview" class="agent-evidence-preview" aria-labelledby="agent-preview-title"></section>
+
+        <details id="all-agent-evidence" class="advanced-evidence">
+          <summary><span>Inspect all agent decisions</span><small>Compare one participant’s decisions, concerns, requests, and structured outputs across environments</small></summary>
           <div class="advanced-evidence-body">
             <div class="advanced-evidence-heading">
               <div><span class="eyebrow">Participant example</span><h3 id="mechanism-person-title">Participant trajectory by condition</h3></div>
@@ -275,7 +271,7 @@
                 <tbody id="mechanism-table"></tbody>
               </table>
             </div>
-            <p class="advanced-paths">Need more? Use <strong>Agent decisions</strong> to read every rationale and outside development, or <strong>How it works</strong> for the experiment contract and limitations.</p>
+            <p class="advanced-paths">Use <strong>Inspect decisions</strong> to read every structured rationale and outside development, or <strong>How it works</strong> for the experiment contract and limitations.</p>
           </div>
         </details>
       </section>
@@ -375,6 +371,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=guided-example-v1" defer></script>
+  <script src="assets/app.js?v=outcome-first-v1" defer></script>
 </body>
 </html>

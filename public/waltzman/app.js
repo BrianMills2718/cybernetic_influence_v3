@@ -286,9 +286,9 @@ function personStance(run, roundNumber, personId) {
 
 function conditionStory(run) {
   const stories = {
-    baseline:{step:'1', title:'No added constraints', change:'The starting plan remained feasible.', explanation:'The agents received no new resource conflicts.'},
-    responsive_exercise_injects:{step:'2', title:'Conflicting requirements', change:'New resource demands could not all be met.', explanation:'Location-specific staffing, testing, supply, and reserve requirements made the shared plan impossible to execute as written.'},
-    capacity_inject_replay_with_stabilization:{step:'3', title:'Verified resources supplied', change:'The stated requirements became compatible.', explanation:'A verified package supplied the staff, laboratory capacity, equipment, and reserve the agents had requested.'},
+    baseline:{step:'1', title:'Baseline', change:'The starting plan remained feasible.', explanation:'The agents received no new resource conflicts.'},
+    responsive_exercise_injects:{step:'2', title:'Capacity constraints', change:'New resource demands could not all be met.', explanation:'Location-specific staffing, testing, supply, and reserve requirements made the shared plan impossible to execute as written.'},
+    capacity_inject_replay_with_stabilization:{step:'3', title:'Capacity constraints + verified resources', change:'The stated requirements became compatible.', explanation:'A verified package supplied the staff, laboratory capacity, equipment, and reserve the agents had requested.'},
   }
   return stories[run.condition] || {step:'•', title:run.condition_label, change:'External environment varied', explanation:'Inspect the retained run for its exact developments.'}
 }
@@ -304,25 +304,15 @@ function renderMechanism() {
   const baseline = dataset.runs.find((run) => run.condition === 'baseline')
   const pressure = dataset.runs.find((run) => run.condition === 'responsive_exercise_injects')
   const stabilized = dataset.runs.find((run) => run.condition === 'capacity_inject_replay_with_stabilization')
-
-  const renderCaseResult = (target, run) => {
-    if (!run) {
-      $(target).innerHTML = '<strong>Run evidence unavailable</strong>'
-      return
-    }
-    const path = run.rounds.map((round) => `<span><b>Round ${round.round}</b>${escapeHtml(countsText(round.decision_counts))}</span>`).join('')
-    $(target).innerHTML = `<div class="case-vote-path">${path}</div><div class="case-final"><span>Final outcome</span>${outcomeBadge(run)}</div>`
-  }
-  renderCaseResult('#case-baseline-result', baseline)
-  renderCaseResult('#case-pressure-result', pressure)
-  renderCaseResult('#case-stabilization-result', stabilized)
-
-  $('#result-takeaway').innerHTML = baseline && pressure && stabilized ? `
-    <span>What happened</span>
-    <h3>All three runs began with unanimous support. Only the decision environment changed what happened next.</h3>
-    <p>With no shock, support remained unanimous. Under the four capacity constraints, the final vote became ${escapeHtml(countsText(pressure.rounds.at(-1).decision_counts))}. When the verified package made the minimum requirements compatible, the vote returned to ${escapeHtml(countsText(stabilized.rounds.at(-1).decision_counts))}.</p>
-    <p>This is one synthetic demonstration, not an estimate of how people or real institutions would behave.</p>` : `
-    <span>What happened</span><h3>${dataset.runs.length} retained trajectories are loaded.</h3><p>Open the evidence below to compare their exact decisions.</p>`
+  const exampleRuns = [baseline, pressure, stabilized].filter(Boolean)
+  $('#case-overview-table').innerHTML = exampleRuns.map((run) => {
+    const story = conditionStory(run)
+    return `<tr><th scope="row"><span>Environment ${escapeHtml(story.step)}</span>${escapeHtml(story.title)}</th>${run.rounds.map((round) => `<td>${escapeHtml(countsText(round.decision_counts))}</td>`).join('')}<td>${outcomeBadge(run)}</td></tr>`
+  }).join('')
+  $('#case-gate-table').innerHTML = exampleRuns.map((run) => {
+    const story = conditionStory(run)
+    return run.gate_checks.map((check, index) => `<tr>${index === 0 ? `<th scope="rowgroup" rowspan="${run.gate_checks.length}">Environment ${escapeHtml(story.step)}<small>${escapeHtml(story.title)}</small></th>` : ''}<td>${escapeHtml(check.label)}</td><td>${escapeHtml(check.required)}</td><td>${escapeHtml(check.observed)}</td><td><span class="gate-status ${check.passed ? 'gate-pass' : 'gate-fail'}">${check.passed ? '✓ Passed' : '× Failed'}</span></td></tr>`).join('')
+  }).join('')
 
   const finalStances = dataset.runs.map((run) => ({run, stance:personStance(run, 3, state.mechanismPersonId)})).filter((item) => item.stance)
   $('#waltzman-lens').innerHTML = finalStances.map(({run, stance}) => {
@@ -345,6 +335,19 @@ function renderMechanism() {
       openRun(button.dataset.openMechanismRun, false)
     }
   })
+
+  const previewStance = pressure ? personStance(pressure, 3, state.mechanismPersonId) : null
+  $('#agent-evidence-preview').innerHTML = previewStance ? `
+    <div><span class="section-kicker">Evidence preview · Environment 2 · Round 3</span><h3 id="agent-preview-title">${escapeHtml(labelPerson(state.mechanismPersonId))}</h3></div>
+    <dl><div><dt>Decision</dt><dd>${decisionPill(previewStance.decision)}</dd></div><div><dt>Primary concern</dt><dd>${escapeHtml(sentence(previewStance.risk))}</dd></div><div><dt>Requested next step</dt><dd>${escapeHtml(sentence(previewStance.request))}</dd></div><div><dt>Structured rationale</dt><dd>${escapeHtml(previewStance.rationale)}</dd></div></dl>
+    <button id="inspect-all-evidence" class="secondary-cta" type="button">Inspect all agent decisions</button>` : `
+    <div><span class="section-kicker">Evidence preview</span><h3 id="agent-preview-title">Participant evidence unavailable</h3></div>`
+  const evidenceButton = $('#inspect-all-evidence')
+  if (evidenceButton) evidenceButton.onclick = () => {
+    const details = $('#all-agent-evidence')
+    details.open = true
+    details.scrollIntoView({behavior:'smooth', block:'start'})
+  }
 }
 
 function renderRunIdentity(run) {

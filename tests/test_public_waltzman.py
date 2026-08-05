@@ -60,27 +60,28 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
 
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
-    assert "Run the simulation" in page
-    assert "Compare runs" in page
+    assert "Build a simulation" in page
+    assert "Compare results" in page
     assert "Overview" in page
-    assert "Agent decisions" in page
+    assert "Inspect decisions" in page
     assert "How it works" in page
-    assert "Interactive AI coordination laboratory" in page
-    assert "Simulate how changing decision environments reshape collective action" in page
-    assert "Turn theories of influence and coordination into executable scenarios" in page
-    assert "Configure the group" in page
-    assert "Change the decision environment" in page
-    assert "Run autonomous decisions" in page
-    assert "Inspect the evidence" in page
-    assert "Explore the evidence" in page
-    assert "Can three countries still launch a joint outbreak response" in page
+    assert "AI coordination simulation workbench" in page
+    assert "Test whether a group can still act" in page
+    assert "Turn coordination hypotheses into reproducible" in page
+    assert "Define participants" in page
+    assert "Change the environment" in page
+    assert "Run independent decisions" in page
+    assert "Compare and inspect" in page
+    assert "Inspect all agent decisions" in page
+    assert "One coalition. Three environments. Three outcomes." in page
+    assert "1 experiment" in page
+    assert "3 decision rounds per environment" in page
     assert "Launch a joint regional response—or wait" in page
-    assert "Twelve agents with different responsibilities" in page
-    assert "Four concrete constraints arrive" in page
-    assert "24 regional clinicians" in page
+    assert "What each stance means" in page
+    assert "Twenty-four regional clinicians" in page
     assert "10% regional reserve" in page
-    assert shape.stylesheets == ["assets/styles.css?v=guided-example-v1"]
-    assert shape.scripts == ["assets/app.js?v=guided-example-v1"]
+    assert shape.stylesheets == ["assets/styles.css?v=outcome-first-v1"]
+    assert shape.scripts == ["assets/app.js?v=outcome-first-v1"]
     assert {
         "overview-view",
         "run-view",
@@ -96,10 +97,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "trajectory-grid",
         "run-matrix",
         "mechanism-view",
-        "case-baseline-result",
-        "case-pressure-result",
-        "case-stabilization-result",
-        "result-takeaway",
+        "case-overview-table",
+        "case-gate-table",
+        "agent-evidence-preview",
+        "all-agent-evidence",
         "waltzman-lens",
         "mechanism-table",
         "run-select",
