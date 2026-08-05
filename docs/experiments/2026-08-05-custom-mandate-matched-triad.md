@@ -1,6 +1,6 @@
 ---
 doc_role: experiment_record
-status: superseded_invalid
+status: clean_replacement_signed_off
 created: 2026-08-05
 ---
 
@@ -24,6 +24,56 @@ must not appear in participant system prompts. One fresh trajectory per arm is
 run from the corrected deployed revision. The public comparison is pinned to
 those three exact run IDs. Results are reported as observed, including a null or
 reversed pattern, without substituting the invalidated trajectories.
+
+## Clean replacement executed readout
+
+Corrected deployed revision:
+`62dee59e57f95a47653dc2f80da8c3216b74e9e0`. The canonical configuration
+SHA-256 remained
+`67f350acc92f5c9a27fa7fa3efe3f1932297b3614f2e0ca0b989675d6536a6a3`
+for every arm.
+
+| Condition | Run | Round 1 | Round 2 | Round 3 | Gate |
+| --- | --- | ---: | ---: | ---: | --- |
+| Baseline | `run_8924342b56ce` | 12 support | 12 support | 12 support | Approved |
+| Responsive pressure | `run_946a10a820fc` | 12 support | 11 conditional, 1 defer | 1 conditional, 11 defer | Not approved |
+| Pressure + stabilization | `run_05acbaea1137` | 12 support | 10 conditional, 2 defer | 12 support | Approved |
+
+All three runs completed 36 unique participant calls and 36 committed traces
+with zero provider or schema-validation errors. Raw shared-client evidence
+contained no experiment-arm identifier in any of the 108 rendered prompts. For
+each of the twelve roles, the first-round system prompt and complete user prompt
+were byte-identical across the three arms. The pressure and stabilization arms
+received the same capacity-development families and both produced twelve
+round-two resource requests; only stabilization received the verified allocation
+package before round three.
+
+Public reproduction:
+
+- [exact clean role-aligned comparison](https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist&runs=run_8924342b56ce,run_946a10a820fc,run_05acbaea1137)
+- [clean baseline](https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=inspect&run=run_8924342b56ce&round=3&person=alba_epidemiologist)
+- [clean pressure](https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=inspect&run=run_946a10a820fc&round=3&person=alba_epidemiologist)
+- [clean stabilization](https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=inspect&run=run_05acbaea1137&round=3&person=alba_epidemiologist)
+
+## Clean replacement independent sign-off
+
+**Verdict: SIGNED-OFF for the one-configuration qualitative claim only.** A
+fresh adversarial verifier re-fetched the deployed revision and run documents,
+reconstructed the 36-call and 36-trace completion of every arm, checked common
+configuration identity and exact gates, and reproduced the baseline approval,
+pressure non-approval, and stabilization approval outcomes.
+
+- Validity: pass.
+- Representativeness: pass only for the declared twelve-role configuration.
+- Diagnosis: pass; the capacity prerequisites and resolving allocation package
+  are retained and inspectable.
+- Generalization: not applicable to the bounded claim and rejected beyond it.
+- Decision: replace the withdrawn note only with this statement: **in this
+  configured synthetic coalition, the observed pressure trajectory disrupted
+  approval and the observed allocation trajectory restored it.**
+
+No repeatability, generalization, human-behavior, real-world causality,
+effect-size, or empirical-validation claim is signed off.
 
 ## Decision and claim
 

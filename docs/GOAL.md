@@ -150,8 +150,12 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   participant system prompts disclosed the arm identifier before round one.
   The retained runs remain authentic historical tool demonstrations, but the
   prior sign-off and mechanism inference are withdrawn. The active replacement
-  is one fresh condition-blind trajectory per arm, with byte-identical
-  participant personas and an exact three-run public URL.
+  is complete: baseline `run_8924342b56ce` approved at 12 support; pressure
+  `run_946a10a820fc` ended at 1 conditional and 11 defer without approval; and
+  stabilization `run_05acbaea1137` returned to 12 support and approval after
+  the verified allocation package. All 108 calls completed, configuration
+  hashes match, and each role's complete first-round prompts are byte-identical
+  across arms. The public comparison URL is pinned to those exact three runs.
   Historically, the invalidated triad used the same edited Alba epidemiologist
   mandate, all twelve agent configurations, shared situation, Terra model
   route, reasoning setting, and exact coalition gate.
@@ -161,9 +165,8 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   round-two state as pressure before a verified binding allocation package,
   then returned to twelve support and approved. Across the three rows, 108
   unique participant calls completed with no provider or validation error.
-  Independent execution-based sign-off accepted only the configuration-specific
-  qualitative mechanism claim and rejected any implied effect estimate,
-  generalization, human-belief inference, or real-world causal attribution.
+  The later audit withdrew that triad's independent sign-off along with its
+  matched-condition inference.
 
 - The causal runtime, maps, narrative, pause/resume, analytical boundaries, and
   exact evidence inspection are technically observed.
@@ -283,8 +286,8 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 ## Active Plan
 
-Use the executable public workbench and a fresh condition-blind triad to replace
-the withdrawn Waltzman-facing note before cold review. The mechanism under test is that
+Use the executable public workbench and completed condition-blind triad for cold
+review. The mechanism observed in this one configured synthetic coalition is that
 a configured institutional dependency became decision-relevant after exogenous
 capacity shocks without any controller selecting participant stances, while a
 verified allocation package satisfied the stated dependency and approval

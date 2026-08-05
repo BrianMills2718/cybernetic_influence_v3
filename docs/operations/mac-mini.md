@@ -159,6 +159,52 @@ becomes stale when the source, UI/API schema, model-route certification,
 shared-client revision, LaunchAgent configuration, public run store, Funnel
 mapping, or public DNS/TLS target changes.
 
+### Clean-triad deployment evidence · 2026-08-05
+
+The previous report became stale when the prompt and public comparison source
+changed. Corrected revision
+`62dee59e57f95a47653dc2f80da8c3216b74e9e0` is now installed on
+`Bs-Mac-mini.local`; `/waltzman/api/config` reports that exact revision and the
+certified `codex/gpt-5.6-terra` route.
+
+- capability: `cybernetic-influence.waltzman-public-executable-workbench`;
+- profile and target level sought: service plus UI action,
+  `deployment_verified`;
+- exact comparison: `run_8924342b56ce`, `run_946a10a820fc`, and
+  `run_05acbaea1137`, pinned through the public `runs=` URL parameter;
+- execution: all three runs completed with 36 successful participant calls and
+  36 committed traces each, zero provider or schema-validation errors, and the
+  same configuration SHA-256
+  `67f350acc92f5c9a27fa7fa3efe3f1932297b3614f2e0ca0b989675d6536a6a3`;
+- blindness control: raw shared-client records contain no arm identifier in any
+  of the 108 prompts, and the complete first-round system and user prompts are
+  byte-identical by role across arms;
+- typed invalid input: an 11-agent request returned HTTP 422 and created no run;
+- missing dependency: with the coordination-route certification removed, the
+  exact build advertised an empty model catalog;
+- deployed composition: public Chromium rendered only the three pinned rows and
+  108 calls, exposed the exact retained run IDs as provenance, and produced no
+  console or failed-request error;
+- deployed artifact SHA-256: HTML
+  `89ce940534f500a9c4a87a70c49dcfe852d525ef23d3dc726b9fcf637825ac28`,
+  JavaScript
+  `f44620616c05c6bde9f151cfbd43729d192332447e355eb12da932595b75a49d`,
+  CSS `2ebcaef8f035340baa927573c90862f5f7d741c43f6f825349fa6d22aa75d7ff`,
+  and snapshot dataset
+  `5c3385cd616c50b985b8228efea94679e78f8c8aa2a778cd7c60baff11c3578f`.
+
+The evidence supports a working deployed instrument and one
+configuration-specific qualitative mechanism demonstration. It does not support
+repeatability, effect-size, human, real-world, or general causal claims.
+An independent verifier reproduced the exact deployed revision, API documents,
+run completeness, configuration identity, and outcomes, but its environment had
+no browser runtime. It therefore rejected the independent `deployment_verified`
+label for insufficient UI-consumption evidence. The producer's separate live
+Chromium pass observed the three rows, 108 calls, exact provenance, and no
+browser errors; the public capability remains `experimental` rather than
+independently deployment-verified until a browser-capable verifier repeats that
+one check.
+
 ## Inspect
 
 ```bash

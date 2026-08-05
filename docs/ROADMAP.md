@@ -233,8 +233,10 @@ conditions, not evidence of hostile attribution or an operational detector.
 - A 2026-08-05 audit found that participant system prompts in those outbreak
   runs disclosed the condition identifier before round one. They remain useful
   product artifacts but no longer support matched-condition inference. The
-  shortest path is now a corrected deployment, one clean condition-blind triad,
-  and an exact run-scoped public comparison.
+  corrected deployment and clean condition-blind replacement are now complete:
+  `run_8924342b56ce`, `run_946a10a820fc`, and `run_05acbaea1137` produced
+  baseline approval, pressure non-approval, and restored approval respectively.
+  The exact run-scoped public comparison excludes incompatible historical rows.
 
 ### Process progress
 
@@ -263,15 +265,11 @@ the judgment passed on the operator's behalf.
 
 ## Shortest Critical Path
 
-1. **Replace the invalidated triad.** Deploy condition-blind participant prompts
-   and run one fresh authentic trajectory in each of the three arms.
-2. **Waltzman-facing readout.** Pin the public URL to those exact runs, update
-   the concise note with the observed result, and confirm it is understandable
-   without raw JSON.
-3. **Scale only after that review.** Decide whether a repeat, 26-agent coalition,
-   or autonomous influence-source condition has the highest value, then decide on
-   the 26-agent coalition and autonomous influence-source condition.
-4. **Resume the architecture decision after the demo review.** Use the retained
+1. **Waltzman-facing readout.** Review the exact run-scoped public comparison
+   and concise note as an instrument demonstration, not an effect estimate.
+2. **Scale only after that review.** Decide whether a repeat, 26-agent coalition,
+   or autonomous influence-source condition is the next impressive experiment.
+3. **Resume the architecture decision after the demo review.** Use the retained
    Slice 26 research to decide ownership of cognition, world state, scheduling,
    adjudication, evidence, authoring, analysis, and experiments before product
    migration. The selected foundation must support the accepted laboratory

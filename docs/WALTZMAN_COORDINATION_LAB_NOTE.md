@@ -4,11 +4,10 @@
 
 Brian Mills · August 2026
 
-> **Draft withdrawn pending a clean rerun.** An audit found that the retained
-> triad disclosed its condition identifier in participant system prompts before
-> round one. The public laboratory remains useful, but the matched-condition
-> interpretation and run IDs below are historical and must not be sent as the
-> current result. This notice will be replaced with the condition-blind readout.
+> **Audit status.** This note uses the clean condition-blind triad executed from
+> corrected revision `62dee59e57f95a47653dc2f80da8c3216b74e9e0`. Earlier
+> outbreak trajectories that disclosed an arm identifier in participant prompts
+> are excluded from the comparison and from the claim below.
 
 ### Abstract
 
@@ -23,14 +22,13 @@ role's mandate and institutional context, vary the external environment, run
 the model, and inspect every stance, rationale, exogenous development, and exact
 decision-gate transition.
 
-In a matched three-run probe, the baseline coalition approved the response with
+In a clean three-run probe, the baseline coalition approved the response with
 twelve final support positions. Under heterogeneous capacity pressure it ended
-with two conditional positions and ten deferrals, so approval failed. That
-pressure trajectory was frozen; the missing baseline and stabilization runs
-were preregistered before execution. The matched stabilization run reached the
-same intermediate state—eleven conditional positions, one deferral, and twelve
-resource requests—before a verified, binding allocation package was added. All
-twelve roles then supported launch and approval returned. This is a synthetic
+with one conditional position and eleven deferrals, so approval failed. The
+stabilization run reached a similar intermediate state—ten conditional
+positions, two deferrals, and twelve resource requests—before a verified,
+binding allocation package was added. All twelve roles then supported launch
+and approval returned. This is a synthetic
 mechanism demonstration, not an effect estimate or empirical validation. Its
 contribution is an auditable way to turn a theory of decision environments into
 configurable, executable experiments.
@@ -61,7 +59,7 @@ Public laboratory:
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>
 
 Role-aligned mechanism view:
-<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist>
+<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist&runs=run_8924342b56ce,run_946a10a820fc,run_05acbaea1137>
 
 ### A matched probe of disruption and stabilization
 
@@ -82,17 +80,20 @@ constant across three conditions. Their canonical configuration hash is
    package meeting each country's stated minimum.
 
 Every run used `codex/gpt-5.6-terra` at medium reasoning and completed 36 traced
-participant calls with no provider or schema-validation error.
+participant calls with no provider or schema-validation error. For each of the
+twelve roles, the complete first-round system and user prompts were
+byte-identical across arms; no retained prompt contained an arm identifier.
 
 | Condition | Round 1 | Round 2 | Round 3 | Focal role | Gate |
 | --- | ---: | ---: | ---: | --- | --- |
-| Baseline · `run_3cf434f148e7` | 12 support | 12 support | 12 support | support → support → support | Approved |
-| Capacity pressure · `run_4da81a355f28` | 12 support | 11 conditional, 1 defer | 2 conditional, 10 defer | support → conditional → defer | Not approved |
-| Pressure + stabilization · `run_40490a742a25` | 12 support | 11 conditional, 1 defer | 12 support | support → conditional → support | Approved |
+| Baseline · `run_8924342b56ce` | 12 support | 12 support | 12 support | support → support → support | Approved |
+| Capacity pressure · `run_946a10a820fc` | 12 support | 11 conditional, 1 defer | 1 conditional, 11 defer | support → conditional → defer | Not approved |
+| Pressure + stabilization · `run_05acbaea1137` | 12 support | 10 conditional, 2 defer | 12 support | support → conditional → support | Approved |
 
-The pressure and stabilization runs received the same first two inject families
-and reached the same round-two aggregate state: nine capacity risks, three
-legitimacy risks, and twelve resource requests. The stabilized row then received
+The pressure and stabilization runs received the same two capacity-development
+families. Their stochastic round-two stances were close but not identical:
+eleven conditional plus one defer under pressure, and ten conditional plus two
+defer under stabilization; both produced twelve resource requests. The stabilized row then received
 the only additional input: a ledger-confirmed 48-hour package preserving Alba's
 domestic laboratory reserve while adding mobile testing capacity, providing 24
 clinicians to Borin, delivering named equipment to Cyrenia, and retaining a
@@ -136,12 +137,11 @@ message.
 
 ### What this does—and does not—show
 
-The matched triad demonstrates that this configured synthetic system can
-produce and reverse the proposed coordination pattern through explicit,
-inspectable mechanisms. Five earlier Luna trajectories in the same tool show
-the same coalition-level direction across two baselines, two pressure runs, and
-one stabilized replay. That is useful directional corroboration, but it is not
-enough to claim an invariant.
+In this configured synthetic coalition, the observed pressure trajectory
+disrupted approval and the observed allocation trajectory restored it through
+explicit, inspectable mechanisms. Earlier trajectories in the same tool are retained as
+product history but excluded as matched-condition evidence because their
+participant prompts disclosed the arm identifier.
 
 The pressure source here is a bounded responsive exercise controller, not an
 autonomous influence swarm. The roles are synthetic, the scenario is fictional,
