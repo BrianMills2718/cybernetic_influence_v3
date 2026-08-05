@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import json
 from typing import Literal, TypeAlias, cast
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from cybernetic_influence.active_runtime import (
     ActiveProposal,
@@ -140,9 +140,63 @@ class OutbreakStance(BaseModel):
     rationale: str = Field(min_length=1, max_length=600)
 
 
+class OutbreakAgentConfiguration(BaseModel):
+    """Editable initial assumptions for one autonomous synthetic participant."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    agent_id: str = Field(min_length=1)
+    mandate: str = Field(min_length=20, max_length=1_200)
+    institutional_context: str = Field(min_length=20, max_length=1_200)
+
+
+class OutbreakScenarioConfiguration(BaseModel):
+    """Reviewed public-demo inputs that may affect participant cognition."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    shared_situation: str = Field(min_length=100, max_length=8_000)
+    agents: list[OutbreakAgentConfiguration] = Field(
+        min_length=len(AGENT_IDS),
+        max_length=len(AGENT_IDS),
+    )
+
+    @model_validator(mode="after")
+    def require_exact_agent_set(self) -> "OutbreakScenarioConfiguration":
+        agent_ids = [item.agent_id for item in self.agents]
+        if len(set(agent_ids)) != len(agent_ids):
+            raise ValueError("outbreak agent configuration contains duplicate identities")
+        if set(agent_ids) != set(AGENT_IDS):
+            raise ValueError("outbreak agent configuration must contain the exact twelve roles")
+        return self
+
+    def agent(self, agent_id: str) -> OutbreakAgentConfiguration:
+        for candidate in self.agents:
+            if candidate.agent_id == agent_id:
+                return candidate
+        raise ValueError(f"unknown outbreak participant: {agent_id}")
+
+
+def default_outbreak_configuration() -> OutbreakScenarioConfiguration:
+    """Return the inspectable configuration used by the retained experiment."""
+
+    return OutbreakScenarioConfiguration(
+        shared_situation=_INITIAL_SITUATION,
+        agents=[
+            OutbreakAgentConfiguration(
+                agent_id=agent_id,
+                mandate=_ROLE_BRIEFS[_role(agent_id)],
+                institutional_context=_country_context(agent_id),
+            )
+            for agent_id in AGENT_IDS
+        ],
+    )
+
+
 @dataclass(frozen=True)
 class OutbreakFixture:
     condition: OutbreakCondition
+    configuration: OutbreakScenarioConfiguration
     scenario: CausalScenario
     active_specs: tuple[ActiveSystemSpec, ...]
     exact_bindings: Mapping[str, ExactMechanismBinding]
@@ -191,8 +245,11 @@ def outbreak_fixture(
     *,
     model: str = "codex/gpt-5.6-luna",
     reasoning_effort: str | None = "medium",
+    configuration: OutbreakScenarioConfiguration | None = None,
 ) -> OutbreakFixture:
     """Build one closed, three-round coalition experiment."""
+
+    resolved_configuration = configuration or default_outbreak_configuration()
 
     entities: dict[str, EntityState] = {
         agent_id: EntityState(
@@ -372,6 +429,7 @@ def outbreak_fixture(
         policy = _native_policy(
             agent_id,
             condition=condition,
+            configuration=resolved_configuration,
             model=model,
             reasoning_effort=reasoning_effort,
             trace_id_prefix="fixture",
@@ -389,7 +447,9 @@ def outbreak_fixture(
                         {
                             "logical_time": 0,
                             "kind": "autobiographical_memory",
-                            "content": _initial_memory(agent_id),
+                            "content": _initial_memory(
+                                agent_id, resolved_configuration
+                            ),
                         }
                     ]
                 },
@@ -406,6 +466,7 @@ def outbreak_fixture(
     )
     return OutbreakFixture(
         condition=condition,
+        configuration=resolved_configuration,
         scenario=scenario,
         active_specs=tuple(specs),
         exact_bindings={mechanism.mechanism_id: exact},
@@ -424,6 +485,7 @@ def outbreak_bindings(
         inner = _native_policy(
             agent_id,
             condition=fixture.condition,
+            configuration=fixture.configuration,
             model=model,
             reasoning_effort=reasoning_effort,
             trace_id_prefix=trace_id_prefix,
@@ -794,13 +856,15 @@ def _native_policy(
     agent_id: str,
     *,
     condition: OutbreakCondition,
+    configuration: OutbreakScenarioConfiguration,
     model: str,
     reasoning_effort: str | None,
     trace_id_prefix: str,
 ) -> NativeLlmActiveSystem:
+    agent_configuration = configuration.agent(agent_id)
     persona = (
         f"You are {_agent_label(agent_id)} in a fictional multinational outbreak exercise. "
-        f"{_ROLE_BRIEFS[_role(agent_id)]} {_country_context(agent_id)} "
+        f"{agent_configuration.mandate} {agent_configuration.institutional_context} "
         "Decide autonomously from your mandate, private memory, and delivered evidence. "
         "You are not required to agree. Use support only when the retained plan is executable "
         "now under your mandate. Use conditional only for a specific unmet prerequisite that "
@@ -845,5 +909,11 @@ def _agent_label(agent_id: str) -> str:
     return agent_id.replace("_", " ").title()
 
 
-def _initial_memory(agent_id: str) -> str:
-    return f"{_INITIAL_SITUATION} Your private institutional context: {_country_context(agent_id)}"
+def _initial_memory(
+    agent_id: str, configuration: OutbreakScenarioConfiguration
+) -> str:
+    agent_configuration = configuration.agent(agent_id)
+    return (
+        f"{configuration.shared_situation} Your private institutional context: "
+        f"{agent_configuration.institutional_context}"
+    )

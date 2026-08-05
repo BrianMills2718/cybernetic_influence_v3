@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A public evidence workbench for inspecting a five-run coordination simulation.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="styles.css?v=workbench-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=live-workbench-v1">
 </head>
 <body>
   <header class="topbar">
@@ -17,13 +17,13 @@
       </div>
     </div>
     <nav class="view-tabs" aria-label="Workbench views">
+      <button type="button" data-view="run">Configure &amp; run</button>
       <button type="button" data-view="compare">Compare</button>
+      <button type="button" data-view="mechanism">Mechanism</button>
       <button type="button" data-view="inspect">Inspect run</button>
       <button type="button" data-view="method">Scenario &amp; method</button>
     </nav>
-    <button class="new-run" type="button" disabled title="Anonymous public model execution is unavailable. This workbench inspects retained authentic runs.">
-      New live run unavailable
-    </button>
+    <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
   </header>
 
   <div id="loading" class="loading-state" role="status">Loading retained experiment evidence…</div>
@@ -54,13 +54,69 @@
         </dl>
       </section>
       <section class="rail-section boundary-note">
-        <h2>Public boundary</h2>
-        <p>This tool explores authentic retained runs. It does not execute new model calls or alter evidence.</p>
+        <h2>Execution boundary</h2>
+        <p>A live run uses the reviewed three-round runtime and retains every model call. The five comparison runs remain immutable.</p>
       </section>
       <div class="dataset-id">Dataset <code id="dataset-id"></code></div>
     </aside>
 
     <section class="workspace">
+      <section id="run-view" class="workspace-view" aria-labelledby="run-title" hidden>
+        <header class="workspace-header">
+          <div>
+            <span class="eyebrow">Executable experiment</span>
+            <h2 id="run-title">Configure and run one authentic trajectory</h2>
+            <p>Change a participant's initial mandate or context, choose the external environment, then observe twelve autonomous LLM roles make three successive decisions.</p>
+          </div>
+          <span id="live-capability" class="capability-badge">Checking live route…</span>
+        </header>
+
+        <div class="run-workbench">
+          <section class="configuration-panel" aria-labelledby="condition-title">
+            <div class="section-title-row"><div><span class="eyebrow">Step 1</span><h3 id="condition-title">Choose the decision environment</h3></div></div>
+            <div id="condition-options" class="condition-options"></div>
+
+            <div class="section-title-row config-heading"><div><span class="eyebrow">Step 2</span><h3>Edit one participant</h3></div><button id="reset-configuration" type="button" class="quiet-button">Reset all inputs</button></div>
+            <label class="field-label" for="agent-config-select">Participant
+              <select id="agent-config-select"></select>
+            </label>
+            <label class="field-label" for="agent-mandate">Initial mandate
+              <textarea id="agent-mandate" rows="5"></textarea>
+            </label>
+            <label class="field-label" for="agent-context">Private institutional context
+              <textarea id="agent-context" rows="5"></textarea>
+            </label>
+            <details class="shared-situation-editor">
+              <summary>Review or edit the common starting situation</summary>
+              <label class="field-label" for="shared-situation">Shared situation
+                <textarea id="shared-situation" rows="12"></textarea>
+              </label>
+            </details>
+          </section>
+
+          <aside class="execution-panel" aria-labelledby="execution-title">
+            <div class="section-title-row"><div><span class="eyebrow">Step 3</span><h3 id="execution-title">Review and execute</h3></div></div>
+            <div id="control-preview" class="control-preview"></div>
+            <dl class="execution-facts">
+              <div><dt>Participants</dt><dd>12 autonomous roles</dd></div>
+              <div><dt>Rounds</dt><dd>3</dd></div>
+              <div><dt>Model</dt><dd id="execution-model">Loading…</dd></div>
+              <div><dt>Maximum calls</dt><dd>36</dd></div>
+              <div><dt>Decision rule</dt><dd>Exact coalition gate</dd></div>
+            </dl>
+            <button id="run-experiment" class="primary-action" type="button" disabled>Run authentic simulation</button>
+            <p id="run-availability" class="availability-note">Waiting for the live simulator contract.</p>
+
+            <section id="live-run-status" class="live-run-status" hidden aria-live="polite">
+              <div class="live-status-heading"><strong id="live-status-label">Starting…</strong><code id="live-run-id"></code></div>
+              <div class="progress-track"><span id="live-progress-bar"></span></div>
+              <p id="live-progress-detail"></p>
+              <button id="open-live-run" type="button" class="secondary-action" hidden>Inspect completed run</button>
+            </section>
+          </aside>
+        </div>
+      </section>
+
       <section id="compare-view" class="workspace-view" aria-labelledby="compare-title">
         <header class="workspace-header">
           <div>
@@ -86,6 +142,29 @@
             <table>
               <thead><tr><th>Run</th><th>Condition</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Gate</th><th>Environment</th></tr></thead>
               <tbody id="run-matrix"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="mechanism-view" class="workspace-view" aria-labelledby="mechanism-title" hidden>
+        <header class="workspace-header">
+          <div>
+            <span class="eyebrow">Waltzman analysis lens</span>
+            <h2 id="mechanism-title">Trace how the decision environment changes coordination</h2>
+            <p>Align the same participant across retained conditions instead of comparing aggregate outcomes from memory.</p>
+          </div>
+          <label class="select-control">Participant
+            <select id="mechanism-person-select"></select>
+          </label>
+        </header>
+        <div id="waltzman-lens" class="waltzman-lens"></div>
+        <section class="mechanism-table-panel">
+          <div class="section-title-row"><div><span class="eyebrow">Role-aligned evidence</span><h3 id="mechanism-person-title">Participant trajectory by condition</h3></div></div>
+          <div class="table-scroll" role="region" aria-label="Role-aligned mechanism comparison" tabindex="0">
+            <table>
+              <thead><tr><th>Run</th><th>Environment</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Coalition gate</th></tr></thead>
+              <tbody id="mechanism-table"></tbody>
             </table>
           </div>
         </section>
@@ -132,6 +211,11 @@
             <div id="gate-checks"></div>
           </section>
         </div>
+
+        <details class="run-inputs-panel">
+          <summary>Inspect the exact initial agent and control configuration</summary>
+          <div id="run-inputs"></div>
+        </details>
 
         <section class="agent-workbench" aria-labelledby="agents-title">
           <div class="section-title-row agent-title-row">
@@ -181,6 +265,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=workbench-v1" defer></script>
+  <script src="assets/app.js?v=live-workbench-v1" defer></script>
 </body>
 </html>

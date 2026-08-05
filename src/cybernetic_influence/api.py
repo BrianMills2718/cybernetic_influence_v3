@@ -180,6 +180,8 @@ from cybernetic_influence.scenarios.coordination_decision import (
 from cybernetic_influence.scenarios.regional_outbreak import (
     OutbreakCondition,
     OutbreakFixture,
+    OutbreakScenarioConfiguration,
+    default_outbreak_configuration,
     outbreak_bindings,
     outbreak_fixture as regional_outbreak_fixture,
     outbreak_readout,
@@ -205,6 +207,7 @@ class RunRequest(BaseModel):
     execution: Literal["scripted", "live"] = "scripted"
     llm_options: RunLlmOptions | None = None
     run_control: RunControlSelection | None = None
+    regional_outbreak_configuration: OutbreakScenarioConfiguration | None = None
     run_id: str | None = None
 
 
@@ -691,6 +694,7 @@ def create_app(
     authoring_call: StructuredCall | None = None,
     measurement_call: MeasurementStructuredCall | None = None,
     allow_internal_scripted_coordination: bool = False,
+    allow_inline_styles: bool = False,
 ) -> FastAPI:
     """Create the visibility-safe API without any legacy workbench."""
     app = FastAPI(title="Cybernetic Influence Simulator", version=__version__)
@@ -1070,8 +1074,13 @@ def create_app(
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         response = await call_next(request)
+        style_policy = (
+            "style-src 'self' 'unsafe-inline'; "
+            if allow_inline_styles
+            else "style-src 'self'; "
+        )
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self'; style-src 'self'; "
+            "default-src 'self'; script-src 'self'; " + style_policy +
             "connect-src 'self'; img-src 'self' data:; object-src 'none'; "
             "base-uri 'none'; frame-ancestors 'none'"
         )
@@ -1230,6 +1239,9 @@ def create_app(
                     "supports_live": bool(coordination_live_models),
                     "live_model_ids": coordination_live_models,
                     "maximum_live_calls": 36,
+                    "editable_configuration": default_outbreak_configuration().model_dump(
+                        mode="json"
+                    ),
                     "arms": [
                         {
                             "id": "baseline",
@@ -2683,6 +2695,17 @@ def create_app(
     @app.post("/api/runs", response_model=None)
     def run(request_body: RunRequest, request: Request) -> dict[str, object] | Response:
         _require_access(request)
+        if (
+            request_body.scenario != "regional_outbreak"
+            and request_body.regional_outbreak_configuration is not None
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "regional_outbreak_configuration applies only to the "
+                    "regional_outbreak scenario"
+                ),
+            )
         service_arm = None
         physical_arm = None
         purchase_arm = None
@@ -2766,7 +2789,10 @@ def create_app(
                     detail="unknown regional-outbreak condition",
                 )
             outbreak_condition = cast(OutbreakCondition, request_body.arm_id)
-            outbreak_runtime = regional_outbreak_fixture(outbreak_condition)
+            outbreak_runtime = regional_outbreak_fixture(
+                outbreak_condition,
+                configuration=request_body.regional_outbreak_configuration,
+            )
             selected_profile = "position_context"
         if request_body.scenario != "service_desk" and request_body.run_control is not None:
             raise HTTPException(
@@ -2870,6 +2896,13 @@ def create_app(
                 "run_control": (
                     resolved_run_control.model_dump(mode="json")
                     if resolved_run_control is not None
+                    else None
+                ),
+                "regional_outbreak_configuration": (
+                    request_body.regional_outbreak_configuration.model_dump(mode="json")
+                    if request_body.regional_outbreak_configuration is not None
+                    else default_outbreak_configuration().model_dump(mode="json")
+                    if request_body.scenario == "regional_outbreak"
                     else None
                 ),
                 "live_progress": [],
@@ -3132,6 +3165,7 @@ def create_app(
                     cast(OutbreakCondition, outbreak_condition),
                     model=effective_llm.model,
                     reasoning_effort=effective_llm.agent_reasoning_effort,
+                    configuration=request_body.regional_outbreak_configuration,
                 )
                 result = run_outbreak(
                     outbreak_runtime,
@@ -3178,6 +3212,9 @@ def create_app(
                     result.completion.model_dump(mode="json")
                     if result.completion is not None
                     else None
+                )
+                document["regional_outbreak_configuration"] = (
+                    outbreak_runtime.configuration.model_dump(mode="json")
                 )
             elif coordination_fixture is not None:
                 live_experiment_fixture: CoordinationExperimentRuntimeFixture | None = None

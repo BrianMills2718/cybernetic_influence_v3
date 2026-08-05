@@ -14,6 +14,8 @@ from cybernetic_influence.scenarios.regional_outbreak import (
     AGENT_IDS,
     OutbreakCondition,
     OutbreakFixture,
+    default_outbreak_configuration,
+    outbreak_bindings,
     outbreak_fixture,
     outbreak_readout,
     outbreak_runtime_config,
@@ -84,6 +86,48 @@ def test_baseline_runs_twelve_autonomous_roles_for_three_rounds() -> None:
     assert readout["outcome"] == "joint_response_approved"
     assert readout["exercise_injects"] == []
     assert readout["stabilization_events"] == []
+
+
+def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy() -> None:
+    default = default_outbreak_configuration()
+    changed_agents = [
+        agent.model_copy(
+            update={
+                "mandate": (
+                    "You must preserve laboratory continuity before supporting launch."
+                    if agent.agent_id == "alba_epidemiologist"
+                    else agent.mandate
+                ),
+                "institutional_context": (
+                    "Alba has assigned a protected domestic confirmation reserve."
+                    if agent.agent_id == "alba_epidemiologist"
+                    else agent.institutional_context
+                ),
+            }
+        )
+        for agent in default.agents
+    ]
+    changed = default.model_copy(update={"agents": changed_agents})
+
+    fixture = outbreak_fixture("baseline", configuration=changed)
+    spec = next(
+        item
+        for item in fixture.active_specs
+        if item.active_system_id == "alba_epidemiologist"
+    )
+    memory = spec.initial_private_state["memory"][0]["content"]
+    bindings = outbreak_bindings(
+        fixture,
+        trace_id_prefix="configuration_test",
+        model="codex/gpt-5.6-luna",
+        reasoning_effort="medium",
+    )
+    policy = bindings["alba_epidemiologist"].implementation.inner
+
+    assert fixture.configuration == changed
+    assert "protected domestic confirmation reserve" in memory
+    assert "preserve laboratory continuity" in policy.persona
+    assert "You are Alba Epidemiologist" in policy.persona
 
 
 def test_responsive_condition_selects_declared_injects_from_reported_risk() -> None:

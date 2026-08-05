@@ -2,25 +2,32 @@
 
 const decisionOrder = ['support', 'conditional', 'defer', 'oppose']
 const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'regional']
-const groupLabels = {
-  all:'All roles',
-  alba:'Alba',
-  borin:'Borin',
-  cyrenia:'Cyrenia',
-  regional:'Regional',
-}
+const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', regional:'Regional'}
+const preferredModel = 'codex/gpt-5.6-luna'
 
 let dataset = null
+let runtimeConfig = null
+let defaultConfiguration = null
+let editableConfiguration = null
+let selectedConfigurationPerson = 'alba_epidemiologist'
+let selectedCondition = 'responsive_exercise_injects'
+let liveModel = null
+let liveReasoning = 'medium'
+let activeRunId = null
+let pollHandle = null
+
 const state = {
-  view:'compare',
+  view:'run',
   runId:null,
   round:3,
   personId:'regional_scientific_advisor',
   group:'all',
+  mechanismPersonId:'regional_scientific_advisor',
 }
 
 const $ = (selector) => document.querySelector(selector)
 const all = (selector) => [...document.querySelectorAll(selector)]
+const clone = (value) => JSON.parse(JSON.stringify(value))
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -35,8 +42,18 @@ function sentence(value) {
   return String(value || '').replaceAll('_', ' ')
 }
 
+function labelPerson(personId) {
+  return sentence(personId).replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function groupFor(personId) {
+  const prefix = String(personId).split('_', 1)[0]
+  return ['alba', 'borin', 'cyrenia'].includes(prefix) ? prefix : 'regional'
+}
+
 function runLabel(run) {
-  const count = dataset.runs.filter((item) => item.condition === run.condition).length
+  if (run.display_label) return run.display_label
+  const count = dataset.runs.filter((item) => item.condition === run.condition && !item.is_live).length
   return `${run.condition_label}${count > 1 ? ` ${run.replicate}` : ''}`
 }
 
@@ -50,6 +67,10 @@ function countsText(counts) {
 function categoryText(counts) {
   const entries = Object.entries(counts || {}).sort((left, right) => right[1] - left[1])
   return entries.map(([key, value]) => `${value} ${sentence(key)}`).join(' · ') || 'None reported'
+}
+
+function countValues(values) {
+  return values.reduce((counts, value) => ({...counts, [value]:(counts[value] || 0) + 1}), {})
 }
 
 function decisionPill(decision) {
@@ -78,16 +99,34 @@ function currentRound(run = currentRun()) {
   return run.rounds.find((round) => round.round === state.round) || run.rounds.at(-1)
 }
 
+function conditionContract(conditionId) {
+  return runtimeConfig?.scenarios?.regional_outbreak?.arms?.find((item) => item.id === conditionId) || {
+    id:conditionId,
+    label:sentence(conditionId),
+    description:'The selected decision environment is retained with the run.',
+  }
+}
+
+function configurationForRun(run) {
+  return run.configuration || defaultConfiguration
+}
+
+function configurationAgent(configuration, personId) {
+  return configuration?.agents?.find((item) => item.agent_id === personId) || null
+}
+
 function readStateFromUrl() {
   const params = new URLSearchParams(window.location.search)
   const requestedView = params.get('view')
-  if (['compare', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
+  if (['run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
   const requestedRun = params.get('run')
   if (requestedRun && dataset.runs.some((run) => run.run_id === requestedRun)) state.runId = requestedRun
   const requestedRound = Number(params.get('round'))
   if ([1, 2, 3].includes(requestedRound)) state.round = requestedRound
   const requestedPerson = params.get('person')
   if (requestedPerson && dataset.people.some((person) => person.person_id === requestedPerson)) state.personId = requestedPerson
+  const requestedMechanismPerson = params.get('mechanism_person')
+  if (requestedMechanismPerson && dataset.people.some((person) => person.person_id === requestedMechanismPerson)) state.mechanismPersonId = requestedMechanismPerson
   const requestedGroup = params.get('group')
   if (groupOrder.includes(requestedGroup)) state.group = requestedGroup
 }
@@ -95,77 +134,180 @@ function readStateFromUrl() {
 function syncUrl() {
   const url = new URL(window.location.href)
   url.searchParams.set('view', state.view)
+  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person']) url.searchParams.delete(key)
   if (state.view === 'inspect') {
     url.searchParams.set('run', state.runId)
     url.searchParams.set('round', String(state.round))
     url.searchParams.set('person', state.personId)
     if (state.group !== 'all') url.searchParams.set('group', state.group)
-    else url.searchParams.delete('group')
-  } else {
-    for (const key of ['run', 'round', 'person', 'group']) url.searchParams.delete(key)
   }
+  if (state.view === 'mechanism') url.searchParams.set('mechanism_person', state.mechanismPersonId)
   window.history.replaceState({}, '', url)
 }
 
 function renderRail() {
   $('#scenario-title').textContent = dataset.scenario_title
   $('#scenario-summary').textContent = dataset.scenario_summary
-  $('#fact-runs').textContent = dataset.runs.length
+  $('#fact-runs').textContent = dataset.runs.filter((run) => !run.is_live).length
   $('#fact-agents').textContent = dataset.agent_count
   $('#fact-calls').textContent = dataset.total_model_calls
   $('#dataset-id').textContent = dataset.dataset_id
 }
 
+function renderRunSetup() {
+  const contracts = runtimeConfig?.scenarios?.regional_outbreak?.arms || [
+    {id:'baseline', label:'Baseline', description:'Only common round feedback is delivered.'},
+    {id:'responsive_exercise_injects', label:'Responsive capacity pressure', description:'Exercise control selects a preauthored development from reported risks.'},
+    {id:'capacity_inject_replay_with_stabilization', label:'Pressure + allocation stabilization', description:'Pressure is replayed and a verified capacity package is added.'},
+  ]
+  $('#condition-options').innerHTML = contracts.map((condition) => `
+    <button type="button" class="condition-option ${condition.id === selectedCondition ? 'active' : ''}" data-condition="${escapeHtml(condition.id)}" aria-pressed="${condition.id === selectedCondition}">
+      <strong>${escapeHtml(condition.label)}</strong><span>${escapeHtml(condition.description)}</span>
+    </button>`).join('')
+  all('[data-condition]').forEach((button) => {
+    button.onclick = () => {
+      selectedCondition = button.dataset.condition
+      renderRunSetup()
+    }
+  })
+
+  const people = editableConfiguration?.agents || []
+  $('#agent-config-select').innerHTML = people.map((agent) => `<option value="${escapeHtml(agent.agent_id)}">${escapeHtml(labelPerson(agent.agent_id))}</option>`).join('')
+  $('#agent-config-select').value = selectedConfigurationPerson
+  const selected = configurationAgent(editableConfiguration, selectedConfigurationPerson)
+  $('#agent-mandate').value = selected?.mandate || ''
+  $('#agent-context').value = selected?.institutional_context || ''
+  $('#shared-situation').value = editableConfiguration?.shared_situation || ''
+
+  const condition = conditionContract(selectedCondition)
+  const controlNote = selectedCondition === 'baseline'
+    ? 'No exercise-control development is introduced between rounds.'
+    : selectedCondition === 'responsive_exercise_injects'
+      ? 'After each round, exercise control reads aggregate reported risks and selects one matching preauthored development. It cannot select a participant stance.'
+      : 'The two accepted capacity developments are replayed. After round two, an external allocation authority adds one verified capacity package. Neither controller can select a participant stance.'
+  $('#control-preview').innerHTML = `<strong>${escapeHtml(condition.label)}</strong><p>${escapeHtml(condition.description)}</p><small>${escapeHtml(controlNote)}</small>`
+
+  $('#agent-config-select').onchange = (event) => {
+    persistEditor()
+    selectedConfigurationPerson = event.target.value
+    renderRunSetup()
+  }
+  $('#agent-mandate').oninput = persistEditor
+  $('#agent-context').oninput = persistEditor
+  $('#shared-situation').oninput = persistEditor
+}
+
+function persistEditor() {
+  if (!editableConfiguration) return
+  const selected = configurationAgent(editableConfiguration, selectedConfigurationPerson)
+  if (selected) {
+    selected.mandate = $('#agent-mandate').value
+    selected.institutional_context = $('#agent-context').value
+  }
+  editableConfiguration.shared_situation = $('#shared-situation').value
+}
+
+function configureRuntime() {
+  const scenario = runtimeConfig?.scenarios?.regional_outbreak
+  defaultConfiguration = clone(scenario?.editable_configuration || dataset.default_configuration || null)
+  editableConfiguration = clone(defaultConfiguration)
+  if (defaultConfiguration) {
+    for (const run of dataset.runs) run.configuration = clone(defaultConfiguration)
+  }
+  const models = runtimeConfig?.live_options?.models || []
+  const allowed = new Set(scenario?.live_model_ids || [])
+  const eligible = models.filter((item) => allowed.has(item.model))
+  const selectedModel = eligible.find((item) => item.model === preferredModel) || eligible[0] || null
+  liveModel = selectedModel?.model || null
+  liveReasoning = selectedModel?.agent_reasoning_efforts?.includes('medium')
+    ? 'medium'
+    : selectedModel?.default_agent_reasoning_effort || 'medium'
+
+  const live = Boolean(runtimeConfig?.live_authorized && scenario?.supports_live && liveModel && defaultConfiguration)
+  $('#runtime-status').textContent = live ? 'Live simulator connected' : 'Live simulator unavailable'
+  $('#runtime-status').className = `runtime-status ${live ? 'live' : 'unavailable'}`
+  $('#live-capability').textContent = live ? 'Authentic LLM execution available' : 'Live route unavailable'
+  $('#live-capability').className = `capability-badge ${live ? 'live' : 'unavailable'}`
+  $('#execution-model').textContent = liveModel || 'Unavailable'
+  $('#run-experiment').disabled = !live
+  $('#run-availability').textContent = live
+    ? 'One public run at a time. Every participant call and exact mechanism event is retained.'
+    : 'Retained evidence remains available, but this deployment cannot start a model run.'
+  renderRunSetup()
+}
+
 function renderComparison() {
   const approved = dataset.runs.filter((run) => run.outcome === 'joint_response_approved').length
   const notApproved = dataset.runs.length - approved
+  const retained = dataset.runs.filter((run) => !run.is_live).length
   $('#comparison-summary').innerHTML = `
-    <span class="comparison-icon" aria-hidden="true">5×</span>
-    <div><strong>Five authentic trajectories are loaded for comparison</strong><p>${approved} ended in approval and ${notApproved} ended without approval. The interface does not average these demonstrations into an effect estimate.</p></div>
-    <small>${dataset.total_model_calls} retained participant calls</small>`
+    <span class="comparison-icon" aria-hidden="true">${dataset.runs.length}×</span>
+    <div><strong>${dataset.runs.length} authentic trajectories are loaded for comparison</strong><p>${approved} ended in approval and ${notApproved} ended without approval. ${retained} are immutable matched evidence${dataset.runs.length > retained ? '; the newest is this session’s configured run' : ''}.</p></div>
+    <small>${dataset.runs.reduce((total, run) => total + run.model_calls, 0)} retained participant calls</small>`
 
   $('#trajectory-grid').innerHTML = dataset.runs.map((run) => `
     <button type="button" class="trajectory-card" data-open-run="${escapeHtml(run.run_id)}" aria-label="Inspect ${escapeHtml(runLabel(run))}, ${escapeHtml(run.run_id)}">
       <span class="card-top"><span><h3>${escapeHtml(runLabel(run))}</h3><span class="run-code">${escapeHtml(run.run_id)}</span></span>${outcomeBadge(run)}</span>
-      <span class="round-track">
-        ${run.rounds.map((round) => `<span class="round-track-row"><span class="round-label">R${round.round}</span>${stackedBar(round.decision_counts)}</span>`).join('')}
-      </span>
+      <span class="round-track">${run.rounds.map((round) => `<span class="round-track-row"><span class="round-label">R${round.round}</span>${stackedBar(round.decision_counts)}</span>`).join('')}</span>
       <span class="final-line">Final · ${escapeHtml(countsText(run.rounds.at(-1).decision_counts))}</span>
     </button>`).join('')
 
   $('#run-matrix').innerHTML = dataset.runs.map((run) => {
+    const pressure = run.developments.filter((item) => item.document_kind === 'exercise_development').length / 4
     const environment = run.developments.length
-      ? `${run.developments.filter((item) => item.document_kind === 'exercise_development').length / 4} pressure inject${run.developments.filter((item) => item.document_kind === 'exercise_development').length / 4 === 1 ? '' : 's'}${run.developments.some((item) => item.document_kind === 'authoritative_allocation_package') ? ' + allocation package' : ''}`
+      ? `${pressure} pressure inject${pressure === 1 ? '' : 's'}${run.developments.some((item) => item.document_kind === 'authoritative_allocation_package') ? ' + allocation package' : ''}`
       : 'Common snapshots only'
-    return `<tr>
-      <td><button type="button" class="matrix-run" data-open-run="${escapeHtml(run.run_id)}">${escapeHtml(run.run_id)}</button></td>
-      <td>${escapeHtml(runLabel(run))}</td>
-      ${run.rounds.map((round) => `<td class="matrix-round">${escapeHtml(countsText(round.decision_counts))}</td>`).join('')}
-      <td>${outcomeBadge(run)}</td>
-      <td>${escapeHtml(environment)}</td>
-    </tr>`
+    return `<tr><td><button type="button" class="matrix-run" data-open-run="${escapeHtml(run.run_id)}">${escapeHtml(run.run_id)}</button></td><td>${escapeHtml(runLabel(run))}</td>${run.rounds.map((round) => `<td class="matrix-round">${escapeHtml(countsText(round.decision_counts))}</td>`).join('')}<td>${outcomeBadge(run)}</td><td>${escapeHtml(environment)}</td></tr>`
   }).join('')
+  all('[data-open-run]').forEach((button) => { button.onclick = () => openRun(button.dataset.openRun) })
+}
 
-  all('[data-open-run]').forEach((button) => {
-    button.onclick = () => openRun(button.dataset.openRun)
+function personStance(run, roundNumber, personId) {
+  return run.rounds.find((round) => round.round === roundNumber)?.stances.find((stance) => stance.person_id === personId) || null
+}
+
+function renderMechanism() {
+  $('#mechanism-person-select').innerHTML = dataset.people.map((person) => `<option value="${escapeHtml(person.person_id)}">${escapeHtml(person.person_label)}</option>`).join('')
+  $('#mechanism-person-select').value = state.mechanismPersonId
+  $('#mechanism-person-select').onchange = (event) => {
+    state.mechanismPersonId = event.target.value
+    renderMechanism()
+    syncUrl()
+  }
+  const finalStances = dataset.runs.map((run) => personStance(run, 3, state.mechanismPersonId)).filter(Boolean)
+  const finalRisks = countValues(finalStances.map((stance) => stance.risk))
+  const dominantRisk = Object.entries(finalRisks).sort((left, right) => right[1] - left[1])[0]?.[0] || 'none'
+  const dependencyRequests = finalStances.filter((stance) => stance.request !== 'none').length
+  const approvals = dataset.runs.filter((run) => run.outcome === 'joint_response_approved').length
+  $('#waltzman-lens').innerHTML = `
+    <article class="lens-card"><span>Trust structure</span><strong>Dependency evidence, not a trust score</strong><p>${dependencyRequests} of ${finalStances.length} final stances requested validation, safeguards, data, or resources. The simulation does not infer private trust.</p></article>
+    <article class="lens-card"><span>Perceived risk</span><strong>${escapeHtml(sentence(dominantRisk))} dominates this role</strong><p>Read the exact risk and rationale by round below; these are structured stated concerns.</p></article>
+    <article class="lens-card"><span>Coordination readiness</span><strong>${approvals} of ${dataset.runs.length} coalition gates passed</strong><p>Readiness is exposed through exact support, conditional, defer, and opposition paths—not a synthetic scalar.</p></article>`
+  $('#mechanism-person-title').textContent = `${labelPerson(state.mechanismPersonId)} across decision environments`
+  $('#mechanism-table').innerHTML = dataset.runs.map((run) => {
+    const cells = [1, 2, 3].map((round) => {
+      const stance = personStance(run, round, state.mechanismPersonId)
+      return `<td class="mechanism-cell">${decisionPill(stance?.decision || 'unknown')}<small>Risk · ${escapeHtml(sentence(stance?.risk || 'unknown'))}<br>Request · ${escapeHtml(sentence(stance?.request || 'unknown'))}</small></td>`
+    }).join('')
+    const environment = run.developments.length ? `${run.developments.length} delivered group-level developments` : 'Common feedback only'
+    return `<tr><td><button type="button" class="matrix-run" data-open-mechanism-run="${escapeHtml(run.run_id)}">${escapeHtml(runLabel(run))}</button></td><td>${escapeHtml(environment)}</td>${cells}<td>${outcomeBadge(run)}</td></tr>`
+  }).join('')
+  all('[data-open-mechanism-run]').forEach((button) => {
+    button.onclick = () => {
+      state.personId = state.mechanismPersonId
+      openRun(button.dataset.openMechanismRun, false)
+    }
   })
 }
 
 function renderRunIdentity(run) {
-  $('#run-identity').innerHTML = `
-    <div><strong>${escapeHtml(runLabel(run))}</strong><small>${escapeHtml(run.run_id)} · ${escapeHtml(run.model)} · ${escapeHtml(run.reasoning_effort)} reasoning · ${run.model_calls} calls</small></div>
-    ${outcomeBadge(run)}`
+  $('#run-identity').innerHTML = `<div><strong>${escapeHtml(runLabel(run))}</strong><small>${escapeHtml(run.run_id)} · ${escapeHtml(run.model)} · ${escapeHtml(run.reasoning_effort)} reasoning · ${run.model_calls} calls</small></div>${outcomeBadge(run)}`
 }
 
 function renderRoundSelector(run) {
-  $('#round-buttons').innerHTML = run.rounds.map((round) => `
-    <button type="button" data-round="${round.round}" class="${round.round === state.round ? 'active' : ''}" aria-pressed="${round.round === state.round}">Round ${round.round}</button>`).join('')
+  $('#round-buttons').innerHTML = run.rounds.map((round) => `<button type="button" data-round="${round.round}" class="${round.round === state.round ? 'active' : ''}" aria-pressed="${round.round === state.round}">Round ${round.round}</button>`).join('')
   all('[data-round]').forEach((button) => {
-    button.onclick = () => {
-      state.round = Number(button.dataset.round)
-      renderInspector()
-      syncUrl()
-    }
+    button.onclick = () => { state.round = Number(button.dataset.round); renderInspector(); syncUrl() }
   })
 }
 
@@ -176,40 +318,31 @@ function renderRoundOverview(round) {
     return count ? `<div class="bar-${decision}" style="width:${count / 12 * 100}%" title="${count} ${decision}">${count} ${decision}</div>` : ''
   }).join('')
   $('#decision-distribution').setAttribute('aria-label', countsText(round.decision_counts))
-  $('#round-counts').innerHTML = `
-    <article class="count-card"><span>Decisions</span><p>${escapeHtml(countsText(round.decision_counts))}</p></article>
-    <article class="count-card"><span>Primary risks</span><p>${escapeHtml(categoryText(round.risk_counts))}</p></article>
-    <article class="count-card"><span>Requested next steps</span><p>${escapeHtml(categoryText(round.request_counts))}</p></article>`
+  $('#round-counts').innerHTML = `<article class="count-card"><span>Decisions</span><p>${escapeHtml(countsText(round.decision_counts))}</p></article><article class="count-card"><span>Primary risks</span><p>${escapeHtml(categoryText(round.risk_counts))}</p></article><article class="count-card"><span>Requested next steps</span><p>${escapeHtml(categoryText(round.request_counts))}</p></article>`
 }
 
 function renderEnvironment(run) {
   if (state.round === 1) {
-    $('#environment-events').innerHTML = '<p class="empty-state">No between-round development has occurred. Every role begins from the common executable plan.</p>'
+    $('#environment-events').innerHTML = '<p class="empty-state">No between-round development has occurred. Every role begins from the reviewed common situation and its own retained mandate and context.</p>'
     return
   }
+  const prior = run.rounds.find((round) => round.round === state.round - 1)
+  const dominantRisk = Object.entries(prior?.risk_counts || {}).sort((left, right) => right[1] - left[1])[0]?.[0]
   const developments = run.developments.filter((item) => item.after_round === state.round - 1)
   if (!developments.length) {
-    $('#environment-events').innerHTML = '<p class="empty-state">Only the common coalition round snapshot was delivered. No exercise-control or stabilization development entered this condition.</p>'
+    $('#environment-events').innerHTML = `<p class="empty-state">Only the common coalition snapshot was delivered. No exercise-control or stabilization development entered this condition.</p>`
     return
   }
-  $('#environment-events').innerHTML = developments.map((item) => {
+  $('#environment-events').innerHTML = `<div class="control-preview"><strong>Selection trace</strong><p>Prior dominant reported risk: ${escapeHtml(sentence(dominantRisk || 'none'))}. The condition supplied only preauthored exogenous developments; participant stances remained model-generated.</p></div>${developments.map((item) => {
     const allocation = item.document_kind === 'authoritative_allocation_package'
-    return `<article class="environment-event">
-      <header><span><strong>${escapeHtml(item.audience_group)}</strong><small> · after round ${item.after_round}</small></span><span class="source-badge">${allocation ? 'Allocation authority' : 'Exercise control'}</span></header>
-      <p>${escapeHtml(item.content)}</p>
-    </article>`
-  }).join('')
+    return `<article class="environment-event"><header><span><strong>${escapeHtml(item.audience_group)}</strong><small> · after round ${item.after_round}</small></span><span class="source-badge">${allocation ? 'Allocation authority' : 'Exercise control'}</span></header><p>${escapeHtml(item.content)}</p></article>`
+  }).join('')}`
 }
 
 function renderGate(run) {
   const approved = run.outcome === 'joint_response_approved'
-  $('#gate-result').innerHTML = `<div class="gate-outcome ${approved ? 'approved' : 'failed'}"><strong>${escapeHtml(run.outcome_label)}</strong><small>Evaluated once after all twelve final-round stances were retained.</small></div>`
-  $('#gate-checks').innerHTML = run.gate_checks.map((check) => `
-    <div class="gate-check">
-      <span class="check-icon ${check.passed ? 'check-pass' : 'check-fail'}">${check.passed ? '✓' : '×'}</span>
-      <span>${escapeHtml(check.label)}</span>
-      <small>${check.observed} · ${escapeHtml(check.required)}</small>
-    </div>`).join('')
+  $('#gate-result').innerHTML = `<div class="gate-outcome ${approved ? 'approved' : 'failed'}"><strong>Final round-3 result · ${escapeHtml(run.outcome_label)}</strong><small>This terminal gate is shown alongside every selected round for reference.</small></div>`
+  $('#gate-checks').innerHTML = run.gate_checks.map((check) => `<div class="gate-check"><span class="check-icon ${check.passed ? 'check-pass' : 'check-fail'}">${check.passed ? '✓' : '×'}</span><span>${escapeHtml(check.label)}</span><small>${check.observed} · ${escapeHtml(check.required)}</small></div>`).join('')
 }
 
 function visibleStances(round) {
@@ -218,9 +351,7 @@ function visibleStances(round) {
 
 function ensureVisiblePerson(round) {
   const visible = visibleStances(round)
-  if (!visible.some((stance) => stance.person_id === state.personId)) {
-    state.personId = visible[0]?.person_id || round.stances[0].person_id
-  }
+  if (!visible.some((stance) => stance.person_id === state.personId)) state.personId = visible[0]?.person_id || round.stances[0].person_id
 }
 
 function renderGroupFilters(round) {
@@ -229,51 +360,33 @@ function renderGroupFilters(round) {
     return `<button type="button" data-group="${group}" class="${group === state.group ? 'active' : ''}" aria-pressed="${group === state.group}">${groupLabels[group]} · ${count}</button>`
   }).join('')
   all('[data-group]').forEach((button) => {
-    button.onclick = () => {
-      state.group = button.dataset.group
-      ensureVisiblePerson(round)
-      renderAgents(currentRun(), round)
-      syncUrl()
-    }
+    button.onclick = () => { state.group = button.dataset.group; ensureVisiblePerson(round); renderAgents(currentRun(), round); syncUrl() }
   })
 }
 
 function renderAgentDetail(run, round) {
   const stance = round.stances.find((item) => item.person_id === state.personId) || round.stances[0]
   const personRounds = run.rounds.map((item) => item.stances.find((candidate) => candidate.person_id === stance.person_id))
-  $('#agent-detail').innerHTML = `
-    <header class="agent-detail-header">
-      <div><span class="eyebrow">Round ${round.round} stance</span><h4>${escapeHtml(stance.person_label)}</h4><span class="group-label">${escapeHtml(stance.group_label)}</span></div>
-      ${decisionPill(stance.decision)}
-    </header>
-    <div class="stance-meta"><span>Risk · ${escapeHtml(sentence(stance.risk))}</span><span>Request · ${escapeHtml(sentence(stance.request))}</span></div>
-    <p class="rationale">${escapeHtml(stance.rationale)}</p>
-    <div class="person-trajectory">
-      ${personRounds.map((item, index) => `<button type="button" class="person-round ${index + 1 === state.round ? 'active' : ''}" data-person-round="${index + 1}"><small>Round ${index + 1}</small>${decisionPill(item.decision)}<span>Risk · ${escapeHtml(sentence(item.risk))}</span></button>`).join('')}
-    </div>
-    <div class="evidence-id">Exact structured evidence · ${escapeHtml(run.run_id)} · round ${round.round} · ${escapeHtml(stance.person_id)}</div>`
+  $('#agent-detail').innerHTML = `<header class="agent-detail-header"><div><span class="eyebrow">Round ${round.round} stance</span><h4>${escapeHtml(stance.person_label)}</h4><span class="group-label">${escapeHtml(stance.group_label)}</span></div>${decisionPill(stance.decision)}</header><div class="stance-meta"><span>Risk · ${escapeHtml(sentence(stance.risk))}</span><span>Request · ${escapeHtml(sentence(stance.request))}</span></div><p class="rationale">${escapeHtml(stance.rationale)}</p><div class="person-trajectory">${personRounds.map((item, index) => `<button type="button" class="person-round ${index + 1 === state.round ? 'active' : ''}" data-person-round="${index + 1}"><small>Round ${index + 1}</small>${decisionPill(item.decision)}<span>Risk · ${escapeHtml(sentence(item.risk))}</span></button>`).join('')}</div><div class="evidence-id">Exact structured evidence · ${escapeHtml(run.run_id)} · round ${round.round} · ${escapeHtml(stance.person_id)}</div>`
   all('[data-person-round]').forEach((button) => {
-    button.onclick = () => {
-      state.round = Number(button.dataset.personRound)
-      renderInspector()
-      syncUrl()
-    }
+    button.onclick = () => { state.round = Number(button.dataset.personRound); renderInspector(); syncUrl() }
   })
+  renderRunInputs(run, stance.person_id)
+}
+
+function renderRunInputs(run, personId) {
+  const configuration = configurationForRun(run)
+  const agent = configurationAgent(configuration, personId)
+  const condition = conditionContract(run.condition)
+  $('#run-inputs').innerHTML = configuration && agent ? `<div class="run-input-grid"><article><span>Common starting situation</span><p>${escapeHtml(configuration.shared_situation)}</p></article><article><span>${escapeHtml(labelPerson(personId))} · initial mandate</span><p>${escapeHtml(agent.mandate)}</p></article><article><span>Private institutional context</span><p>${escapeHtml(agent.institutional_context)}</p></article><article><span>Exercise-control rule</span><p>${escapeHtml(condition.description)}</p></article><article><span>Execution configuration</span><p>${escapeHtml(run.model)} · ${escapeHtml(run.reasoning_effort)} reasoning · ${run.model_calls} retained calls</p></article></div>` : '<p class="empty-state">This legacy retained run predates the public configuration projection.</p>'
 }
 
 function renderAgents(run, round) {
   ensureVisiblePerson(round)
   renderGroupFilters(round)
-  $('#agent-list').innerHTML = visibleStances(round).map((stance) => `
-    <button type="button" class="agent-button ${stance.person_id === state.personId ? 'active' : ''}" data-person="${escapeHtml(stance.person_id)}" aria-pressed="${stance.person_id === state.personId}">
-      <strong>${escapeHtml(stance.person_label)}</strong>${decisionPill(stance.decision)}<small>${escapeHtml(sentence(stance.risk))} risk</small>
-    </button>`).join('')
+  $('#agent-list').innerHTML = visibleStances(round).map((stance) => `<button type="button" class="agent-button ${stance.person_id === state.personId ? 'active' : ''}" data-person="${escapeHtml(stance.person_id)}" aria-pressed="${stance.person_id === state.personId}"><strong>${escapeHtml(stance.person_label)}</strong>${decisionPill(stance.decision)}<small>${escapeHtml(sentence(stance.risk))} risk</small></button>`).join('')
   all('[data-person]').forEach((button) => {
-    button.onclick = () => {
-      state.personId = button.dataset.person
-      renderAgents(run, round)
-      syncUrl()
-    }
+    button.onclick = () => { state.personId = button.dataset.person; renderAgents(run, round); syncUrl() }
   })
   renderAgentDetail(run, round)
 }
@@ -302,23 +415,23 @@ function renderMethod() {
 }
 
 function renderView() {
-  for (const view of ['compare', 'inspect', 'method']) {
-    $(`#${view}-view`).hidden = state.view !== view
-  }
+  for (const view of ['run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
   all('[data-view]').forEach((button) => {
     const active = button.dataset.view === state.view
     button.classList.toggle('active', active)
     button.setAttribute('aria-pressed', String(active))
   })
+  if (state.view === 'run') renderRunSetup()
   if (state.view === 'compare') renderComparison()
+  if (state.view === 'mechanism') renderMechanism()
   if (state.view === 'inspect') renderInspector()
   if (state.view === 'method') renderMethod()
 }
 
-function openRun(runId) {
+function openRun(runId, resetPerson = true) {
   state.runId = runId
   state.round = 3
-  state.personId = 'regional_scientific_advisor'
+  if (resetPerson) state.personId = 'regional_scientific_advisor'
   state.group = 'all'
   state.view = 'inspect'
   renderView()
@@ -330,24 +443,183 @@ function configureControls() {
   $('#run-select').innerHTML = dataset.runs.map((run) => `<option value="${escapeHtml(run.run_id)}">${escapeHtml(runLabel(run))} · ${escapeHtml(run.run_id)}</option>`).join('')
   $('#run-select').onchange = (event) => openRun(event.target.value)
   all('[data-view]').forEach((button) => {
-    button.onclick = () => {
-      state.view = button.dataset.view
-      renderView()
-      syncUrl()
+    button.onclick = () => { state.view = button.dataset.view; renderView(); syncUrl() }
+  })
+  $('#reset-configuration').onclick = () => {
+    editableConfiguration = clone(defaultConfiguration)
+    renderRunSetup()
+  }
+  $('#run-experiment').onclick = startLiveRun
+  $('#open-live-run').onclick = () => {
+    state.personId = selectedConfigurationPerson
+    openRun(activeRunId, false)
+  }
+}
+
+function gateChecks(finalCounts) {
+  const support = Number(finalCounts.support || 0)
+  const conditional = Number(finalCounts.conditional || 0)
+  const oppose = Number(finalCounts.oppose || 0)
+  return [
+    {check_id:'executable_support', label:'Executable-now support', observed:support, required:'at least 6', passed:support >= 6},
+    {check_id:'aligned_positions', label:'Support or conditional', observed:support + conditional, required:'at least 9', passed:support + conditional >= 9},
+    {check_id:'opposition_ceiling', label:'Opposition', observed:oppose, required:'no more than 1', passed:oppose <= 1},
+  ]
+}
+
+function projectDevelopments(raw) {
+  const seen = new Set()
+  const developments = []
+  for (const event of raw.events || []) {
+    for (const observation of event?.patch?.observations_added || []) {
+      let content = null
+      try { content = JSON.parse(observation.apparent_content) } catch (_error) { continue }
+      if (!['exercise_development', 'authoritative_allocation_package'].includes(content?.document_kind)) continue
+      const audienceGroup = content.document_kind === 'authoritative_allocation_package'
+        ? 'All participants'
+        : groupLabels[groupFor(observation.target_entity_id)]
+      const developmentId = content.inject_id || content.stabilization_id
+      const key = `${content.after_round}|${content.document_kind}|${developmentId}|${audienceGroup}|${content.content}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      developments.push({
+        after_round:content.after_round,
+        document_kind:content.document_kind,
+        development_id:developmentId,
+        source:observation.apparent_source_ref || 'unknown',
+        audience_group:audienceGroup,
+        content:content.content,
+        instruction:content.instruction,
+      })
+    }
+  }
+  return developments.sort((left, right) => left.after_round - right.after_round || left.document_kind.localeCompare(right.document_kind) || left.audience_group.localeCompare(right.audience_group))
+}
+
+function projectLiveRun(raw) {
+  const rounds = (raw.outcome?.round_history || []).map((roundDocument) => {
+    const stances = Object.entries(roundDocument.stances || {}).sort().map(([personId, stance]) => ({
+      person_id:personId,
+      person_label:labelPerson(personId),
+      group_id:groupFor(personId),
+      group_label:groupLabels[groupFor(personId)],
+      decision:stance.decision,
+      risk:stance.risk,
+      request:stance.request,
+      rationale:stance.rationale,
+    }))
+    return {
+      round:roundDocument.round,
+      decision_counts:countValues(stances.map((stance) => stance.decision)),
+      risk_counts:countValues(stances.map((stance) => stance.risk)),
+      request_counts:countValues(stances.map((stance) => stance.request)),
+      stances,
     }
   })
+  const finalCounts = rounds.at(-1).decision_counts
+  const outcome = raw.outcome.outcome
+  return {
+    run_id:raw.run_id,
+    condition:raw.arm,
+    condition_label:conditionContract(raw.arm).label,
+    display_label:`Live · ${conditionContract(raw.arm).label}`,
+    replicate:1,
+    created_at:raw.created_at,
+    model:raw.llm_configuration?.model || liveModel,
+    reasoning_effort:raw.llm_configuration?.agent_reasoning_effort || liveReasoning,
+    model_calls:raw.model_calls,
+    observed_cost:Number(raw.cost || 0),
+    outcome,
+    outcome_label:outcome === 'joint_response_approved' ? 'Joint response approved' : 'No joint response',
+    gate_checks:gateChecks(finalCounts),
+    rounds,
+    developments:projectDevelopments(raw),
+    configuration:raw.regional_outbreak_configuration || clone(editableConfiguration),
+    is_live:true,
+  }
+}
+
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {cache:'no-store', ...options})
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(body.detail || `${path} failed with ${response.status}`)
+  return body
+}
+
+async function startLiveRun() {
+  persistEditor()
+  $('#run-experiment').disabled = true
+  $('#open-live-run').hidden = true
+  $('#live-run-status').hidden = false
+  $('#live-status-label').textContent = 'Starting authentic run…'
+  $('#live-progress-detail').textContent = 'Validating the reviewed configuration and model route.'
+  $('#live-progress-bar').style.width = '2%'
+  try {
+    const started = await apiRequest('api/runs', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        scenario:'regional_outbreak',
+        arm_id:selectedCondition,
+        execution:'live',
+        llm_options:{model:liveModel, agent_reasoning_effort:liveReasoning, max_total_cost:0.74},
+        regional_outbreak_configuration:editableConfiguration,
+      }),
+    })
+    activeRunId = started.run_id
+    $('#live-run-id').textContent = activeRunId
+    $('#live-status-label').textContent = 'Twelve participants are running'
+    schedulePoll(250)
+  } catch (error) {
+    $('#live-status-label').textContent = 'Run did not start'
+    $('#live-progress-detail').textContent = error.message
+    $('#live-progress-bar').style.width = '0%'
+    $('#run-experiment').disabled = false
+  }
+}
+
+function schedulePoll(delay = 2000) {
+  if (pollHandle) window.clearTimeout(pollHandle)
+  pollHandle = window.setTimeout(pollLiveRun, delay)
+}
+
+async function pollLiveRun() {
+  try {
+    const raw = await apiRequest(`api/runs/${encodeURIComponent(activeRunId)}`)
+    const calls = Number(raw.model_calls || 0)
+    const progress = raw.status === 'completed' ? 100 : Math.min(95, 5 + calls / 36 * 90)
+    $('#live-progress-bar').style.width = `${progress}%`
+    $('#live-progress-detail').textContent = `${calls} of at most 36 participant calls retained · status ${sentence(raw.status)}`
+    if (raw.status === 'completed') {
+      const projected = projectLiveRun(raw)
+      dataset.runs = [projected, ...dataset.runs.filter((run) => run.run_id !== projected.run_id)]
+      state.runId = projected.run_id
+      configureControls()
+      $('#live-status-label').textContent = projected.outcome_label
+      $('#live-progress-detail').textContent = `${projected.model_calls} authentic participant calls retained. Inspect every input, stance, and control event.`
+      $('#open-live-run').hidden = false
+      $('#run-experiment').disabled = false
+      return
+    }
+    if (['failed', 'interrupted', 'stopped'].includes(raw.status)) throw new Error(raw.error || `run ${raw.status}`)
+    schedulePoll()
+  } catch (error) {
+    $('#live-status-label').textContent = 'Run failed visibly'
+    $('#live-progress-detail').textContent = error.message
+    $('#run-experiment').disabled = false
+  }
 }
 
 async function loadWorkbench() {
   try {
-    const response = await fetch('data.json', {cache:'no-store'})
+    const response = await fetch('assets/data.json', {cache:'no-store'})
     if (!response.ok) throw new Error(`public evidence request failed with ${response.status}`)
     const loaded = await response.json()
-    if (loaded.schema_version !== 1 || !Array.isArray(loaded.runs) || loaded.runs.length !== 5) {
-      throw new Error('public evidence contract is invalid')
-    }
+    if (loaded.schema_version !== 1 || !Array.isArray(loaded.runs) || loaded.runs.length !== 5) throw new Error('public evidence contract is invalid')
     dataset = loaded
     state.runId = dataset.runs[0].run_id
+    try { runtimeConfig = await apiRequest('api/config') } catch (error) { console.warn(`live simulator unavailable: ${error.message}`) }
+    configureRuntime()
     readStateFromUrl()
     renderRail()
     configureControls()

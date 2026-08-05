@@ -1,9 +1,13 @@
-"""Focused contracts for the read-only public coordination workbench."""
+"""Focused contracts for the executable public coordination workbench."""
 
 from html.parser import HTMLParser
 import json
 from pathlib import Path
 import plistlib
+
+from fastapi.testclient import TestClient
+
+from cybernetic_influence.api import create_app
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +32,6 @@ class _PageShape(HTMLParser):
         super().__init__()
         self.h1_count = 0
         self.element_ids: set[str] = set()
-        self.disabled_buttons: list[str] = []
         self.stylesheets: list[str] = []
         self.scripts: list[str] = []
 
@@ -40,8 +43,6 @@ class _PageShape(HTMLParser):
             self.h1_count += 1
         if element_id := attributes.get("id"):
             self.element_ids.add(element_id)
-        if tag == "button" and "disabled" in attributes:
-            self.disabled_buttons.append(attributes.get("class") or "")
         if tag == "link" and attributes.get("rel") == "stylesheet":
             self.stylesheets.append(attributes.get("href") or "")
         if tag == "script":
@@ -52,43 +53,50 @@ def _dataset() -> dict[str, object]:
     return json.loads(DATA.read_text(encoding="utf-8"))
 
 
-def test_public_page_is_an_evidence_workbench() -> None:
+def test_public_page_is_an_executable_evidence_workbench() -> None:
     page = PAGE.read_text(encoding="utf-8")
     shape = _PageShape()
     shape.feed(page)
 
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
+    assert "Configure &amp; run" in page
     assert "Compare" in page
+    assert "Mechanism" in page
     assert "Inspect run" in page
     assert "Scenario &amp; method" in page
-    assert "New live run unavailable" in page
-    assert "new-run" in shape.disabled_buttons
-    assert shape.stylesheets == ["styles.css?v=workbench-v1"]
-    assert shape.scripts == ["app.js?v=workbench-v1"]
+    assert shape.stylesheets == ["assets/styles.css?v=live-workbench-v1"]
+    assert shape.scripts == ["assets/app.js?v=live-workbench-v1"]
     assert {
+        "run-view",
+        "condition-options",
+        "agent-config-select",
+        "agent-mandate",
+        "agent-context",
+        "shared-situation",
+        "control-preview",
+        "run-experiment",
+        "live-run-status",
+        "open-live-run",
         "trajectory-grid",
         "run-matrix",
+        "mechanism-view",
+        "waltzman-lens",
+        "mechanism-table",
         "run-select",
         "round-buttons",
         "environment-events",
         "gate-checks",
-        "group-filters",
+        "run-inputs",
         "agent-list",
         "agent-detail",
-        "initial-plan",
         "limitations",
         "provenance-digest",
     }.issubset(shape.element_ids)
 
     lowered = page.lower()
-    for internal_surface in (
-        "localhost",
-        "tail9c321e",
-        "/api/",
-        "play live simulation",
-    ):
-        assert internal_surface not in lowered
+    assert "localhost" not in lowered
+    assert "tail9c321e" not in lowered
 
 
 def test_public_dataset_retains_all_five_runs_and_180_agent_stances() -> None:
@@ -116,7 +124,11 @@ def test_public_dataset_retains_all_five_runs_and_180_agent_stances() -> None:
     ]
     assert len(stances) == 180
     assert all(stance["rationale"].strip() for stance in stances)
-    assert all(len(round_document["stances"]) == 12 for run in runs for round_document in run["rounds"])
+    assert all(
+        len(round_document["stances"]) == 12
+        for run in runs
+        for round_document in run["rounds"]
+    )
     assert all(len(run["gate_checks"]) == 3 for run in runs)
 
     outcomes = [run["outcome"] for run in runs]
@@ -124,38 +136,87 @@ def test_public_dataset_retains_all_five_runs_and_180_agent_stances() -> None:
     assert outcomes.count("no_joint_response") == 2
 
 
-def test_public_client_exposes_inspection_without_execution() -> None:
+def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     script = SCRIPT.read_text(encoding="utf-8")
     style = STYLE.read_text(encoding="utf-8")
 
     for capability in (
+        "renderRunSetup",
+        "startLiveRun",
+        "pollLiveRun",
+        "projectLiveRun",
         "renderComparison",
+        "renderMechanism",
         "renderInspector",
         "renderEnvironment",
         "renderGate",
         "renderAgents",
         "readStateFromUrl",
         "syncUrl",
-        "fetch('data.json'",
+        "fetch('assets/data.json'",
+        "apiRequest('api/runs'",
+        "regional_outbreak_configuration:editableConfiguration",
     ):
         assert capability in script
 
-    lowered = script.lower()
-    for execution_surface in ("/api/", "eventsource", "websocket", "openrouter"):
-        assert execution_surface not in lowered
+    assert "eventsource" not in script.lower()
+    assert "websocket" not in script.lower()
+    assert "openrouter" not in script.lower()
     assert "[hidden] { display: none !important; }" in style
 
 
-def test_public_launch_agent_serves_only_the_static_workbench() -> None:
+def test_public_app_serves_defaults_and_rejects_misrouted_agent_configuration(
+    tmp_path: Path,
+) -> None:
+    client = TestClient(
+        create_app(
+            web_root=PUBLIC_ROOT,
+            run_root=tmp_path / "runs",
+            allow_inline_styles=True,
+        )
+    )
+
+    page = client.get("/")
+    assert page.status_code == 200
+    assert "style-src 'self' 'unsafe-inline'" in page.headers[
+        "content-security-policy"
+    ]
+
+    response = client.get("/api/config")
+    assert response.status_code == 200
+    outbreak = response.json()["scenarios"]["regional_outbreak"]
+    configuration = outbreak["editable_configuration"]
+    assert len(configuration["agents"]) == 12
+    assert configuration["agents"][0]["agent_id"] == "alba_epidemiologist"
+    assert outbreak["maximum_live_calls"] == 36
+
+    invalid = client.post(
+        "/api/runs",
+        json={
+            "scenario": "service_desk",
+            "arm_id": "baseline",
+            "execution": "scripted",
+            "regional_outbreak_configuration": configuration,
+        },
+    )
+    assert invalid.status_code == 422
+    assert "applies only to the regional_outbreak scenario" in invalid.json()["detail"]
+
+
+def test_public_launch_agent_runs_the_typed_simulator() -> None:
     plist_bytes = PLIST.read_bytes()
     plistlib.loads(plist_bytes)
     plist = plist_bytes.decode("utf-8")
 
     assert "com.cybernetic-influence.waltzman-public" in plist
-    assert "http.server" in plist
+    assert "run-with-provider-secret.sh" in plist
+    assert "uvicorn" in plist
+    assert "cybernetic_influence.public_waltzman:app" in plist
     assert "8621" in plist
     assert "127.0.0.1" in plist
-    assert "__PYTHON__" in plist
-    assert "__PROJECT_ROOT__/public/waltzman" in plist
-    assert "CYBERNETIC_INFLUENCE_LIVE" not in plist
-    assert "OPENROUTER" not in plist
+    assert "__PROJECT_ROOT__/.venv/bin/python" in plist
+    assert "CYBERNETIC_INFLUENCE_PUBLIC_ROOT" in plist
+    assert "CYBERNETIC_INFLUENCE_RUNS_DIR" in plist
+    assert "CYBERNETIC_INFLUENCE_LIVE" in plist
+    assert "__CERT_CODEX_LUNA__" in plist
+    assert "__PUBLIC_RUN_ROOT__" in plist
