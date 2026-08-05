@@ -219,4 +219,6 @@ def test_public_launch_agent_runs_the_typed_simulator() -> None:
     assert "CYBERNETIC_INFLUENCE_RUNS_DIR" in plist
     assert "CYBERNETIC_INFLUENCE_LIVE" in plist
     assert "__CERT_CODEX_LUNA__" in plist
+    assert "__CERT_CODEX_TERRA__" in plist
+    assert "__CERT_COORDINATION_CODEX_TERRA__" in plist
     assert "__PUBLIC_RUN_ROOT__" in plist
