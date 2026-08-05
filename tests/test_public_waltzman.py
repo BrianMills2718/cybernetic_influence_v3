@@ -60,13 +60,15 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
 
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
-    assert "Configure &amp; run" in page
-    assert "Compare" in page
-    assert "Mechanism" in page
-    assert "Inspect run" in page
-    assert "Scenario &amp; method" in page
-    assert shape.stylesheets == ["assets/styles.css?v=live-workbench-v1"]
-    assert shape.scripts == ["assets/app.js?v=clean-triad-v2"]
+    assert "Run your own" in page
+    assert "All runs" in page
+    assert "Result" in page
+    assert "Exact evidence" in page
+    assert "Method" in page
+    assert "Can pressure break coordination?" in page
+    assert "Explore the evidence" in page
+    assert shape.stylesheets == ["assets/styles.css?v=guided-result-v1"]
+    assert shape.scripts == ["assets/app.js?v=guided-result-v1"]
     assert {
         "run-view",
         "condition-options",
@@ -81,6 +83,8 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "trajectory-grid",
         "run-matrix",
         "mechanism-view",
+        "result-sequence",
+        "result-takeaway",
         "waltzman-lens",
         "mechanism-table",
         "run-select",
@@ -148,6 +152,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "projectLiveRun",
         "renderComparison",
         "renderMechanism",
+        "conditionStory",
         "renderInspector",
         "renderEnvironment",
         "renderGate",

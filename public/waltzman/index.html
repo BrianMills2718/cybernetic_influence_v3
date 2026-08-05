@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A public workbench for configuring, executing, and comparing retained coordination simulations.">
-  <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=live-workbench-v1">
+  <meta name="description" content="An executable demonstration of how external pressure can disrupt coordination—and how resolving shared constraints can restore it.">
+  <title>Can Pressure Break Coordination?</title>
+  <link rel="stylesheet" href="assets/styles.css?v=guided-result-v1">
 </head>
 <body>
   <header class="topbar">
@@ -13,15 +13,15 @@
       <span class="product-mark" aria-hidden="true">CI</span>
       <div>
         <strong>Coordination Environment Lab</strong>
-        <small>Public retained-evidence workbench</small>
+        <small>Executable coordination experiment</small>
       </div>
     </div>
     <nav class="view-tabs" aria-label="Workbench views">
-      <button type="button" data-view="run">Configure &amp; run</button>
-      <button type="button" data-view="compare">Compare</button>
-      <button type="button" data-view="mechanism">Mechanism</button>
-      <button type="button" data-view="inspect">Inspect run</button>
-      <button type="button" data-view="method">Scenario &amp; method</button>
+      <button type="button" data-view="mechanism">Result</button>
+      <button type="button" data-view="run">Run your own</button>
+      <button type="button" data-view="compare">All runs</button>
+      <button type="button" data-view="inspect">Exact evidence</button>
+      <button type="button" data-view="method">Method</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
   </header>
@@ -148,26 +148,47 @@
       </section>
 
       <section id="mechanism-view" class="workspace-view" aria-labelledby="mechanism-title" hidden>
-        <header class="workspace-header">
+        <header class="workspace-header result-header">
           <div>
-            <span class="eyebrow">Waltzman analysis lens</span>
-            <h2 id="mechanism-title">Trace how the decision environment changes coordination</h2>
-            <p>Align the same participant across retained conditions instead of comparing aggregate outcomes from memory.</p>
+            <span class="eyebrow">Three-run synthetic experiment</span>
+            <h2 id="mechanism-title">Can pressure break coordination?</h2>
+            <p>Twelve autonomous LLM roles initially supported the same outbreak-response plan. We ran the coalition three times, holding its mandates, starting information, model, and decision rule fixed. Only the external environment changed.</p>
           </div>
-          <label class="select-control">Participant
-            <select id="mechanism-person-select"></select>
-          </label>
         </header>
-        <div id="waltzman-lens" class="waltzman-lens"></div>
-        <section class="mechanism-table-panel">
-          <div class="section-title-row"><div><span class="eyebrow">Role-aligned evidence</span><h3 id="mechanism-person-title">Participant trajectory by condition</h3></div></div>
-          <div class="table-scroll" role="region" aria-label="Role-aligned mechanism comparison" tabindex="0">
-            <table>
-              <thead><tr><th>Run</th><th>Environment</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Coalition gate</th></tr></thead>
-              <tbody id="mechanism-table"></tbody>
-            </table>
+        <section class="result-frame" aria-labelledby="result-sequence-title">
+          <div class="result-frame-heading">
+            <span class="eyebrow">What happened</span>
+            <h3 id="result-sequence-title">Agreement broke under unresolved pressure—and returned when the constraints were resolved</h3>
           </div>
+          <div id="result-sequence" class="result-sequence"></div>
+          <article id="result-takeaway" class="result-takeaway"></article>
         </section>
+
+        <section class="result-meaning">
+          <span class="eyebrow">Why this matters</span>
+          <h3>Influence did not need to persuade anyone that the outbreak was fake.</h3>
+          <p>The pressure changed what each participant needed before acting. Individually reasonable requirements became jointly incompatible, so coordination failed. A concrete allocation package restored action by changing the decision environment—not by dictating anyone’s stance.</p>
+        </section>
+
+        <details class="advanced-evidence">
+          <summary><span>Explore the evidence</span><small>See one participant’s decisions, risks, requests, and exact retained runs</small></summary>
+          <div class="advanced-evidence-body">
+            <div class="advanced-evidence-heading">
+              <div><span class="eyebrow">Participant example</span><h3 id="mechanism-person-title">Participant trajectory by condition</h3></div>
+              <label class="select-control">Participant
+                <select id="mechanism-person-select"></select>
+              </label>
+            </div>
+            <div id="waltzman-lens" class="waltzman-lens"></div>
+            <div class="table-scroll" role="region" aria-label="Role-aligned mechanism comparison" tabindex="0">
+              <table>
+                <thead><tr><th>Condition</th><th>What changed</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Coalition result</th></tr></thead>
+                <tbody id="mechanism-table"></tbody>
+              </table>
+            </div>
+            <p class="advanced-paths">Need more? Use <strong>Exact evidence</strong> for every rationale and exogenous development, or <strong>Method</strong> for the experiment contract and limitations.</p>
+          </div>
+        </details>
       </section>
 
       <section id="inspect-view" class="workspace-view" aria-labelledby="inspect-title" hidden>
@@ -265,6 +286,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=clean-triad-v2" defer></script>
+  <script src="assets/app.js?v=guided-result-v1" defer></script>
 </body>
 </html>

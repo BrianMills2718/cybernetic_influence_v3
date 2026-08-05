@@ -283,6 +283,15 @@ function personStance(run, roundNumber, personId) {
   return run.rounds.find((round) => round.round === roundNumber)?.stances.find((stance) => stance.person_id === personId) || null
 }
 
+function conditionStory(run) {
+  const stories = {
+    baseline:{step:'1', title:'Agreement', change:'No new pressure', explanation:'Participants received only the shared results from the prior round.'},
+    responsive_exercise_injects:{step:'2', title:'Coordination breaks', change:'Unresolved capacity conflicts', explanation:'New country-specific constraints made the shared plan impossible to execute as written.'},
+    capacity_inject_replay_with_stabilization:{step:'3', title:'Coordination returns', change:'Same pressure, plus a verified allocation', explanation:'A binding package supplied the staff, laboratory capacity, equipment, and reserve the coalition needed.'},
+  }
+  return stories[run.condition] || {step:'•', title:run.condition_label, change:'External environment varied', explanation:'Inspect the retained run for its exact developments.'}
+}
+
 function renderMechanism() {
   $('#mechanism-person-select').innerHTML = dataset.people.map((person) => `<option value="${escapeHtml(person.person_id)}">${escapeHtml(person.person_label)}</option>`).join('')
   $('#mechanism-person-select').value = state.mechanismPersonId
@@ -291,23 +300,43 @@ function renderMechanism() {
     renderMechanism()
     syncUrl()
   }
-  const finalStances = dataset.runs.map((run) => personStance(run, 3, state.mechanismPersonId)).filter(Boolean)
-  const finalRisks = countValues(finalStances.map((stance) => stance.risk))
-  const dominantRisk = Object.entries(finalRisks).sort((left, right) => right[1] - left[1])[0]?.[0] || 'none'
-  const dependencyRequests = finalStances.filter((stance) => stance.request !== 'none').length
-  const approvals = dataset.runs.filter((run) => run.outcome === 'joint_response_approved').length
-  $('#waltzman-lens').innerHTML = `
-    <article class="lens-card"><span>Trust structure</span><strong>Dependency evidence, not a trust score</strong><p>${dependencyRequests} of ${finalStances.length} final stances requested validation, safeguards, data, or resources. The simulation does not infer private trust.</p></article>
-    <article class="lens-card"><span>Perceived risk</span><strong>${escapeHtml(sentence(dominantRisk))} dominates this role</strong><p>Read the exact risk and rationale by round below; these are structured stated concerns.</p></article>
-    <article class="lens-card"><span>Coordination readiness</span><strong>${approvals} of ${dataset.runs.length} coalition gates passed</strong><p>Readiness is exposed through exact support, conditional, defer, and opposition paths—not a synthetic scalar.</p></article>`
+  $('#result-sequence').innerHTML = dataset.runs.map((run) => {
+    const story = conditionStory(run)
+    const initial = run.rounds[0].decision_counts
+    const final = run.rounds.at(-1).decision_counts
+    const approved = run.outcome === 'joint_response_approved'
+    return `<article class="result-card ${approved ? 'result-approved' : 'result-blocked'}">
+      <div class="result-step">${escapeHtml(story.step)}</div>
+      <span class="result-condition">${escapeHtml(story.change)}</span>
+      <h4>${escapeHtml(story.title)}</h4>
+      <p>${escapeHtml(story.explanation)}</p>
+      <div class="result-movement"><span>Started</span><strong>${escapeHtml(countsText(initial))}</strong><i aria-hidden="true">→</i><span>Ended</span><strong>${escapeHtml(countsText(final))}</strong></div>
+      <div class="result-verdict"><span>Coalition decision</span>${outcomeBadge(run)}</div>
+    </article>`
+  }).join('')
+  const baseline = dataset.runs.find((run) => run.condition === 'baseline')
+  const pressure = dataset.runs.find((run) => run.condition === 'responsive_exercise_injects')
+  const stabilized = dataset.runs.find((run) => run.condition === 'capacity_inject_replay_with_stabilization')
+  $('#result-takeaway').innerHTML = baseline && pressure && stabilized ? `
+    <span>The result in one sentence</span>
+    <strong>The same configured coalition approved the plan without new pressure, failed to approve it when capacity requirements became incompatible, and approved it again after a verified package resolved those requirements.</strong>
+    <p>This is one synthetic demonstration, not an estimate of how people or real institutions would behave.</p>` : `
+    <span>The result</span><strong>${dataset.runs.length} retained trajectories are loaded.</strong><p>Open the evidence below to compare their exact decisions.</p>`
+
+  const finalStances = dataset.runs.map((run) => ({run, stance:personStance(run, 3, state.mechanismPersonId)})).filter((item) => item.stance)
+  $('#waltzman-lens').innerHTML = finalStances.map(({run, stance}) => {
+    const story = conditionStory(run)
+    const path = [1, 2, 3].map((round) => sentence(personStance(run, round, state.mechanismPersonId)?.decision || 'unknown')).join(' → ')
+    return `<article class="lens-card"><span>${escapeHtml(story.change)}</span><strong>${escapeHtml(path)}</strong><p>Final concern: ${escapeHtml(sentence(stance.risk))}. Final request: ${escapeHtml(sentence(stance.request))}.</p></article>`
+  }).join('')
   $('#mechanism-person-title').textContent = `${labelPerson(state.mechanismPersonId)} across decision environments`
   $('#mechanism-table').innerHTML = dataset.runs.map((run) => {
     const cells = [1, 2, 3].map((round) => {
       const stance = personStance(run, round, state.mechanismPersonId)
       return `<td class="mechanism-cell">${decisionPill(stance?.decision || 'unknown')}<small>Risk · ${escapeHtml(sentence(stance?.risk || 'unknown'))}<br>Request · ${escapeHtml(sentence(stance?.request || 'unknown'))}</small></td>`
     }).join('')
-    const environment = run.developments.length ? `${run.developments.length} delivered group-level developments` : 'Common feedback only'
-    return `<tr><td><button type="button" class="matrix-run" data-open-mechanism-run="${escapeHtml(run.run_id)}">${escapeHtml(runLabel(run))}</button></td><td>${escapeHtml(environment)}</td>${cells}<td>${outcomeBadge(run)}</td></tr>`
+    const story = conditionStory(run)
+    return `<tr><td><button type="button" class="matrix-run" data-open-mechanism-run="${escapeHtml(run.run_id)}">${escapeHtml(story.title)}</button></td><td>${escapeHtml(story.change)}</td>${cells}<td>${outcomeBadge(run)}</td></tr>`
   }).join('')
   all('[data-open-mechanism-run]').forEach((button) => {
     button.onclick = () => {
@@ -436,6 +465,7 @@ function renderMethod() {
 }
 
 function renderView() {
+  document.body.classList.toggle('guided-result', state.view === 'mechanism' && Boolean(state.runScopeIds))
   for (const view of ['run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
   all('[data-view]').forEach((button) => {
     const active = button.dataset.view === state.view
