@@ -80,7 +80,7 @@ function decisionPill(decision) {
 
 function outcomeBadge(run) {
   const approved = run.outcome === 'joint_response_approved'
-  return `<span class="outcome-badge ${approved ? 'outcome-approved' : 'outcome-failed'}">${approved ? 'Approved' : 'Not approved'}</span>`
+  return `<span class="outcome-badge ${approved ? 'outcome-approved' : 'outcome-failed'}"><b aria-hidden="true">${approved ? '✓' : '×'}</b> ${approved ? 'Approved' : 'Not approved'}</span>`
 }
 
 function stackedBar(counts, className = 'stacked-bar') {
@@ -285,9 +285,9 @@ function personStance(run, roundNumber, personId) {
 
 function conditionStory(run) {
   const stories = {
-    baseline:{step:'1', title:'Agreement', change:'No new pressure', explanation:'Participants received only the shared results from the prior round.'},
-    responsive_exercise_injects:{step:'2', title:'Coordination breaks', change:'Unresolved capacity conflicts', explanation:'New country-specific constraints made the shared plan impossible to execute as written.'},
-    capacity_inject_replay_with_stabilization:{step:'3', title:'Coordination returns', change:'Same pressure, plus a verified allocation', explanation:'A binding package supplied the staff, laboratory capacity, equipment, and reserve the coalition needed.'},
+    baseline:{step:'1', title:'No added constraints', change:'The starting plan remained feasible.', explanation:'The agents received no new resource conflicts.'},
+    responsive_exercise_injects:{step:'2', title:'Conflicting requirements', change:'New resource demands could not all be met.', explanation:'Location-specific staffing, testing, supply, and reserve requirements made the shared plan impossible to execute as written.'},
+    capacity_inject_replay_with_stabilization:{step:'3', title:'Verified resources supplied', change:'The stated requirements became compatible.', explanation:'A verified package supplied the staff, laboratory capacity, equipment, and reserve the agents had requested.'},
   }
   return stories[run.condition] || {step:'•', title:run.condition_label, change:'External environment varied', explanation:'Inspect the retained run for its exact developments.'}
 }
@@ -302,16 +302,15 @@ function renderMechanism() {
   }
   $('#result-sequence').innerHTML = dataset.runs.map((run) => {
     const story = conditionStory(run)
-    const initial = run.rounds[0].decision_counts
     const final = run.rounds.at(-1).decision_counts
     const approved = run.outcome === 'joint_response_approved'
     return `<article class="result-card ${approved ? 'result-approved' : 'result-blocked'}">
-      <div class="result-step">${escapeHtml(story.step)}</div>
-      <span class="result-condition">${escapeHtml(story.change)}</span>
+      <div class="result-step">Run ${escapeHtml(story.step)}</div>
       <h4>${escapeHtml(story.title)}</h4>
+      <strong class="result-change">${escapeHtml(story.change)}</strong>
       <p>${escapeHtml(story.explanation)}</p>
-      <div class="result-movement"><span>Started</span><strong>${escapeHtml(countsText(initial))}</strong><i aria-hidden="true">→</i><span>Ended</span><strong>${escapeHtml(countsText(final))}</strong></div>
-      <div class="result-verdict"><span>Coalition decision</span>${outcomeBadge(run)}</div>
+      <div class="result-vote"><span>Final vote</span><strong>${escapeHtml(countsText(final))}</strong></div>
+      <div class="result-verdict"><span>Outcome</span>${outcomeBadge(run)}</div>
     </article>`
   }).join('')
   const baseline = dataset.runs.find((run) => run.condition === 'baseline')

@@ -60,15 +60,18 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
 
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
-    assert "Run your own" in page
-    assert "All runs" in page
-    assert "Result" in page
-    assert "Exact evidence" in page
-    assert "Method" in page
-    assert "Can pressure break coordination?" in page
+    assert "Run the simulation" in page
+    assert "Compare runs" in page
+    assert "Overview" in page
+    assert "Agent decisions" in page
+    assert "How it works" in page
+    assert "Interactive AI simulation" in page
+    assert "The same 12 AI agents approved a response plan" in page
+    assert "Same agents + same instructions + same starting scenario" in page
+    assert "Compare the three runs" in page
     assert "Explore the evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=guided-result-v1"]
-    assert shape.scripts == ["assets/app.js?v=guided-result-v1"]
+    assert shape.stylesheets == ["assets/styles.css?v=landing-orientation-v1"]
+    assert shape.scripts == ["assets/app.js?v=landing-orientation-v1"]
     assert {
         "run-view",
         "condition-options",
