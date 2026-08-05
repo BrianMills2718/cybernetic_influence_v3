@@ -126,11 +126,21 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 - Use the existing shared `llm_client`; every call retains `task`, `trace_id`,
   `max_budget`, native `json_schema`, raw lifecycle evidence, and observed
   accounting.
-- No public hosting, mobile requirement, production hardening, arbitrary world
-  language, generalized game master, universal fidelity score, trust score,
-  coordination score, or agency score.
+- No general public hosting, mobile requirement, production hardening,
+  arbitrary world language, generalized game master, universal fidelity score,
+  trust score, coordination score, or agency score. User-approved exception,
+  2026-08-04: one read-only public stakeholder page may present the bounded
+  synthetic outbreak result; the simulator, APIs, run store, and internal trace
+  workbench remain private.
 
 ## Current Truth
+
+- A user-approved public stakeholder-page slice is active for the retained
+  outbreak probe. It presents the three-condition result, all five exact run
+  identifiers and round paths, representative retained statements, method, and
+  non-claims without exposing the internal simulator or run APIs. Public runtime
+  availability remains unproven until the exact Funnel URL passes its deployment
+  checks.
 
 - The causal runtime, maps, narrative, pause/resume, analytical boundaries, and
   exact evidence inspection are technically observed.
