@@ -11,7 +11,7 @@ risk expands, and coordination readiness declines. We built a small executable
 probe of that claim using twelve autonomous LLM participants representing three
 national delegations and one regional institution in a fictional outbreak.
 
-Across two fresh baseline trajectories, all twelve participants supported an
+Across two baseline trajectories, all twelve participants supported an
 executable joint response and the coalition approved it. Across two responsive
 trajectories, exercise control selected the same predeclared country-specific
 capacity developments after first-round risk reports. The first treatment ended

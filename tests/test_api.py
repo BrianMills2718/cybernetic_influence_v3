@@ -263,7 +263,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="live-probe-title"' in page.text
     assert 'id="live-coordination-comparisons"' in page.text
     assert "Run the same conditions with LLM-modeled participants" in page.text
-    assert "regional-outbreak-v2" in page.text
+    assert "regional-outbreak-v3" in page.text
     assert 'id="regional-outbreak-comparisons"' in page.text
     assert "Read me" in page.text
     assert "Author scenario" in page.text
@@ -351,6 +351,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function renderCoordinationExperiment" in app_script.content
     assert b"function renderLiveCoordinationComparison" in app_script.content
     assert b"Authentic LLM comparison" in app_script.content
+    assert b"Every retained completed trajectory is shown" in app_script.content
+    assert b"Final support" in app_script.content
+    assert b"No separate narrator call was requested" in app_script.content
+    assert b"Final positions:" in app_script.content
     assert b"What reached the group" in app_script.content
     assert b"What the group sent out" in app_script.content
     assert b"function renderAuthoring" in app_script.content

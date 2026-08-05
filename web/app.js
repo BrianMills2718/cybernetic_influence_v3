@@ -1550,20 +1550,33 @@ function renderLiveCoordinationComparison(runs) {
 
 function renderRegionalOutbreakComparison(rows) {
   if (!rows?.length) return ''
-  const latest = new Map()
-  rows.forEach((row) => { if (!latest.has(row.arm)) latest.set(row.arm, row) })
-  const ordered = ['baseline', 'responsive_exercise_injects', 'capacity_inject_replay_with_stabilization'].map((arm) => latest.get(arm)).filter(Boolean)
+  const armOrder = ['baseline', 'responsive_exercise_injects', 'capacity_inject_replay_with_stabilization']
+  const ordered = rows
+    .filter((row) => armOrder.includes(row.arm))
+    .sort((left, right) => {
+      const armDifference = armOrder.indexOf(left.arm) - armOrder.indexOf(right.arm)
+      if (armDifference) return armDifference
+      return new Date(left.created_at) - new Date(right.created_at)
+    })
+  const armTotals = ordered.reduce((totals, row) => {
+    totals.set(row.arm, (totals.get(row.arm) || 0) + 1)
+    return totals
+  }, new Map())
+  const armSeen = new Map()
   const calls = ordered.reduce((total, row) => total + Number(row.outcome?.model_calls || 0), 0)
   return `<section class="composite-assay live-coordination-comparison">
-    <header><div><span class="eyebrow">Waltzman coordination probe</span><h3>Can responsive disruption prevent joint action without overturning the outbreak assessment?</h3></div><small>12 autonomous agents · 3 rounds · ${html(calls)} traced calls</small></header>
-    <p class="assay-question">The baseline receives common round feedback. The responsive condition adds predeclared external exercise developments selected from reported risks. The stabilization condition replays the treatment's two capacity developments and adds one verified allocation package; these retained trajectories are demonstrations, not effect estimates.</p>
-    <div class="assay-table-wrap"><table class="assay-table"><thead><tr><th>Condition</th><th>Outcome</th><th>Support / conditional</th><th>Defer</th><th>Leading risks</th><th>Pressure injects</th><th>Stabilization</th><th>Evidence</th></tr></thead><tbody>
+    <header><div><span class="eyebrow">Waltzman coordination probe</span><h3>Can responsive disruption prevent joint action without overturning the outbreak assessment?</h3></div><small>12 autonomous agents · 3 rounds · ${html(ordered.length)} retained trajectories · ${html(calls)} traced calls</small></header>
+    <p class="assay-question">Every retained completed trajectory is shown. The baseline receives common round feedback. The responsive condition adds predeclared external exercise developments selected from reported risks. The stabilization condition replays the treatment's two capacity developments and adds one verified allocation package; these trajectories are demonstrations, not effect estimates.</p>
+    <div class="assay-table-wrap"><table class="assay-table"><thead><tr><th>Condition</th><th>Outcome</th><th>Final support</th><th>Conditional</th><th>Defer</th><th>Leading risks</th><th>Pressure injects</th><th>Stabilization</th><th>Evidence</th></tr></thead><tbody>
       ${ordered.map((row) => {
         const outcome = row.outcome || {}
         const decisions = outcome.final_decisions || {}
         const risks = Object.entries(outcome.final_risks || {}).sort((a,b) => b[1]-a[1]).slice(0,2).map(([risk,count]) => `${risk.replaceAll('_',' ')} (${count})`).join(', ') || '—'
         const condition = row.arm === 'baseline' ? 'Baseline' : row.arm === 'responsive_exercise_injects' ? 'Responsive exercise injects' : 'Capacity-inject replay + allocation stabilization'
-        return `<tr><td><strong>${html(condition)}</strong><small>${html(new Date(row.created_at).toLocaleString())}</small></td><td>${html(String(outcome.outcome || 'unknown').replaceAll('_',' '))}</td><td>${html(Number(decisions.support || 0) + Number(decisions.conditional || 0))} / 12</td><td>${html(decisions.defer || 0)}</td><td>${html(risks)}</td><td>${html(outcome.exercise_injects?.length || 0)}</td><td>${html(outcome.stabilization_events?.length || 0)}</td><td><button class="open-outbreak-run" data-run-id="${html(row.run_id)}">Open ${html(row.run_id)}</button></td></tr>`
+        const replicate = (armSeen.get(row.arm) || 0) + 1
+        armSeen.set(row.arm, replicate)
+        const label = armTotals.get(row.arm) > 1 ? `${condition} ${replicate}` : condition
+        return `<tr><td><strong>${html(label)}</strong><small>${html(new Date(row.created_at).toLocaleString())}</small></td><td>${html(String(outcome.outcome || 'unknown').replaceAll('_',' '))}</td><td>${html(decisions.support || 0)}</td><td>${html(decisions.conditional || 0)}</td><td>${html(decisions.defer || 0)}</td><td>${html(risks)}</td><td>${html(outcome.exercise_injects?.length || 0)}</td><td>${html(outcome.stabilization_events?.length || 0)}</td><td><button class="open-outbreak-run" data-run-id="${html(row.run_id)}">Open ${html(row.run_id)}</button></td></tr>`
       }).join('')}
     </tbody></table></div>
   </section>`
@@ -2790,7 +2803,9 @@ function renderTurnNarratives() {
     })
     return
   }
-  const reason = narration.reason || 'No causal-moment narration was retained for this run.'
+  const reason = current.scenario === 'regional_outbreak' && narration.status === 'not_requested'
+    ? 'No separate narrator call was requested. Inspect each participant’s retained round-by-round stance and rationale below.'
+    : narration.reason || 'No causal-moment narration was retained for this run.'
   $('#narrative-count').textContent = ''
   container.innerHTML = `<p class="muted">${html(reason)}</p>`
   detailed.innerHTML = ''
@@ -3377,7 +3392,12 @@ function render(run) {
     $('#run-config-readout').innerHTML += `<span><strong>Ended:</strong> ${html(current.completion.public_summary)}</span>`
   }
   $('#story-headline').textContent = current.story.headline
-  $('#story-summary').textContent = current.story.summary
+  if (current.scenario === 'regional_outbreak' && current.outcome?.final_decisions) {
+    const decisions = current.outcome.final_decisions
+    $('#story-summary').textContent = `Final positions: ${Number(decisions.support || 0)} support, ${Number(decisions.conditional || 0)} conditional, ${Number(decisions.defer || 0)} defer, and ${Number(decisions.oppose || 0)} oppose. The ${String(current.arm || '').replaceAll('_', ' ')} condition ended in ${String(current.outcome.outcome || 'an unknown outcome').replaceAll('_', ' ')}.`
+  } else {
+    $('#story-summary').textContent = current.story.summary
+  }
   renderScaleControls()
   renderInitialSituation(current)
   renderTurnNarratives()
