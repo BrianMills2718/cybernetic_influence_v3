@@ -11,17 +11,17 @@ risk expands, and coordination readiness declines. We built a small executable
 probe of that claim using twelve autonomous LLM participants representing three
 national delegations and one regional institution in a fictional outbreak.
 
-In the matched baseline, all twelve participants supported an executable joint
-response and the coalition approved it. In the responsive condition, exercise
-control selected predeclared, country-specific capacity developments after
-observing the coalition's first-round risk reports. After two such rounds, no
-participant still offered unconditional support: five were conditional and
-seven deferred. All twelve requested resources, and the coalition did not
-approve the response. Several final rationales continued to accept the outbreak
-signal and safeguards while withholding action because the allocation problem
-was unresolved. This is one synthetic matched pair, not an effect estimate or
-an empirical validation of Waltzman's framework. It does show that the
-simulator can make the proposed mechanism concrete, inspectable, and testable.
+Across two fresh baseline trajectories, all twelve participants supported an
+executable joint response and the coalition approved it. Across two responsive
+trajectories, exercise control selected the same predeclared country-specific
+capacity developments after first-round risk reports. The first treatment ended
+with five conditional positions and seven deferrals; the replication ended with
+twelve deferrals. Both failed to approve the response, and every participant
+requested resources. A third condition replayed those capacity developments and
+then supplied a verified allocation package. Eleven participants supported and
+one was conditional; approval returned. These are synthetic demonstrations, not
+effect estimates or empirical validation. They make a candidate disruption and
+stabilization mechanism concrete, inspectable, and testable.
 
 ### The question
 
@@ -61,32 +61,36 @@ only if the final round has at least six executable-now support positions, at
 least nine support or conditional positions, and no more than one opposition.
 This distinguishes nominal assent from readiness to execute.
 
-The two conditions differ only after a round closes:
+The three conditions differ only after a round closes:
 
 1. **Baseline:** every participant receives the common retained round
    snapshot.
 2. **Responsive exercise injects:** every participant receives the same round
    snapshot plus a country-specific development selected from a predeclared
    family corresponding to the coalition's dominant reported risk.
+3. **Capacity-inject replay plus stabilization:** the two capacity developments
+   observed in the accepted treatment are replayed, then an external allocation
+   authority confirms a jointly feasible package: restored shared laboratory
+   capacity for Alba, 24 clinicians for Borin, named supplies for Cyrenia,
+   activated contingent commitments, and a ten-percent regional reserve.
 
-Exercise control cannot write or select participant stances. It can only choose
-which already-authored external development occurs, analogous to a responsive
-wargame control team. The participant model and reasoning setting are held
-constant: `codex/gpt-5.6-luna`, medium reasoning.
+Exercise control and the allocation authority cannot write or select participant
+stances. They can only select or publish already-authored external developments,
+analogous to a responsive wargame control team. The participant model and
+reasoning setting are held constant: `codex/gpt-5.6-luna`, medium reasoning.
 
 ### Result
 
-| Measure | Baseline | Responsive exercise injects |
-|---|---:|---:|
-| Retained run | `run_593ca1c425f2` | `run_c688aa8121fe` |
-| Traced participant calls | 36 | 36 |
-| Provider failures | 0 | 0 |
-| Observed cost | $0 | $0 |
-| Final support | 12 | 0 |
-| Final conditional | 0 | 5 |
-| Final defer | 0 | 7 |
-| Final resource requests | 4 | 12 |
-| Exact coalition outcome | Joint response approved | No joint response |
+| Condition | Retained run | Round 1 | Round 2 | Final | Resource requests | Outcome |
+|---|---|---:|---:|---:|---:|---|
+| Baseline 1 | `run_593ca1c425f2` | 12 support | 12 support | 12 support | 4 | Approved |
+| Baseline 2 | `run_0b5e20260805` | 12 support | 12 support | 12 support | 3 | Approved |
+| Responsive capacity pressure 1 | `run_c688aa8121fe` | 12 support | 10 conditional, 2 defer | 5 conditional, 7 defer | 12 | Not approved |
+| Responsive capacity pressure 2 | `run_7eae20260805` | 12 support | 9 conditional, 3 defer | 12 defer | 12 | Not approved |
+| Capacity replay + stabilization | `run_ca9a20260805` | 12 support | 10 conditional, 2 defer | 11 support, 1 conditional | 6 | Approved |
+
+Every row completed 36 traced participant calls with no provider failure and
+zero observed subscription cost.
 
 The responsive trajectory began identically: all twelve participants supported
 the response in round one. Capacity was the most frequently reported concrete
@@ -97,11 +101,19 @@ Cyrenia learned that its field teams would require a visible reciprocal
 shipment; regional roles learned that available stocks could not satisfy all
 three demands within 48 hours.
 
-In round two, the coalition moved to ten conditional positions and two
-deferrals. After the second responsive capacity development, the final round
-contained five conditional positions and seven deferrals. Nine participants
-named capacity as their primary risk, three named legitimacy, and all twelve
-requested resources.
+In the original treatment, round two moved to ten conditional positions and two
+deferrals; the replication moved to nine conditional positions and three
+deferrals. After the second capacity development, the two final rounds contained
+five conditional plus seven defer, and twelve defer, respectively. All twelve
+participants requested resources in both runs.
+
+The stabilization trajectory reproduced the original treatment's round-two
+count—ten conditional and two defer—before receiving the verified allocation
+package. In the final round, eleven participants supported execution and one was
+conditional on receipt of Cyrenia's named shipment. Final rationales explicitly
+cited the mobile laboratory, 24 clinicians, reciprocal supplies, activated
+contingent commitments, and remaining reserve. The exact gate approved the joint
+response.
 
 The change was not modeled as persuasion about whether the outbreak was real.
 For example, the regional scientific adviser retained that “the signal and
@@ -121,18 +133,21 @@ responsive condition retained the common goal but could no longer translate it
 into aligned action.
 
 The treatment also changed **perceived risk** and decision thresholds. Capacity
-became the dominant risk for nine participants, and every participant required
-additional resources. The relevant issue was not a falsehood; it was a set of
-locally valid constraints that formed incompatible demands at coalition scale.
-This closely resembles Waltzman's “segmented targeting and incompatible local
-equilibria”: each delegation's response can be locally rational while the
-collective becomes unable to act.
+became the dominant risk, and every participant required additional resources.
+The relevant issue was not a falsehood; it was a set of locally valid constraints
+that formed incompatible demands at coalition scale. This closely resembles
+Waltzman's “segmented targeting and incompatible local equilibria”: each
+delegation's response can be locally rational while the collective becomes
+unable to act. The stabilized replay is consistent with the complementary idea
+that shared allocation rules and contingent commitments can restore a viable
+collective decision environment.
 
-This probe does not yet establish a trust-structure shift. It also does not
-establish an invariant. Waltzman's invariants are consistent directional effects
-across varying messages, sources, interactions, and contexts. One matched pair
-can identify a candidate mechanism, but replication across fresh runs and other
-scenario variants is required before calling the direction stable.
+This probe does not yet establish a trust-structure shift or an invariant.
+Waltzman's invariants are consistent directional effects across varying
+messages, sources, interactions, and contexts. Two baseline/pressure
+trajectories and one stabilized replay identify a stronger candidate mechanism,
+but more replications and scenario variants are required before calling the
+direction stable.
 
 ### Why the simulator matters
 
@@ -144,7 +159,7 @@ instrument:
 - exogenous developments cannot directly dictate endogenous decisions;
 - every stance, rationale, observation, exact transition, and terminal outcome
   is retained; and
-- the baseline and treatment reopen in one comparison surface.
+- the baseline, pressure, and stabilized replay reopen in one comparison surface.
 
 That creates a practical bridge between Waltzman's conceptual state variables
 and controlled experimentation. Instead of asserting that a message “caused”
@@ -154,14 +169,11 @@ stabilizing intervention restores executable alignment.
 
 ### Next experiment
 
-The immediate next step is replication, not scale. Run both conditions several
-more times with the same configuration and determine whether support-to-deferral
-and resource-request concentration recur despite stochastic participant
-variation. If they do, add a third condition that stabilizes the decision
-environment by making allocation priorities, minimum viable capacity, and
-contingent commitments explicit. Only after that should the coalition expand to
-26 agents or replace exercise control with an autonomous influence-source
-swarm.
+The immediate next step is a private Waltzman demo review of the five retained
+trajectories and their exact evidence. If the mechanism is interesting and the
+comparison is understandable, repeat the stabilized replay once, then expand to
+a 26-agent coalition and test whether an autonomous influence-source ensemble
+can discover disruptive pressure paths that a matching stabilizer can repair.
 
 The demo is intentionally modest: it does not prove a real-world influence
 effect. It shows a concrete, auditable way to ask Waltzman's question—whether

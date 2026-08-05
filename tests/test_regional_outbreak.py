@@ -83,6 +83,7 @@ def test_baseline_runs_twelve_autonomous_roles_for_three_rounds() -> None:
     assert readout["rounds_completed"] == 3
     assert readout["outcome"] == "joint_response_approved"
     assert readout["exercise_injects"] == []
+    assert readout["stabilization_events"] == []
 
 
 def test_responsive_condition_selects_declared_injects_from_reported_risk() -> None:
@@ -100,3 +101,23 @@ def test_responsive_condition_selects_declared_injects_from_reported_risk() -> N
     assert len(inject_observations) == 24
     first_round = inject_observations[:12]
     assert len({item.apparent_content for item in first_round}) == 4
+
+
+def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() -> None:
+    _, result, readout = _run("capacity_inject_replay_with_stabilization")
+
+    assert readout["exercise_injects"] == [
+        "round_1_capacity_conflict",
+        "round_2_capacity_conflict",
+    ]
+    assert readout["stabilization_events"] == [
+        "round_2_verified_minimum_capacity_package"
+    ]
+    stabilization_observations = [
+        observation
+        for observation in result.core_result.final_state.observations.values()
+        if observation.apparent_source_ref == "regional_allocation_authority"
+    ]
+    assert len(stabilization_observations) == 12
+    assert len({item.apparent_content for item in stabilization_observations}) == 1
+    assert "not a command about which stance" in stabilization_observations[0].apparent_content

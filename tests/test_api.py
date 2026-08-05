@@ -170,6 +170,14 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "adaptive_pressure_with_stabilization",
     }
     assert coordination["run_control_options"]["max_participant_calls_cap"] == 150
+    assert {
+        item["id"]
+        for item in config.json()["scenarios"]["regional_outbreak"]["arms"]
+    } == {
+        "baseline",
+        "responsive_exercise_injects",
+        "capacity_inject_replay_with_stabilization",
+    }
     assert config.json()["maximum_live_calls"] == 150
     assert config.json()["live_options"]["limits"]["maximum_participant_calls"] == 150
     assert config.json()["scenarios"]["physical_access"]["arms"][0]["description"]
@@ -255,7 +263,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="live-probe-title"' in page.text
     assert 'id="live-coordination-comparisons"' in page.text
     assert "Run the same conditions with LLM-modeled participants" in page.text
-    assert "regional-outbreak-v1" in page.text
+    assert "regional-outbreak-v2" in page.text
     assert 'id="regional-outbreak-comparisons"' in page.text
     assert "Read me" in page.text
     assert "Author scenario" in page.text

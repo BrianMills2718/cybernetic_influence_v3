@@ -636,7 +636,11 @@ def _scenario_preview(
     elif scenario == "coordination_decision":
         compiled_scenario = _coordination_contract(arm_id).scenario
     elif scenario == "regional_outbreak":
-        if arm_id not in {"baseline", "responsive_exercise_injects"}:
+        if arm_id not in {
+            "baseline",
+            "responsive_exercise_injects",
+            "capacity_inject_replay_with_stabilization",
+        }:
             raise ValueError("unknown Regional Outbreak condition")
         compiled_scenario = regional_outbreak_fixture(
             cast(OutbreakCondition, arm_id)
@@ -1241,6 +1245,15 @@ def create_app(
                             "description": (
                                 "Exercise control observes aggregate reported risks and "
                                 "selects a predeclared external development between rounds."
+                            ),
+                        },
+                        {
+                            "id": "capacity_inject_replay_with_stabilization",
+                            "label": "Capacity-inject replay + allocation stabilization",
+                            "description": (
+                                "The accepted treatment's two capacity developments are "
+                                "replayed, then a verified minimum-capacity package makes "
+                                "resource allocations and contingent commitments explicit."
                             ),
                         },
                     ],
@@ -2746,6 +2759,7 @@ def create_app(
             if request_body.arm_id not in {
                 "baseline",
                 "responsive_exercise_injects",
+                "capacity_inject_replay_with_stabilization",
             }:
                 raise HTTPException(
                     status_code=422,
@@ -3681,7 +3695,7 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
             ],
             "known_omissions": [
                 "The synthetic roles are not validated models of real people or governments.",
-                "The first comparison is one run per condition and cannot establish a general causal effect.",
+                "A small synthetic replication set cannot establish a general causal effect.",
                 "Epidemic transmission, media, and response implementation are outside this slice.",
             ],
             "fidelity_questions": [

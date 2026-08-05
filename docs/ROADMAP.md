@@ -221,6 +221,15 @@ conditions, not evidence of hostile attribution or an operational detector.
   scope with validation. Adaptation changed retained source messages but did
   not change the selected exact metrics in this batch; that null contrast is
   retained rather than promoted to an invariant.
+- The Waltzman-facing twelve-agent outbreak probe now retains two authentic
+  baseline/pressure pairs and one matched stabilization replay. Both baselines
+  ended 12-support with approval. The pressure runs ended 5-conditional/7-defer
+  and 12-defer with no approval and twelve resource requests. Replaying the same
+  two capacity developments with a verified allocation package ended
+  11-support/1-conditional and restored approval. All five trajectories used
+  `codex/gpt-5.6-luna` at medium reasoning with 36 completed calls each and no
+  observed cost. These are candidate-mechanism demonstrations, not effect
+  estimates or invariants.
 
 ### Process progress
 
@@ -249,15 +258,14 @@ the judgment passed on the operator's behalf.
 
 ## Shortest Critical Path
 
-1. **Finish and deploy the Waltzman instrument.** Packet 24E must make the
-   retained trust-, risk-, and coordination-related observations understandable
-   from one screen, preserve exact outcome and chronology, retain the complete
-   findings and evidence step-down, and keep limitations visible.
-2. **Stakeholder readout.** Review live run `run_2250cbb74f44` and decide
-   whether its situation, trajectory, Waltzman readout, evidence, and
-   limitations are understandable without raw JSON. Only the operator can
-   close M7.
-3. **Resume the architecture decision after the demo review.** Use the retained
+1. **Deploy the outbreak comparison.** Put the five authentic trajectories,
+   compact paper, exact round transitions, and evidence step-down on the private
+   demo without weakening the nonclaim boundary.
+2. **Waltzman-facing readout.** Confirm that the disruption and matched
+   stabilization mechanism are understandable and interesting without raw JSON.
+3. **Scale only after that review.** Repeat stabilization once, then decide on
+   the 26-agent coalition and autonomous influence-source condition.
+4. **Resume the architecture decision after the demo review.** Use the retained
    Slice 26 research to decide ownership of cognition, world state, scheduling,
    adjudication, evidence, authoring, analysis, and experiments before product
    migration. The selected foundation must support the accepted laboratory

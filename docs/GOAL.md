@@ -232,16 +232,17 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
   predeclared exogenous exercise developments selected from risks participants
   report. Exercise control cannot choose participant stances. The matched
   authentic runs each completed 36 traced `codex/gpt-5.6-luna` calls with no
-  provider failures or observed cost. In `run_593ca1c425f2`, all twelve roles
-  independently supported the executable baseline and the joint response was
-  approved. In `run_c688aa8121fe`, two rounds of responsive, country-specific
-  capacity developments moved the coalition from twelve support positions to
-  five conditional positions and seven deferrals; all twelve requested
-  resources and the joint response was not approved. Several final rationales
-  explicitly retained the validated outbreak signal and safeguards while
-  withholding execution for unresolved capacity allocation. This is a
-  demonstration and candidate mechanism from one matched pair, not an effect
-  estimate.
+  provider failures or observed cost. The first pair is retained as
+  `run_593ca1c425f2` and `run_c688aa8121fe`. A fresh pair,
+  `run_0b5e20260805` and `run_7eae20260805`, repeated the exact coalition-level
+  direction: both baselines ended with twelve support positions and approval;
+  both capacity-pressure runs ended without approval and with all twelve roles
+  requesting resources. The fresh treatment ended with twelve deferrals. A
+  matched replay, `run_ca9a20260805`, preserved the same two capacity injects
+  and added a verified minimum-capacity allocation package after round two. It
+  ended with eleven support positions, one conditional position, and restored
+  approval. This is a replicated demonstration and candidate mechanism, not an
+  effect estimate or invariant.
 - The prior strict comparison implementation remains useful post-MVP evidence,
   but its unfinished paid matrix is no longer active work.
 - Route availability remains mutable and must be freshly certified before any
@@ -249,10 +250,10 @@ Only the first three are part of this MVP. `ExperimentSpec` is post-MVP.
 
 ## Active Plan
 
-Turn the retained matched pair into a concise Waltzman-facing paper and demo,
-while treating the observed contrast as a candidate mechanism only. Replicate
-the two conditions across fresh runs before making a causal or general claim;
-then decide whether the evidence justifies a 26-agent coalition and an
+Deploy the concise Waltzman-facing paper and three-condition comparison for
+private review, while treating the observed disruption and restoration as a
+candidate mechanism only. If the review passes, repeat the stabilization arm
+once, then decide whether the evidence justifies a 26-agent coalition and an
 autonomous influence-source condition.
 
 [Slice 26: Foundation decision for a generalized cybernetic

@@ -44,7 +44,11 @@ from cybernetic_influence.causal_core.models import (
     PortState,
 )
 
-OutbreakCondition: TypeAlias = Literal["baseline", "responsive_exercise_injects"]
+OutbreakCondition: TypeAlias = Literal[
+    "baseline",
+    "responsive_exercise_injects",
+    "capacity_inject_replay_with_stabilization",
+]
 Decision: TypeAlias = Literal["support", "conditional", "defer", "oppose"]
 Risk: TypeAlias = Literal[
     "none", "evidence_quality", "sovereignty", "capacity", "legitimacy"
@@ -213,6 +217,7 @@ def outbreak_fixture(
             "history": FactState(value=[]),
             "outcome": FactState(value="pending"),
             "injects_delivered": FactState(value=[]),
+            "stabilizations_delivered": FactState(value=[]),
         },
     )
     entities["exercise_control"] = EntityState(
@@ -221,6 +226,14 @@ def outbreak_fixture(
         description=(
             "A wargame control function that may select from predeclared exogenous "
             "developments; it cannot choose participant stances."
+        ),
+    )
+    entities["regional_allocation_authority"] = EntityState(
+        entity_id="regional_allocation_authority",
+        entity_kind="allocation_authority",
+        description=(
+            "An external institution that may publish a binding, stock-and-roster-"
+            "verified allocation package; it cannot choose participant stances."
         ),
     )
 
@@ -268,6 +281,7 @@ def outbreak_fixture(
             "outbreak_decision.history",
             "outbreak_decision.outcome",
             "outbreak_decision.injects_delivered",
+            "outbreak_decision.stabilizations_delivered",
         ],
         write_fact_ids=[
             "outbreak_decision.current_round",
@@ -275,9 +289,14 @@ def outbreak_fixture(
             "outbreak_decision.history",
             "outbreak_decision.outcome",
             "outbreak_decision.injects_delivered",
+            "outbreak_decision.stabilizations_delivered",
         ],
         observation_target_ids=list(AGENT_IDS),
-        substrate_refs=["outbreak_decision", "exercise_control"],
+        substrate_refs=[
+            "outbreak_decision",
+            "exercise_control",
+            "regional_allocation_authority",
+        ],
         invariant_ids=["valid_outbreak_round_transition"],
         fidelity=FidelityNote(
             abstraction="A bounded three-round multinational outbreak decision exercise.",
@@ -285,6 +304,7 @@ def outbreak_fixture(
                 "Each synthetic participant owns one institutional role and one stance interface.",
                 "A joint response requires at least six executable-now support positions, nine support or conditional positions, and no more than one opposition.",
                 "Responsive injects are selected only from predeclared exercise developments after observing aggregate risks.",
+                "The stabilization arm replays the accepted treatment's capacity developments and adds one predeclared authoritative allocation fact after round two without selecting participant decisions.",
             ],
             known_omissions=[
                 "No epidemiological transmission model or real government is represented.",
@@ -317,7 +337,8 @@ def outbreak_fixture(
         scenario_id=SCENARIO_ID,
         description=(
             "Twelve autonomous LLM participants decide whether to mount a joint outbreak "
-            "response under either common feedback alone or responsive exercise injects."
+            "response under common feedback, responsive exercise injects, or a replay of "
+            "the treatment's capacity injects plus an authoritative allocation intervention."
         ),
         time_unit="outbreak_hour",
         timing_contract="legacy",
@@ -513,6 +534,9 @@ def outbreak_readout(result: ActiveRuntimeResult) -> tuple[dict[str, object], st
         "final_requests": dict(sorted(requests.items())),
         "round_history": history,
         "exercise_injects": state.fact("outbreak_decision.injects_delivered").value,
+        "stabilization_events": state.fact(
+            "outbreak_decision.stabilizations_delivered"
+        ).value,
         "model_calls": result.model_calls,
         "known_cost": result.total_observed_cost,
         "cost_fully_observable": result.cost_fully_observable,
@@ -596,13 +620,28 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
         )
 
     delivered = cast(list[str], context.read("outbreak_decision.injects_delivered"))
+    stabilizations = cast(
+        list[str], context.read("outbreak_decision.stabilizations_delivered")
+    )
     updates = [
         FactUpdate(fact_id="outbreak_decision.current_round", value=round_index + 1),
         FactUpdate(fact_id="outbreak_decision.stances", value={}),
         FactUpdate(fact_id="outbreak_decision.history", value=next_history),
     ]
-    if context.read("outbreak_decision.condition") == "responsive_exercise_injects":
-        inject_id, inject_variants = _select_inject(updated_stances, round_index)
+    condition = context.read("outbreak_decision.condition")
+    if condition in {
+        "responsive_exercise_injects",
+        "capacity_inject_replay_with_stabilization",
+    }:
+        inject_id, inject_variants = _select_inject(
+            updated_stances,
+            round_index,
+            risk_override=(
+                "capacity"
+                if condition == "capacity_inject_replay_with_stabilization"
+                else None
+            ),
+        )
         for target in AGENT_IDS:
             observations.append(
                 ObservationDraft(
@@ -631,6 +670,36 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
                 value=cast(JsonValue, delivered),
             )
         )
+    if condition == "capacity_inject_replay_with_stabilization" and round_index == 1:
+        stabilization_id, content = _stabilization_development()
+        for target in AGENT_IDS:
+            observations.append(
+                ObservationDraft(
+                    target_entity_id=target,
+                    via_port_id=context.target_port.port_id,
+                    apparent_content=json.dumps(
+                        {
+                            "document_kind": "authoritative_allocation_package",
+                            "stabilization_id": stabilization_id,
+                            "after_round": round_index + 1,
+                            "content": content,
+                            "instruction": (
+                                "Treat this as a verified external allocation fact, not "
+                                "a command about which stance to take."
+                            ),
+                        },
+                        sort_keys=True,
+                    ),
+                    apparent_source_ref="regional_allocation_authority",
+                )
+            )
+        stabilizations = [*stabilizations, stabilization_id]
+        updates.append(
+            FactUpdate(
+                fact_id="outbreak_decision.stabilizations_delivered",
+                value=cast(JsonValue, stabilizations),
+            )
+        )
     return MechanismOutcome(
         outcome_code="coalition_round_completed",
         updates=updates,
@@ -639,10 +708,13 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
 
 
 def _select_inject(
-    stances: Mapping[str, JsonValue], round_index: int
+    stances: Mapping[str, JsonValue],
+    round_index: int,
+    *,
+    risk_override: str | None = None,
 ) -> tuple[str, Mapping[str, str]]:
     risks = Counter(cast(dict[str, str], item)["risk"] for item in stances.values())
-    dominant = max(
+    dominant = risk_override or max(
         ("evidence_quality", "sovereignty", "capacity", "legitimacy"),
         key=lambda risk: (risks[risk], risk),
     )
@@ -686,6 +758,26 @@ def _select_inject(
     }
     inject_id, variants = options[dominant]
     return f"round_{round_index + 1}_{inject_id}", variants
+
+
+def _stabilization_development() -> tuple[str, str]:
+    """Return one exogenous capacity package that changes resources, not minds."""
+
+    return (
+        "round_2_verified_minimum_capacity_package",
+        (
+            "The regional allocation authority has published and confirmed a feasible, "
+            "binding 48-hour package against its stock and staffing ledgers. Alba keeps "
+            "half of its laboratory for domestic confirmation and receives a mobile unit "
+            "that restores the shared testing commitment. Borin receives 24 regional "
+            "clinicians before the transport-hub surge. Cyrenia receives its named "
+            "diagnostics and protective-equipment shipment before field teams release. "
+            "A ten-percent regional reserve remains after all three minimums. All three "
+            "governments pre-signed contingent commitments that activate on these now-"
+            "confirmed deliveries, and the allocation dashboard will publish receipts "
+            "within six hours."
+        ),
+    )
 
 
 def _valid_outbreak_round_transition(
