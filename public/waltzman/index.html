@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=waltzman-probe-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=autonomous-swarm-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -159,6 +159,23 @@
       </section>
 
       <section id="mechanism-view" class="workspace-view" aria-labelledby="mechanism-title" hidden>
+        <div class="swarm-demo">
+          <header class="swarm-briefing">
+            <span class="swarm-label">From Minds to Coordination · autonomous influence probe</span>
+            <h2 id="swarm-title">Can independent influence sources change whether a group can act?</h2>
+            <p>Five autonomous AI participants must decide whether to deploy a public-health monitoring system. Three other AI agents observe only the public meeting record and independently decide whether—and how—to raise technical, government-oversight, or local-safety concerns.</p>
+            <div class="swarm-rules"><span><b>5</b> decision agents</span><span><b>3</b> influence agents</span><span><b>4</b> meetings</span><strong>Influence agents cannot vote or edit participants.</strong></div>
+          </header>
+          <section class="swarm-board" aria-label="Autonomous influence experiment">
+            <div class="mission-objective"><span>Mission</span><strong>Reach a reviewed deployment decision before the day-four deadline.</strong></div>
+            <nav id="probe-condition-select" class="environment-select" aria-label="Choose experiment condition"></nav>
+            <div id="probe-condition" class="probe-condition" aria-live="polite"></div>
+            <div class="swarm-actions"><button id="probe-next" class="primary-cta" type="button">Next condition →</button><button id="run-probe" class="secondary-cta" type="button">Run this condition again</button><a id="probe-raw-run" class="quiet-link" href="#">Open retained evidence</a></div>
+            <p id="probe-run-status" class="probe-run-status" hidden aria-live="polite"></p>
+          </section>
+          <section class="swarm-explainer"><article><span>1</span><div><strong>Sources observe</strong><p>They receive only public meeting snapshots.</p></div></article><i>→</i><article><span>2</span><div><strong>Sources choose</strong><p>They may speak, adapt a follow-up, or stay silent.</p></div></article><i>→</i><article><span>3</span><div><strong>Participants decide</strong><p>Only coalition members choose their own stance.</p></div></article></section>
+          <details class="probe-method"><summary>What this demonstrates</summary><p>This is a synthetic mechanism demonstration inspired by Waltzman’s account of influence moving from individual cognition into coordination. It tests whether heterogeneous, feedback-responsive signals can alter perceived risk and collective readiness without a central controller dictating participant decisions. It does not estimate human behavior.</p></details>
+        </div>
         <header class="workspace-header case-header">
           <div>
             <div class="artifact-type"><strong>Waltzman mechanism probe</strong><span>Authentic retained model decisions · fictional scenario</span></div>
@@ -349,6 +366,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=waltzman-probe-v1" defer></script>
+  <script src="assets/app.js?v=autonomous-swarm-v1" defer></script>
 </body>
 </html>

@@ -16,6 +16,7 @@ PAGE = PUBLIC_ROOT / "index.html"
 DATA = PUBLIC_ROOT / "data.json"
 SCRIPT = PUBLIC_ROOT / "app.js"
 STYLE = PUBLIC_ROOT / "styles.css"
+AUTONOMOUS_PROBE = PUBLIC_ROOT / "autonomous-probe.json"
 PLIST = ROOT / "deploy" / "com.cybernetic-influence.waltzman-public.plist"
 
 RUN_IDS = {
@@ -74,6 +75,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Current demo template" in page
     assert "Inspect all agent decisions" in page
     assert "Waltzman mechanism probe" in page
+    assert "From Minds to Coordination · autonomous influence probe" in page
+    assert "Influence agents cannot vote or edit participants" in page
+    assert "Run this condition again" in page
     assert "Can different local pressures push a coalition" in page
     assert "bounded exercise controller" in page
     assert "1 experiment" in page
@@ -85,8 +89,8 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What enters the decision environment?" in page
     assert "Edit one role—or keep the reviewed coalition" in page
     assert "Mechanism analysis and retained evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=waltzman-probe-v1"]
-    assert shape.scripts == ["assets/app.js?v=waltzman-probe-v1"]
+    assert shape.stylesheets == ["assets/styles.css?v=autonomous-swarm-v1"]
+    assert shape.scripts == ["assets/app.js?v=autonomous-swarm-v1"]
     assert {
         "overview-view",
         "run-view",
@@ -130,6 +134,24 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     lowered = page.lower()
     assert "localhost" not in lowered
     assert "tail9c321e" not in lowered
+
+
+def test_autonomous_probe_retains_the_completed_matched_runs() -> None:
+    probe = json.loads(AUTONOMOUS_PROBE.read_text(encoding="utf-8"))
+
+    assert probe["schema_version"] == 1
+    assert [condition["arm_id"] for condition in probe["conditions"]] == [
+        "baseline",
+        "adaptive_heterogeneous_pressure",
+    ]
+    baseline, adaptive = probe["conditions"]
+    assert baseline["run_id"] == "run_73b84f6d4682"
+    assert adaptive["run_id"] == "run_e3a1f6742777"
+    assert baseline["outcome_label"] == "DEPLOY ON TIME"
+    assert adaptive["outcome_label"] == "NO DECISION"
+    assert [meeting["open_risks"] for meeting in baseline["meetings"]] == [0, 0, 0, 0]
+    assert [meeting["open_risks"] for meeting in adaptive["meetings"]] == [0, 1, 3, 3]
+    assert len(adaptive["source_moves"]) == 3
 
 
 def test_public_dataset_retains_all_five_runs_and_180_agent_stances() -> None:
@@ -181,6 +203,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "projectLiveRun",
         "renderComparison",
         "renderMechanism",
+        "renderAutonomousProbe",
+        "startAutonomousProbe",
         "conditionStory",
         "renderInspector",
         "renderEnvironment",
@@ -192,6 +216,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "view:'overview'",
         "featuredRunIds",
         "fetch('assets/data.json'",
+        "fetch('assets/autonomous-probe.json'",
         "apiRequest('api/runs'",
         "regional_outbreak_configuration:editableConfiguration",
     ):

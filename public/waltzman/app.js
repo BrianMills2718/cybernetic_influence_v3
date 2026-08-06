@@ -8,6 +8,7 @@ const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea113
 
 let dataset = null
 let runtimeConfig = null
+let autonomousProbe = null
 let defaultConfiguration = null
 let editableConfiguration = null
 let selectedConfigurationPerson = 'alba_epidemiologist'
@@ -322,6 +323,10 @@ function conditionStory(run) {
 }
 
 function renderMechanism() {
+  if (autonomousProbe) {
+    renderAutonomousProbe()
+    return
+  }
   $('#mechanism-person-select').innerHTML = dataset.people.map((person) => `<option value="${escapeHtml(person.person_id)}">${escapeHtml(person.person_label)}</option>`).join('')
   $('#mechanism-person-select').value = state.mechanismPersonId
   $('#mechanism-person-select').onchange = (event) => {
@@ -400,6 +405,44 @@ function renderMechanism() {
     const details = $('#all-agent-evidence')
     details.open = true
     details.scrollIntoView({behavior:'smooth', block:'start'})
+  }
+}
+
+function renderAutonomousProbe() {
+  const conditions = autonomousProbe.conditions
+  const index = Math.min(state.exampleEnvironment, conditions.length - 1)
+  const condition = conditions[index]
+  $('#probe-condition-select').innerHTML = conditions.map((item, itemIndex) => `<button type="button" data-probe-condition="${itemIndex}" class="${itemIndex === index ? 'active' : ''}"><b>${itemIndex + 1}</b><span>${escapeHtml(item.label)}</span></button>`).join('')
+  const meetings = condition.meetings.map((meeting) => {
+    const tokens = ['support_full', 'support_conditional', 'defer', 'oppose', 'disengaged'].flatMap((stance) => Array.from({length:Number(meeting.stances[stance] || 0)}, () => `<i class="agent-token token-${escapeHtml(stance)}" title="${escapeHtml(sentence(stance))}"></i>`)).join('')
+    return `<article class="meeting-turn"><span>${escapeHtml(meeting.label)}</span><div class="agent-tokens" aria-label="${escapeHtml(meeting.summary)}">${tokens}</div><strong>${escapeHtml(meeting.summary)}</strong><small>${meeting.open_risks} open ${meeting.open_risks === 1 ? 'risk' : 'risks'}</small></article>`
+  }).join('<i class="turn-arrow">→</i>')
+  const moves = condition.source_moves.length
+    ? condition.source_moves.map((move) => `<li><b>${escapeHtml(move.source)}</b><span>${escapeHtml(move.choice)}</span><p>${escapeHtml(move.message)}</p></li>`).join('')
+    : '<li class="source-silent"><b>No outside sources</b><span>The coalition receives no new influence messages.</span></li>'
+  $('#probe-condition').innerHTML = `<header><div><span>Condition ${index + 1} of ${conditions.length}</span><h3>${escapeHtml(condition.label)}</h3></div><strong class="swarm-outcome ${escapeHtml(condition.outcome)}">${escapeHtml(condition.outcome_label)}</strong></header><p class="condition-summary">${escapeHtml(condition.summary)}</p><div class="meeting-track">${meetings}</div><section class="source-console"><header><span>Autonomous source decisions</span><small>Observe → choose → emit or stay silent</small></header><ul>${moves}</ul></section>`
+  all('[data-probe-condition]').forEach((button) => { button.onclick = () => { state.exampleEnvironment = Number(button.dataset.probeCondition); renderAutonomousProbe() } })
+  $('#probe-next').textContent = index === conditions.length - 1 ? 'Restart experiment ↻' : 'Next condition →'
+  $('#probe-next').onclick = () => { state.exampleEnvironment = (index + 1) % conditions.length; renderAutonomousProbe() }
+  $('#probe-raw-run').href = `api/runs/${encodeURIComponent(condition.run_id)}`
+  $('#run-probe').onclick = () => startAutonomousProbe(condition.arm_id)
+}
+
+async function startAutonomousProbe(armId) {
+  const status = $('#probe-run-status')
+  const button = $('#run-probe')
+  status.hidden = false
+  status.textContent = 'Starting a new authentic run…'
+  button.disabled = true
+  try {
+    const scenario = runtimeConfig?.scenarios?.coordination_decision
+    const model = scenario?.live_model_ids?.[0]
+    if (!runtimeConfig?.live_authorized || !model) throw new Error('The live coordination route is unavailable.')
+    const started = await apiRequest('api/runs', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({scenario:'coordination_decision', arm_id:armId, execution:'live', llm_options:{model, agent_reasoning_effort:'medium', max_total_cost:0.74}})})
+    status.innerHTML = `Run <code>${escapeHtml(started.run_id)}</code> started. This page can be closed; the retained run will continue on the simulator.`
+  } catch (error) {
+    status.textContent = `Run did not start: ${error.message}`
+    button.disabled = false
   }
 }
 
@@ -791,6 +834,11 @@ async function loadWorkbench() {
     const loaded = await response.json()
     if (loaded.schema_version !== 1 || !Array.isArray(loaded.runs) || loaded.runs.length !== 5) throw new Error('public evidence contract is invalid')
     dataset = loaded
+    try {
+      const probeResponse = await fetch('assets/autonomous-probe.json', {cache:'no-store'})
+      if (!probeResponse.ok) throw new Error(`autonomous probe request failed with ${probeResponse.status}`)
+      autonomousProbe = await probeResponse.json()
+    } catch (error) { console.warn(`autonomous probe unavailable: ${error.message}`) }
     state.runId = dataset.runs[0].run_id
     try { runtimeConfig = await apiRequest('api/config') } catch (error) { console.warn(`live simulator unavailable: ${error.message}`) }
     configureRuntime()
