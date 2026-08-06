@@ -12,6 +12,7 @@ from cybernetic_influence.active_runtime import (
 )
 from cybernetic_influence.scenarios.regional_outbreak import (
     AGENT_IDS,
+    SOURCE_IDS,
     OutbreakCondition,
     OutbreakFixture,
     default_outbreak_configuration,
@@ -32,6 +33,16 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
         ) -> ActiveStepResult:
             active_system_id = item.active_system_id
             private_state = item.private_state
+            if active_system_id in SOURCE_IDS:
+                return ActiveStepResult(
+                    proposal=ActiveProposal(
+                        active_system_id=active_system_id,
+                        implementation_id=implementation_id,
+                        private_state=private_state,
+                        actions=[ActionIntent(output_port_id=f"{active_system_id}_out", payload={"signal_id": "escalate", "rationale": "A reviewed external incompatibility is present."}, public_summary="Emitted one bounded external signal.")],
+                        update_schedule=UpdateScheduleDirective(mode="dormant"),
+                    )
+                )
             return ActiveStepResult(
                 proposal=ActiveProposal(
                     active_system_id=active_system_id,
@@ -152,38 +163,38 @@ def test_participant_policy_is_blind_to_experiment_condition() -> None:
     assert "capacity_inject_replay_with_stabilization" not in personas["baseline"]
 
 
-def test_responsive_condition_selects_declared_injects_from_reported_risk() -> None:
+def test_responsive_condition_delivers_complete_autonomous_source_bundles() -> None:
     _, result, readout = _run("responsive_exercise_injects")
 
-    assert readout["exercise_injects"] == [
-        "round_1_capacity_conflict",
-        "round_2_capacity_conflict",
-    ]
+    assert [attempt.logical_time for attempt in result.attempts] == [0, 1, 2, 3, 4]
+    assert [
+        set(attempt.declared_active_system_ids) == set(SOURCE_IDS)
+        for attempt in result.attempts
+    ] == [False, True, False, True, False]
+
+    assert len(readout["exercise_injects"]) == len(SOURCE_IDS) * 2
+    assert all("pressure_source" in item for item in readout["exercise_injects"])
     inject_observations = [
         observation
         for observation in result.core_result.final_state.observations.values()
-        if observation.apparent_source_ref == "exercise_control"
+        if observation.apparent_source_ref == "outbreak_source_delivery"
     ]
     assert len(inject_observations) == len(AGENT_IDS) * 2
-    first_round = inject_observations[: len(AGENT_IDS)]
-    assert len({item.apparent_content for item in first_round}) == 5
 
 
 def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() -> None:
     _, result, readout = _run("capacity_inject_replay_with_stabilization")
 
-    assert readout["exercise_injects"] == [
-        "round_1_capacity_conflict",
-        "round_2_capacity_conflict",
-    ]
+    assert len(readout["exercise_injects"]) == len(SOURCE_IDS) * 2
     assert readout["stabilization_events"] == [
         "round_2_verified_minimum_capacity_package"
     ]
     stabilization_observations = [
         observation
         for observation in result.core_result.final_state.observations.values()
-        if observation.apparent_source_ref == "regional_allocation_authority"
+        if observation.apparent_source_ref == "outbreak_source_delivery"
+        and '"stabilization"' in observation.apparent_content
     ]
     assert len(stabilization_observations) == len(AGENT_IDS)
-    assert len({item.apparent_content for item in stabilization_observations}) == 1
-    assert "not a command about which stance" in stabilization_observations[0].apparent_content
+    assert len({item.apparent_content for item in stabilization_observations}) == 5
+    assert "not a command about your stance" in stabilization_observations[0].apparent_content

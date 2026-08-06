@@ -180,6 +180,7 @@ from cybernetic_influence.scenarios.coordination_decision import (
 from cybernetic_influence.scenarios.regional_outbreak import (
     AGENT_IDS as OUTBREAK_AGENT_IDS,
     MAX_ROUNDS as OUTBREAK_MAX_ROUNDS,
+    SOURCE_IDS as OUTBREAK_SOURCE_IDS,
     OutbreakCondition,
     OutbreakFixture,
     OutbreakScenarioConfiguration,
@@ -1240,7 +1241,10 @@ def create_app(
                     "execution_modes": ["live"],
                     "supports_live": bool(coordination_live_models),
                     "live_model_ids": coordination_live_models,
-                    "maximum_live_calls": len(OUTBREAK_AGENT_IDS) * OUTBREAK_MAX_ROUNDS,
+                    "maximum_live_calls": (
+                        len(OUTBREAK_AGENT_IDS) * OUTBREAK_MAX_ROUNDS
+                        + len(OUTBREAK_SOURCE_IDS) * (OUTBREAK_MAX_ROUNDS - 1)
+                    ),
                     "editable_configuration": default_outbreak_configuration().model_dump(
                         mode="json"
                     ),
@@ -1255,19 +1259,18 @@ def create_app(
                         },
                         {
                             "id": "responsive_exercise_injects",
-                            "label": "Responsive exercise injects",
+                            "label": "Autonomous source pressure",
                             "description": (
-                                "Exercise control observes aggregate reported risks and "
-                                "selects a predeclared external development between rounds."
+                                "Four bounded source agents observe the completed public round, "
+                                "then a complete external-signal bundle enters before the next round."
                             ),
                         },
                         {
                             "id": "capacity_inject_replay_with_stabilization",
-                            "label": "Capacity-inject replay + allocation stabilization",
+                            "label": "Autonomous source pressure + allocation stabilization",
                             "description": (
-                                "The accepted treatment's two capacity developments are "
-                                "replayed, then a verified minimum-capacity package makes "
-                                "resource allocations and contingent commitments explicit."
+                                "The four source agents remain active, then a verified minimum-"
+                                "capacity package enters the complete round-two bundle."
                             ),
                         },
                     ],
@@ -3721,16 +3724,16 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
         "regional_outbreak": {
             "help": (
                 "Compare whether a multinational coalition preserves joint action "
-                "when exercise control responds to the risks participants themselves report."
+                "when bounded autonomous sources introduce heterogeneous external signals."
             ),
             "representation_summary": (
-                "Twelve autonomous synthetic roles across three countries and a regional "
-                "institution make three successive outbreak-response decisions."
+                "Twenty-six autonomous synthetic roles across four countries and a regional "
+                "institution make three successive compact decisions."
             ),
             "assumptions": [
                 "Participant roles receive identical initial conditions across arms.",
-                "Exercise injects are predeclared external developments, not commands to participants.",
-                "The exact decision rule requires six executable-now support positions, nine support or conditional positions, and at most one opposition after round three.",
+                "Four source agents can emit only bounded external signals, not commands or participant stances.",
+                "The exact decision rule requires thirteen executable-now support positions, twenty support or conditional positions, and at most two oppositions after round three.",
             ],
             "known_omissions": [
                 "The synthetic roles are not validated models of real people or governments.",
@@ -3738,7 +3741,7 @@ def _scenario_explanation(scenario: str) -> dict[str, object]:
                 "Epidemic transmission, media, and response implementation are outside this slice.",
             ],
             "fidelity_questions": [
-                "Did participants remain autonomous while exercise control changed only external information?",
+                "Did participants remain autonomous while source agents changed only external information?",
                 "Which risk and request patterns changed between rounds and conditions?",
                 "Does the observed contrast warrant replicated runs or a larger coalition?",
             ],

@@ -57,7 +57,15 @@ Request: TypeAlias = Literal["none", "data", "validation", "safeguards", "resour
 
 SCENARIO_ID = "regional_outbreak_v2"
 TASK = "regional_outbreak_coordination_step"
+SOURCE_TASK = "regional_outbreak_source_step"
 MAX_ROUNDS = 3
+
+SOURCE_IDS: tuple[str, ...] = (
+    "technical_pressure_source",
+    "legal_pressure_source",
+    "logistics_pressure_source",
+    "community_pressure_source",
+)
 
 AGENT_IDS: tuple[str, ...] = (
     "alba_epidemiologist",
@@ -180,6 +188,14 @@ class OutbreakStance(BaseModel):
     rationale: str = Field(min_length=1, max_length=600)
 
 
+class SourceSignal(BaseModel):
+    """One bounded external signal; it contains no participant decision field."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    signal_id: Literal["escalate", "verify"]
+    rationale: str = Field(min_length=1, max_length=300)
+
+
 class OutbreakAgentConfiguration(BaseModel):
     """Editable initial assumptions for one autonomous synthetic participant."""
 
@@ -282,6 +298,29 @@ class RequiredStanceSystem:
         )
 
 
+@dataclass(frozen=True)
+class RequiredSourceSystem:
+    source_id: str
+    output_port_id: str
+    inner: NativeLlmActiveSystem
+
+    @property
+    def implementation_id(self) -> str:
+        return self.inner.implementation_id
+
+    @property
+    def provider_bound(self) -> bool:
+        return True
+
+    def step(self, active_input: ActiveSystemInput) -> object:
+        result = ActiveStepResult.model_validate(self.inner.step(active_input))
+        actions = result.proposal.actions
+        if len(actions) != 1 or actions[0].output_port_id != self.output_port_id:
+            raise ValueError(f"{self.source_id} must use its single source interface")
+        SourceSignal.model_validate(actions[0].payload)
+        return result.model_copy(update={"proposal": result.proposal.model_copy(update={"update_schedule": UpdateScheduleDirective(mode="dormant")})})
+
+
 def outbreak_fixture(
     condition: OutbreakCondition,
     *,
@@ -319,14 +358,12 @@ def outbreak_fixture(
             "stabilizations_delivered": FactState(value=[]),
         },
     )
-    entities["exercise_control"] = EntityState(
-        entity_id="exercise_control",
-        entity_kind="exercise_control",
-        description=(
-            "A wargame control function that may select from predeclared exogenous "
-            "developments; it cannot choose participant stances."
-        ),
-    )
+    for source_id in SOURCE_IDS:
+        entities[source_id] = EntityState(
+            entity_id=source_id,
+            entity_kind="autonomous_exogenous_source",
+            description="A bounded source with no participant stance or coalition-gate interface.",
+        )
     entities["regional_allocation_authority"] = EntityState(
         entity_id="regional_allocation_authority",
         entity_kind="allocation_authority",
@@ -366,6 +403,26 @@ def outbreak_fixture(
             delay=1,
             description="A participant's stated position enters the exact round register.",
         )
+    ports["source_signal_in"] = PortState(
+        port_id="source_signal_in", owner_ref="outbreak_source_delivery",
+        direction="input", effect_type="outbreak_source_signal",
+        description="Exact intake for bounded external source signals.",
+    )
+    for source_id in SOURCE_IDS:
+        output_port_id = f"{source_id}_out"
+        ports[output_port_id] = PortState(
+            port_id=output_port_id, owner_ref=source_id, direction="output",
+            effect_type="outbreak_source_signal",
+            description=(
+                "Submit exactly one payload with signal_id=escalate|verify and a concise "
+                "rationale string. Participant decision, risk, and request fields are invalid."
+            ),
+        )
+        connections[f"route_{source_id}"] = ConnectionState(
+            connection_id=f"route_{source_id}", source_port_id=output_port_id,
+            target_port_id="source_signal_in", delay=1,
+            description="Routes a source document outside the coalition stance register.",
+        )
 
     mechanism = MechanismSpec(
         mechanism_id="outbreak_stance_recorder",
@@ -390,10 +447,9 @@ def outbreak_fixture(
             "outbreak_decision.injects_delivered",
             "outbreak_decision.stabilizations_delivered",
         ],
-        observation_target_ids=list(AGENT_IDS),
+        observation_target_ids=[*AGENT_IDS, *SOURCE_IDS],
         substrate_refs=[
             "outbreak_decision",
-            "exercise_control",
             "regional_allocation_authority",
         ],
         invariant_ids=["valid_outbreak_round_transition"],
@@ -402,8 +458,8 @@ def outbreak_fixture(
             assumptions=[
                 "Each synthetic participant owns one institutional role and one stance interface.",
                 "A joint response requires at least thirteen executable-now support positions, twenty support or conditional positions, and no more than two opposition positions.",
-                "Responsive injects are selected only from predeclared exercise developments after observing aggregate risks.",
-                "The stabilization arm replays the accepted treatment's capacity developments and adds one predeclared authoritative allocation fact after round two without selecting participant decisions.",
+                "Four autonomous bounded sources observe only the completed public round and emit through source-only interfaces.",
+                "The stabilization arm adds one verified allocation fact to the second complete source bundle without selecting participant decisions.",
             ],
             known_omissions=[
                 "No epidemiological transmission model or real government is represented.",
@@ -412,6 +468,24 @@ def outbreak_fixture(
             validation_basis=[
                 "Strict stance schema, exact round accounting, retained participant calls, and identical initial conditions across arms."
             ],
+        ),
+    )
+    source_delivery = MechanismSpec(
+        mechanism_id="outbreak_source_delivery",
+        mechanism_kind="source_bundle_delivery",
+        implementation_id="outbreak_source_delivery_v1",
+        description="Retains four source signals and releases the complete bundle to participants.",
+        input_port_ids=["source_signal_in"],
+        read_fact_ids=["outbreak_decision.current_round", "outbreak_decision.injects_delivered", "outbreak_decision.condition"],
+        write_fact_ids=["outbreak_decision.injects_delivered"],
+        observation_target_ids=list(AGENT_IDS),
+        substrate_refs=["outbreak_decision"],
+        invariant_ids=["bounded_source_delivery"],
+        fidelity=FidelityNote(
+            abstraction="Four autonomous bounded sources run between coalition rounds.",
+            assumptions=["Only a complete four-source bundle wakes the next coalition round."],
+            known_omissions=["Each source selects from two reviewed signal dispositions."],
+            validation_basis=["Owned source ports, strict payloads, and exact four-source barrier."],
         ),
     )
 
@@ -430,14 +504,14 @@ def outbreak_fixture(
         },
         ports=ports,
         connections=connections,
-        mechanisms={mechanism.mechanism_id: mechanism},
+        mechanisms={mechanism.mechanism_id: mechanism, source_delivery.mechanism_id: source_delivery},
     )
     scenario = CausalScenario(
         scenario_id=SCENARIO_ID,
         description=(
             "Twenty-six autonomous LLM participants decide whether to activate a Cross-Border "
-            "Early Warning Compact under common feedback, responsive exercise injects, or a replay of "
-            "the treatment's capacity injects plus an authoritative allocation intervention."
+            "Early Warning Compact under common feedback, autonomous source pressure, or the same "
+            "source phase plus an authoritative allocation intervention."
         ),
         time_unit="outbreak_hour",
         timing_contract="legacy",
@@ -460,7 +534,7 @@ def outbreak_fixture(
             ],
         ],
         fidelity_questions=[
-            "Do responsive injects change coalition decisions without directly controlling participants?",
+            "Do autonomous source signals change coalition decisions without directly controlling participants?",
             "Which reported risks and requests precede failure or preservation of coordination?",
             "Are any apparent effects robust enough to justify replicated follow-up runs?",
         ],
@@ -481,7 +555,7 @@ def outbreak_fixture(
                 entity_id=agent_id,
                 implementation_id=policy.implementation_id,
                 description=f"Autonomous synthetic role: {_agent_label(agent_id)}.",
-                observation_port_ids=["coalition_round_in"],
+                observation_port_ids=["coalition_round_in", "source_signal_in"],
                 output_port_ids=[f"stance_{agent_id}_out"],
                 initial_private_state={
                     "memory": [
@@ -497,6 +571,19 @@ def outbreak_fixture(
                 initial_next_update_at=0,
             )
         )
+    if condition in {"responsive_exercise_injects", "capacity_inject_replay_with_stabilization"}:
+        for source_id in SOURCE_IDS:
+            policy = _source_policy(source_id, model=model, reasoning_effort=reasoning_effort, trace_id_prefix="fixture")
+            specs.append(
+                ActiveSystemSpec(
+                    active_system_id=source_id, entity_id=source_id,
+                    implementation_id=policy.implementation_id,
+                    description=f"Autonomous bounded source: {source_id}.",
+                    observation_port_ids=["coalition_round_in"],
+                    output_port_ids=[f"{source_id}_out"],
+                    initial_private_state={"memory": []}, initial_next_update_at=None,
+                )
+            )
 
     exact = ExactMechanismBinding(
         implementation_id="outbreak_stance_recorder_v1",
@@ -510,7 +597,14 @@ def outbreak_fixture(
         configuration=resolved_configuration,
         scenario=scenario,
         active_specs=tuple(specs),
-        exact_bindings={mechanism.mechanism_id: exact},
+        exact_bindings={
+            mechanism.mechanism_id: exact,
+            source_delivery.mechanism_id: ExactMechanismBinding(
+                implementation_id="outbreak_source_delivery_v1",
+                handler=_deliver_source_signal,
+                invariant_checkers={"bounded_source_delivery": _bounded_source_delivery},
+            ),
+        },
     )
 
 
@@ -537,6 +631,11 @@ def outbreak_bindings(
             inner=inner,
         )
         bindings[agent_id] = ActiveSystemBinding(wrapped.implementation_id, wrapped)
+    if fixture.condition in {"responsive_exercise_injects", "capacity_inject_replay_with_stabilization"}:
+        for source_id in SOURCE_IDS:
+            inner = _source_policy(source_id, model=model, reasoning_effort=reasoning_effort, trace_id_prefix=trace_id_prefix)
+            source = RequiredSourceSystem(source_id, f"{source_id}_out", inner)
+            bindings[source_id] = ActiveSystemBinding(source.implementation_id, source)
     return bindings
 
 
@@ -576,8 +675,8 @@ def run_outbreak(
             break
         if due is None:
             raise RuntimeError("outbreak run became quiescent before a decision")
-        committed_rounds = sum(
-            attempt.status == "committed" for attempt in session.attempts
+        committed_rounds = len(
+            cast(list[JsonValue], session.core_state.fact("outbreak_decision.history").value)
         )
         if committed_rounds >= MAX_ROUNDS:
             raise RuntimeError("outbreak run exceeded the three-round limit")
@@ -701,6 +800,8 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
             ],
         )
 
+    condition = context.read("outbreak_decision.condition")
+    source_condition = condition in {"responsive_exercise_injects", "capacity_inject_replay_with_stabilization"}
     observations: list[ObservationDraft] = []
     snapshot = json.dumps(
         {
@@ -711,7 +812,7 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
         },
         sort_keys=True,
     )
-    for target in AGENT_IDS:
+    for target in (SOURCE_IDS if source_condition else AGENT_IDS):
         observations.append(
             ObservationDraft(
                 target_entity_id=target,
@@ -730,71 +831,8 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
         FactUpdate(fact_id="outbreak_decision.stances", value={}),
         FactUpdate(fact_id="outbreak_decision.history", value=next_history),
     ]
-    condition = context.read("outbreak_decision.condition")
-    if condition in {
-        "responsive_exercise_injects",
-        "capacity_inject_replay_with_stabilization",
-    }:
-        inject_id, inject_variants = _select_inject(
-            updated_stances,
-            round_index,
-            risk_override=(
-                "capacity"
-                if condition == "capacity_inject_replay_with_stabilization"
-                else None
-            ),
-        )
-        for target in AGENT_IDS:
-            observations.append(
-                ObservationDraft(
-                    target_entity_id=target,
-                    via_port_id=context.target_port.port_id,
-                    apparent_content=json.dumps(
-                        {
-                            "document_kind": "exercise_development",
-                            "inject_id": inject_id,
-                            "after_round": round_index + 1,
-                            "content": inject_variants[_country(target)],
-                            "instruction": (
-                                "Treat this as new external information, not a command. "
-                                "Other delegations may have received different developments."
-                            ),
-                        },
-                        sort_keys=True,
-                    ),
-                    apparent_source_ref="exercise_control",
-                )
-            )
-        delivered = [*delivered, inject_id]
-        updates.append(
-            FactUpdate(
-                fact_id="outbreak_decision.injects_delivered",
-                value=cast(JsonValue, delivered),
-            )
-        )
     if condition == "capacity_inject_replay_with_stabilization" and round_index == 1:
-        stabilization_id, content = _stabilization_development()
-        for target in AGENT_IDS:
-            observations.append(
-                ObservationDraft(
-                    target_entity_id=target,
-                    via_port_id=context.target_port.port_id,
-                    apparent_content=json.dumps(
-                        {
-                            "document_kind": "authoritative_allocation_package",
-                            "stabilization_id": stabilization_id,
-                            "after_round": round_index + 1,
-                            "content": content,
-                            "instruction": (
-                                "Treat this as a verified external allocation fact, not "
-                                "a command about which stance to take."
-                            ),
-                        },
-                        sort_keys=True,
-                    ),
-                    apparent_source_ref="regional_allocation_authority",
-                )
-            )
+        stabilization_id, _ = _stabilization_development()
         stabilizations = [*stabilizations, stabilization_id]
         updates.append(
             FactUpdate(
@@ -866,6 +904,55 @@ def _select_inject(
     return f"round_{round_index + 1}_{inject_id}", variants
 
 
+def _deliver_source_signal(context: MechanismContext) -> MechanismOutcome:
+    source_id = context.effect.source_port_id.removesuffix("_out")
+    if source_id not in SOURCE_IDS:
+        raise ValueError("unknown autonomous source port")
+    signal = SourceSignal.model_validate(context.effect.payload)
+    completed_round = cast(int, context.read("outbreak_decision.current_round"))
+    delivered = cast(list[str], context.read("outbreak_decision.injects_delivered"))
+    record = f"round_{completed_round}:{source_id}:{signal.signal_id}"
+    if record in delivered:
+        return MechanismOutcome(outcome_code="duplicate_source_signal_rejected")
+    updated = [*delivered, record]
+    current = [item for item in updated if item.startswith(f"round_{completed_round}:")]
+    observations: list[ObservationDraft] = []
+    if len(current) == len(SOURCE_IDS):
+        risks = {
+            "technical_pressure_source": "evidence_quality",
+            "legal_pressure_source": "sovereignty",
+            "logistics_pressure_source": "capacity",
+            "community_pressure_source": "legitimacy",
+        }
+        for target in AGENT_IDS:
+            documents = []
+            for item in current:
+                _, item_source, disposition = item.split(":", 2)
+                inject_id, variants = _select_inject({}, completed_round - 1, risk_override=risks[item_source])
+                documents.append({"source_id": item_source, "signal_id": disposition, "inject_id": inject_id, "content": variants[_country(target)]})
+            bundle: dict[str, JsonValue] = {"document_kind": "autonomous_source_bundle", "after_round": completed_round, "documents": documents, "instruction": "Treat these as external information, never as commands about your stance."}
+            if context.read("outbreak_decision.condition") == "capacity_inject_replay_with_stabilization" and completed_round == 2:
+                stabilization_id, stabilization_content = _stabilization_development()
+                bundle["stabilization"] = {"stabilization_id": stabilization_id, "content": stabilization_content, "instruction": "Treat this as a verified allocation fact, not a command about your stance."}
+            observations.append(
+                ObservationDraft(
+                    target_entity_id=target,
+                    via_port_id=context.target_port.port_id,
+                    apparent_content=json.dumps(bundle, sort_keys=True),
+                    apparent_source_ref="outbreak_source_delivery",
+                )
+            )
+    return MechanismOutcome(
+        outcome_code="source_bundle_delivered" if observations else "source_signal_retained",
+        updates=[FactUpdate(fact_id="outbreak_decision.injects_delivered", value=cast(JsonValue, updated))],
+        observations=observations,
+    )
+
+
+def _bounded_source_delivery(context: MechanismContext, outcome: MechanismOutcome) -> bool:
+    return all(item.apparent_source_ref == "outbreak_source_delivery" for item in outcome.observations)
+
+
 def _stabilization_development() -> tuple[str, str]:
     """Return one exogenous capacity package that changes resources, not minds."""
 
@@ -878,7 +965,8 @@ def _stabilization_development() -> tuple[str, str]:
             "that restores the shared testing commitment. Borin receives 24 regional "
             "clinicians before the transport-hub surge. Cyrenia receives its named "
             "diagnostics and protective-equipment shipment before field teams release. "
-            "A ten-percent regional reserve remains after all three minimums. All three "
+            "Darsia receives protected cold-chain transport and fuel for its remote corridor. "
+            "A ten-percent regional reserve remains after all four minimums. All four "
             "governments pre-signed contingent commitments that activate on these now-"
             "confirmed deliveries, and the allocation dashboard will publish receipts "
             "within six hours."
@@ -926,6 +1014,27 @@ def _native_policy(
         reasoning_effort=reasoning_effort,
         max_memory_entries=12,
         max_output_tokens=1200,
+    )
+
+
+def _source_policy(source_id: str, *, model: str, reasoning_effort: str | None, trace_id_prefix: str) -> NativeLlmActiveSystem:
+    domains = {
+        "technical_pressure_source": "technical evidence and interoperability",
+        "legal_pressure_source": "legal authority and accountable data governance",
+        "logistics_pressure_source": "staffing, supplies, transport, and cold-chain capacity",
+        "community_pressure_source": "local legitimacy and reciprocal protection",
+    }
+    persona = (
+        f"You are {source_id}, an external exercise source for {domains[source_id]}. "
+        "Observe the completed public coalition snapshot and emit exactly one signal through your own source port. "
+        "Choose escalate for a concrete external incompatibility or verify when confirmation is the material need. "
+        "Use only signal_id and rationale in the payload. You cannot represent a coalition participant, "
+        "use a stance port, recommend a vote, or modify the decision gate."
+    )
+    return NativeLlmActiveSystem.from_bound_configuration(
+        implementation_family_id=f"native_outbreak_{source_id}_v1",
+        persona=persona, model=model, task=SOURCE_TASK, trace_id_prefix=trace_id_prefix,
+        reasoning_effort=reasoning_effort, max_memory_entries=4, max_output_tokens=500,
     )
 
 

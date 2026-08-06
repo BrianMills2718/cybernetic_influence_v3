@@ -179,7 +179,7 @@ function renderRail() {
 function renderRunSetup() {
   const contracts = runtimeConfig?.scenarios?.regional_outbreak?.arms || [
     {id:'baseline', label:'Baseline', description:'Only common round feedback is delivered.'},
-    {id:'responsive_exercise_injects', label:'Responsive capacity pressure', description:'Exercise control selects a preauthored development from reported risks.'},
+    {id:'responsive_exercise_injects', label:'Autonomous source pressure', description:'Four bounded source agents emit a complete external-signal bundle between rounds.'},
     {id:'capacity_inject_replay_with_stabilization', label:'Pressure + allocation stabilization', description:'Pressure is replayed and a verified capacity package is added.'},
   ]
   const publicConditionCopy = {
@@ -216,8 +216,8 @@ function renderRunSetup() {
   const controlNote = selectedCondition === 'baseline'
     ? 'No exercise-control development is introduced between rounds.'
     : selectedCondition === 'responsive_exercise_injects'
-      ? 'After each round, exercise control reads aggregate reported risks and selects one matching preauthored development. It cannot select a participant stance.'
-      : 'The two accepted capacity developments are replayed. After round two, an external allocation authority adds one verified capacity package. Neither controller can select a participant stance.'
+      ? 'After each round, four source agents observe the public snapshot. Their complete signal bundle arrives before participants decide again; none can access a stance port.'
+      : 'The four source agents remain active. After round two, a verified allocation package joins their complete signal bundle before participants decide again. No source can select a participant stance.'
   $('#control-preview').innerHTML = `<strong>${escapeHtml(condition.label)}</strong><p>${escapeHtml(condition.description)}</p><small>${escapeHtml(controlNote)}</small>`
 
   $('#agent-config-select').onchange = (event) => {
@@ -303,9 +303,10 @@ function renderComparison() {
     </button>`).join('')
 
   $('#run-matrix').innerHTML = dataset.runs.map((run) => {
-    const pressure = run.developments.filter((item) => item.document_kind === 'exercise_development').length / 4
+    const pressure = new Set(run.developments.filter((item) => ['exercise_development', 'autonomous_source_bundle'].includes(item.document_kind)).map((item) => item.after_round)).size
+    const hasAllocation = run.developments.some((item) => item.document_kind === 'authoritative_allocation_package' || item.has_stabilization)
     const environment = run.developments.length
-      ? `${pressure} pressure inject${pressure === 1 ? '' : 's'}${run.developments.some((item) => item.document_kind === 'authoritative_allocation_package') ? ' + allocation package' : ''}`
+      ? `${pressure} pressure phase${pressure === 1 ? '' : 's'}${hasAllocation ? ' + allocation package' : ''}`
       : 'Common snapshots only'
     return `<tr><td><button type="button" class="matrix-run" data-open-run="${escapeHtml(run.run_id)}">${escapeHtml(run.run_id)}</button></td><td>${escapeHtml(runLabel(run))}</td>${run.rounds.map((round) => `<td class="matrix-round">${escapeHtml(countsText(round.decision_counts))}</td>`).join('')}<td>${outcomeBadge(run)}</td><td>${escapeHtml(environment)}</td></tr>`
   }).join('')
@@ -485,7 +486,8 @@ function renderEnvironment(run) {
   }
   $('#environment-events').innerHTML = `<div class="control-preview"><strong>Selection trace</strong><p>Prior dominant reported risk: ${escapeHtml(sentence(dominantRisk || 'none'))}. The condition supplied only preauthored exogenous developments; participant stances remained model-generated.</p></div>${developments.map((item) => {
     const allocation = item.document_kind === 'authoritative_allocation_package'
-    return `<article class="environment-event"><header><span><strong>${escapeHtml(item.audience_group)}</strong><small> · after round ${item.after_round}</small></span><span class="source-badge">${allocation ? 'Allocation authority' : 'Exercise control'}</span></header><p>${escapeHtml(item.content)}</p></article>`
+    const sourceLabel = allocation ? 'Allocation authority' : item.document_kind === 'autonomous_source_bundle' ? 'Autonomous sources' : 'Exercise control'
+    return `<article class="environment-event"><header><span><strong>${escapeHtml(item.audience_group)}</strong><small> · after round ${item.after_round}</small></span><span class="source-badge">${sourceLabel}</span></header><p>${escapeHtml(item.content)}</p></article>`
   }).join('')}`
 }
 
@@ -670,12 +672,13 @@ function projectDevelopments(raw) {
     for (const observation of event?.patch?.observations_added || []) {
       let content = null
       try { content = JSON.parse(observation.apparent_content) } catch (_error) { continue }
-      if (!['exercise_development', 'authoritative_allocation_package'].includes(content?.document_kind)) continue
+      if (!['exercise_development', 'autonomous_source_bundle', 'authoritative_allocation_package'].includes(content?.document_kind)) continue
       const audienceGroup = content.document_kind === 'authoritative_allocation_package'
         ? 'All participants'
         : groupLabels[groupFor(observation.target_entity_id)]
-      const developmentId = content.inject_id || content.stabilization_id
-      const key = `${content.after_round}|${content.document_kind}|${developmentId}|${audienceGroup}|${content.content}`
+      const developmentId = content.inject_id || content.stabilization_id || `source_bundle_round_${content.after_round}`
+      const developmentContent = content.content || (content.documents || []).map((item) => `${sentence(item.source_id)}: ${item.content}`).join(' ')
+      const key = `${content.after_round}|${content.document_kind}|${developmentId}|${audienceGroup}|${developmentContent}`
       if (seen.has(key)) continue
       seen.add(key)
       developments.push({
@@ -684,8 +687,9 @@ function projectDevelopments(raw) {
         development_id:developmentId,
         source:observation.apparent_source_ref || 'unknown',
         audience_group:audienceGroup,
-        content:content.content,
+        content:developmentContent,
         instruction:content.instruction,
+        has_stabilization:Boolean(content.stabilization),
       })
     }
   }

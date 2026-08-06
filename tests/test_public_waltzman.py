@@ -258,7 +258,7 @@ def test_public_app_serves_defaults_and_rejects_misrouted_agent_configuration(
     configuration = outbreak["editable_configuration"]
     assert len(configuration["agents"]) == 26
     assert configuration["agents"][0]["agent_id"] == "alba_epidemiologist"
-    assert outbreak["maximum_live_calls"] == 78
+    assert outbreak["maximum_live_calls"] == 86
 
     invalid = client.post(
         "/api/runs",
