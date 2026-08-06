@@ -582,7 +582,7 @@ function sourcePhaseText(signals) {
   }
   return [...phases.entries()].map(([round, moves]) => {
     const phase = Number(round.replace('round_', ''))
-    return `phase ${phase} ${[...moves.entries()].map(([move, count]) => `${count} ${sentence(move)}`).join(' / ')}`
+    return `phase ${phase}: ${[...moves.entries()].map(([move, count]) => `${count} ${sentence(move)}`).join(', ')}`
   }).join(' · ')
 }
 

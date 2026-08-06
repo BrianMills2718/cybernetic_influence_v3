@@ -92,8 +92,8 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What enters the decision environment?" in page
     assert "Edit one role—or keep the reviewed coalition" in page
     assert "Mechanism analysis and retained evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=waltzman-case-v4"]
-    assert shape.scripts == ["assets/app.js?v=waltzman-case-v4"]
+    assert shape.stylesheets == ["assets/styles.css?v=waltzman-case-v5"]
+    assert shape.scripts == ["assets/app.js?v=waltzman-case-v5"]
     assert {
         "overview-view",
         "case-view",
