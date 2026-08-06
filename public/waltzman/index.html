@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=waltzman-case-v5">
+  <link rel="stylesheet" href="assets/styles.css?v=waltzman-cso-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -55,19 +55,19 @@
     <section class="workspace">
       <section id="overview-view" class="workspace-view" aria-labelledby="overview-title" hidden>
         <header class="overview-hero">
-          <div class="artifact-type"><strong>Create your own simulation</strong><span>Authentic multi-agent execution with inspectable decisions</span></div>
-          <h2 id="overview-title">Build a group. Change its environment. See whether it can act.</h2>
-          <p>Start from a reviewed cross-border compact template. Rewrite the shared situation and any role’s mandate or institutional context, choose what happens between rounds, then run the agents and inspect the result.</p>
+          <div class="artifact-type"><strong>From Minds to Coordination</strong><span>Executable AI simulation of Waltzman’s decision-environment framework</span></div>
+          <h2 id="overview-title">Test how distributed influence changes a group’s ability to coordinate—and how a defensive cell responds.</h2>
+          <p>Configure autonomous coalition roles and heterogeneous influence sources. The coalition decides; sources introduce locally different signals; an optional Coordination Security Operations cell detects shifts in trust, risk, and readiness, diagnoses the mechanism, and selects a bounded intervention.</p>
           <div class="hero-actions">
-            <button class="primary-cta" type="button" data-view="run">Create a simulation</button>
-            <button class="secondary-cta" type="button" data-view="case">View the research case</button>
+            <button class="primary-cta" type="button" data-view="run">Create a coordination experiment</button>
+            <button class="secondary-cta" type="button" data-view="case">Inspect the complete case</button>
           </div>
           <p class="scope-note">Produces synthetic AI-agent behavior for research and prototyping. It does not estimate how people or institutions will behave.</p>
         </header>
 
         <section class="overview-builder-preview" aria-labelledby="overview-builder-title">
-          <span class="section-kicker">Your simulation</span><h3 id="overview-builder-title">Three decisions, then run</h3>
-          <ol><li><b>1</b><div><strong>Choose the decision environment</strong><p>Baseline, heterogeneous local pressure, or pressure plus stabilization.</p></div></li><li><b>2</b><div><strong>Configure the coalition</strong><p>Edit the shared situation and any participant’s mandate or context.</p></div></li><li><b>3</b><div><strong>Run and inspect</strong><p>Autonomous roles decide across three rounds; every structured decision is retained.</p></div></li></ol>
+          <span class="section-kicker">Your experiment</span><h3 id="overview-builder-title">Configure the actors, pressure, and response loop</h3>
+          <ol><li><b>1</b><div><strong>Define the coalition</strong><p>Edit the shared decision, institutional roles, mandates, and local context.</p></div></li><li><b>2</b><div><strong>Choose the influence environment</strong><p>Run a baseline, heterogeneous pressure, a fixed intervention, or an adaptive CSO response.</p></div></li><li><b>3</b><div><strong>Inspect the coordination process</strong><p>Trace every source choice, coalition decision, CSO finding, diagnosis, intervention, and outcome.</p></div></li></ol>
           <p class="template-boundary">Current demo template · Cross-Border Early Warning Compact · 3 rounds · authentic model calls retained</p>
         </section>
       </section>
@@ -75,26 +75,31 @@
       <section id="case-view" class="workspace-view research-case" aria-labelledby="research-case-title" hidden>
         <header class="research-case-hero">
           <span class="case-label">From Minds to Coordination · synthetic mechanism demonstration</span>
-          <h2 id="research-case-title">Can autonomous influence sources disrupt—and restore—collective action?</h2>
-          <p>Twenty-six autonomous AI roles decide whether to activate a cross-border early-warning compact. Between decision rounds, four other AI agents independently introduce technical, legal, logistical, and community signals. The sources can change external information; they cannot vote, recommend a vote, or edit a participant.</p>
-          <div class="case-facts"><span><b>26</b> decision agents</span><span><b>4</b> source agents</span><span><b>3</b> decision rounds</span><span><b>3</b> environments</span></div>
+          <h2 id="research-case-title">Can distributed influence degrade a decision environment—and can an autonomous CSO cell respond?</h2>
+          <p>Twenty-six autonomous AI roles decide whether to activate a cross-border early-warning compact. Four influence agents introduce locally different technical, legal, logistical, and community signals. In the adaptive condition, three additional agents detect the shift, diagnose the coordination problem, and select one authorized intervention.</p>
+          <div class="case-facts"><span><b>26</b> coalition agents</span><span><b>4</b> influence agents</span><span><b>3</b> CSO agents</span><span><b>4</b> environments</span></div>
         </header>
 
         <section class="case-mechanism" aria-labelledby="case-mechanism-title">
           <h3 id="case-mechanism-title">The mechanism</h3>
-          <div><span>Coalition decides</span><i>→</i><span>Sources observe the public result</span><i>→</i><span>Complete source bundle enters</span><i>→</i><span>Coalition decides again</span></div>
-          <p>That ordering is enforced by the simulator. A new coalition round cannot begin until all four source outputs are retained.</p>
+          <div><span>Coalition decides</span><i>→</i><span>Sources act</span><i>→</i><span>CSO detects and diagnoses</span><i>→</i><span>Planner selects an intervention</span><i>→</i><span>Coalition decides independently</span></div>
+          <p>The simulator enforces that ordering. Influence and CSO agents have no participant stance ports and cannot vote, edit mandates, or change the decision gate.</p>
         </section>
 
         <section class="case-results" aria-labelledby="case-results-title">
-          <div class="case-section-heading"><span>Authentic retained model decisions</span><h3 id="case-results-title">One coalition. Three environments. Three trajectories.</h3></div>
+          <div class="case-section-heading"><span>Authentic retained model decisions</span><h3 id="case-results-title">One coalition. Four environments. Four trajectories.</h3></div>
           <div id="research-case-runs" class="research-case-runs"></div>
         </section>
 
         <section class="case-interpretation" aria-labelledby="case-interpretation-title">
           <div><span>What the demonstration shows</span><h3 id="case-interpretation-title">Coordination changed without anyone dictating the agents’ decisions.</h3></div>
-          <p>Under source pressure, locally reasonable verification and safeguard requirements became jointly blocking. Within the stabilization run, support returned after a verified package resolved the technical, legal, capacity, and legitimacy constraints together.</p>
-          <div class="case-causal-lines"><p><b>Pressure:</b> heterogeneous signals → incompatible requirements → deferral → gate fails</p><p><b>Resolution:</b> verified cross-domain package → requirements become compatible → support returns → gate passes</p></div>
+          <p>Under source pressure, locally reasonable requirements became jointly blocking. A fixed package showed that changing those conditions could restore action. The adaptive CSO run then added the missing operating loop: model agents detected the shift, diagnosed incompatible requirements, and selected the cross-domain response themselves.</p>
+          <div class="case-causal-lines"><p><b>Pressure:</b> heterogeneous signals → incompatible requirements → readiness falls → gate fails</p><p><b>Adaptive response:</b> detect → diagnose → select bounded intervention → coalition reassesses → gate passes</p></div>
+        </section>
+
+        <section class="case-evidence" aria-labelledby="case-cso-title">
+          <div><span>Autonomous defensive loop</span><h3 id="case-cso-title">What the CSO cell detected, diagnosed, and chose</h3></div>
+          <div id="case-cso-records"></div>
         </section>
 
         <section class="case-evidence" aria-labelledby="case-evidence-title">
@@ -106,7 +111,7 @@
           <strong>Interpretation boundary</strong><p>This demonstrates behavior inside one controlled AI-agent simulation. It does not estimate how people or real institutions would behave.</p>
         </section>
 
-        <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Inspect the three runs</button><button class="secondary-cta" type="button" data-view="run">Build your own simulation</button></div>
+        <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Inspect the four runs</button><button class="secondary-cta" type="button" data-view="run">Build your own experiment</button></div>
       </section>
 
       <section id="run-view" class="workspace-view" aria-labelledby="run-title" hidden>
@@ -403,6 +408,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=waltzman-case-v5" defer></script>
+  <script src="assets/app.js?v=waltzman-cso-v1" defer></script>
 </body>
 </html>

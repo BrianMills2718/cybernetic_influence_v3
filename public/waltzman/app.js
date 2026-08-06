@@ -5,7 +5,7 @@ const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'darsia', 'regional']
 const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', darsia:'Darsia', regional:'Regional'}
 const preferredModel = 'codex/gpt-5.6-luna'
 const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
-const researchCaseRunIds = ['run_ef3763b4d477', 'run_3303c9302a36', 'run_e2f31904e10b']
+const researchCaseRunIds = ['run_ef3763b4d477', 'run_3303c9302a36', 'run_e2f31904e10b', 'run_a27f8e4082ef']
 
 let dataset = null
 let runtimeConfig = null
@@ -13,7 +13,7 @@ let autonomousProbe = null
 let defaultConfiguration = null
 let editableConfiguration = null
 let selectedConfigurationPerson = 'alba_epidemiologist'
-let selectedCondition = 'responsive_exercise_injects'
+let selectedCondition = 'adaptive_cso_stabilization'
 let liveModel = null
 let liveReasoning = 'medium'
 let activeRunId = null
@@ -182,11 +182,13 @@ function renderRunSetup() {
     {id:'baseline', label:'Baseline', description:'Only common round feedback is delivered.'},
     {id:'responsive_exercise_injects', label:'Autonomous source pressure', description:'Four bounded source agents emit a complete external-signal bundle between rounds.'},
     {id:'capacity_inject_replay_with_stabilization', label:'Pressure + allocation stabilization', description:'Pressure is replayed and a verified capacity package is added.'},
+    {id:'adaptive_cso_stabilization', label:'Pressure + adaptive CSO cell', description:'Three defensive agents detect, diagnose, and select one authorized intervention.'},
   ]
   const publicConditionCopy = {
     baseline:{label:'Baseline', description:'No additional pressure enters between rounds.'},
     responsive_exercise_injects:{label:'Heterogeneous local pressure', description:'Different locally relevant developments enter the coalition as reported concerns emerge.'},
     capacity_inject_replay_with_stabilization:{label:'Pressure + stabilization', description:'The same pressures remain, then an authoritative package bounds uncertainty and resolves dependencies.'},
+    adaptive_cso_stabilization:{label:'Pressure + adaptive CSO cell', description:'The same pressures remain; a monitor, diagnostician, and planner choose whether and how to respond.'},
   }
   $('#condition-options').innerHTML = contracts.map((condition) => {
     const copy = publicConditionCopy[condition.id] || condition
@@ -218,7 +220,9 @@ function renderRunSetup() {
     ? 'No exercise-control development is introduced between rounds.'
     : selectedCondition === 'responsive_exercise_injects'
       ? 'After each round, four source agents observe the public snapshot. Their complete signal bundle arrives before participants decide again; none can access a stance port.'
-      : 'The four source agents remain active. After round two, a verified technical, legal, capacity, and legitimacy package joins their complete signal bundle before participants decide again. No source can select a participant stance.'
+      : selectedCondition === 'capacity_inject_replay_with_stabilization'
+        ? 'The four source agents remain active. After round two, a fixed verified package joins their complete signal bundle before participants decide again.'
+        : 'After round two, the CSO monitor detects directional changes, the diagnostician identifies the mechanism, and the planner selects one authorized intervention. None can access a stance port.'
   $('#control-preview').innerHTML = `<strong>${escapeHtml(condition.label)}</strong><p>${escapeHtml(condition.description)}</p><small>${escapeHtml(controlNote)}</small>`
 
   $('#agent-config-select').onchange = (event) => {
@@ -323,6 +327,7 @@ function conditionStory(run) {
     baseline:{step:'1', title:'Baseline', change:'No pressure enters the coalition.', explanation:'The agents receive only common round results and remain ready to act.'},
     responsive_exercise_injects:{step:'2', title:'Heterogeneous local pressure', change:'Different subgroups receive different locally relevant developments.', explanation:'The content varies by location, while reported risk and coordination move in the same direction.'},
     capacity_inject_replay_with_stabilization:{step:'3', title:'Pressure + stabilization', change:'The same pressure remains and an authoritative intervention is added.', explanation:'Verified allocations bound uncertainty and make the coalition’s commitments compatible.'},
+    adaptive_cso_stabilization:{step:'4', title:'Pressure + adaptive CSO', change:'A defensive cell observes the degraded decision environment and chooses a bounded response.', explanation:'The monitor detects, the diagnostician explains, and the planner selects an authorized intervention before agents decide again.'},
   }
   return stories[run.condition] || {step:'•', title:run.condition_label, change:'External environment varied', explanation:'Inspect the retained run for its exact developments.'}
 }
@@ -487,7 +492,13 @@ function renderEnvironment(run) {
   }
   $('#environment-events').innerHTML = `<div class="control-preview"><strong>Selection trace</strong><p>Prior dominant reported risk: ${escapeHtml(sentence(dominantRisk || 'none'))}. The condition supplied only preauthored exogenous developments; participant stances remained model-generated.</p></div>${developments.map((item) => {
     const allocation = item.document_kind === 'authoritative_allocation_package'
-    const sourceLabel = allocation ? 'Allocation authority' : item.document_kind === 'autonomous_source_bundle' ? 'Autonomous sources' : 'Exercise control'
+    const sourceLabel = allocation
+      ? 'Allocation authority'
+      : item.document_kind === 'cso_stabilization_bundle'
+        ? 'CSO planner'
+        : item.document_kind === 'autonomous_source_bundle'
+          ? 'Autonomous sources'
+          : 'Exercise control'
     return `<article class="environment-event"><header><span><strong>${escapeHtml(item.audience_group)}</strong><small> · after round ${item.after_round}</small></span><span class="source-badge">${sourceLabel}</span></header><p>${escapeHtml(item.content)}</p></article>`
   }).join('')}`
 }
@@ -599,7 +610,8 @@ function renderResearchCase() {
   const stories = [
     {label:'Baseline', change:'No source agents enter between rounds.'},
     {label:'Autonomous source pressure', change:'Four source agents introduce technical, legal, logistical, and community constraints.'},
-    {label:'Verified compact package', change:'The source process remains; a verified package resolves all four constraint classes after round two.'},
+    {label:'Fixed verified package', change:'The source process remains; a preselected package resolves all four constraint classes after round two.'},
+    {label:'Adaptive CSO cell', change:'Three defensive agents detect the shift, diagnose its mechanism, and select one authorized response.'},
   ]
   $('#research-case-runs').innerHTML = researchCaseRunIds.map((runId, index) => {
     const run = indexed.get(runId)
@@ -613,10 +625,23 @@ function renderResearchCase() {
   }).join('')
 
   const evidenceRole = 'alba_epidemiologist'
-  $('#case-evidence-records').innerHTML = [indexed.get(researchCaseRunIds[1]), indexed.get(researchCaseRunIds[2])].map((run, index) => {
+  $('#case-evidence-records').innerHTML = [indexed.get(researchCaseRunIds[1]), indexed.get(researchCaseRunIds[3])].map((run, index) => {
     const stance = run.rounds.at(-1).stances.find((item) => item.person_id === evidenceRole)
     if (!stance) throw new Error(`representative evidence is unavailable for ${evidenceRole}`)
-    return `<article><header><span>${index === 0 ? 'Under source pressure' : 'After verified package'}</span>${decisionPill(stance.decision)}</header><p>${escapeHtml(stance.rationale)}</p></article>`
+    return `<article><header><span>${index === 0 ? 'Under source pressure' : 'After the CSO-selected intervention'}</span>${decisionPill(stance.decision)}</header><p>${escapeHtml(stance.rationale)}</p></article>`
+  }).join('')
+
+  const csoRun = indexed.get(researchCaseRunIds[3])
+  const stageLabels = {detection:'Detected', diagnosis:'Diagnosed', intervention:'Selected'}
+  $('#case-cso-records').innerHTML = (csoRun.cso_records || []).map((record) => {
+    const payload = record.payload || {}
+    const summary = record.stage === 'detection'
+      ? `${sentence(payload.trust_structure)} trust · ${sentence(payload.perceived_risk)} risk · readiness ${sentence(payload.coordination_readiness)}`
+      : record.stage === 'diagnosis'
+        ? `${sentence(payload.mechanism)} · ${sentence(payload.affected_scope)}`
+        : `${sentence(payload.action_id)} · targets ${sentence(payload.target_dimension)}`
+    const rationale = payload.evidence_summary || payload.rationale || ''
+    return `<article><header><span>${escapeHtml(stageLabels[record.stage] || sentence(record.stage))}</span><strong>${escapeHtml(labelPerson(record.actor_id))}</strong></header><p><b>${escapeHtml(summary)}</b></p><p>${escapeHtml(rationale)}</p></article>`
   }).join('')
 
   $('#case-open-comparison').onclick = () => {
@@ -730,12 +755,14 @@ function projectDevelopments(raw) {
     for (const observation of event?.patch?.observations_added || []) {
       let content = null
       try { content = JSON.parse(observation.apparent_content) } catch (_error) { continue }
-      if (!['exercise_development', 'autonomous_source_bundle', 'authoritative_allocation_package'].includes(content?.document_kind)) continue
+      if (!['exercise_development', 'autonomous_source_bundle', 'authoritative_allocation_package', 'cso_stabilization_bundle'].includes(content?.document_kind)) continue
       const audienceGroup = content.document_kind === 'authoritative_allocation_package'
         ? 'All participants'
         : groupLabels[groupFor(observation.target_entity_id)]
-      const developmentId = content.inject_id || content.stabilization_id || `source_bundle_round_${content.after_round}`
-      const developmentContent = content.content || (content.documents || []).map((item) => `${sentence(item.source_id)}: ${item.content}`).join(' ')
+      const developmentId = content.inject_id || content.stabilization_id || content.intervention?.intervention_id || `source_bundle_round_${content.after_round}`
+      const pressureContent = (content.documents || []).map((item) => `${sentence(item.source_id)}: ${item.content}`).join(' ')
+      const interventionContent = content.intervention?.content ? ` Selected CSO intervention: ${content.intervention.content}` : ''
+      const developmentContent = content.content || `${pressureContent}${interventionContent}`.trim()
       const key = `${content.after_round}|${content.document_kind}|${developmentId}|${audienceGroup}|${developmentContent}`
       if (seen.has(key)) continue
       seen.add(key)
@@ -747,7 +774,7 @@ function projectDevelopments(raw) {
         audience_group:audienceGroup,
         content:developmentContent,
         instruction:content.instruction,
-        has_stabilization:Boolean(content.stabilization),
+        has_stabilization:Boolean(content.stabilization || content.intervention),
       })
     }
   }
@@ -796,6 +823,7 @@ function projectLiveRun(raw) {
     developments:projectDevelopments(raw),
     source_signals:raw.outcome?.exercise_injects || [],
     stabilization_events:raw.outcome?.stabilization_events || [],
+    cso_records:raw.outcome?.cso_records || [],
     configuration:raw.regional_outbreak_configuration || null,
     is_live:true,
   }

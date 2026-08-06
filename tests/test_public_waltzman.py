@@ -61,7 +61,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
 
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
-    assert "Create a simulation" in page
+    assert "Create a coordination experiment" in page
     assert "Open Lab" in page
     assert "Lab workspace" in page
     assert "Choose, configure, run" in page
@@ -69,12 +69,12 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Terminal decision gate" in page
     assert "Open method" in page
     assert "AI coordination simulation workbench" in page
-    assert "Build a group. Change its environment." in page
-    assert "Three decisions, then run" in page
-    assert "Configure the coalition" in page
+    assert "Test how distributed influence changes a group’s ability to coordinate" in page
+    assert "Configure the actors, pressure, and response loop" in page
+    assert "Define the coalition" in page
     assert "Current demo template" in page
-    assert "Can autonomous influence sources disrupt—and restore—collective action?" in page
-    assert "Complete source bundle enters" in page
+    assert "can an autonomous CSO cell respond?" in page
+    assert "CSO detects and diagnoses" in page
     assert "Same role. Different environment. Different decision." in page
     assert "Inspect all agent decisions" in page
     assert "Waltzman mechanism probe" in page
@@ -92,13 +92,14 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What enters the decision environment?" in page
     assert "Edit one role—or keep the reviewed coalition" in page
     assert "Mechanism analysis and retained evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=waltzman-case-v5"]
-    assert shape.scripts == ["assets/app.js?v=waltzman-case-v5"]
+    assert shape.stylesheets == ["assets/styles.css?v=waltzman-cso-v1"]
+    assert shape.scripts == ["assets/app.js?v=waltzman-cso-v1"]
     assert {
         "overview-view",
         "case-view",
         "research-case-runs",
         "case-evidence-records",
+        "case-cso-records",
         "run-view",
         "condition-options",
         "agent-config-select",
@@ -232,6 +233,9 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "fetch('assets/autonomous-probe.json'",
         "apiRequest('api/runs'",
         "regional_outbreak_configuration:editableConfiguration",
+        "adaptive_cso_stabilization",
+        "cso_records:raw.outcome?.cso_records",
+        "case-cso-records",
     ):
         assert capability in script
 
@@ -266,7 +270,7 @@ def test_public_app_serves_defaults_and_rejects_misrouted_agent_configuration(
     configuration = outbreak["editable_configuration"]
     assert len(configuration["agents"]) == 26
     assert configuration["agents"][0]["agent_id"] == "alba_epidemiologist"
-    assert outbreak["maximum_live_calls"] == 86
+    assert outbreak["maximum_live_calls"] == 89
 
     invalid = client.post(
         "/api/runs",
