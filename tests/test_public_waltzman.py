@@ -73,6 +73,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Three decisions, then run" in page
     assert "Configure the coalition" in page
     assert "Current demo template" in page
+    assert "Can autonomous influence sources disrupt—and restore—collective action?" in page
+    assert "Complete source bundle enters" in page
+    assert "Same role. Different environment. Different decision." in page
     assert "Inspect all agent decisions" in page
     assert "Waltzman mechanism probe" in page
     assert "From Minds to Coordination · autonomous influence probe" in page
@@ -89,10 +92,13 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What enters the decision environment?" in page
     assert "Edit one role—or keep the reviewed coalition" in page
     assert "Mechanism analysis and retained evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=autonomous-swarm-v1"]
-    assert shape.scripts == ["assets/app.js?v=autonomous-swarm-v1"]
+    assert shape.stylesheets == ["assets/styles.css?v=waltzman-case-v1"]
+    assert shape.scripts == ["assets/app.js?v=waltzman-case-v1"]
     assert {
         "overview-view",
+        "case-view",
+        "research-case-runs",
+        "case-evidence-records",
         "run-view",
         "condition-options",
         "agent-config-select",
@@ -220,6 +226,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "syncUrl",
         "view:'overview'",
         "featuredRunIds",
+        "researchCaseRunIds",
+        "renderResearchCase",
         "fetch('assets/data.json'",
         "fetch('assets/autonomous-probe.json'",
         "apiRequest('api/runs'",

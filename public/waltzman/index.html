@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=autonomous-swarm-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=waltzman-case-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -18,7 +18,7 @@
     </div>
     <nav class="view-tabs" aria-label="Primary navigation">
       <button type="button" data-view="overview">Overview</button>
-      <button type="button" data-view="mechanism">Example</button>
+      <button type="button" data-view="case">Research case</button>
       <button type="button" data-open-lab>Open Lab</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
@@ -60,7 +60,7 @@
           <p>Start from a reviewed cross-border compact template. Rewrite the shared situation and any role’s mandate or institutional context, choose what happens between rounds, then run the agents and inspect the result.</p>
           <div class="hero-actions">
             <button class="primary-cta" type="button" data-view="run">Create a simulation</button>
-            <button class="secondary-cta" type="button" data-featured-example>View an example</button>
+            <button class="secondary-cta" type="button" data-view="case">View the research case</button>
           </div>
           <p class="scope-note">Produces synthetic AI-agent behavior for research and prototyping. It does not estimate how people or institutions will behave.</p>
         </header>
@@ -70,6 +70,43 @@
           <ol><li><b>1</b><div><strong>Choose the decision environment</strong><p>Baseline, heterogeneous local pressure, or pressure plus stabilization.</p></div></li><li><b>2</b><div><strong>Configure the coalition</strong><p>Edit the shared situation and any participant’s mandate or context.</p></div></li><li><b>3</b><div><strong>Run and inspect</strong><p>Autonomous roles decide across three rounds; every structured decision is retained.</p></div></li></ol>
           <p class="template-boundary">Current demo template · Cross-Border Early Warning Compact · 3 rounds · authentic model calls retained</p>
         </section>
+      </section>
+
+      <section id="case-view" class="workspace-view research-case" aria-labelledby="research-case-title" hidden>
+        <header class="research-case-hero">
+          <span class="case-label">From Minds to Coordination · synthetic mechanism demonstration</span>
+          <h2 id="research-case-title">Can autonomous influence sources disrupt—and restore—collective action?</h2>
+          <p>Twenty-six autonomous AI roles decide whether to activate a cross-border early-warning compact. Between decision rounds, four other AI agents independently introduce technical, legal, logistical, and community signals. The sources can change external information; they cannot vote, recommend a vote, or edit a participant.</p>
+          <div class="case-facts"><span><b>26</b> decision agents</span><span><b>4</b> source agents</span><span><b>3</b> decision rounds</span><span><b>3</b> environments</span></div>
+        </header>
+
+        <section class="case-mechanism" aria-labelledby="case-mechanism-title">
+          <h3 id="case-mechanism-title">The mechanism</h3>
+          <div><span>Coalition decides</span><i>→</i><span>Sources observe the public result</span><i>→</i><span>Complete source bundle enters</span><i>→</i><span>Coalition decides again</span></div>
+          <p>That ordering is enforced by the simulator. A new coalition round cannot begin until all four source outputs are retained.</p>
+        </section>
+
+        <section class="case-results" aria-labelledby="case-results-title">
+          <div class="case-section-heading"><span>Authentic retained model decisions</span><h3 id="case-results-title">One coalition. Three environments. Three trajectories.</h3></div>
+          <div id="research-case-runs" class="research-case-runs"></div>
+        </section>
+
+        <section class="case-interpretation" aria-labelledby="case-interpretation-title">
+          <div><span>What the demonstration shows</span><h3 id="case-interpretation-title">Coordination changed without anyone dictating the agents’ decisions.</h3></div>
+          <p>Under source pressure, locally reasonable verification and safeguard requirements became jointly blocking. A verified package restored coordination only after it resolved the technical, legal, capacity, and legitimacy constraints together.</p>
+          <div class="case-causal-lines"><p><b>Pressure:</b> heterogeneous signals → incompatible requirements → deferral → gate fails</p><p><b>Resolution:</b> verified cross-domain package → requirements become compatible → support returns → gate passes</p></div>
+        </section>
+
+        <section class="case-evidence" aria-labelledby="case-evidence-title">
+          <div><span>Representative retained evidence</span><h3 id="case-evidence-title">Same role. Different environment. Different decision.</h3></div>
+          <div id="case-evidence-records"></div>
+        </section>
+
+        <section class="case-boundary">
+          <strong>Interpretation boundary</strong><p>This demonstrates behavior inside one controlled AI-agent simulation. It does not estimate how people or real institutions would behave.</p>
+        </section>
+
+        <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Inspect the three runs</button><button class="secondary-cta" type="button" data-view="run">Build your own simulation</button></div>
       </section>
 
       <section id="run-view" class="workspace-view" aria-labelledby="run-title" hidden>
@@ -366,6 +403,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=autonomous-swarm-v1" defer></script>
+  <script src="assets/app.js?v=waltzman-case-v1" defer></script>
 </body>
 </html>

@@ -5,6 +5,7 @@ const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'darsia', 'regional']
 const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', darsia:'Darsia', regional:'Regional'}
 const preferredModel = 'codex/gpt-5.6-luna'
 const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
+const researchCaseRunIds = ['run_658093bbf480', 'run_a679fde37844', 'run_461bf953f9ac']
 
 let dataset = null
 let runtimeConfig = null
@@ -124,7 +125,7 @@ function configurationAgent(configuration, personId) {
 function readStateFromUrl() {
   const params = new URLSearchParams(window.location.search)
   const requestedView = params.get('view')
-  if (['overview', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
+  if (['overview', 'case', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
   const requestedRun = params.get('run')
   if (requestedRun && dataset.runs.some((run) => run.run_id === requestedRun)) state.runId = requestedRun
   const requestedRound = Number(params.get('round'))
@@ -570,12 +571,67 @@ function renderMethod() {
   $('#provenance-time').dateTime = latest
 }
 
+function sourcePhaseText(signals) {
+  const phases = new Map()
+  for (const signal of signals || []) {
+    const [round, , move] = String(signal).split(':')
+    if (!round || !move) continue
+    if (!phases.has(round)) phases.set(round, new Set())
+    phases.get(round).add(move)
+  }
+  return [...phases.entries()].map(([round, moves]) => {
+    const phase = Number(round.replace('round_', ''))
+    return `phase ${phase} ${[...moves].map(sentence).join(' / ')}`
+  }).join(' · ')
+}
+
+function renderResearchCase() {
+  const indexed = new Map(dataset.runs.map((run) => [run.run_id, run]))
+  const missing = researchCaseRunIds.filter((runId) => !indexed.has(runId))
+  if (missing.length) {
+    $('#research-case-runs').innerHTML = `<p class="case-data-error"><strong>Research case unavailable.</strong> Missing retained runs: ${escapeHtml(missing.join(', '))}</p>`
+    $('#case-open-comparison').disabled = true
+    return
+  }
+
+  $('#case-open-comparison').disabled = false
+  const stories = [
+    {label:'Baseline', change:'No source agents enter between rounds.'},
+    {label:'Autonomous source pressure', change:'Four source agents introduce technical, legal, logistical, and community constraints.'},
+    {label:'Verified compact package', change:'The source process remains; a verified package resolves all four constraint classes after round two.'},
+  ]
+  $('#research-case-runs').innerHTML = researchCaseRunIds.map((runId, index) => {
+    const run = indexed.get(runId)
+    const sourceSummary = sourcePhaseText(run.source_signals)
+    return `<article class="research-case-run">
+      <header><span>Environment ${index + 1}</span><h4>${escapeHtml(stories[index].label)}</h4>${outcomeBadge(run)}</header>
+      <p>${escapeHtml(stories[index].change)}</p>
+      <div class="case-run-rounds">${run.rounds.map((round) => `<div class="case-run-round"><b>R${round.round}</b>${stackedBar(round.decision_counts, 'case-result-bar', run.agent_count || 26)}<span>${escapeHtml(countsText(round.decision_counts))}</span></div>`).join('')}</div>
+      ${sourceSummary ? `<small>Source choices · ${escapeHtml(sourceSummary)}</small>` : '<small>No source phase</small>'}
+    </article>`
+  }).join('')
+
+  const evidenceRole = 'alba_epidemiologist'
+  $('#case-evidence-records').innerHTML = [indexed.get(researchCaseRunIds[1]), indexed.get(researchCaseRunIds[2])].map((run, index) => {
+    const stance = run.rounds.at(-1).stances.find((item) => item.person_id === evidenceRole)
+    if (!stance) throw new Error(`representative evidence is unavailable for ${evidenceRole}`)
+    return `<article><header><span>${index === 0 ? 'Under source pressure' : 'After verified package'}</span>${decisionPill(stance.decision)}</header><p>${escapeHtml(stance.rationale)}</p></article>`
+  }).join('')
+
+  $('#case-open-comparison').onclick = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('view', 'compare')
+    url.searchParams.set('runs', researchCaseRunIds.join(','))
+    window.location.assign(url)
+  }
+}
+
 function renderView() {
-  const publicView = state.view === 'overview' || state.view === 'mechanism'
+  const publicView = ['overview', 'case', 'mechanism'].includes(state.view)
   document.body.classList.toggle('guided-result', publicView)
   document.body.classList.toggle('public-shell', publicView)
   document.body.classList.toggle('lab-shell', !publicView)
-  for (const view of ['overview', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
+  for (const view of ['overview', 'case', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
   all('[data-view]').forEach((button) => {
     const active = button.dataset.view === state.view
     button.classList.toggle('active', active)
@@ -589,6 +645,7 @@ function renderView() {
     button.setAttribute('aria-current', active ? 'page' : 'false')
   })
   if (state.view === 'run') renderRunSetup()
+  if (state.view === 'case') renderResearchCase()
   if (state.view === 'compare') renderComparison()
   if (state.view === 'mechanism') renderMechanism()
   if (state.view === 'inspect') renderInspector()
@@ -736,6 +793,8 @@ function projectLiveRun(raw) {
     agent_count:agentCount,
     rounds,
     developments:projectDevelopments(raw),
+    source_signals:raw.outcome?.exercise_injects || [],
+    stabilization_events:raw.outcome?.stabilization_events || [],
     configuration:raw.regional_outbreak_configuration || null,
     is_live:true,
   }
