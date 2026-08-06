@@ -447,3 +447,56 @@ def test_adaptive_cso_cell_detects_diagnoses_and_selects_before_round_three() ->
     }
     assert all("decision" not in item["intervention"] for item in final_inputs)
     assert all("cso_trace" not in item for item in final_inputs)
+
+
+def test_resource_allocation_moves_conserved_objects_and_publishes_manifest() -> None:
+    fixture = outbreak_fixture("baseline", world_resource_probe=True)
+    session = ActiveRuntimeSession(
+        fixture.scenario,
+        fixture.exact_bindings,
+        fixture.active_specs,
+        _bindings(fixture),
+        run_id="outbreak_resource_allocation",
+        config=outbreak_runtime_config(per_call_budget=0.01, per_run_budget=0.1),
+        participant_concurrency=3,
+    )
+    step = session.apply_external_action(
+        ActionAttempt(
+            action_id="verified_partial_allocation",
+            actor_entity_id="regional_allocation_authority",
+            output_port_id="resource_allocation_out",
+            payload={
+                "commitment_ids": ["alba_mobile_lab", "borin_clinician_roster"],
+                "verification_status": "verified",
+                "manifest_ref": "manifest-48h-001",
+            },
+            logical_time=0,
+            public_summary="Committed two named operational resources.",
+        )
+    )
+
+    state = session.core_state
+    assert "outbreak_resource_allocation" in {
+        event.mechanism_id for event in step.events
+    }
+    assert state.fact("alba_mobile_lab.availability").value == "committed"
+    assert state.fact("alba_mobile_lab.assigned_to").value == "Alba domestic confirmation"
+    assert state.fact("borin_clinician_roster.availability").value == "committed"
+    assert state.fact("cyrenia_diagnostic_kits.availability").value == "available"
+    assert state.fact("regional_allocation_manifest.status").value == "verified"
+    assert state.fact("regional_allocation_manifest.commitment_ids").value == [
+        "alba_mobile_lab",
+        "borin_clinician_roster",
+    ]
+    observations = [
+        item
+        for item in state.observations.values()
+        if item.apparent_source_ref == "regional_allocation_authority"
+    ]
+    assert len(observations) == len(AGENT_IDS)
+    payload = json.loads(observations[0].apparent_content)
+    assert payload["manifest"]["verification_status"] == "verified"
+    assert {item["resource_id"] for item in payload["resource_commitments"]} == {
+        "alba_mobile_lab",
+        "borin_clinician_roster",
+    }

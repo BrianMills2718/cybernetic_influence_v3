@@ -363,6 +363,35 @@ class MessageForkControl(BaseModel):
     round: int = Field(ge=1, le=MAX_ROUNDS)
 
 
+class ResourceAllocation(BaseModel):
+    """A bounded allocation authority action over concrete scenario objects.
+
+    It deliberately moves named resources and changes a provenance-bearing
+    manifest.  It does not contain a coalition stance or any instruction to a
+    participant about what to decide.
+    """
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    commitment_ids: list[
+        Literal[
+            "alba_mobile_lab",
+            "borin_clinician_roster",
+            "cyrenia_diagnostic_kits",
+            "cyrenia_protective_equipment",
+            "darsia_cold_chain_route",
+            "darsia_fuel_lot",
+        ]
+    ] = Field(min_length=1, max_length=6)
+    verification_status: Literal["proposed", "verified"]
+    manifest_ref: str = Field(min_length=3, max_length=120)
+
+    @model_validator(mode="after")
+    def require_unique_commitments(self) -> "ResourceAllocation":
+        if len(set(self.commitment_ids)) != len(self.commitment_ids):
+            raise ValueError("resource allocation cannot commit the same object twice")
+        return self
+
+
 class CsoDetection(BaseModel):
     """Observed directional state of the coalition; no attribution or remedy."""
 
@@ -687,6 +716,7 @@ def outbreak_fixture(
     reasoning_effort: str | None = "medium",
     configuration: OutbreakScenarioConfiguration | None = None,
     message_fork_probe: bool = False,
+    world_resource_probe: bool = False,
 ) -> OutbreakFixture:
     """Build one closed, three-round coalition experiment."""
 
@@ -748,6 +778,36 @@ def outbreak_fixture(
             "verified allocation package; it cannot choose participant stances."
         ),
     )
+    for resource_id, destination in _RESOURCE_DESTINATIONS.items():
+        entities[resource_id] = EntityState(
+            entity_id=resource_id,
+            entity_kind="conserved_operational_resource",
+            description=f"A concrete resource initially available for {destination}.",
+            attributes={
+                "availability": FactState(value="available"),
+                "assigned_to": FactState(value="unassigned"),
+                "quantity": FactState(
+                    value={
+                        "alba_mobile_lab": "one mobile laboratory unit",
+                        "borin_clinician_roster": "24 clinicians",
+                        "cyrenia_diagnostic_kits": "named diagnostic kits",
+                        "cyrenia_protective_equipment": "named protective equipment",
+                        "darsia_cold_chain_route": "one protected cold-chain route",
+                        "darsia_fuel_lot": "one fuel lot",
+                    }[resource_id]
+                ),
+            },
+        )
+    entities["regional_allocation_manifest"] = EntityState(
+        entity_id="regional_allocation_manifest",
+        entity_kind="provenance_artifact",
+        description="A signed allocation manifest whose verification status is world state.",
+        attributes={
+            "status": FactState(value="absent"),
+            "manifest_ref": FactState(value="none"),
+            "commitment_ids": FactState(value=[]),
+        },
+    )
     if message_fork_probe:
         entities["message_fork_controller"] = EntityState(
             entity_id="message_fork_controller",
@@ -757,6 +817,7 @@ def outbreak_fixture(
                 "messages without acting as a coalition participant."
             ),
         )
+
 
     ports: dict[str, PortState] = {
         "coalition_round_in": PortState(
@@ -831,6 +892,28 @@ def outbreak_fixture(
             target_port_id="message_fork_control_in",
             delay=0,
             description="Routes one explicit experiment-control action at the fork boundary.",
+        )
+    if world_resource_probe:
+        ports["resource_allocation_out"] = PortState(
+            port_id="resource_allocation_out",
+            owner_ref="regional_allocation_authority",
+            direction="output",
+            effect_type="outbreak_resource_allocation",
+            description="Commit named resources and publish a proposed or verified allocation manifest.",
+        )
+        ports["resource_allocation_in"] = PortState(
+            port_id="resource_allocation_in",
+            owner_ref="outbreak_resource_allocation",
+            direction="input",
+            effect_type="outbreak_resource_allocation",
+            description="Exact intake for one bounded resource-allocation authority action.",
+        )
+        connections["route_resource_allocation"] = ConnectionState(
+            connection_id="route_resource_allocation",
+            source_port_id="resource_allocation_out",
+            target_port_id="resource_allocation_in",
+            delay=0,
+            description="Moves named resources through the allocation authority into exact world state.",
         )
 
     cso_ports = {
@@ -1039,6 +1122,33 @@ def outbreak_fixture(
             validation_basis=["Typed external action and retained exact state transition."],
         ),
     )
+    resource_allocation = MechanismSpec(
+        mechanism_id="outbreak_resource_allocation",
+        mechanism_kind="resource_allocation",
+        implementation_id="outbreak_resource_allocation_v1",
+        description="Changes conserved resource custody and the allocation manifest, then informs participants of the resulting facts.",
+        input_port_ids=["resource_allocation_in"],
+        read_fact_ids=[
+            *[f"{resource_id}.availability" for resource_id in _RESOURCE_DESTINATIONS],
+            "regional_allocation_manifest.status",
+        ],
+        write_fact_ids=[
+            *[f"{resource_id}.availability" for resource_id in _RESOURCE_DESTINATIONS],
+            *[f"{resource_id}.assigned_to" for resource_id in _RESOURCE_DESTINATIONS],
+            "regional_allocation_manifest.status",
+            "regional_allocation_manifest.manifest_ref",
+            "regional_allocation_manifest.commitment_ids",
+        ],
+        observation_target_ids=list(AGENT_IDS),
+        substrate_refs=[*_RESOURCE_DESTINATIONS, "regional_allocation_manifest"],
+        invariant_ids=["bounded_resource_allocation"],
+        fidelity=FidelityNote(
+            abstraction="Six named, conserved response resources and one provenance-bearing allocation manifest.",
+            assumptions=["A resource changes availability only through the allocation-authority port in this exercise."],
+            known_omissions=["Travel, consumption, and execution failure are not yet modeled."],
+            validation_basis=["Owned allocation port, finite named objects, and exact custody updates."],
+        ),
+    )
 
     mechanisms = {
         mechanism.mechanism_id: mechanism,
@@ -1049,6 +1159,8 @@ def outbreak_fixture(
     }
     if message_fork_probe:
         mechanisms[message_fork_control.mechanism_id] = message_fork_control
+    if world_resource_probe:
+        mechanisms[resource_allocation.mechanism_id] = resource_allocation
 
     state = CausalState(
         entities=entities,
@@ -1226,6 +1338,12 @@ def outbreak_fixture(
             invariant_checkers={
                 "bounded_message_fork_control": _bounded_message_fork_control
             },
+        )
+    if world_resource_probe:
+        exact_bindings[resource_allocation.mechanism_id] = ExactMechanismBinding(
+            implementation_id="outbreak_resource_allocation_v1",
+            handler=_apply_resource_allocation,
+            invariant_checkers={"bounded_resource_allocation": _bounded_resource_allocation},
         )
 
     return OutbreakFixture(
@@ -1625,6 +1743,92 @@ def _bounded_message_fork_control(
     context: MechanismContext, outcome: MechanismOutcome
 ) -> bool:
     return len(outcome.updates) == 2 and not outcome.observations
+
+
+_RESOURCE_DESTINATIONS: dict[str, str] = {
+    "alba_mobile_lab": "Alba domestic confirmation",
+    "borin_clinician_roster": "Borin transport hub",
+    "cyrenia_diagnostic_kits": "Cyrenia field teams",
+    "cyrenia_protective_equipment": "Cyrenia field teams",
+    "darsia_cold_chain_route": "Darsia remote corridor",
+    "darsia_fuel_lot": "Darsia remote corridor",
+}
+
+
+def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
+    allocation = ResourceAllocation.model_validate(context.effect.payload)
+    resources: list[dict[str, JsonValue]] = []
+    updates: list[FactUpdate] = []
+    for resource_id in allocation.commitment_ids:
+        availability = context.read(f"{resource_id}.availability")
+        if availability != "available":
+            raise ValueError(f"resource {resource_id} is no longer available")
+        destination = _RESOURCE_DESTINATIONS[resource_id]
+        updates.extend(
+            [
+                FactUpdate(fact_id=f"{resource_id}.availability", value="committed"),
+                FactUpdate(fact_id=f"{resource_id}.assigned_to", value=destination),
+            ]
+        )
+        resources.append(
+            {
+                "resource_id": resource_id,
+                "assigned_to": destination,
+                "world_outcome": "committed",
+            }
+        )
+    updates.extend(
+        [
+            FactUpdate(
+                fact_id="regional_allocation_manifest.status",
+                value=allocation.verification_status,
+            ),
+            FactUpdate(
+                fact_id="regional_allocation_manifest.manifest_ref",
+                value=allocation.manifest_ref,
+            ),
+            FactUpdate(
+                fact_id="regional_allocation_manifest.commitment_ids",
+                value=cast(JsonValue, allocation.commitment_ids),
+            ),
+        ]
+    )
+    snapshot: dict[str, JsonValue] = {
+        "document_kind": "resource_allocation_world_update",
+        "manifest": {
+            "manifest_ref": allocation.manifest_ref,
+            "verification_status": allocation.verification_status,
+        },
+        "resource_commitments": cast(JsonValue, resources),
+        "instruction": (
+            "These are exact world-state changes, not instructions about your stance. "
+            "Decide independently from your position, memory, and delivered evidence."
+        ),
+    }
+    return MechanismOutcome(
+        outcome_code="resource_allocation_committed",
+        updates=updates,
+        observations=[
+            ObservationDraft(
+                target_entity_id=agent_id,
+                via_port_id=context.target_port.port_id,
+                apparent_content=json.dumps(snapshot, sort_keys=True),
+                apparent_source_ref="regional_allocation_authority",
+            )
+            for agent_id in AGENT_IDS
+        ],
+    )
+
+
+def _bounded_resource_allocation(
+    context: MechanismContext, outcome: MechanismOutcome
+) -> bool:
+    allocation = ResourceAllocation.model_validate(context.effect.payload)
+    return (
+        len(outcome.updates) == len(allocation.commitment_ids) * 2 + 3
+        and len(outcome.observations) == len(AGENT_IDS)
+        and all(item.apparent_source_ref == "regional_allocation_authority" for item in outcome.observations)
+    )
 
 
 def _messages_for_target(
@@ -2194,7 +2398,12 @@ def _valid_outbreak_round_transition(
         "duplicate"
     ) or outcome.outcome_code.endswith("ignored_after_decision"):
         return not outcome.updates and not outcome.observations
-    return all(update.fact_id.startswith("outbreak_decision.") for update in outcome.updates)
+    return all(
+        update.fact_id.startswith("outbreak_decision.")
+        or update.fact_id.startswith("regional_allocation_manifest.")
+        or update.fact_id.split(".", 1)[0] in _RESOURCE_DESTINATIONS
+        for update in outcome.updates
+    )
 
 
 def _native_policy(
