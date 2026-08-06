@@ -231,3 +231,4 @@ def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() 
     assert len(stabilization_observations) == len(AGENT_IDS)
     assert len({item.apparent_content for item in stabilization_observations}) == 5
     assert "not a command about your stance" in stabilization_observations[0].apparent_content
+    assert "pre-signed activation" not in stabilization_observations[0].apparent_content

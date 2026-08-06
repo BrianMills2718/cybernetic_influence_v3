@@ -1056,8 +1056,7 @@ def _stabilization_development() -> tuple[str, str]:
             "and protective equipment before field-team release. Darsia receives protected "
             "cold-chain transport and fuel for its remote corridor. A ten-percent reserve remains. "
             "Public receipts name reciprocal protection for corridor communities, national command, "
-            "cost shares, deliveries, and the independent 72-hour review. All four governments and "
-            "local validation boards pre-signed activation on these now-confirmed conditions."
+            "cost shares, deliveries, and the independent 72-hour review."
         ),
     )
 
