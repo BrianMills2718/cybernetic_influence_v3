@@ -221,7 +221,7 @@ def main() -> int:
     parser.add_argument("--reasoning-effort", default="medium")
     args = parser.parse_args()
 
-    probe_id = f"message_fork_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+    probe_id = f"message_fork_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
     fixture = outbreak_fixture(
         "responsive_exercise_injects",
         model=args.model,
