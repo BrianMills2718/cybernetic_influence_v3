@@ -569,7 +569,13 @@ function renderGroupFilters(round) {
 function renderAgentDetail(run, round) {
   const stance = round.stances.find((item) => item.person_id === state.personId) || round.stances[0]
   const personRounds = run.rounds.map((item) => item.stances.find((candidate) => candidate.person_id === stance.person_id))
-  $('#agent-detail').innerHTML = `<header class="agent-detail-header"><div><span class="eyebrow">Round ${round.round} stance</span><h4>${escapeHtml(stance.person_label)}</h4><span class="group-label">${escapeHtml(stance.group_label)}</span></div>${decisionPill(stance.decision)}</header><div class="stance-meta"><span>Risk · ${escapeHtml(sentence(stance.risk))}</span><span>Request · ${escapeHtml(sentence(stance.request))}</span></div><p class="rationale">${escapeHtml(stance.rationale)}</p><div class="person-trajectory">${personRounds.map((item, index) => `<button type="button" class="person-round ${index + 1 === state.round ? 'active' : ''}" data-person-round="${index + 1}"><small>Round ${index + 1}</small>${decisionPill(item.decision)}<span>Risk · ${escapeHtml(sentence(item.risk))}</span></button>`).join('')}</div><div class="evidence-id">Exact structured evidence · ${escapeHtml(run.run_id)} · round ${round.round} · ${escapeHtml(stance.person_id)}</div>`
+  const messages = run.coordination_messages || []
+  const attempted = messages.find((item) => item.round === round.round && item.actor_id === stance.person_id)
+  const received = messages.filter((item) => item.delivered_round === round.round && item.target_ref === stance.person_id)
+  const interaction = attempted
+    ? `<div class="interaction-trace"><strong>Action → world outcome</strong><p>${attempted.kind === 'no_action' ? 'No direct message attempted' : `Message to ${escapeHtml(labelPerson(attempted.target_ref))}`}: ${escapeHtml(attempted.content)}</p><small>${escapeHtml(sentence(attempted.outcome))}${attempted.delivered_round ? ` · available to the recipient in round ${attempted.delivered_round}` : ''}${received.length ? ` · ${received.length} message${received.length === 1 ? '' : 's'} received before this decision` : ''}</small></div>`
+    : ''
+  $('#agent-detail').innerHTML = `<header class="agent-detail-header"><div><span class="eyebrow">Round ${round.round} stance</span><h4>${escapeHtml(stance.person_label)}</h4><span class="group-label">${escapeHtml(stance.group_label)}</span></div>${decisionPill(stance.decision)}</header><div class="stance-meta"><span>Risk · ${escapeHtml(sentence(stance.risk))}</span><span>Request · ${escapeHtml(sentence(stance.request))}</span></div><p class="rationale">${escapeHtml(stance.rationale)}</p>${interaction}<div class="person-trajectory">${personRounds.map((item, index) => `<button type="button" class="person-round ${index + 1 === state.round ? 'active' : ''}" data-person-round="${index + 1}"><small>Round ${index + 1}</small>${decisionPill(item.decision)}<span>Risk · ${escapeHtml(sentence(item.risk))}</span></button>`).join('')}</div><div class="evidence-id">Exact structured evidence · ${escapeHtml(run.run_id)} · round ${round.round} · ${escapeHtml(stance.person_id)}</div>`
   all('[data-person-round]').forEach((button) => {
     button.onclick = () => { state.round = Number(button.dataset.personRound); renderInspector(); syncUrl() }
   })
@@ -866,6 +872,7 @@ function projectLiveRun(raw) {
     source_signals:raw.outcome?.exercise_injects || [],
     stabilization_events:raw.outcome?.stabilization_events || [],
     cso_records:raw.outcome?.cso_records || [],
+    coordination_messages:raw.outcome?.coordination_messages || [],
     configuration:raw.regional_outbreak_configuration || null,
     is_live:true,
   }

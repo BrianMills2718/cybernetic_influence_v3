@@ -97,6 +97,15 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                     "risk": "capacity",
                     "request": "resources",
                     "rationale": "Support depends on an explicit surge allocation.",
+                    "coordination_action": {
+                        "kind": "send_message",
+                        "target_ref": (
+                            "regional_logistics_coordinator"
+                            if active_system_id != "regional_logistics_coordinator"
+                            else "alba_operations_lead"
+                        ),
+                        "content": "Please confirm the named surge allocation before the next round.",
+                    },
                 }
                 output_port_id = f"stance_{active_system_id}_out"
             return ActiveStepResult(
@@ -148,6 +157,26 @@ def test_baseline_runs_the_cross_border_compact_for_three_rounds() -> None:
     assert readout["outcome"] == "joint_response_approved"
     assert readout["exercise_injects"] == []
     assert readout["stabilization_events"] == []
+    messages = readout["coordination_messages"]
+    assert len(messages) == len(AGENT_IDS) * 3
+    assert {
+        item["outcome"] for item in messages if item["round"] in {1, 2}
+    } == {"delivered"}
+    assert {
+        item["outcome"] for item in messages if item["round"] == 3
+    } == {"expired_at_simulation_horizon"}
+
+    regional_inputs = [
+        json.loads(observation.apparent_content)
+        for observation in result.core_result.final_state.observations.values()
+        if observation.target_entity_id == "regional_logistics_coordinator"
+        and observation.apparent_source_ref == "outbreak_decision"
+    ]
+    assert len(regional_inputs[0]["direct_messages"]) == len(AGENT_IDS) - 1
+    assert all(
+        "coordination_action" not in stance
+        for stance in regional_inputs[0]["stances"].values()
+    )
 
 
 def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy() -> None:
@@ -308,7 +337,12 @@ def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() 
         and '"stabilization"' in observation.apparent_content
     ]
     assert len(stabilization_observations) == len(AGENT_IDS)
-    assert len({item.apparent_content for item in stabilization_observations}) == 5
+    normalized_bundles = []
+    for observation in stabilization_observations:
+        bundle = json.loads(observation.apparent_content)
+        bundle.pop("direct_messages")
+        normalized_bundles.append(json.dumps(bundle, sort_keys=True))
+    assert len(set(normalized_bundles)) == 5
     assert "not a command about your stance" in stabilization_observations[0].apparent_content
     assert "pre-signed activation" not in stabilization_observations[0].apparent_content
 

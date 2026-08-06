@@ -499,6 +499,10 @@ tbody tr:last-child td { border-bottom: 0; }
 .stance-meta { display: flex; flex-wrap: wrap; gap: 7px; margin: 17px 0; }
 .stance-meta span:not(.decision-pill) { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 0.68rem; padding: 5px 8px; }
 .rationale { border-left: 2px solid var(--accent); color: #d8e1e6; font-size: 0.91rem; margin: 0; padding: 2px 0 2px 14px; }
+.interaction-trace { border-left: 2px solid var(--line-strong); margin-top: 16px; padding-left: 14px; }
+.interaction-trace strong { color: #d8e1e6; font-size: 0.74rem; }
+.interaction-trace p { color: var(--text); font-size: 0.83rem; margin: 4px 0; }
+.interaction-trace small { color: var(--muted); display: block; font-size: 0.7rem; }
 .person-trajectory { border-top: 1px solid var(--line); display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); margin-top: 22px; padding-top: 17px; }
 .person-round { background: transparent; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; padding: 9px; text-align: left; }
 .person-round.active { background: var(--panel-3); border-color: var(--line-strong); }
