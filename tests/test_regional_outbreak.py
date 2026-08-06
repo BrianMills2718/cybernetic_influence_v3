@@ -2,6 +2,9 @@
 
 import json
 
+import pytest
+from pydantic import ValidationError
+
 from cybernetic_influence.active_runtime import (
     ActionIntent,
     ActiveProposal,
@@ -16,6 +19,7 @@ from cybernetic_influence.scenarios.regional_outbreak import (
     AGENT_IDS,
     CSO_IDS,
     SOURCE_IDS,
+    OutbreakAgentConfiguration,
     OutbreakCondition,
     OutbreakFixture,
     default_outbreak_configuration,
@@ -161,6 +165,25 @@ def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy()
                     if agent.agent_id == "alba_epidemiologist"
                     else agent.institutional_context
                 ),
+                "person": (
+                    agent.person.model_copy(
+                        update={
+                            "disposition": "Personally impatient with avoidable delay but unwilling to hide uncertainty.",
+                            "memories": [
+                                "A previous delayed confirmation allowed a manageable cluster to spread."
+                            ],
+                            "behavioral_profile": agent.person.behavioral_profile.model_copy(
+                                update={
+                                    "goals": [
+                                        "Avoid both an ungrounded alarm and preventable delay."
+                                    ]
+                                }
+                            ),
+                        }
+                    )
+                    if agent.agent_id == "alba_epidemiologist"
+                    else agent.person
+                ),
             }
         )
         for agent in default.agents
@@ -173,7 +196,7 @@ def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy()
         for item in fixture.active_specs
         if item.active_system_id == "alba_epidemiologist"
     )
-    memory = spec.initial_private_state["memory"][0]["content"]
+    memories = [item["content"] for item in spec.initial_private_state["memory"]]
     bindings = outbreak_bindings(
         fixture,
         trace_id_prefix="configuration_test",
@@ -183,9 +206,32 @@ def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy()
     policy = bindings["alba_epidemiologist"].implementation.inner
 
     assert fixture.configuration == changed
-    assert "protected domestic confirmation reserve" in memory
+    assert changed.person_contract_id == "person_contract_v1"
+    assert any("previous delayed confirmation" in item for item in memories)
+    assert any("protected domestic confirmation reserve" in item for item in memories)
     assert "preserve laboratory continuity" in policy.persona
-    assert "You are Alba Epidemiologist" in policy.persona
+    assert "Avoid both an ungrounded alarm" in policy.persona
+    assert "Position expectations (institutional oughts" in policy.persona
+    assert "do not dictate your judgment" in policy.persona
+    assert policy.implementation_id.startswith(
+        "native_outbreak_alba_epidemiologist_person_contract_v1"
+    )
+
+
+def test_outbreak_configuration_rejects_a_person_bound_to_another_actor() -> None:
+    default = default_outbreak_configuration()
+    first = default.agents[0]
+
+    with pytest.raises(ValidationError, match="person identity must match"):
+        OutbreakAgentConfiguration.model_validate(
+            {
+                **first.model_dump(mode="json"),
+                "person": {
+                    **first.person.model_dump(mode="json"),
+                    "entity_id": "borin_epidemiologist",
+                },
+            }
+        )
 
 
 def test_participant_policy_is_blind_to_experiment_condition() -> None:

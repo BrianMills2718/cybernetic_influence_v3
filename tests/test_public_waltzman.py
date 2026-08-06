@@ -94,6 +94,8 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "10% regional reserve" in page
     assert "What enters the decision environment?" in page
     assert "Edit one role—or keep the reviewed coalition" in page
+    assert "Institutional oughts—not personal commands" in page
+    assert "Edit personal character and memory" in page
     assert "Mechanism analysis and retained evidence" in page
     assert shape.stylesheets == ["assets/styles.css?v=waltzman-cso-v1"]
     assert shape.scripts == ["assets/app.js?v=waltzman-cso-v1"]
@@ -108,6 +110,17 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "agent-config-select",
         "agent-mandate",
         "agent-context",
+        "person-position",
+        "person-disposition",
+        "person-memories",
+        "person-values",
+        "person-goals",
+        "person-beliefs",
+        "person-decision-tendencies",
+        "person-social-perceptions",
+        "person-current-state",
+        "person-capabilities",
+        "person-limitations",
         "shared-situation",
         "control-preview",
         "run-experiment",
@@ -285,6 +298,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "fetch('assets/autonomous-probe.json'",
         "apiRequest('api/runs'",
         "regional_outbreak_configuration:editableConfiguration",
+        "personProfileFields",
+        "selected.person.behavioral_profile",
         "adaptive_cso_stabilization",
         "cso_records:raw.outcome?.cso_records",
         "case-cso-records",
@@ -329,8 +344,21 @@ def test_public_app_serves_defaults_and_rejects_misrouted_agent_configuration(
     assert response.status_code == 200
     outbreak = response.json()["scenarios"]["regional_outbreak"]
     configuration = outbreak["editable_configuration"]
+    assert configuration["person_contract_id"] == "person_contract_v1"
     assert len(configuration["agents"]) == 26
     assert configuration["agents"][0]["agent_id"] == "alba_epidemiologist"
+    person = configuration["agents"][0]["person"]
+    assert person["entity_id"] == "alba_epidemiologist"
+    assert person["disposition"]
+    assert person["memories"]
+    assert person["behavioral_profile"]["values"]
+    assert person["behavioral_profile"]["goals"]
+    assert person["behavioral_profile"]["beliefs"]
+    assert person["behavioral_profile"]["decision_tendencies"]
+    assert person["behavioral_profile"]["social_perceptions"]
+    assert person["behavioral_profile"]["current_state"]
+    assert person["behavioral_profile"]["capabilities"]
+    assert person["behavioral_profile"]["limitations"]
     assert outbreak["maximum_live_calls"] == 89
 
     invalid = client.post(

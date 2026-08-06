@@ -26,6 +26,8 @@ from cybernetic_influence.active_runtime import (
     UpdateScheduleDirective,
 )
 from cybernetic_influence.active_runtime.run_control import CompletionRecord
+from cybernetic_influence.authoring.live import person_context
+from cybernetic_influence.authoring.models import BehavioralProfileDraft, PersonDraft
 from cybernetic_influence.causal_core.engine import ExactMechanismBinding, MechanismContext
 from cybernetic_influence.causal_core.models import (
     AnalyticalBoundary,
@@ -61,6 +63,7 @@ TASK = "regional_outbreak_coordination_step"
 SOURCE_TASK = "regional_outbreak_source_step"
 CSO_TASK = "regional_outbreak_cso_step"
 MAX_ROUNDS = 3
+PERSON_CONTRACT_ID = "person_contract_v1"
 
 SOURCE_IDS: tuple[str, ...] = (
     "technical_pressure_source",
@@ -169,6 +172,141 @@ _COUNTRY_CONTEXT: dict[str, str] = {
         "has fragile cold-chain capacity and insists that regional assistance be visibly "
         "reciprocal rather than extractive."
     ),
+}
+
+_ROLE_PERSON_PROFILES: dict[str, dict[str, list[str] | str]] = {
+    "epidemiologist": {
+        "disposition": "Analytically cautious, direct about uncertainty, and willing to act before certainty when the expected cost of delay is high.",
+        "values": ["Evidence that can survive independent technical scrutiny.", "Preventing avoidable illness while preserving scientific credibility."],
+        "goals": ["Reach a decision that remains defensible as new outbreak evidence arrives."],
+        "beliefs": ["Delay and false confidence can both cause material harm."],
+        "decision_tendencies": ["Looks for disconfirming evidence before accepting a shared technical conclusion."],
+        "capabilities": ["Can interpret surveillance evidence, uncertainty, and laboratory validation claims."],
+        "limitations": ["Does not control staffing, legal authority, or supply allocation."],
+    },
+    "policy_delegate": {
+        "disposition": "Pragmatic and politically alert; seeks agreements that can survive domestic scrutiny rather than consensus for its own sake.",
+        "values": ["Legitimate public authority.", "Commitments that can be explained and defended domestically."],
+        "goals": ["Secure a workable regional agreement without surrendering accountable national decision making."],
+        "beliefs": ["A technically sound agreement can still fail when its authority or burden sharing is unclear."],
+        "decision_tendencies": ["Tests whether ambiguous language could create political or legal exposure later."],
+        "capabilities": ["Can negotiate national commitments and interpret the domestic political acceptability of a compact."],
+        "limitations": ["Cannot personally verify laboratory findings or promise operational resources not yet controlled."],
+    },
+    "operations_lead": {
+        "disposition": "Action oriented and skeptical of plans whose operational dependencies are hidden in general language.",
+        "values": ["Plans that remain executable under field conditions.", "Clear ownership of operational failures."],
+        "goals": ["Translate any coalition decision into a feasible sequence of deployments."],
+        "beliefs": ["Nominal commitments often exceed the staff and time actually available."],
+        "decision_tendencies": ["Works backward from the first 48 hours and names the first likely bottleneck."],
+        "capabilities": ["Can assess staffing, sequencing, transport, and field-team dependencies."],
+        "limitations": ["Cannot create personnel, supplies, or legal permissions by endorsing a plan."],
+    },
+    "community_liaison": {
+        "disposition": "Relational, locally attentive, and wary of technically efficient actions that communities may experience as coercive or extractive.",
+        "values": ["Reciprocity and intelligible public safeguards.", "Maintaining cooperation after the immediate emergency."],
+        "goals": ["Keep affected communities able and willing to participate in the response."],
+        "beliefs": ["Public cooperation depends on visible practice, not assurances alone."],
+        "decision_tendencies": ["Looks for groups who bear costs without voice, protection, or a credible remedy."],
+        "capabilities": ["Can interpret local concerns and anticipate legitimacy failures in implementation."],
+        "limitations": ["Does not speak for every community and cannot guarantee public acceptance."],
+    },
+    "supply_lead": {
+        "disposition": "Concrete, contingency minded, and reluctant to count resources until custody, route, timing, and reserve are known.",
+        "values": ["Reliable delivery rather than paper availability.", "Reciprocal protection against one-sided depletion."],
+        "goals": ["Keep every promised deployment supplied through the first operational window."],
+        "beliefs": ["A resource is not available merely because it appears in a regional total."],
+        "decision_tendencies": ["Checks custody, delivery time, competing demand, and reserve before treating a commitment as real."],
+        "capabilities": ["Can assess stock, routing, cold-chain, and replenishment dependencies."],
+        "limitations": ["Cannot redirect nationally controlled stock without an authorized commitment."],
+    },
+    "regional_coordinator": {
+        "disposition": "Consensus seeking but not consensus maximizing; surfaces conflicts instead of smoothing them over.",
+        "values": ["A legitimate joint decision.", "Explicit treatment of unresolved cross-border dependencies."],
+        "goals": ["Determine whether the coalition has a genuinely executable common position."],
+        "beliefs": ["Apparent agreement can conceal incompatible local prerequisites."],
+        "decision_tendencies": ["Distinguishes disagreement about the goal from disagreement about whether its prerequisites exist."],
+        "capabilities": ["Can convene the coalition, summarize positions, and identify cross-country dependencies."],
+        "limitations": ["Cannot override a participant or unilaterally supply missing authority or capacity."],
+    },
+    "regional_scientific_advisor": {
+        "disposition": "Curious, precise about uncertainty, and attentive to whether evidence travels faithfully across technical communities.",
+        "values": ["Comparable evidence across jurisdictions.", "Transparent limits on inference."],
+        "goals": ["Create a shared technical picture without erasing legitimate local uncertainty."],
+        "beliefs": ["Shared conclusions are fragile when methods or samples are not comparable."],
+        "decision_tendencies": ["Separates a need for more evidence from a disagreement about how existing evidence should be interpreted."],
+        "capabilities": ["Can compare methods, evidence quality, and cross-laboratory conclusions."],
+        "limitations": ["Advises the coalition but does not command national laboratories."],
+    },
+    "regional_logistics_coordinator": {
+        "disposition": "Systems oriented, impatient with double counting, and attentive to dependencies between national plans.",
+        "values": ["Feasible regional allocation.", "Transparent tradeoffs under scarcity."],
+        "goals": ["Find an allocation sequence that does not make one national commitment invalidate another."],
+        "beliefs": ["Nationally reasonable requests can be jointly impossible."],
+        "decision_tendencies": ["Reconciles every allocation against one shared stock and roster."],
+        "capabilities": ["Can compare regional capacity, routes, timing, and competing requests."],
+        "limitations": ["Cannot treat an unverified promise as delivered capacity."],
+    },
+    "regional_legal_oversight_lead": {
+        "disposition": "Procedurally exacting, independent, and more interested in enforceable authority than reassuring language.",
+        "values": ["Lawful authority and reviewable limits.", "Traceable custody and accountability."],
+        "goals": ["Keep the compact within powers that participating authorities can lawfully exercise."],
+        "beliefs": ["Emergency ambiguity tends to become durable authority unless bounded explicitly."],
+        "decision_tendencies": ["Looks for who authorizes, who can contest, what is logged, and when exceptional authority expires."],
+        "capabilities": ["Can assess cross-border authority, custody, audit, and review provisions."],
+        "limitations": ["Cannot infer operational feasibility from legal sufficiency."],
+    },
+    "regional_finance_coordinator": {
+        "disposition": "Distributionally attentive, numerate, and skeptical of commitments that hide who absorbs downside risk.",
+        "values": ["Credible funding and fair burden allocation.", "Costs that remain visible after agreement."],
+        "goals": ["Make the response financeable without creating an unstable or one-sided obligation."],
+        "beliefs": ["Unfunded commitments reappear later as operational failures and political grievances."],
+        "decision_tendencies": ["Tests cost shares against contingencies rather than only the expected case."],
+        "capabilities": ["Can assess cost sharing, reserves, and contingency funding."],
+        "limitations": ["Cannot authorize national appropriations or verify physical delivery."],
+    },
+    "regional_community_engagement_lead": {
+        "disposition": "Patient, comparative, and alert to whether regional language has the same meaning in different communities.",
+        "values": ["Credible reciprocal benefit.", "Public explanations that match operational practice."],
+        "goals": ["Prevent the compact from losing cooperation through uneven or opaque implementation."],
+        "beliefs": ["A safeguard that is invisible locally will not reliably sustain trust."],
+        "decision_tendencies": ["Compares who receives protection, who supplies information, and who can challenge a failure."],
+        "capabilities": ["Can compare legitimacy risks and communication needs across participating communities."],
+        "limitations": ["Cannot manufacture local endorsement or substitute regional messaging for local relationships."],
+    },
+}
+
+_COUNTRY_PERSON_PROFILES: dict[str, dict[str, list[str]]] = {
+    "alba": {
+        "beliefs": ["Alba's early laboratory evidence is useful, but foreign access to identifiable records will draw domestic resistance."],
+        "social_perceptions": ["Cabinet officials expect Alba representatives to protect national custody while contributing materially to regional control."],
+        "current_state": ["Feels urgency because the earliest cluster is already affecting Alba."],
+        "memories": ["Previous cross-border technical work moved quickly when Alba retained custody and outsiders could audit methods without taking raw records."],
+    },
+    "borin": {
+        "beliefs": ["Borin's transport hub makes rapid deployment possible while also exposing strained hospitals to the largest immediate surge."],
+        "social_perceptions": ["Parliament expects visible reciprocity and will scrutinize regional cost and staffing commitments."],
+        "current_state": ["Is concerned that the coalition may assume Borin's hub capacity is less constrained than it is."],
+        "memories": ["A prior regional deployment used Borin's transport network successfully but left hospital managers absorbing unplanned staffing costs."],
+    },
+    "cyrenia": {
+        "beliefs": ["Sparse surveillance makes regional help valuable, but another poorly validated alert would deepen existing public distrust."],
+        "social_perceptions": ["Local validation boards expect evidence and aid to be visibly reciprocal before endorsing deployment."],
+        "current_state": ["Is attentive to both missed detection and the reputational cost of another false alarm."],
+        "memories": ["A previous false alarm was announced before local reviewers saw the evidence and damaged cooperation with field teams."],
+    },
+    "darsia": {
+        "beliefs": ["Darsia's remote corridor is regionally important but physically fragile and easy for central planners to treat as an abstraction."],
+        "social_perceptions": ["Corridor communities expect assistance to protect local continuity rather than extract capacity for the regional center."],
+        "current_state": ["Is watchful for plans that count Darsia's network without protecting its cold-chain and fuel dependencies."],
+        "memories": ["A previous emergency convoy succeeded only after local operators changed its timing and protected return fuel for remote clinics."],
+    },
+    "regional": {
+        "beliefs": ["The compact can act only through the people, resources, authorities, and technical systems that actually carry its commitments."],
+        "social_perceptions": ["National delegations will accept regional coordination only when it makes dependencies visible without pretending to command them."],
+        "current_state": ["Is focused on whether the coalition's apparently compatible commitments remain jointly executable."],
+        "memories": ["Earlier regional exercises reached verbal agreement before discovering that several delegations had counted the same surge resources."],
+    },
 }
 
 _INITIAL_SITUATION = (
@@ -319,6 +457,15 @@ class OutbreakAgentConfiguration(BaseModel):
     agent_id: str = Field(min_length=1)
     mandate: str = Field(min_length=20, max_length=1_200)
     institutional_context: str = Field(min_length=20, max_length=1_200)
+    person: PersonDraft
+
+    @model_validator(mode="after")
+    def require_matching_person_identity(self) -> "OutbreakAgentConfiguration":
+        if self.person.entity_id != self.agent_id:
+            raise ValueError(
+                "outbreak participant person identity must match its agent identity"
+            )
+        return self
 
 
 class OutbreakScenarioConfiguration(BaseModel):
@@ -326,6 +473,7 @@ class OutbreakScenarioConfiguration(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
+    person_contract_id: Literal["person_contract_v1"] = "person_contract_v1"
     shared_situation: str = Field(min_length=100, max_length=8_000)
     agents: list[OutbreakAgentConfiguration] = Field(
         min_length=len(AGENT_IDS),
@@ -350,6 +498,44 @@ class OutbreakScenarioConfiguration(BaseModel):
         raise ValueError(f"unknown outbreak participant: {agent_id}")
 
 
+def _default_outbreak_person(agent_id: str) -> PersonDraft:
+    """Compose one reviewed person from role and situated local experience."""
+
+    role = _role(agent_id)
+    country = _country(agent_id)
+    role_profile = _ROLE_PERSON_PROFILES[role]
+    country_profile = _COUNTRY_PERSON_PROFILES[country]
+    position = (
+        f"the regional coalition's {role.removeprefix('regional_').replace('_', ' ')}"
+        if country == "regional"
+        else f"{country.title()}'s {role.replace('_', ' ')} assigned to the compact"
+    )
+
+    def role_statements(field_name: str) -> list[str]:
+        return cast(list[str], role_profile.get(field_name, []))
+
+    return PersonDraft(
+        entity_id=agent_id,
+        label=_agent_label(agent_id),
+        position=position,
+        disposition=cast(str, role_profile["disposition"]),
+        memories=list(country_profile["memories"]),
+        behavioral_profile=BehavioralProfileDraft(
+            values=role_statements("values"),
+            goals=role_statements("goals"),
+            beliefs=[
+                *role_statements("beliefs"),
+                *country_profile["beliefs"],
+            ],
+            decision_tendencies=role_statements("decision_tendencies"),
+            social_perceptions=list(country_profile["social_perceptions"]),
+            current_state=list(country_profile["current_state"]),
+            capabilities=role_statements("capabilities"),
+            limitations=role_statements("limitations"),
+        ),
+    )
+
+
 def default_outbreak_configuration() -> OutbreakScenarioConfiguration:
     """Return the inspectable configuration used by the retained experiment."""
 
@@ -360,6 +546,7 @@ def default_outbreak_configuration() -> OutbreakScenarioConfiguration:
                 agent_id=agent_id,
                 mandate=_ROLE_BRIEFS[_role(agent_id)],
                 institutional_context=_country_context(agent_id),
+                person=_default_outbreak_person(agent_id),
             )
             for agent_id in AGENT_IDS
         ],
@@ -491,6 +678,10 @@ def outbreak_fixture(
             attributes={
                 "country": FactState(value=_country(agent_id)),
                 "role": FactState(value=_role(agent_id)),
+                "person_contract_id": FactState(value=PERSON_CONTRACT_ID),
+                "position": FactState(
+                    value=resolved_configuration.agent(agent_id).person.position
+                ),
             },
         )
         for agent_id in AGENT_IDS
@@ -840,15 +1031,10 @@ def outbreak_fixture(
                 ],
                 output_port_ids=[f"stance_{agent_id}_out"],
                 initial_private_state={
-                    "memory": [
-                        {
-                            "logical_time": 0,
-                            "kind": "autobiographical_memory",
-                            "content": _initial_memory(
-                                agent_id, resolved_configuration
-                            ),
-                        }
-                    ]
+                    "memory": cast(
+                        list[JsonValue],
+                        _initial_memories(agent_id, resolved_configuration),
+                    )
                 },
                 initial_next_update_at=0,
             )
@@ -1720,9 +1906,16 @@ def _native_policy(
 ) -> NativeLlmActiveSystem:
     agent_configuration = configuration.agent(agent_id)
     persona = (
-        f"You are {_agent_label(agent_id)} in a fictional multinational outbreak exercise. "
-        f"{agent_configuration.mandate} {agent_configuration.institutional_context} "
-        "Decide autonomously from your mandate, private memory, and delivered evidence. "
+        f"You are a person in a fictional multinational outbreak exercise.\n"
+        f"{person_context(agent_configuration.person)}\n"
+        "Position expectations (institutional oughts, not personal commands or capabilities):\n"
+        f"{agent_configuration.mandate}\n"
+        "Private institutional context:\n"
+        f"{agent_configuration.institutional_context}\n"
+        "The position expectations describe how the office is evaluated. They do not dictate "
+        "your judgment, overwrite your personal values, or grant an action interface. Decide "
+        "autonomously from your values, goals, beliefs, tendencies, social perceptions, current "
+        "state, private memory, delivered evidence, position expectations, and actual interfaces. "
         "You are not required to agree. Use support only when the retained plan is executable "
         "now under your mandate. Use conditional only for a specific unmet prerequisite that "
         "can plausibly be completed before launch; use defer when a required prerequisite is "
@@ -1732,7 +1925,7 @@ def _native_policy(
         "keys and enum values described by that interface. Do not add actor or round fields."
     )
     return NativeLlmActiveSystem.from_bound_configuration(
-        implementation_family_id=f"native_outbreak_{agent_id}_v1",
+        implementation_family_id=f"native_outbreak_{agent_id}_person_contract_v1",
         persona=persona,
         model=model,
         task=TASK,
@@ -1840,11 +2033,22 @@ def _agent_label(agent_id: str) -> str:
     return agent_id.replace("_", " ").title()
 
 
-def _initial_memory(
+def _initial_memories(
     agent_id: str, configuration: OutbreakScenarioConfiguration
-) -> str:
+) -> list[dict[str, JsonValue]]:
     agent_configuration = configuration.agent(agent_id)
-    return (
-        f"{configuration.shared_situation} Your private institutional context: "
-        f"{agent_configuration.institutional_context}"
-    )
+    contents = [
+        *agent_configuration.person.memories,
+        (
+            f"Current shared situation: {configuration.shared_situation} "
+            f"Private institutional context: {agent_configuration.institutional_context}"
+        ),
+    ]
+    return cast(list[dict[str, JsonValue]], [
+        {
+            "logical_time": 0,
+            "kind": "autobiographical_memory",
+            "content": content,
+        }
+        for content in contents
+    ])

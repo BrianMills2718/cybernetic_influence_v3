@@ -67,7 +67,7 @@
 
         <section class="overview-builder-preview" aria-labelledby="overview-builder-title">
           <span class="section-kicker">Your experiment</span><h3 id="overview-builder-title">Configure the actors, pressure, and response loop</h3>
-          <ol><li><b>1</b><div><strong>Define the coalition</strong><p>Edit the shared decision, institutional roles, mandates, and local context.</p></div></li><li><b>2</b><div><strong>Choose the influence environment</strong><p>Run a baseline, heterogeneous pressure, a fixed intervention, or an adaptive CSO response.</p></div></li><li><b>3</b><div><strong>Inspect the coordination process</strong><p>Trace every source choice, coalition decision, CSO finding, diagnosis, intervention, and outcome.</p></div></li></ol>
+          <ol><li><b>1</b><div><strong>Define the coalition</strong><p>Edit each person’s values, goals, beliefs, memories, position expectations, and local context.</p></div></li><li><b>2</b><div><strong>Choose the influence environment</strong><p>Run a baseline, heterogeneous pressure, a fixed intervention, or an adaptive CSO response.</p></div></li><li><b>3</b><div><strong>Inspect the coordination process</strong><p>Trace every source choice, coalition decision, CSO finding, diagnosis, intervention, and outcome.</p></div></li></ol>
           <p class="template-boundary">Current demo template · Cross-Border Early Warning Compact · 3 rounds · authentic model calls retained</p>
         </section>
       </section>
@@ -139,8 +139,23 @@
             <section data-build-panel="coalition" hidden>
               <div class="build-screen-title"><span>Configure the players</span><h3>Edit one role—or keep the reviewed coalition</h3></div>
               <div class="coalition-editor-heading"><label class="field-label" for="agent-config-select">Participant<select id="agent-config-select"></select></label><button id="reset-configuration" type="button" class="quiet-button">Reset</button></div>
-              <label class="field-label" for="agent-mandate">Initial mandate<textarea id="agent-mandate" rows="5"></textarea></label>
+              <label class="field-label" for="agent-mandate">Position expectations <small>Institutional oughts—not personal commands</small><textarea id="agent-mandate" rows="5"></textarea></label>
               <label class="field-label" for="agent-context">Private institutional context<textarea id="agent-context" rows="5"></textarea></label>
+              <details class="shared-situation-editor">
+                <summary>Edit personal character and memory</summary>
+                <p>These are descriptive starting assumptions. They shape interpretation but do not grant actions or dictate a decision.</p>
+                <label class="field-label" for="person-position">Position<textarea id="person-position" rows="2"></textarea></label>
+                <label class="field-label" for="person-disposition">Disposition<textarea id="person-disposition" rows="3"></textarea></label>
+                <label class="field-label" for="person-memories">Personal memories <small>One item per line</small><textarea id="person-memories" rows="4"></textarea></label>
+                <label class="field-label" for="person-values">Values <small>One item per line</small><textarea id="person-values" rows="4"></textarea></label>
+                <label class="field-label" for="person-goals">Goals <small>One item per line</small><textarea id="person-goals" rows="4"></textarea></label>
+                <label class="field-label" for="person-beliefs">Beliefs <small>May be wrong; one item per line</small><textarea id="person-beliefs" rows="4"></textarea></label>
+                <label class="field-label" for="person-decision-tendencies">Decision tendencies <small>One item per line</small><textarea id="person-decision-tendencies" rows="4"></textarea></label>
+                <label class="field-label" for="person-social-perceptions">Social perceptions <small>One item per line</small><textarea id="person-social-perceptions" rows="4"></textarea></label>
+                <label class="field-label" for="person-current-state">Current state <small>Attention, confidence, fatigue, or intent</small><textarea id="person-current-state" rows="4"></textarea></label>
+                <label class="field-label" for="person-capabilities">Capabilities <small>Descriptive; interfaces still govern action</small><textarea id="person-capabilities" rows="4"></textarea></label>
+                <label class="field-label" for="person-limitations">Limitations <small>One item per line</small><textarea id="person-limitations" rows="4"></textarea></label>
+              </details>
               <details class="shared-situation-editor"><summary>Edit the common starting situation</summary><label class="field-label" for="shared-situation">Shared situation<textarea id="shared-situation" rows="12"></textarea></label></details>
               <div class="build-screen-actions"><button type="button" data-build-next="environment">← Back</button><button class="build-next" type="button" data-build-next="review">Review run →</button></div>
             </section>
@@ -382,7 +397,7 @@
         </header>
         <div class="method-grid">
           <section><span class="phase-number">01</span><h3>Initial executable plan</h3><ul id="initial-plan"></ul></section>
-          <section><span class="phase-number">02</span><h3>Participant cognition</h3><p>Twelve LLM-modeled roles receive their mandate, private memory, common round snapshot, and any external development addressed to their delegation. Each independently returns a decision, primary risk, requested next step, and rationale.</p></section>
+          <section><span class="phase-number">02</span><h3>Participant cognition</h3><p>Each LLM-modeled person receives reviewed values, goals, beliefs, tendencies, social perceptions, current state, capabilities, limitations, personal memory, position expectations, and only the information delivered to them. Each independently returns a decision, primary risk, requested next step, and rationale.</p></section>
           <section><span class="phase-number">03</span><h3>Exercise control</h3><p>After a round closes, exercise control may select a preauthored external development from the dominant reported risk. It cannot write, select, or override participant stances.</p></section>
           <section><span class="phase-number">04</span><h3>Coalition decision gate</h3><p>After round three, approval requires at least six support positions, at least nine support-or-conditional positions, and no more than one opposition.</p></section>
         </div>

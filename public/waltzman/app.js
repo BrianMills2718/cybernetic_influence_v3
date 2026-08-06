@@ -6,6 +6,16 @@ const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyren
 const preferredModel = 'codex/gpt-5.6-luna'
 const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
 const researchCaseRunIds = ['run_ef3763b4d477', 'run_3303c9302a36', 'run_e2f31904e10b', 'run_a27f8e4082ef']
+const personProfileFields = {
+  values:'person-values',
+  goals:'person-goals',
+  beliefs:'person-beliefs',
+  decision_tendencies:'person-decision-tendencies',
+  social_perceptions:'person-social-perceptions',
+  current_state:'person-current-state',
+  capabilities:'person-capabilities',
+  limitations:'person-limitations',
+}
 
 let dataset = null
 let runtimeConfig = null
@@ -122,6 +132,10 @@ function configurationAgent(configuration, personId) {
   return configuration?.agents?.find((item) => item.agent_id === personId) || null
 }
 
+function lineItems(value) {
+  return String(value || '').split('\n').map((item) => item.trim()).filter(Boolean)
+}
+
 function readStateFromUrl() {
   const params = new URLSearchParams(window.location.search)
   const requestedView = params.get('view')
@@ -213,6 +227,12 @@ function renderRunSetup() {
   const selected = configurationAgent(editableConfiguration, selectedConfigurationPerson)
   $('#agent-mandate').value = selected?.mandate || ''
   $('#agent-context').value = selected?.institutional_context || ''
+  $('#person-position').value = selected?.person?.position || ''
+  $('#person-disposition').value = selected?.person?.disposition || ''
+  $('#person-memories').value = (selected?.person?.memories || []).join('\n')
+  Object.entries(personProfileFields).forEach(([fieldName, elementId]) => {
+    $(`#${elementId}`).value = (selected?.person?.behavioral_profile?.[fieldName] || []).join('\n')
+  })
   $('#shared-situation').value = editableConfiguration?.shared_situation || ''
 
   const condition = publicConditionCopy[selectedCondition] || conditionContract(selectedCondition)
@@ -232,6 +252,10 @@ function renderRunSetup() {
   }
   $('#agent-mandate').oninput = persistEditor
   $('#agent-context').oninput = persistEditor
+  $('#person-position').oninput = persistEditor
+  $('#person-disposition').oninput = persistEditor
+  $('#person-memories').oninput = persistEditor
+  Object.values(personProfileFields).forEach((elementId) => { $(`#${elementId}`).oninput = persistEditor })
   $('#shared-situation').oninput = persistEditor
   renderBuildStep()
 }
@@ -255,6 +279,14 @@ function persistEditor() {
   if (selected) {
     selected.mandate = $('#agent-mandate').value
     selected.institutional_context = $('#agent-context').value
+    if (selected.person) {
+      selected.person.position = $('#person-position').value
+      selected.person.disposition = $('#person-disposition').value
+      selected.person.memories = lineItems($('#person-memories').value)
+      Object.entries(personProfileFields).forEach(([fieldName, elementId]) => {
+        selected.person.behavioral_profile[fieldName] = lineItems($(`#${elementId}`).value)
+      })
+    }
   }
   editableConfiguration.shared_situation = $('#shared-situation').value
 }
@@ -542,7 +574,11 @@ function renderRunInputs(run, personId) {
   const configuration = configurationForRun(run)
   const agent = configurationAgent(configuration, personId)
   const condition = conditionContract(run.condition)
-  $('#run-inputs').innerHTML = configuration && agent ? `<div class="run-input-grid"><article><span>Common starting situation</span><p>${escapeHtml(configuration.shared_situation)}</p></article><article><span>${escapeHtml(labelPerson(personId))} · initial mandate</span><p>${escapeHtml(agent.mandate)}</p></article><article><span>Private institutional context</span><p>${escapeHtml(agent.institutional_context)}</p></article><article><span>Exercise-control rule</span><p>${escapeHtml(condition.description)}</p></article><article><span>Execution configuration</span><p>${escapeHtml(run.model)} · ${escapeHtml(run.reasoning_effort)} reasoning · ${run.model_calls} retained calls</p></article></div>` : '<p class="empty-state">This legacy retained run predates the public configuration projection.</p>'
+  const person = agent?.person
+  const personalContext = person
+    ? `${person.disposition} Goals: ${(person.behavioral_profile?.goals || []).join(' ')}`
+    : 'This retained run predates the canonical person contract.'
+  $('#run-inputs').innerHTML = configuration && agent ? `<div class="run-input-grid"><article><span>Common starting situation</span><p>${escapeHtml(configuration.shared_situation)}</p></article><article><span>${escapeHtml(labelPerson(personId))} · position expectations</span><p>${escapeHtml(agent.mandate)}</p></article><article><span>Personal starting context</span><p>${escapeHtml(personalContext)}</p></article><article><span>Private institutional context</span><p>${escapeHtml(agent.institutional_context)}</p></article><article><span>Exercise-control rule</span><p>${escapeHtml(condition.description)}</p></article><article><span>Execution configuration</span><p>${escapeHtml(run.model)} · ${escapeHtml(run.reasoning_effort)} reasoning · ${run.model_calls} retained calls</p></article></div>` : '<p class="empty-state">This legacy retained run predates the public configuration projection.</p>'
 }
 
 function renderAgents(run, round) {
