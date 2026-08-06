@@ -1,5 +1,7 @@
 """Focused exact-plumbing checks for the authentic regional outbreak scenario."""
 
+import json
+
 from cybernetic_influence.active_runtime import (
     ActionIntent,
     ActiveProposal,
@@ -34,12 +36,26 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
             active_system_id = item.active_system_id
             private_state = item.private_state
             if active_system_id in SOURCE_IDS:
+                snapshot = json.loads(item.observations[0].apparent_content)
+                signal_id = "verify" if snapshot["completed_round"] == 1 else "escalate"
                 return ActiveStepResult(
                     proposal=ActiveProposal(
                         active_system_id=active_system_id,
                         implementation_id=implementation_id,
                         private_state=private_state,
-                        actions=[ActionIntent(output_port_id=f"{active_system_id}_out", payload={"signal_id": "escalate", "rationale": "A reviewed external incompatibility is present."}, public_summary="Emitted one bounded external signal.")],
+                        actions=[
+                            ActionIntent(
+                                output_port_id=f"{active_system_id}_out",
+                                payload={
+                                    "signal_id": signal_id,
+                                    "rationale": (
+                                        "Selected the reviewed development that matches "
+                                        "the public coalition feedback."
+                                    ),
+                                },
+                                public_summary="Emitted one bounded external signal.",
+                            )
+                        ],
                         update_schedule=UpdateScheduleDirective(mode="dormant"),
                     )
                 )
@@ -180,6 +196,23 @@ def test_responsive_condition_delivers_complete_autonomous_source_bundles() -> N
         if observation.apparent_source_ref == "outbreak_source_delivery"
     ]
     assert len(inject_observations) == len(AGENT_IDS) * 2
+    alba_bundles = [
+        json.loads(observation.apparent_content)
+        for observation in inject_observations
+        if observation.target_entity_id == "alba_epidemiologist"
+    ]
+    assert [
+        bundle["coalition_snapshot"]["stances"] for bundle in alba_bundles
+    ] == [round_document["stances"] for round_document in readout["round_history"][:2]]
+    assert [
+        {document["signal_id"] for document in bundle["documents"]}
+        for bundle in alba_bundles
+    ] == [{"verify"}, {"escalate"}]
+    assert {
+        document["content"] for document in alba_bundles[0]["documents"]
+    }.isdisjoint(
+        document["content"] for document in alba_bundles[1]["documents"]
+    )
 
 
 def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() -> None:
