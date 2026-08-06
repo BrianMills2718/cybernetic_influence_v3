@@ -211,7 +211,7 @@ class CsoDetection(BaseModel):
     trust_structure: Literal["stable", "conditional", "fragmented"]
     perceived_risk: Literal["bounded", "expanding", "high"]
     coordination_readiness: Literal["ready", "degrading", "blocked"]
-    evidence: list[str] = Field(min_length=1, max_length=6)
+    evidence: str = Field(min_length=1, max_length=600)
 
 
 class CsoDiagnosis(BaseModel):
@@ -231,7 +231,15 @@ class CsoDiagnosis(BaseModel):
         "process_delay",
         "no_material_shift",
     ]
-    affected_groups: list[str] = Field(min_length=1, max_length=6)
+    affected_scope: Literal[
+        "alba",
+        "borin",
+        "cyrenia",
+        "darsia",
+        "regional",
+        "multiple_groups",
+        "coalition_wide",
+    ]
     rationale: str = Field(min_length=1, max_length=500)
 
 
@@ -247,9 +255,12 @@ class CsoIntervention(BaseModel):
         "process_reset",
         "no_action",
     ]
-    target_dimensions: list[
-        Literal["trust_structure", "perceived_risk", "coordination_readiness"]
-    ] = Field(min_length=1, max_length=3)
+    target_dimension: Literal[
+        "trust_structure",
+        "perceived_risk",
+        "coordination_readiness",
+        "cross_dimension",
+    ]
     rationale: str = Field(min_length=1, max_length=500)
 
 
@@ -1719,7 +1730,7 @@ def _cso_policy(
             "Operations cell. Observe only the retained coalition snapshot and external source "
             "documents. Classify trust_structure as stable|conditional|fragmented, perceived_risk "
             "as bounded|expanding|high, and coordination_readiness as ready|degrading|blocked. "
-            "Cite one to six concise pieces of observable evidence. Do not infer hostile intent, "
+            "Give one concise evidence summary. Do not infer hostile intent, "
             "diagnose a mechanism, propose an intervention, or recommend a vote. Submit exactly "
             "one action through cso_detection_out using only those four payload keys."
         ),
@@ -1728,10 +1739,11 @@ def _cso_policy(
             "Operations cell. Given the monitor's typed finding, identify the primary_dimension "
             "as trust_structure|perceived_risk|coordination_readiness|cross_dimension and the "
             "mechanism as authority_fragmentation|risk_expansion|incompatible_requirements|"
-            "process_delay|no_material_shift. Name one to six affected groups and give a concise "
+            "process_delay|no_material_shift. Set affected_scope to alba|borin|cyrenia|darsia|"
+            "regional|multiple_groups|coalition_wide and give a concise "
             "evidence-bound rationale. Do not attribute hostile intent, select an intervention, "
             "or recommend a vote. Submit exactly one action through cso_diagnosis_out using only "
-            "primary_dimension, mechanism, affected_groups, and rationale."
+            "primary_dimension, mechanism, affected_scope, and rationale."
         ),
         "cso_stabilization_planner": (
             "You are the stabilization planner in a fictional Coordination Security Operations "
@@ -1739,11 +1751,12 @@ def _cso_policy(
             "independent_validation for an evidence conflict; authority_clarification for an "
             "authority conflict; resource_coordination for a resource conflict; cross_domain_compact "
             "only when several domains must be resolved together; process_reset for an unclear or "
-            "premature decision process; or no_action when no material shift is diagnosed. Name the "
-            "target_dimensions from trust_structure, perceived_risk, and coordination_readiness and "
+            "premature decision process; or no_action when no material shift is diagnosed. Set "
+            "target_dimension to trust_structure, perceived_risk, coordination_readiness, or "
+            "cross_dimension and "
             "give a concise rationale. You cannot alter a mandate, use a stance port, recommend a "
             "vote, or modify the coalition gate. Submit exactly one action through "
-            "cso_intervention_out using only action_id, target_dimensions, and rationale."
+            "cso_intervention_out using only action_id, target_dimension, and rationale."
         ),
     }
     return NativeLlmActiveSystem.from_bound_configuration(

@@ -65,27 +65,21 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                     "trust_structure": "conditional",
                     "perceived_risk": "high",
                     "coordination_readiness": "blocked",
-                    "evidence": [
-                        "Most coalition roles require unresolved verification or resources."
-                    ],
+                    "evidence": "Most coalition roles require unresolved verification or resources.",
                 }
                 output_port_id = "cso_detection_out"
             elif active_system_id == "cso_coordination_diagnostician":
                 payload = {
                     "primary_dimension": "cross_dimension",
                     "mechanism": "incompatible_requirements",
-                    "affected_groups": ["alba", "borin", "cyrenia", "darsia"],
+                    "affected_scope": "coalition_wide",
                     "rationale": "Several locally valid requirements cannot be met together.",
                 }
                 output_port_id = "cso_diagnosis_out"
             elif active_system_id == "cso_stabilization_planner":
                 payload = {
                     "action_id": "cross_domain_compact",
-                    "target_dimensions": [
-                        "trust_structure",
-                        "perceived_risk",
-                        "coordination_readiness",
-                    ],
+                    "target_dimension": "cross_dimension",
                     "rationale": "The diagnosis spans evidence, authority, and resources.",
                 }
                 output_port_id = "cso_intervention_out"
