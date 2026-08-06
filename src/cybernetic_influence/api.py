@@ -3434,6 +3434,10 @@ def create_app(
     def review_dossier() -> FileResponse:
         return FileResponse(root / "review.html")
 
+    @app.get("/review/trace")
+    def review_trace() -> FileResponse:
+        return FileResponse(root / "simulation-trace.md", media_type="text/markdown")
+
     @app.get("/")
     def index() -> FileResponse:
         return FileResponse(root / "index.html")

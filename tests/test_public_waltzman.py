@@ -18,6 +18,7 @@ SCRIPT = PUBLIC_ROOT / "app.js"
 STYLE = PUBLIC_ROOT / "styles.css"
 REVIEW_PAGE = PUBLIC_ROOT / "review.html"
 REVIEW_STYLE = PUBLIC_ROOT / "review.css"
+REVIEW_TRACE = PUBLIC_ROOT / "simulation-trace.md"
 AUTONOMOUS_PROBE = PUBLIC_ROOT / "autonomous-probe.json"
 PLIST = ROOT / "deploy" / "com.cybernetic-influence.waltzman-public.plist"
 
@@ -163,11 +164,35 @@ def test_external_review_dossier_is_concise_and_auditable() -> None:
     assert "What the evidence supports" in page
     assert "Not established" in page
     assert "run_a27f8e4082ef" in page
+    assert "review/trace" in page
+    assert "89 model outputs · exact prompts and inputs" in page
     assert "api/runs/run_a27f8e4082ef" in page
     assert "tail9c321e" not in page.lower()
     assert shape.stylesheets == ["assets/review.css?v=waltzman-review-v1"]
     assert shape.scripts == []
     assert "max-width: 1180px" not in style
+
+
+def test_tractable_trace_retains_every_model_output_and_review_input() -> None:
+    trace = REVIEW_TRACE.read_text(encoding="utf-8")
+
+    assert "critique of the simulation itself" in trace
+    assert "Shared starting situation" in trace
+    assert "Exact representative coalition prompt" in trace
+    assert "Exact external-source system messages" in trace
+    assert "Exact CSO system messages" in trace
+    assert "Coalition round 1" in trace
+    assert "Coalition round 2" in trace
+    assert "Coalition round 3" in trace
+    assert "Source phase 1" in trace
+    assert "Source phase 2" in trace
+    assert "CSO detect → diagnose → select sequence" in trace
+    assert "Exact intervention fact delivered to every coalition role" in trace
+    assert "Coalition outputs printed: `78`" in trace
+    assert "Source outputs printed: `8`" in trace
+    assert "CSO outputs printed: `3`" in trace
+    assert "Does `cross_domain_compact` bundle so many verified facts" in trace
+    assert 60_000 <= len(trace) <= 180_000
 
 
 def test_autonomous_probe_retains_the_completed_matched_runs() -> None:
@@ -294,6 +319,11 @@ def test_public_app_serves_defaults_and_rejects_misrouted_agent_configuration(
     review = client.get("/review")
     assert review.status_code == 200
     assert "External review dossier" in review.text
+
+    trace = client.get("/review/trace")
+    assert trace.status_code == 200
+    assert trace.headers["content-type"].startswith("text/markdown")
+    assert "Tractable simulation trace" in trace.text
 
     response = client.get("/api/config")
     assert response.status_code == 200
