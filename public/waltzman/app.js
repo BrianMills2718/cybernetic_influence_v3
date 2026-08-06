@@ -132,6 +132,12 @@ function configurationAgent(configuration, personId) {
   return configuration?.agents?.find((item) => item.agent_id === personId) || null
 }
 
+function retainedPersonExists(personId) {
+  return dataset.runs.some((run) =>
+    run.rounds?.some((round) => round.stances?.some((stance) => stance.person_id === personId))
+  )
+}
+
 function lineItems(value) {
   return String(value || '').split('\n').map((item) => item.trim()).filter(Boolean)
 }
@@ -145,9 +151,9 @@ function readStateFromUrl() {
   const requestedRound = Number(params.get('round'))
   if ([1, 2, 3].includes(requestedRound)) state.round = requestedRound
   const requestedPerson = params.get('person')
-  if (requestedPerson && dataset.people.some((person) => person.person_id === requestedPerson)) state.personId = requestedPerson
+  if (requestedPerson && retainedPersonExists(requestedPerson)) state.personId = requestedPerson
   const requestedMechanismPerson = params.get('mechanism_person')
-  if (requestedMechanismPerson && dataset.people.some((person) => person.person_id === requestedMechanismPerson)) state.mechanismPersonId = requestedMechanismPerson
+  if (requestedMechanismPerson && retainedPersonExists(requestedMechanismPerson)) state.mechanismPersonId = requestedMechanismPerson
   const requestedGroup = params.get('group')
   if (groupOrder.includes(requestedGroup)) state.group = requestedGroup
   const requestedSection = params.get('section')
