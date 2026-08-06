@@ -1,160 +1,106 @@
-# From State Variables to an Executable Coordination Laboratory
-
-## A short experimental note inspired by *From Minds to Coordination*
+# From Minds to Coordination: an executable mechanism demonstration
 
 Brian Mills · August 2026
 
-> **Audit status.** This note uses the clean condition-blind triad executed from
-> corrected revision `62dee59e57f95a47653dc2f80da8c3216b74e9e0`. Earlier
-> outbreak trajectories that disclosed an arm identifier in participant prompts
-> are excluded from the comparison and from the claim below.
+## Question
 
-### Abstract
+*From Minds to Coordination* argues that influence can impair collective action
+without installing one shared false belief. Heterogeneous, locally plausible
+signals can instead alter a group’s decision environment: authority becomes
+conditional, the relevant risk set expands, and individually reasonable
+requirements become difficult to satisfy together. The paper proposes watching
+directional changes in trust structure, perceived risk, and coordination
+readiness—and stabilizing the decision environment rather than merely rebutting
+content.
 
-*From Minds to Coordination* proposes that influence may be visible less in a
-dominant message than in changes to a decision environment: trust becomes
-conditional, perceived risk expands, and a group loses the ability to translate
-shared information into coordinated action. We built a public, executable
-laboratory for making that proposition inspectable. Twelve autonomous LLM roles
-representing three countries and a regional institution make three successive
-decisions about a joint outbreak response. The analyst can configure each
-role's mandate and institutional context, vary the external environment, run
-the model, and inspect every stance, rationale, exogenous development, and exact
-decision-gate transition.
+We built a synthetic, executable version of that mechanism. The purpose is not
+to validate the framework against human institutions. It is to make the causal
+story configurable, observable, and falsifiable inside a controlled multi-agent
+simulation.
 
-In a clean three-run probe, the baseline coalition approved the response with
-twelve final support positions. Under heterogeneous capacity pressure it ended
-with one conditional position and eleven deferrals, so approval failed. The
-stabilization run reached a similar intermediate state—ten conditional
-positions, two deferrals, and twelve resource requests—before a verified,
-binding allocation package was added. All twelve roles then supported launch
-and approval returned. This is a synthetic
-mechanism demonstration, not an effect estimate or empirical validation. Its
-contribution is an auditable way to turn a theory of decision environments into
-configurable, executable experiments.
+Research case:
+<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=case>
 
-### The instrument
+## Demonstration
 
-The laboratory models a regional coalition deciding whether to launch a joint
-response to a novel respiratory outbreak. It contains twelve synthetic roles:
-an epidemiologist, policy delegate, and operations lead from each of Alba,
-Borin, and Cyrenia, plus a regional coordinator, scientific adviser, and
-logistics coordinator.
+Twenty-six autonomous LLM roles represent four countries and a regional
+institution deciding whether to activate a cross-border early-warning compact.
+They make three independent decisions, each retaining a stance, primary risk,
+requested next step, and rationale. A fixed coalition gate determines whether
+the compact is executable.
 
-Each role is an autonomous model participant. In every round it returns a
-structured decision (`support`, `conditional`, `defer`, or `oppose`), primary
-risk, requested next step, and rationale. The coalition approves only when the
-final round contains at least six executable-now support positions, at least
-nine support-or-conditional positions, and no more than one opposition. This
-separates broad assent from readiness to execute.
+In two conditions, four additional LLM agents operate as external sources for
+technical evidence, legal authority, logistics, and community legitimacy. After
+each public coalition round, every source independently chooses whether its
+domain calls for verification or escalation. The simulator retains all four
+outputs before delivering a complete, locally adapted signal bundle to the
+coalition. The sources cannot vote, recommend a vote, write a participant’s
+stance, or modify the decision gate.
 
-The analyst can edit the shared situation and each role's initial mandate and
-private institutional context before a run. Once execution starts, neither the
-analyst nor exercise control can select participant stances. Exercise control
-can only introduce predeclared external developments, analogous to a wargame
-control team. The tool retains the rendered agent inputs, all 36 model calls,
-structured outputs, causal events, and exact terminal gate.
+The same 26-role configuration, model, reasoning setting, and decision rule are
+used for the matched trio:
 
-Public laboratory:
-<https://brian-mac-mini.tail9c321e.ts.net/waltzman/>
+| Environment | Round 1 | Round 2 | Round 3 | Outcome |
+| --- | --- | --- | --- | --- |
+| Baseline | 26 support | 26 support | 26 support | Approved |
+| Autonomous source pressure | 26 support | 20 conditional, 6 defer | 7 conditional, 19 defer | Not approved |
+| Pressure plus verified compact package | 26 support | 21 conditional, 5 defer | 26 support | Approved |
 
-Role-aligned mechanism view:
-<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist&runs=run_8924342b56ce,run_946a10a820fc,run_05acbaea1137>
+Retained runs: `run_b2f48cbdbb3d`, `run_a679fde37844`, and
+`run_461bf953f9ac`. Their configuration SHA-256 is identical:
+`d55c080a0c5ddaa7d6b18a87d5976fd03c34bc51c5b55d07e661f70910de5d26`.
 
-### A matched probe of disruption and stabilization
+In both source conditions, all four sources chose verification after round one
+and escalation after round two. Under pressure alone, technical, sovereignty,
+capacity, and legitimacy requirements accumulated into a jointly blocking set.
+The coalition did not reject the shared objective; by the final round, none of
+the 26 roles considered the compact executable immediately.
 
-The focal configuration adds one explicit institutional dependency to the Alba
-epidemiologist's mandate: preserve a protected domestic confirmation reserve
-while maintaining cross-border validation. All twelve configurations, the
-shared situation, model, reasoning setting, budget, and decision gate were held
-constant across three conditions. Their canonical configuration hash is
-`67f350acc92f5c9a27fa7fa3efe3f1932297b3614f2e0ca0b989675d6536a6a3`.
+The stabilization condition kept the source process active. After round two, a
+verified cross-domain package clarified evidentiary standards, bounded data and
+access authority, assigned staff and supplies, protected national reserves, and
+specified reciprocal community safeguards. All 26 roles then returned to
+support. The intervention did not instruct them how to vote; it made their
+minimum requirements mutually compatible.
 
-1. **Baseline:** participants receive only the common results of the prior
-   round.
-2. **Responsive capacity pressure:** exercise control observes aggregate
-   reported risk and selects a predeclared family of locally relevant capacity
-   developments.
-3. **Pressure plus stabilization:** the same capacity developments are applied;
-   after round two, an allocation authority publishes a verified binding
-   package meeting each country's stated minimum.
+One retained role illustrates the mechanism. Under source pressure, the Alba
+epidemiologist offered only conditional support because national data custody,
+foreign-team limits, and visible national command remained unresolved. After
+the verified package supplied those conditions—along with protected laboratory
+capacity and a 72-hour review—the same role supported immediate activation.
 
-Every run used `codex/gpt-5.6-terra` at medium reasoning and completed 36 traced
-participant calls with no provider or schema-validation error. For each of the
-twelve roles, the complete first-round system and user prompts were
-byte-identical across arms; no retained prompt contained an arm identifier.
+## Relationship to the paper
 
-| Condition | Round 1 | Round 2 | Round 3 | Focal role | Gate |
-| --- | ---: | ---: | ---: | --- | --- |
-| Baseline · `run_8924342b56ce` | 12 support | 12 support | 12 support | support → support → support | Approved |
-| Capacity pressure · `run_946a10a820fc` | 12 support | 11 conditional, 1 defer | 1 conditional, 11 defer | support → conditional → defer | Not approved |
-| Pressure + stabilization · `run_05acbaea1137` | 12 support | 10 conditional, 2 defer | 12 support | support → conditional → support | Approved |
+The demonstration operationalizes three especially concrete claims from the
+paper:
 
-The pressure and stabilization runs received the same two capacity-development
-families. Their stochastic round-two stances were close but not identical:
-eleven conditional plus one defer under pressure, and ten conditional plus two
-defer under stabilization; both produced twelve resource requests. The stabilized row then received
-the only additional input: a ledger-confirmed 48-hour package preserving Alba's
-domestic laboratory reserve while adding mobile testing capacity, providing 24
-clinicians to Borin, delivering named equipment to Cyrenia, and retaining a
-ten-percent regional reserve.
+1. **Collective effects need not require coherent content.** Four distinct
+   domains produced different local concerns but one directional coalition
+   effect.
+2. **Segmented local equilibria can impair joint action.** Each role’s
+   requirements remained intelligible within its mandate while the combined
+   requirements became incompatible.
+3. **Stabilization can target the decision environment.** Coordination returned
+   after authority, verification, resources, and expectations were jointly
+   clarified—not after a counter-message persuaded agents that their concerns
+   were false.
 
-The focal participant's rationale tracks the configured dependency. In the
-pressure row it moved from support to conditional support and then deferral
-because no allocation both preserved domestic confirmation and replaced shared
-validation capacity. In the stabilized row it returned to support because the
-verified package explicitly preserved the reserve and restored the shared
-testing commitment. The other roles likewise cited the concrete staffing,
-supply, and allocation facts relevant to their mandates.
+The result is strongest as a demonstration of coordination readiness and
+constraint compatibility. It is weaker as evidence about private trust, which
+the simulation does not directly measure.
 
-### Relationship to the state-variable framework
+## Limits and proposed discussion
 
-The strongest observation concerns **coordination readiness**. Across the three
-independent model runs, the same configured coalition produced unanimous
-executable support, a set of individually intelligible but jointly unresolved
-prerequisites, and unanimous support after those prerequisites were jointly
-satisfied. The exact gate makes that movement inspectable without compressing
-it into a synthetic readiness score.
+This is one fictional scenario with synthetic LLM behavior and one stochastic
+trajectory per environment. It does not estimate effects in people, establish
+hostile intent, validate the paper’s state variables, or show that the same
+direction generalizes across contexts. The source agents are domain-bounded and
+observe public coalition feedback; they are not an unconstrained influence
+system.
 
-**Perceived risk** is observed through structured participant reports rather
-than inferred from prose alone. Under pressure, capacity or legitimacy became
-the primary risk for every role and all twelve requested resources. The package
-did not argue that these concerns were mistaken; it changed the environment so
-the concerns could be satisfied simultaneously.
-
-The probe does **not** measure a shift in private trust. Validation and
-dependency requests are visible, but the tool labels them as evidence about
-reliance and prerequisites—not as a trust score. This distinction matters. The
-result supports a coordination mechanism more strongly than a trust mechanism.
-
-The experiment also makes concrete the paper's discussion of segmented local
-equilibria. Alba's laboratory reserve, Borin's staffing minimum, and Cyrenia's
-reciprocal-supply requirement were each locally rational. Together, they
-exceeded the unallocated regional capacity and prevented action. Stabilization
-worked by making commitments, allocations, and shared expectations explicit,
-which is closer to changing the decision environment than to countering a
-message.
-
-### What this does—and does not—show
-
-In this configured synthetic coalition, the observed pressure trajectory
-disrupted approval and the observed allocation trajectory restored it through
-explicit, inspectable mechanisms. Earlier trajectories in the same tool are retained as
-product history but excluded as matched-condition evidence because their
-participant prompts disclosed the arm identifier.
-
-The pressure source here is a bounded responsive exercise controller, not an
-autonomous influence swarm. The roles are synthetic, the scenario is fictional,
-and each condition contains one stochastic model trajectory rather than a set
-of repeated samples. Nothing here estimates effects in human organizations,
-proves beliefs stayed constant, establishes malicious intent, or validates the
-three state variables as real-world measurements.
-
-The immediate value is the instrument: theories about decision environments can
-be expressed as configurable roles, information flows, external pressures,
-decision rules, and stabilizing interventions; authentic trajectories can then
-be compared with every causal and model-generated step retained. The next useful
-experiment is not a larger claim from these runs. It is to vary sources,
-messages, role configurations, and scenario context to test whether the same
-direction persists—and to introduce genuinely autonomous influence sources
-without giving them any authority over the participants being studied.
+What the tool contributes is an inspectable experimental substrate: roles,
+information paths, source adaptation, decision rules, interventions, prompts,
+and outputs are retained rather than collapsed into a narrative summary. The
+useful question for discussion is whether this is a faithful minimal
+operationalization of the paper’s mechanism—and which scenario, observable, or
+stabilization test would make the next experiment genuinely informative.

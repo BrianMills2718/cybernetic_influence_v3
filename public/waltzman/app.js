@@ -5,7 +5,7 @@ const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'darsia', 'regional']
 const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', darsia:'Darsia', regional:'Regional'}
 const preferredModel = 'codex/gpt-5.6-luna'
 const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
-const researchCaseRunIds = ['run_658093bbf480', 'run_a679fde37844', 'run_461bf953f9ac']
+const researchCaseRunIds = ['run_b2f48cbdbb3d', 'run_a679fde37844', 'run_461bf953f9ac']
 
 let dataset = null
 let runtimeConfig = null
