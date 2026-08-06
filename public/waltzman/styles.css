@@ -216,7 +216,7 @@ code { color: #b9c8d2; font-family: ui-monospace, SFMono-Regular, Menlo, monospa
 .agent-tokens { display: flex; gap: 5px; margin: 20px 0; }
 .agent-token { background: var(--faint); border-radius: 50%; display: block; height: 13px; width: 13px; }
 .token-support_full { background: var(--support); }
-.token-support_conditional { background: var(--conditional); }
+.token-support_conditional, .token-support_reduced { background: var(--conditional); }
 .token-defer { background: var(--defer); }
 .token-oppose, .token-disengaged { background: var(--oppose); }
 .source-console { border-top: 1px solid var(--line); margin-top: 25px; padding-top: 20px; }

@@ -414,7 +414,7 @@ function renderAutonomousProbe() {
   const condition = conditions[index]
   $('#probe-condition-select').innerHTML = conditions.map((item, itemIndex) => `<button type="button" data-probe-condition="${itemIndex}" class="${itemIndex === index ? 'active' : ''}"><b>${itemIndex + 1}</b><span>${escapeHtml(item.label)}</span></button>`).join('')
   const meetings = condition.meetings.map((meeting) => {
-    const tokens = ['support_full', 'support_conditional', 'defer', 'oppose', 'disengaged'].flatMap((stance) => Array.from({length:Number(meeting.stances[stance] || 0)}, () => `<i class="agent-token token-${escapeHtml(stance)}" title="${escapeHtml(sentence(stance))}"></i>`)).join('')
+    const tokens = ['support_full', 'support_reduced', 'support_conditional', 'defer', 'oppose', 'disengaged'].flatMap((stance) => Array.from({length:Number(meeting.stances[stance] || 0)}, () => `<i class="agent-token token-${escapeHtml(stance)}" title="${escapeHtml(sentence(stance))}"></i>`)).join('')
     return `<article class="meeting-turn"><span>${escapeHtml(meeting.label)}</span><div class="agent-tokens" aria-label="${escapeHtml(meeting.summary)}">${tokens}</div><strong>${escapeHtml(meeting.summary)}</strong><small>${meeting.open_risks} open ${meeting.open_risks === 1 ? 'risk' : 'risks'}</small></article>`
   }).join('<i class="turn-arrow">→</i>')
   const moves = condition.source_moves.length

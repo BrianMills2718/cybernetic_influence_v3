@@ -143,8 +143,9 @@ def test_autonomous_probe_retains_the_completed_matched_runs() -> None:
     assert [condition["arm_id"] for condition in probe["conditions"]] == [
         "baseline",
         "adaptive_heterogeneous_pressure",
+        "adaptive_pressure_with_stabilization",
     ]
-    baseline, adaptive = probe["conditions"]
+    baseline, adaptive, stabilization = probe["conditions"]
     assert baseline["run_id"] == "run_73b84f6d4682"
     assert adaptive["run_id"] == "run_e3a1f6742777"
     assert baseline["outcome_label"] == "DEPLOY ON TIME"
@@ -152,6 +153,10 @@ def test_autonomous_probe_retains_the_completed_matched_runs() -> None:
     assert [meeting["open_risks"] for meeting in baseline["meetings"]] == [0, 0, 0, 0]
     assert [meeting["open_risks"] for meeting in adaptive["meetings"]] == [0, 1, 3, 3]
     assert len(adaptive["source_moves"]) == 3
+    assert stabilization["run_id"] == "run_7b3695edc3c1"
+    assert stabilization["outcome_label"] == "NO DECISION"
+    assert [meeting["open_risks"] for meeting in stabilization["meetings"]] == [0, 1, 3, 3]
+    assert stabilization["meetings"][1]["stances"] == {"support_reduced": 5}
 
 
 def test_public_dataset_retains_all_five_runs_and_180_agent_stances() -> None:
