@@ -44,10 +44,10 @@ used for the configuration-matched trio:
 | --- | --- | --- | --- | --- |
 | Baseline | 26 support | 26 support | 26 support | Approved |
 | Autonomous source pressure | 26 support | 3 support, 17 conditional, 6 defer | 17 conditional, 9 defer | Not approved |
-| Pressure plus verified compact package | 26 support | 1 support, 24 conditional, 1 defer | 26 support | Approved |
+| Pressure plus verified compact package | 26 support | 2 support, 21 conditional, 3 defer | 26 support | Approved |
 
 Retained runs: `run_ef3763b4d477`, `run_3303c9302a36`, and
-`run_78cfee99640c`. Their configuration SHA-256 is identical:
+`run_e2f31904e10b`. Their configuration SHA-256 is identical:
 `d55c080a0c5ddaa7d6b18a87d5976fd03c34bc51c5b55d07e661f70910de5d26`.
 
 The source agents made bounded, heterogeneous choices from the reviewed
@@ -58,9 +58,10 @@ a jointly blocking set. The coalition did not reject the shared objective; by
 the final round, none of the 26 roles considered the compact executable
 immediately.
 
-The stabilization condition kept the autonomous source process active; in this
-trajectory all four sources selected verification in both phases. After round two, a
-verified cross-domain package clarified evidentiary standards, bounded data and
+The stabilization condition kept the autonomous source process active. Its
+first phase also contained three verification selections and one escalation;
+its second contained two of each. After round two, a verified cross-domain
+package clarified evidentiary standards, bounded data and
 access authority, assigned staff and supplies, protected national reserves, and
 specified reciprocal community safeguards. All 26 roles then returned to
 support. The intervention did not instruct them how to vote; it made their
