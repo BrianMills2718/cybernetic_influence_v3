@@ -354,6 +354,15 @@ class SourceSignal(BaseModel):
     rationale: str = Field(min_length=1, max_length=800)
 
 
+class MessageForkControl(BaseModel):
+    """Explicit experiment-control action applied only by the fork probe."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    mode: Literal["deliver", "withhold_target"]
+    target_ref: str = Field(min_length=1, max_length=80)
+    round: int = Field(ge=1, le=MAX_ROUNDS)
+
+
 class CsoDetection(BaseModel):
     """Observed directional state of the coalition; no attribution or remedy."""
 
@@ -677,6 +686,7 @@ def outbreak_fixture(
     model: str = "codex/gpt-5.6-luna",
     reasoning_effort: str | None = "medium",
     configuration: OutbreakScenarioConfiguration | None = None,
+    message_fork_probe: bool = False,
 ) -> OutbreakFixture:
     """Build one closed, three-round coalition experiment."""
 
@@ -708,6 +718,7 @@ def outbreak_fixture(
             "stances": FactState(value={}),
             "history": FactState(value=[]),
             "coordination_messages": FactState(value=[]),
+            "message_fork_controls": FactState(value=[]),
             "outcome": FactState(value="pending"),
             "injects_delivered": FactState(value=[]),
             "stabilizations_delivered": FactState(value=[]),
@@ -737,6 +748,15 @@ def outbreak_fixture(
             "verified allocation package; it cannot choose participant stances."
         ),
     )
+    if message_fork_probe:
+        entities["message_fork_controller"] = EntityState(
+            entity_id="message_fork_controller",
+            entity_kind="exogenous_experiment_controller",
+            description=(
+                "A disposable checkpoint-fork controller that can withhold queued "
+                "messages without acting as a coalition participant."
+            ),
+        )
 
     ports: dict[str, PortState] = {
         "coalition_round_in": PortState(
@@ -789,6 +809,28 @@ def outbreak_fixture(
             connection_id=f"route_{source_id}", source_port_id=output_port_id,
             target_port_id="source_signal_in", delay=1,
             description="Routes a source document outside the coalition stance register.",
+        )
+    if message_fork_probe:
+        ports["message_fork_control_out"] = PortState(
+            port_id="message_fork_control_out",
+            owner_ref="message_fork_controller",
+            direction="output",
+            effect_type="outbreak_message_fork_control",
+            description="Apply one explicit deliver-or-withhold checkpoint-fork action.",
+        )
+        ports["message_fork_control_in"] = PortState(
+            port_id="message_fork_control_in",
+            owner_ref="message_fork_control",
+            direction="input",
+            effect_type="outbreak_message_fork_control",
+            description="Exact intake for the disposable checkpoint-fork action.",
+        )
+        connections["route_message_fork_control"] = ConnectionState(
+            connection_id="route_message_fork_control",
+            source_port_id="message_fork_control_out",
+            target_port_id="message_fork_control_in",
+            delay=0,
+            description="Routes one explicit experiment-control action at the fork boundary.",
         )
 
     cso_ports = {
@@ -974,6 +1016,40 @@ def outbreak_fixture(
         ),
     )
 
+    message_fork_control = MechanismSpec(
+        mechanism_id="message_fork_control",
+        mechanism_kind="message_fork_control",
+        implementation_id="message_fork_control_v1",
+        description="Delivers or withholds one target's queued direct messages at an exact checkpoint.",
+        input_port_ids=["message_fork_control_in"],
+        read_fact_ids=[
+            "outbreak_decision.coordination_messages",
+            "outbreak_decision.message_fork_controls",
+        ],
+        write_fact_ids=[
+            "outbreak_decision.coordination_messages",
+            "outbreak_decision.message_fork_controls",
+        ],
+        substrate_refs=["outbreak_decision"],
+        invariant_ids=["bounded_message_fork_control"],
+        fidelity=FidelityNote(
+            abstraction="A disposable exogenous intervention for one checkpoint-fork probe.",
+            assumptions=["The fork action is experiment control, not participant behavior."],
+            known_omissions=["It does not model a real communication failure mechanism."],
+            validation_basis=["Typed external action and retained exact state transition."],
+        ),
+    )
+
+    mechanisms = {
+        mechanism.mechanism_id: mechanism,
+        source_delivery.mechanism_id: source_delivery,
+        cso_detection_recorder.mechanism_id: cso_detection_recorder,
+        cso_diagnosis_recorder.mechanism_id: cso_diagnosis_recorder,
+        cso_intervention_recorder.mechanism_id: cso_intervention_recorder,
+    }
+    if message_fork_probe:
+        mechanisms[message_fork_control.mechanism_id] = message_fork_control
+
     state = CausalState(
         entities=entities,
         places={
@@ -989,13 +1065,7 @@ def outbreak_fixture(
         },
         ports=ports,
         connections=connections,
-        mechanisms={
-            mechanism.mechanism_id: mechanism,
-            source_delivery.mechanism_id: source_delivery,
-            cso_detection_recorder.mechanism_id: cso_detection_recorder,
-            cso_diagnosis_recorder.mechanism_id: cso_diagnosis_recorder,
-            cso_intervention_recorder.mechanism_id: cso_intervention_recorder,
-        },
+        mechanisms=mechanisms,
     )
     scenario = CausalScenario(
         scenario_id=SCENARIO_ID,
@@ -1124,36 +1194,46 @@ def outbreak_fixture(
             "valid_outbreak_round_transition": _valid_outbreak_round_transition
         },
     )
+    exact_bindings: dict[str, ExactMechanismBinding] = {
+        mechanism.mechanism_id: exact,
+        source_delivery.mechanism_id: ExactMechanismBinding(
+            implementation_id="outbreak_source_delivery_v2",
+            handler=_deliver_source_signal,
+            invariant_checkers={"bounded_source_delivery": _bounded_source_delivery},
+        ),
+        cso_detection_recorder.mechanism_id: ExactMechanismBinding(
+            implementation_id="cso_detection_recorder_v1",
+            handler=_record_cso_detection,
+            invariant_checkers={"bounded_cso_stage": _bounded_cso_stage},
+        ),
+        cso_diagnosis_recorder.mechanism_id: ExactMechanismBinding(
+            implementation_id="cso_diagnosis_recorder_v1",
+            handler=_record_cso_diagnosis,
+            invariant_checkers={"bounded_cso_stage": _bounded_cso_stage},
+        ),
+        cso_intervention_recorder.mechanism_id: ExactMechanismBinding(
+            implementation_id="cso_intervention_recorder_v1",
+            handler=_record_cso_intervention,
+            invariant_checkers={
+                "bounded_cso_intervention": _bounded_cso_intervention
+            },
+        ),
+    }
+    if message_fork_probe:
+        exact_bindings[message_fork_control.mechanism_id] = ExactMechanismBinding(
+            implementation_id="message_fork_control_v1",
+            handler=_apply_message_fork_control,
+            invariant_checkers={
+                "bounded_message_fork_control": _bounded_message_fork_control
+            },
+        )
+
     return OutbreakFixture(
         condition=condition,
         configuration=resolved_configuration,
         scenario=scenario,
         active_specs=tuple(specs),
-        exact_bindings={
-            mechanism.mechanism_id: exact,
-            source_delivery.mechanism_id: ExactMechanismBinding(
-                implementation_id="outbreak_source_delivery_v2",
-                handler=_deliver_source_signal,
-                invariant_checkers={"bounded_source_delivery": _bounded_source_delivery},
-            ),
-            cso_detection_recorder.mechanism_id: ExactMechanismBinding(
-                implementation_id="cso_detection_recorder_v1",
-                handler=_record_cso_detection,
-                invariant_checkers={"bounded_cso_stage": _bounded_cso_stage},
-            ),
-            cso_diagnosis_recorder.mechanism_id: ExactMechanismBinding(
-                implementation_id="cso_diagnosis_recorder_v1",
-                handler=_record_cso_diagnosis,
-                invariant_checkers={"bounded_cso_stage": _bounded_cso_stage},
-            ),
-            cso_intervention_recorder.mechanism_id: ExactMechanismBinding(
-                implementation_id="cso_intervention_recorder_v1",
-                handler=_record_cso_intervention,
-                invariant_checkers={
-                    "bounded_cso_intervention": _bounded_cso_intervention
-                },
-            ),
-        },
+        exact_bindings=exact_bindings,
     )
 
 
@@ -1490,6 +1570,61 @@ def _coordination_message_attempts(
             )
         )
     return events
+
+
+def _apply_message_fork_control(context: MechanismContext) -> MechanismOutcome:
+    control = MessageForkControl.model_validate(context.effect.payload)
+    messages = cast(
+        list[JsonValue], context.read("outbreak_decision.coordination_messages")
+    )
+    controls = cast(
+        list[JsonValue], context.read("outbreak_decision.message_fork_controls")
+    )
+    withheld = 0
+    updated: list[JsonValue] = []
+    for raw in messages:
+        item = cast(dict[str, JsonValue], raw)
+        if (
+            control.mode == "withhold_target"
+            and item["round"] == control.round
+            and item["target_ref"] == control.target_ref
+            and item["outcome"] == "queued_for_next_round"
+        ):
+            item = {**item, "outcome": "withheld_by_checkpoint_fork"}
+            withheld += 1
+        updated.append(cast(JsonValue, item))
+    if control.mode == "withhold_target" and withheld == 0:
+        raise ValueError("checkpoint fork found no queued messages for the selected target")
+    record = cast(
+        JsonValue,
+        {
+            **control.model_dump(mode="json"),
+            "withheld_count": withheld,
+        },
+    )
+    return MechanismOutcome(
+        outcome_code=(
+            "target_messages_withheld"
+            if control.mode == "withhold_target"
+            else "message_delivery_preserved"
+        ),
+        updates=[
+            FactUpdate(
+                fact_id="outbreak_decision.coordination_messages",
+                value=cast(JsonValue, updated),
+            ),
+            FactUpdate(
+                fact_id="outbreak_decision.message_fork_controls",
+                value=cast(JsonValue, [*controls, record]),
+            ),
+        ],
+    )
+
+
+def _bounded_message_fork_control(
+    context: MechanismContext, outcome: MechanismOutcome
+) -> bool:
+    return len(outcome.updates) == 2 and not outcome.observations
 
 
 def _messages_for_target(

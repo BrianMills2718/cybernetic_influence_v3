@@ -47,6 +47,7 @@ from cybernetic_influence.causal_core.models import (
     CausalCheckpoint,
     CausalScenario,
     CausalState,
+    CausalStep,
     scenario_execution_fingerprint,
     scenario_fingerprint,
 )
@@ -623,6 +624,42 @@ class ActiveRuntimeSession:
                 next_attempt_index=self._next_attempt_index,
                 next_commit_index=self._next_commit_index,
             )
+
+    def apply_external_action(self, action: ActionAttempt) -> CausalStep:
+        """Apply one explicit exogenous action and retain it as exact work.
+
+        This deliberately thin seam lets a paused or forked exercise introduce a
+        wargame-control action without impersonating an active participant.
+        """
+        with self._lock:
+            self._require_active()
+            before = self._core.checkpoint()
+            step = self._core.advance(action, drain_through=action.logical_time)
+            after = self._core.checkpoint()
+            event_ids = [event.event_id for event in step.events]
+            record = ExactWorkRecord.model_validate(
+                with_record_digest(
+                    {
+                        "work_index": len(self._exact_work),
+                        "work_id": f"exact_work_{len(self._exact_work):06d}",
+                        "prior_attempt_count": self._next_attempt_index,
+                        "logical_time": action.logical_time,
+                        "pre_core_state_digest": before.state_digest,
+                        "pre_core_event_tail_digest": before.event_tail_digest,
+                        "post_core_state_digest": after.state_digest,
+                        "post_core_event_tail_digest": after.event_tail_digest,
+                        "core_event_ids": event_ids,
+                    }
+                )
+            )
+            self._exact_work.append(record)
+            self._emit_progress(
+                kind="exact_work_committed",
+                logical_time=record.logical_time,
+                exact_work_id=record.work_id,
+                event_ids=record.core_event_ids,
+            )
+            return step.model_copy(deep=True)
 
     def _emit_progress(
         self,

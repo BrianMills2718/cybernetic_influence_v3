@@ -9,12 +9,14 @@ from cybernetic_influence.active_runtime import (
     ActionIntent,
     ActiveProposal,
     ActiveRuntimeResult,
+    ActiveRuntimeSession,
     ActiveStepResult,
     ActiveSystemBinding,
     ActiveSystemInput,
     ScriptedActiveSystem,
     UpdateScheduleDirective,
 )
+from cybernetic_influence.causal_core.models import ActionAttempt
 from cybernetic_influence.scenarios.regional_outbreak import (
     AGENT_IDS,
     CSO_IDS,
@@ -178,6 +180,68 @@ def test_baseline_runs_the_cross_border_compact_for_three_rounds() -> None:
     assert outbreak_runtime_config(
         per_call_budget=0.01, per_run_budget=0.1
     ).max_private_state_bytes == 65_536
+
+
+def test_exact_checkpoint_fork_can_withhold_one_targets_queued_messages() -> None:
+    fixture = outbreak_fixture(
+        "responsive_exercise_injects", message_fork_probe=True
+    )
+    bindings = _bindings(fixture)
+    session = ActiveRuntimeSession(
+        fixture.scenario,
+        fixture.exact_bindings,
+        fixture.active_specs,
+        bindings,
+        run_id="outbreak_message_fork",
+        config=outbreak_runtime_config(per_call_budget=0.01, per_run_budget=0.1),
+        participant_concurrency=3,
+    )
+    first = session.next_due_activation()
+    assert first is not None and first.logical_time == 0
+    session.activate(
+        first.active_system_ids,
+        logical_time=first.logical_time,
+        activation_causes=first.causes,
+    )
+    sources = session.next_due_activation()
+    assert sources is not None and set(sources.active_system_ids) == set(SOURCE_IDS)
+    shared = session.checkpoint()
+
+    fork = ActiveRuntimeSession.restore(
+        fixture.scenario, fixture.exact_bindings, bindings, shared
+    )
+    fork.apply_external_action(
+        ActionAttempt(
+            action_id="withhold_regional_logistics_messages",
+            actor_entity_id="message_fork_controller",
+            output_port_id="message_fork_control_out",
+            payload={
+                "mode": "withhold_target",
+                "target_ref": "regional_logistics_coordinator",
+                "round": 1,
+            },
+            logical_time=fork.core_state.logical_time,
+            public_summary="Withheld queued messages to one recipient in the control fork.",
+        )
+    )
+    branched = fork.checkpoint()
+    assert branched.attempts == shared.attempts
+    assert branched.core_checkpoint.event_tail_digest != shared.core_checkpoint.event_tail_digest
+    messages = branched.core_checkpoint.state.fact(
+        "outbreak_decision.coordination_messages"
+    ).value
+    withheld = [
+        item
+        for item in messages
+        if item["outcome"] == "withheld_by_checkpoint_fork"
+    ]
+    assert len(withheld) == len(AGENT_IDS) - 1
+    assert {item["target_ref"] for item in withheld} == {
+        "regional_logistics_coordinator"
+    }
+    assert ActiveRuntimeSession.restore(
+        fixture.scenario, fixture.exact_bindings, bindings, branched
+    ).checkpoint() == branched
 
 
 def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy() -> None:
