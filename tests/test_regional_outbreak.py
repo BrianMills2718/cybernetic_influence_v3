@@ -14,6 +14,7 @@ from cybernetic_influence.active_runtime import (
 )
 from cybernetic_influence.scenarios.regional_outbreak import (
     AGENT_IDS,
+    CSO_IDS,
     SOURCE_IDS,
     OutbreakCondition,
     OutbreakFixture,
@@ -59,6 +60,43 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                         update_schedule=UpdateScheduleDirective(mode="dormant"),
                     )
                 )
+            if active_system_id == "cso_decision_environment_monitor":
+                payload = {
+                    "trust_structure": "conditional",
+                    "perceived_risk": "high",
+                    "coordination_readiness": "blocked",
+                    "evidence": [
+                        "Most coalition roles require unresolved verification or resources."
+                    ],
+                }
+                output_port_id = "cso_detection_out"
+            elif active_system_id == "cso_coordination_diagnostician":
+                payload = {
+                    "primary_dimension": "cross_dimension",
+                    "mechanism": "incompatible_requirements",
+                    "affected_groups": ["alba", "borin", "cyrenia", "darsia"],
+                    "rationale": "Several locally valid requirements cannot be met together.",
+                }
+                output_port_id = "cso_diagnosis_out"
+            elif active_system_id == "cso_stabilization_planner":
+                payload = {
+                    "action_id": "cross_domain_compact",
+                    "target_dimensions": [
+                        "trust_structure",
+                        "perceived_risk",
+                        "coordination_readiness",
+                    ],
+                    "rationale": "The diagnosis spans evidence, authority, and resources.",
+                }
+                output_port_id = "cso_intervention_out"
+            else:
+                payload = {
+                    "decision": "support",
+                    "risk": "capacity",
+                    "request": "resources",
+                    "rationale": "Support depends on an explicit surge allocation.",
+                }
+                output_port_id = f"stance_{active_system_id}_out"
             return ActiveStepResult(
                 proposal=ActiveProposal(
                     active_system_id=active_system_id,
@@ -66,13 +104,8 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                     private_state=private_state,
                     actions=[
                         ActionIntent(
-                            output_port_id=f"stance_{active_system_id}_out",
-                            payload={
-                                "decision": "support",
-                                "risk": "capacity",
-                                "request": "resources",
-                                "rationale": "Support depends on an explicit surge allocation.",
-                            },
+                            output_port_id=output_port_id,
+                            payload=payload,
                             public_summary="Submitted a conditional stance.",
                         )
                     ],
@@ -163,6 +196,7 @@ def test_participant_policy_is_blind_to_experiment_condition() -> None:
         "baseline",
         "responsive_exercise_injects",
         "capacity_inject_replay_with_stabilization",
+        "adaptive_cso_stabilization",
     ):
         fixture = outbreak_fixture(condition)
         bindings = outbreak_bindings(
@@ -177,6 +211,7 @@ def test_participant_policy_is_blind_to_experiment_condition() -> None:
     assert "condition label" not in personas["baseline"]
     assert "responsive_exercise_injects" not in personas["baseline"]
     assert "capacity_inject_replay_with_stabilization" not in personas["baseline"]
+    assert "adaptive_cso_stabilization" not in personas["baseline"]
 
 
 def test_responsive_condition_delivers_complete_autonomous_source_bundles() -> None:
@@ -232,3 +267,35 @@ def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() 
     assert len({item.apparent_content for item in stabilization_observations}) == 5
     assert "not a command about your stance" in stabilization_observations[0].apparent_content
     assert "pre-signed activation" not in stabilization_observations[0].apparent_content
+
+
+def test_adaptive_cso_cell_detects_diagnoses_and_selects_before_round_three() -> None:
+    fixture, result, readout = _run("adaptive_cso_stabilization")
+
+    assert len(fixture.active_specs) == len(AGENT_IDS) + len(SOURCE_IDS) + len(CSO_IDS)
+    assert [record["stage"] for record in readout["cso_records"]] == [
+        "detection",
+        "diagnosis",
+        "intervention",
+    ]
+    assert [record["actor_id"] for record in readout["cso_records"]] == list(
+        CSO_IDS
+    )
+    assert readout["cso_records"][-1]["payload"]["action_id"] == "cross_domain_compact"
+    assert readout["stabilization_events"] == ["cso_cross_domain_compact"]
+    assert [attempt.logical_time for attempt in result.attempts] == list(range(8))
+
+    final_inputs = [
+        json.loads(observation.apparent_content)
+        for observation in result.core_result.final_state.observations.values()
+        if observation.apparent_source_ref == "cso_stabilization_planner"
+    ]
+    assert len(final_inputs) == len(AGENT_IDS)
+    assert {item["document_kind"] for item in final_inputs} == {
+        "cso_stabilization_bundle"
+    }
+    assert {item["intervention"]["action_id"] for item in final_inputs} == {
+        "cross_domain_compact"
+    }
+    assert all("decision" not in item["intervention"] for item in final_inputs)
+    assert all("cso_trace" not in item for item in final_inputs)

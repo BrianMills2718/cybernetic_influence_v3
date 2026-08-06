@@ -179,6 +179,7 @@ from cybernetic_influence.scenarios.coordination_decision import (
 )
 from cybernetic_influence.scenarios.regional_outbreak import (
     AGENT_IDS as OUTBREAK_AGENT_IDS,
+    CSO_IDS as OUTBREAK_CSO_IDS,
     MAX_ROUNDS as OUTBREAK_MAX_ROUNDS,
     SOURCE_IDS as OUTBREAK_SOURCE_IDS,
     OutbreakCondition,
@@ -646,6 +647,7 @@ def _scenario_preview(
             "baseline",
             "responsive_exercise_injects",
             "capacity_inject_replay_with_stabilization",
+            "adaptive_cso_stabilization",
         }:
             raise ValueError("unknown Regional Outbreak condition")
         compiled_scenario = regional_outbreak_fixture(
@@ -1244,6 +1246,7 @@ def create_app(
                     "maximum_live_calls": (
                         len(OUTBREAK_AGENT_IDS) * OUTBREAK_MAX_ROUNDS
                         + len(OUTBREAK_SOURCE_IDS) * (OUTBREAK_MAX_ROUNDS - 1)
+                        + len(OUTBREAK_CSO_IDS)
                     ),
                     "editable_configuration": default_outbreak_configuration().model_dump(
                         mode="json"
@@ -1271,6 +1274,16 @@ def create_app(
                             "description": (
                                 "The four source agents remain active, then a verified technical, "
                                 "legal, capacity, and legitimacy package enters the round-two bundle."
+                            ),
+                        },
+                        {
+                            "id": "adaptive_cso_stabilization",
+                            "label": "Autonomous source pressure + adaptive CSO cell",
+                            "description": (
+                                "After round two, a monitor detects directional changes, a "
+                                "diagnostician identifies the coordination mechanism, and a "
+                                "planner selects one authorized intervention before the coalition "
+                                "decides independently again."
                             ),
                         },
                     ],
@@ -2788,6 +2801,7 @@ def create_app(
                 "baseline",
                 "responsive_exercise_injects",
                 "capacity_inject_replay_with_stabilization",
+                "adaptive_cso_stabilization",
             }:
                 raise HTTPException(
                     status_code=422,

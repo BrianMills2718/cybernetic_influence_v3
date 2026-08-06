@@ -177,7 +177,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "baseline",
         "responsive_exercise_injects",
         "capacity_inject_replay_with_stabilization",
+        "adaptive_cso_stabilization",
     }
+    assert config.json()["scenarios"]["regional_outbreak"]["maximum_live_calls"] == 89
     assert config.json()["maximum_live_calls"] == 150
     assert config.json()["live_options"]["limits"]["maximum_participant_calls"] == 150
     assert config.json()["scenarios"]["physical_access"]["arms"][0]["description"]
