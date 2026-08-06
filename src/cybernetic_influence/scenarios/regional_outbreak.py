@@ -335,7 +335,7 @@ class OutbreakStance(BaseModel):
     rationale: str = Field(min_length=1, max_length=600)
     coordination_action: CoordinationActionKind
     coordination_target_ref: str = Field(min_length=1, max_length=80)
-    coordination_content: str = Field(min_length=1, max_length=400)
+    coordination_content: str = Field(min_length=1, max_length=800)
 
     @model_validator(mode="after")
     def validate_coordination_action_shape(self) -> "OutbreakStance":
@@ -2091,6 +2091,7 @@ def _native_policy(
         "keys and enum values described by that interface. The payload must also include "
         "the three flat fields coordination_action, coordination_target_ref, and "
         "coordination_content. Do not encode them as a nested object or JSON string. "
+        "Keep coordination_content at or below 800 characters. "
         "A targeted message is a separate attempted interaction: it does not change your stance, "
         "does not guarantee delivery or agreement, and the exact world records its outcome. "
         "For send_message, target_ref must be another participant ID. Valid target_ref values are: "
