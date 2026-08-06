@@ -3430,6 +3430,10 @@ def create_app(
 
     app.mount("/assets", StaticFiles(directory=root), name="assets")
 
+    @app.get("/review")
+    def review_dossier() -> FileResponse:
+        return FileResponse(root / "review.html")
+
     @app.get("/")
     def index() -> FileResponse:
         return FileResponse(root / "index.html")

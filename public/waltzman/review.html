@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="External review dossier for one retained From Minds to Coordination simulation.">
+  <title>External review dossier · Coordination Environment Lab</title>
+  <link rel="stylesheet" href="assets/review.css?v=waltzman-review-v1">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./"><span>CE</span><strong>Coordination Environment Lab</strong></a>
+    <nav aria-label="Review links">
+      <a href="./?view=case">Interactive case</a>
+      <a href="./?view=run">Run the simulator</a>
+    </nav>
+  </header>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">External review dossier · retained synthetic execution</p>
+      <h1>Did we implement Waltzman’s proposed defensive coordination loop faithfully?</h1>
+      <p class="lede">This package assumes familiarity with <em>From Minds to Coordination</em>. It presents the implementation boundary, four retained conditions, the autonomous CSO trace, representative agent decisions, and the limits of what this demonstration establishes.</p>
+      <div class="review-question">
+        <strong>Question for the reviewer</strong>
+        <p>Does this simulation meaningfully instantiate distributed influence on a coalition’s decision environment and a separate detect → diagnose → stabilize capability—without covertly dictating the coalition’s decisions?</p>
+      </div>
+    </header>
+
+    <section aria-labelledby="orientation-title">
+      <div class="section-heading"><span>01</span><h2 id="orientation-title">What was executed</h2></div>
+      <div class="facts" aria-label="Experiment facts">
+        <div><strong>26</strong><span>coalition agents</span></div>
+        <div><strong>4</strong><span>influence agents</span></div>
+        <div><strong>3</strong><span>CSO agents</span></div>
+        <div><strong>4</strong><span>conditions</span></div>
+        <div><strong>3</strong><span>decision rounds</span></div>
+      </div>
+      <p>Twenty-six autonomous roles across four fictional countries and a regional institution decide whether to activate a cross-border early-warning compact. Coalition roles, mandates, starting situation, model, and approval gate remain fixed. Conditions vary what enters the decision environment between rounds and whether the response is fixed or selected by a defensive cell.</p>
+      <p><strong>Fixed decision gate:</strong> at least 13 agents must support immediate execution, at least 20 must support or conditionally support, and no more than 2 may oppose after round three. The CSO cannot change these thresholds.</p>
+      <div class="flow" aria-label="Execution order">
+        <div><small>1</small><strong>Coalition decides</strong><span>Independent typed stances</span></div>
+        <i>→</i>
+        <div><small>2</small><strong>Sources act</strong><span>Bounded external signals</span></div>
+        <i>→</i>
+        <div><small>3</small><strong>CSO assesses</strong><span>Detect, diagnose, select</span></div>
+        <i>→</i>
+        <div><small>4</small><strong>Coalition reassesses</strong><span>No prescribed vote</span></div>
+      </div>
+      <aside class="invariant"><strong>Autonomy boundary</strong> Influence and CSO agents have no coalition stance ports. They cannot vote, edit mandates, alter the decision gate, or place a decision in another agent’s output. Coalition agents receive only external signals and the concrete facts produced by the selected intervention.</aside>
+    </section>
+
+    <section aria-labelledby="contrast-title">
+      <div class="section-heading"><span>02</span><h2 id="contrast-title">Four retained conditions</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Condition</th><th>Between-round process</th><th>R1</th><th>R2</th><th>R3</th><th>Gate</th></tr></thead>
+          <tbody>
+            <tr><th>Baseline</th><td>No influence sources or intervention</td><td>26 support</td><td>26 support</td><td>26 support</td><td><span class="pass">Passed</span></td></tr>
+            <tr><th>Distributed pressure</th><td>Four sources introduce heterogeneous local signals</td><td>26 support</td><td>3 support · 17 conditional · 6 defer</td><td>17 conditional · 9 defer</td><td><span class="fail">Failed</span></td></tr>
+            <tr><th>Fixed package</th><td>Matched pressure followed by a preselected verified package</td><td>26 support</td><td>2 support · 21 conditional · 3 defer</td><td>26 support</td><td><span class="pass">Passed</span></td></tr>
+            <tr class="focus"><th>Adaptive CSO</th><td>Matched pressure; three defensive agents select a response</td><td>26 support</td><td>2 support · 21 conditional · 3 defer</td><td>26 support</td><td><span class="pass">Passed</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">The fixed-package and adaptive-CSO runs received the same eight source choices and reached the same round-two stance distribution. The pressure-only run is directionally informative but not a strict matched counterfactual because one round-one source choice differed.</p>
+    </section>
+
+    <section aria-labelledby="cso-title">
+      <div class="section-heading"><span>03</span><h2 id="cso-title">Complete adaptive CSO trace</h2></div>
+      <div class="trace">
+        <article>
+          <span>Detect</span>
+          <h3>Fragmented trust · high risk · readiness blocked</h3>
+          <p>“All four countries retain distinct preconditions, while regional sources report that available roster and stock cannot meet all requests within 48 hours; reproducibility, custody/audit protocol, and public-assurance issues also remain unresolved.”</p>
+        </article>
+        <article>
+          <span>Diagnose</span>
+          <h3>Coalition-wide incompatible requirements</h3>
+          <p>The diagnostician classified the primary dimension as cross-domain: unresolved evidence, custody, assurance, staffing, and supply requirements coincided inside the same 48-hour window.</p>
+        </article>
+        <article>
+          <span>Select</span>
+          <h3>Cross-domain compact</h3>
+          <p>“Coordinate a joint resolution framework for the interdependent evidence, assurance, and resource preconditions that cannot be addressed separately within 48 hours.”</p>
+        </article>
+      </div>
+      <div class="intervention">
+        <strong>What entered the coalition after selection</strong>
+        <p>A joint reproducibility result and published methods; a time-bounded, logged protocol preserving national custody; named clinicians, diagnostics, protective equipment, mobile laboratory capacity, and reserve resources; published cost shares, receipts, and independent review. These are scenario facts—not instructions to support the compact.</p>
+      </div>
+      <details>
+        <summary>Planner’s authorized choice set</summary>
+        <p>The planner could select independent validation, authority clarification, resource coordination, a cross-domain compact, a process reset, or no action. Each option maps to bounded scenario facts. The model selected <strong>cross-domain compact</strong>; it did not generate arbitrary world changes.</p>
+      </details>
+    </section>
+
+    <section aria-labelledby="decisions-title">
+      <div class="section-heading"><span>04</span><h2 id="decisions-title">Representative independent decisions</h2></div>
+      <div class="decisions">
+        <article>
+          <header><strong>Alba epidemiologist</strong><span>Evidence quality</span></header>
+          <div><small>After pressure · support with validation request</small><p>Supported safeguarded activation but withheld regional lineage comparison pending methods submission and a blinded rerun.</p></div>
+          <div><small>After CSO-selected intervention · support</small><p>Cited the reproduced finding, published methods, national custody, bounded logged access, mobile laboratory offset, and verified operational support.</p></div>
+        </article>
+        <article>
+          <header><strong>Borin operations lead</strong><span>Capacity</span></header>
+          <div><small>After pressure · conditional</small><p>Required immediate clinical reinforcement to protect strained hospitals and keep the transport hub open.</p></div>
+          <div><small>After CSO-selected intervention · support</small><p>Cited 24 delivered clinicians, published cost shares, the bounded data protocol, and a remaining monitored reserve risk.</p></div>
+        </article>
+        <article>
+          <header><strong>Cyrenia policy delegate</strong><span>Legitimacy</span></header>
+          <div><small>After pressure · conditional</small><p>Required independently observed local validation, public recording, receipted supplies, and continued national custody.</p></div>
+          <div><small>After CSO-selected intervention · support</small><p>Cited published reproducibility, national custody, logged audit access, delivered supplies, public receipts, and independent review.</p></div>
+        </article>
+      </div>
+      <p class="note">The final rationales cite resolved evidence, authority, resources, safeguards, and verification. They do not cite obedience to the CSO or a recommendation about how to vote.</p>
+    </section>
+
+    <section aria-labelledby="audit-title">
+      <div class="section-heading"><span>05</span><h2 id="audit-title">What the evidence supports</h2></div>
+      <div class="claims">
+        <article><h3>Supported within this execution</h3><ul>
+          <li>Heterogeneous signals changed locally salient requirements without directly changing mandates.</li>
+          <li>The coalition fell below a fixed approval gate while the shared objective remained intact.</li>
+          <li>A separate CSO sequence detected, diagnosed, and selected an authorized intervention.</li>
+          <li>Coalition agents reassessed the resulting facts and generated their own final rationales.</li>
+          <li>The complete model-call and mechanism trace was retained.</li>
+        </ul></article>
+        <article><h3>Not established</h3><ul>
+          <li>No inference about how humans, governments, or real institutions would behave.</li>
+          <li>No general causal estimate from one model trajectory per condition.</li>
+          <li>No evidence that this intervention catalog is complete or correctly specified.</li>
+          <li>No proof that the CSO labels are valid measurements of Waltzman’s dimensions.</li>
+          <li>No test yet of false alarms, harmful interventions, adversarial adaptation, or repeated recovery.</li>
+        </ul></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="audit-artifacts-title">
+      <div class="section-heading"><span>06</span><h2 id="audit-artifacts-title">Audit artifacts</h2></div>
+      <dl class="metadata">
+        <div><dt>Adaptive run</dt><dd><code>run_a27f8e4082ef</code></dd></div>
+        <div><dt>Scenario</dt><dd>Cross-Border Early Warning Compact</dd></div>
+        <div><dt>Model</dt><dd><code>openrouter/openai/gpt-5.6-terra</code></dd></div>
+        <div><dt>Reasoning</dt><dd>Medium</dd></div>
+        <div><dt>Model calls</dt><dd>89</dd></div>
+        <div><dt>Observed cost</dt><dd>$0.54746685 · fully observable</dd></div>
+        <div><dt>Runtime revision</dt><dd><code>4cd1f20f232c964254df4aa57faabfd7cca10d05</code></dd></div>
+        <div><dt>Matched configuration</dt><dd><code>d6242eac5ae7d85ce74bd6ddc99f8002f77702eb7e99f99ed6e76bd96fc8ce0d</code></dd></div>
+        <div><dt>Source match</dt><dd>Fixed-package and adaptive-CSO runs share all eight source choices</dd></div>
+      </dl>
+      <div class="artifacts">
+        <a class="primary" href="api/runs/run_a27f8e4082ef">Open complete adaptive-run trace</a>
+        <a href="api/runs/run_ef3763b4d477">Baseline trace</a>
+        <a href="api/runs/run_3303c9302a36">Pressure trace</a>
+        <a href="api/runs/run_e2f31904e10b">Fixed-package trace</a>
+        <a href="./?view=case">Interactive case presentation</a>
+      </div>
+    </section>
+
+    <footer>
+      <p><strong>Requested review:</strong> identify conceptual mismatches with Waltzman’s framework, hidden forms of endogenous control, invalid comparisons, and the highest-value next simulation.</p>
+    </footer>
+  </main>
+</body>
+</html>

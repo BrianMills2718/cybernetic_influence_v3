@@ -16,6 +16,8 @@ PAGE = PUBLIC_ROOT / "index.html"
 DATA = PUBLIC_ROOT / "data.json"
 SCRIPT = PUBLIC_ROOT / "app.js"
 STYLE = PUBLIC_ROOT / "styles.css"
+REVIEW_PAGE = PUBLIC_ROOT / "review.html"
+REVIEW_STYLE = PUBLIC_ROOT / "review.css"
 AUTONOMOUS_PROBE = PUBLIC_ROOT / "autonomous-probe.json"
 PLIST = ROOT / "deploy" / "com.cybernetic-influence.waltzman-public.plist"
 
@@ -143,6 +145,31 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "tail9c321e" not in lowered
 
 
+def test_external_review_dossier_is_concise_and_auditable() -> None:
+    page = REVIEW_PAGE.read_text(encoding="utf-8")
+    style = REVIEW_STYLE.read_text(encoding="utf-8")
+    shape = _PageShape()
+    shape.feed(page)
+
+    assert shape.h1_count == 1
+    assert "assumes familiarity with" in page
+    assert "Did we implement Waltzman’s proposed defensive coordination loop faithfully?" in page
+    assert "Autonomy boundary" in page
+    assert "Fixed decision gate" in page
+    assert "Four retained conditions" in page
+    assert "Complete adaptive CSO trace" in page
+    assert "Planner’s authorized choice set" in page
+    assert "Representative independent decisions" in page
+    assert "What the evidence supports" in page
+    assert "Not established" in page
+    assert "run_a27f8e4082ef" in page
+    assert "api/runs/run_a27f8e4082ef" in page
+    assert "tail9c321e" not in page.lower()
+    assert shape.stylesheets == ["assets/review.css?v=waltzman-review-v1"]
+    assert shape.scripts == []
+    assert "max-width: 1180px" not in style
+
+
 def test_autonomous_probe_retains_the_completed_matched_runs() -> None:
     probe = json.loads(AUTONOMOUS_PROBE.read_text(encoding="utf-8"))
 
@@ -263,6 +290,10 @@ def test_public_app_serves_defaults_and_rejects_misrouted_agent_configuration(
     assert "style-src 'self' 'unsafe-inline'" in page.headers[
         "content-security-policy"
     ]
+
+    review = client.get("/review")
+    assert review.status_code == 200
+    assert "External review dossier" in review.text
 
     response = client.get("/api/config")
     assert response.status_code == 200
