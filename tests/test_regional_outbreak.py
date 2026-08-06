@@ -175,6 +175,9 @@ def test_baseline_runs_the_cross_border_compact_for_three_rounds() -> None:
         "coordination_action" not in stance
         for stance in regional_inputs[0]["stances"].values()
     )
+    assert outbreak_runtime_config(
+        per_call_budget=0.01, per_run_budget=0.1
+    ).max_private_state_bytes == 65_536
 
 
 def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy() -> None:

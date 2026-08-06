@@ -1213,7 +1213,7 @@ def outbreak_runtime_config(*, per_call_budget: float, per_run_budget: float) ->
         per_run_budget=per_run_budget,
         max_actions_per_system=1,
         max_observations_per_system=6,
-        max_private_state_bytes=32_768,
+        max_private_state_bytes=65_536,
     )
 
 
