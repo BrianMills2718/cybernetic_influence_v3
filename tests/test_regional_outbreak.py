@@ -97,15 +97,13 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                     "risk": "capacity",
                     "request": "resources",
                     "rationale": "Support depends on an explicit surge allocation.",
-                    "coordination_action": {
-                        "kind": "send_message",
-                        "target_ref": (
-                            "regional_logistics_coordinator"
-                            if active_system_id != "regional_logistics_coordinator"
-                            else "alba_operations_lead"
-                        ),
-                        "content": "Please confirm the named surge allocation before the next round.",
-                    },
+                    "coordination_action": "send_message",
+                    "coordination_target_ref": (
+                        "regional_logistics_coordinator"
+                        if active_system_id != "regional_logistics_coordinator"
+                        else "alba_operations_lead"
+                    ),
+                    "coordination_content": "Please confirm the named surge allocation before the next round.",
                 }
                 output_port_id = f"stance_{active_system_id}_out"
             return ActiveStepResult(

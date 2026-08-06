@@ -333,22 +333,15 @@ class OutbreakStance(BaseModel):
     risk: Risk
     request: Request
     rationale: str = Field(min_length=1, max_length=600)
-    coordination_action: "CoordinationAction"
-
-
-class CoordinationAction(BaseModel):
-    """One attempted local interaction, distinct from the actor's stance."""
-
-    model_config = ConfigDict(extra="forbid", strict=True)
-    kind: CoordinationActionKind
-    target_ref: str = Field(min_length=1, max_length=80)
-    content: str = Field(min_length=1, max_length=400)
+    coordination_action: CoordinationActionKind
+    coordination_target_ref: str = Field(min_length=1, max_length=80)
+    coordination_content: str = Field(min_length=1, max_length=400)
 
     @model_validator(mode="after")
-    def validate_no_action_shape(self) -> "CoordinationAction":
-        if self.kind == "no_action" and self.target_ref != "none":
+    def validate_coordination_action_shape(self) -> "OutbreakStance":
+        if self.coordination_action == "no_action" and self.coordination_target_ref != "none":
             raise ValueError("no_action requires target_ref='none'")
-        if self.kind == "send_message" and self.target_ref == "none":
+        if self.coordination_action == "send_message" and self.coordination_target_ref == "none":
             raise ValueError("send_message requires a participant target_ref")
         return self
 
@@ -766,7 +759,8 @@ def outbreak_fixture(
                 "Submit exactly one payload with decision=support|conditional|defer|oppose, "
                 "risk=none|evidence_quality|sovereignty|capacity|legitimacy, "
                 "request=none|data|validation|safeguards|resources, a rationale string, and "
-                "one coordination_action that either attempts a targeted message or takes no action."
+                "coordination_action=send_message|no_action, coordination_target_ref, and "
+                "coordination_content."
             ),
         )
         connections[f"route_{agent_id}_stance"] = ConnectionState(
@@ -1358,7 +1352,7 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
         actor_id: {
             key: value
             for key, value in cast(dict[str, JsonValue], payload).items()
-            if key != "coordination_action"
+            if not key.startswith("coordination_")
         }
         for actor_id, payload in updated_stances.items()
     }
@@ -1470,14 +1464,12 @@ def _coordination_message_attempts(
 ) -> list[JsonValue]:
     events: list[JsonValue] = []
     for actor_id, payload in sorted(stances.items()):
-        action = CoordinationAction.model_validate(
-            cast(dict[str, JsonValue], payload)["coordination_action"]
-        )
-        if action.kind == "no_action":
+        stance = OutbreakStance.model_validate(payload)
+        if stance.coordination_action == "no_action":
             outcome = "not_attempted"
-        elif action.target_ref not in AGENT_IDS:
+        elif stance.coordination_target_ref not in AGENT_IDS:
             outcome = "rejected_unknown_recipient"
-        elif action.target_ref == actor_id:
+        elif stance.coordination_target_ref == actor_id:
             outcome = "rejected_self_recipient"
         elif terminal:
             outcome = "expired_at_simulation_horizon"
@@ -1489,9 +1481,9 @@ def _coordination_message_attempts(
                 {
                     "round": round_number,
                     "actor_id": actor_id,
-                    "kind": action.kind,
-                    "target_ref": action.target_ref,
-                    "content": action.content,
+                    "kind": stance.coordination_action,
+                    "target_ref": stance.coordination_target_ref,
+                    "content": stance.coordination_content,
                     "outcome": outcome,
                     "delivered_round": None,
                 },
@@ -2097,12 +2089,13 @@ def _native_policy(
         "proposal conflicts with your mandate. The institutional meeting rule requires exactly one "
         f"action through stance_{agent_id}_out on every activation. Use only the exact payload "
         "keys and enum values described by that interface. The payload must also include "
-        "coordination_action with kind=send_message or no_action, target_ref, and content. "
+        "the three flat fields coordination_action, coordination_target_ref, and "
+        "coordination_content. Do not encode them as a nested object or JSON string. "
         "A targeted message is a separate attempted interaction: it does not change your stance, "
         "does not guarantee delivery or agreement, and the exact world records its outcome. "
         "For send_message, target_ref must be another participant ID. Valid target_ref values are: "
-        f"{', '.join(AGENT_IDS)}. For no_action, use "
-        "target_ref=none and briefly state why no message is useful. Do not add actor or round fields."
+        f"{', '.join(AGENT_IDS)}. For no_action, use coordination_target_ref=none and briefly "
+        "state why no message is useful in coordination_content. Do not add actor or round fields."
     )
     return NativeLlmActiveSystem.from_bound_configuration(
         implementation_family_id=f"native_outbreak_{agent_id}_person_contract_v1",
