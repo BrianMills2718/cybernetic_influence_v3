@@ -1,8 +1,8 @@
 'use strict'
 
 const decisionOrder = ['support', 'conditional', 'defer', 'oppose']
-const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'regional']
-const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', regional:'Regional'}
+const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'darsia', 'regional']
+const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', darsia:'Darsia', regional:'Regional'}
 const preferredModel = 'codex/gpt-5.6-luna'
 const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
 
@@ -54,7 +54,7 @@ function labelPerson(personId) {
 
 function groupFor(personId) {
   const prefix = String(personId).split('_', 1)[0]
-  return ['alba', 'borin', 'cyrenia'].includes(prefix) ? prefix : 'regional'
+  return ['alba', 'borin', 'cyrenia', 'darsia'].includes(prefix) ? prefix : 'regional'
 }
 
 function runLabel(run) {
@@ -88,11 +88,11 @@ function outcomeBadge(run) {
   return `<span class="outcome-badge ${approved ? 'outcome-approved' : 'outcome-failed'}"><b aria-hidden="true">${approved ? '✓' : '×'}</b> ${approved ? 'Approved' : 'Not approved'}</span>`
 }
 
-function stackedBar(counts, className = 'stacked-bar') {
+function stackedBar(counts, className = 'stacked-bar', total = 12) {
   return `<div class="${className}" aria-label="${escapeHtml(countsText(counts))}">
     ${decisionOrder.map((decision) => {
       const count = Number(counts?.[decision] || 0)
-      return count ? `<span class="bar-${decision}" style="width:${count / 12 * 100}%" title="${count} ${decision}"></span>` : ''
+      return count ? `<span class="bar-${decision}" style="width:${count / total * 100}%" title="${count} ${decision}"></span>` : ''
     }).join('')}
   </div>`
 }
@@ -202,6 +202,9 @@ function renderRunSetup() {
   })
 
   const people = editableConfiguration?.agents || []
+  const maximumCalls = runtimeConfig?.scenarios?.regional_outbreak?.maximum_live_calls || people.length * 3
+  $('#execution-participants').textContent = `${people.length} autonomous roles`
+  $('#execution-max-calls').textContent = String(maximumCalls)
   $('#agent-config-select').innerHTML = people.map((agent) => `<option value="${escapeHtml(agent.agent_id)}">${escapeHtml(labelPerson(agent.agent_id))}</option>`).join('')
   $('#agent-config-select').value = selectedConfigurationPerson
   const selected = configurationAgent(editableConfiguration, selectedConfigurationPerson)
@@ -295,7 +298,7 @@ function renderComparison() {
   $('#trajectory-grid').innerHTML = dataset.runs.map((run) => `
     <button type="button" class="trajectory-card" data-open-run="${escapeHtml(run.run_id)}" aria-label="Inspect ${escapeHtml(runLabel(run))}, ${escapeHtml(run.run_id)}">
       <span class="card-top"><span><h3>${escapeHtml(runLabel(run))}</h3><span class="run-code">${escapeHtml(run.run_id)}</span></span>${outcomeBadge(run)}</span>
-      <span class="round-track">${run.rounds.map((round) => `<span class="round-track-row"><span class="round-label">R${round.round}</span>${stackedBar(round.decision_counts)}</span>`).join('')}</span>
+      <span class="round-track">${run.rounds.map((round) => `<span class="round-track-row"><span class="round-label">R${round.round}</span>${stackedBar(round.decision_counts, 'stacked-bar', run.agent_count || 12)}</span>`).join('')}</span>
       <span class="final-line">Final · ${escapeHtml(countsText(run.rounds.at(-1).decision_counts))}</span>
     </button>`).join('')
 
@@ -461,7 +464,8 @@ function renderRoundOverview(round) {
   $('#round-state-note').textContent = state.round === 3 ? 'Terminal round' : `Intermediate state before round ${state.round + 1}`
   $('#decision-distribution').innerHTML = decisionOrder.map((decision) => {
     const count = Number(round.decision_counts[decision] || 0)
-    return count ? `<div class="bar-${decision}" style="width:${count / 12 * 100}%" title="${count} ${decision}">${count} ${decision}</div>` : ''
+    const total = currentRun()?.agent_count || 12
+    return count ? `<div class="bar-${decision}" style="width:${count / total * 100}%" title="${count} ${decision}">${count} ${decision}</div>` : ''
   }).join('')
   $('#decision-distribution').setAttribute('aria-label', countsText(round.decision_counts))
   $('#round-counts').innerHTML = `<article class="count-card"><span>Decisions</span><p>${escapeHtml(countsText(round.decision_counts))}</p></article><article class="count-card"><span>Primary risks</span><p>${escapeHtml(categoryText(round.risk_counts))}</p></article><article class="count-card"><span>Requested next steps</span><p>${escapeHtml(categoryText(round.request_counts))}</p></article>`
@@ -648,14 +652,14 @@ function configureControls() {
   }
 }
 
-function gateChecks(finalCounts) {
+function gateChecks(finalCounts, participantCount = 12) {
   const support = Number(finalCounts.support || 0)
   const conditional = Number(finalCounts.conditional || 0)
   const oppose = Number(finalCounts.oppose || 0)
   return [
-    {check_id:'executable_support', label:'Executable-now support', observed:support, required:'at least 6', passed:support >= 6},
-    {check_id:'aligned_positions', label:'Support or conditional', observed:support + conditional, required:'at least 9', passed:support + conditional >= 9},
-    {check_id:'opposition_ceiling', label:'Opposition', observed:oppose, required:'no more than 1', passed:oppose <= 1},
+    {check_id:'executable_support', label:'Executable-now support', observed:support, required:`at least ${Math.ceil(participantCount / 2)}`, passed:support >= Math.ceil(participantCount / 2)},
+    {check_id:'aligned_positions', label:'Support or conditional', observed:support + conditional, required:`at least ${Math.ceil(participantCount * 0.75)}`, passed:support + conditional >= Math.ceil(participantCount * 0.75)},
+    {check_id:'opposition_ceiling', label:'Opposition', observed:oppose, required:`no more than ${Math.floor(participantCount * 0.1)}`, passed:oppose <= Math.floor(participantCount * 0.1)},
   ]
 }
 
@@ -709,6 +713,7 @@ function projectLiveRun(raw) {
     }
   })
   const finalCounts = rounds.at(-1).decision_counts
+  const agentCount = rounds.at(-1).stances.length
   const outcome = raw.outcome.outcome
   return {
     run_id:raw.run_id,
@@ -723,7 +728,8 @@ function projectLiveRun(raw) {
     observed_cost:Number(raw.cost || 0),
     outcome,
     outcome_label:outcome === 'joint_response_approved' ? 'Joint response approved' : 'No joint response',
-    gate_checks:gateChecks(finalCounts),
+    gate_checks:gateChecks(finalCounts, agentCount),
+    agent_count:agentCount,
     rounds,
     developments:projectDevelopments(raw),
     configuration:raw.regional_outbreak_configuration || null,
@@ -760,7 +766,7 @@ async function startLiveRun() {
     })
     activeRunId = started.run_id
     $('#live-run-id').textContent = activeRunId
-    $('#live-status-label').textContent = 'Twelve participants are running'
+    $('#live-status-label').textContent = `${editableConfiguration.agents.length} participants are running`
     schedulePoll(250)
   } catch (error) {
     $('#live-status-label').textContent = 'Run did not start'
@@ -779,9 +785,10 @@ async function pollLiveRun() {
   try {
     const raw = await apiRequest(`api/runs/${encodeURIComponent(activeRunId)}`)
     const calls = Number(raw.model_calls || 0)
-    const progress = raw.status === 'completed' ? 100 : Math.min(95, 5 + calls / 36 * 90)
+    const maximumCalls = runtimeConfig?.scenarios?.regional_outbreak?.maximum_live_calls || editableConfiguration.agents.length * 3
+    const progress = raw.status === 'completed' ? 100 : Math.min(95, 5 + calls / maximumCalls * 90)
     $('#live-progress-bar').style.width = `${progress}%`
-    $('#live-progress-detail').textContent = `${calls} of at most 36 participant calls retained · status ${sentence(raw.status)}`
+    $('#live-progress-detail').textContent = `${calls} of at most ${maximumCalls} participant calls retained · status ${sentence(raw.status)}`
     if (raw.status === 'completed') {
       const projected = projectLiveRun(raw)
       dataset.runs = [projected, ...dataset.runs.filter((run) => run.run_id !== projected.run_id)]

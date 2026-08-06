@@ -178,6 +178,8 @@ from cybernetic_influence.scenarios.coordination_decision import (
     stabilization_coordination_fixture,
 )
 from cybernetic_influence.scenarios.regional_outbreak import (
+    AGENT_IDS as OUTBREAK_AGENT_IDS,
+    MAX_ROUNDS as OUTBREAK_MAX_ROUNDS,
     OutbreakCondition,
     OutbreakFixture,
     OutbreakScenarioConfiguration,
@@ -1232,13 +1234,13 @@ def create_app(
                     ],
                 },
                 "regional_outbreak": {
-                    "label": "Regional outbreak response",
+                    "label": "Cross-Border Early Warning Compact",
                     **_scenario_explanation("regional_outbreak"),
                     "profiles": ["position_context"],
                     "execution_modes": ["live"],
                     "supports_live": bool(coordination_live_models),
                     "live_model_ids": coordination_live_models,
-                    "maximum_live_calls": 36,
+                    "maximum_live_calls": len(OUTBREAK_AGENT_IDS) * OUTBREAK_MAX_ROUNDS,
                     "editable_configuration": default_outbreak_configuration().model_dump(
                         mode="json"
                     ),
@@ -1247,7 +1249,7 @@ def create_app(
                             "id": "baseline",
                             "label": "Baseline",
                             "description": (
-                                "Twelve autonomous coalition roles receive only the common "
+                                "Twenty-six autonomous coalition roles receive only the common "
                                 "results of each prior decision round."
                             ),
                         },

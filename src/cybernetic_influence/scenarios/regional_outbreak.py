@@ -1,4 +1,4 @@
-"""Twelve-agent outbreak coordination experiment with optional exercise injects."""
+"""Twenty-six-agent cross-border early-warning compact with optional injects."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ Risk: TypeAlias = Literal[
 ]
 Request: TypeAlias = Literal["none", "data", "validation", "safeguards", "resources"]
 
-SCENARIO_ID = "regional_outbreak_v1"
+SCENARIO_ID = "regional_outbreak_v2"
 TASK = "regional_outbreak_coordination_step"
 MAX_ROUNDS = 3
 
@@ -63,15 +63,29 @@ AGENT_IDS: tuple[str, ...] = (
     "alba_epidemiologist",
     "alba_policy_delegate",
     "alba_operations_lead",
+    "alba_community_liaison",
+    "alba_supply_lead",
     "borin_epidemiologist",
     "borin_policy_delegate",
     "borin_operations_lead",
+    "borin_community_liaison",
+    "borin_supply_lead",
     "cyrenia_epidemiologist",
     "cyrenia_policy_delegate",
     "cyrenia_operations_lead",
+    "cyrenia_community_liaison",
+    "cyrenia_supply_lead",
+    "darsia_epidemiologist",
+    "darsia_policy_delegate",
+    "darsia_operations_lead",
+    "darsia_community_liaison",
+    "darsia_supply_lead",
     "regional_coordinator",
     "regional_scientific_advisor",
     "regional_logistics_coordinator",
+    "regional_legal_oversight_lead",
+    "regional_finance_coordinator",
+    "regional_community_engagement_lead",
 )
 
 _ROLE_BRIEFS: dict[str, str] = {
@@ -87,6 +101,14 @@ _ROLE_BRIEFS: dict[str, str] = {
         "You are accountable for executable staffing, supplies, and field delivery. You "
         "favor a joint response that matches real capacity and names resource gaps."
     ),
+    "community_liaison": (
+        "You are accountable for locally legible safeguards, community acceptance, and "
+        "whether a proposed response can retain public cooperation."
+    ),
+    "supply_lead": (
+        "You are accountable for diagnostics, protective equipment, transport, and "
+        "reciprocal delivery commitments. You reject plans with hidden supply gaps."
+    ),
     "regional_coordinator": (
         "You are accountable for a legitimate coalition decision, not agreement at any cost. "
         "You surface unresolved dependencies and can support a bounded joint response."
@@ -98,6 +120,18 @@ _ROLE_BRIEFS: dict[str, str] = {
     "regional_logistics_coordinator": (
         "You are accountable for regional surge capacity and fair allocation. You support "
         "plans that can be supplied and will flag hidden implementation dependencies."
+    ),
+    "regional_legal_oversight_lead": (
+        "You are accountable for compatible legal authority, auditability, and clear "
+        "limits on the compact's shared powers."
+    ),
+    "regional_finance_coordinator": (
+        "You are accountable for credible cost shares, contingency funding, and fair "
+        "burden allocation across the compact."
+    ),
+    "regional_community_engagement_lead": (
+        "You are accountable for whether the compact's safeguards and benefits are "
+        "understandable and credible across participating communities."
     ),
 }
 
@@ -114,17 +148,23 @@ _COUNTRY_CONTEXT: dict[str, str] = {
         "Cyrenia has sparse surveillance outside its capital and high public distrust after "
         "a prior false alarm; local validation and visibly reciprocal aid matter."
     ),
+    "darsia": (
+        "Darsia supplies a remote-border surveillance network and convoy corridor, but "
+        "has fragile cold-chain capacity and insists that regional assistance be visibly "
+        "reciprocal rather than extractive."
+    ),
 }
 
 _INITIAL_SITUATION = (
-    "A novel respiratory outbreak is growing across Alba, Borin, and Cyrenia. The proposed "
-    "joint response pools de-identified case data, deploys mixed investigation teams, shares "
-    "laboratory capacity, and releases supplies through a regional allocation cell. A signed "
-    "compact keeps line-level records under national control, forbids unapproved export, and "
-    "logs all access. Cross-laboratory validation has confirmed the initial signal. National "
-    "authorities retain clinical command. Reserve staff, diagnostics, reciprocal aid shipments, "
-    "and equal regional cost shares are precommitted, and local validation boards in all three "
-    "countries endorsed the launch. The plan is reviewed after 72 hours. "
+    "A novel respiratory outbreak is growing across Alba, Borin, Cyrenia, and Darsia. The "
+    "proposed Cross-Border Early Warning Compact pools de-identified case data, deploys mixed "
+    "investigation teams, shares laboratory capacity, and releases supplies through a regional "
+    "allocation cell. A signed compact keeps line-level records under national control, forbids "
+    "unapproved export, logs all access, and requires public receipts for cross-border support. "
+    "Cross-laboratory validation has confirmed the initial signal. National authorities retain "
+    "clinical command. Reserve staff, diagnostics, cold-chain transport, reciprocal aid shipments, "
+    "and equitable regional cost shares are precommitted; local validation boards in all four "
+    "countries endorsed launch. The plan is reviewed after 72 hours. "
     "The coalition has three decision rounds. In every round you must independently state your "
     "current decision, primary risk, requested next step, and concise rationale."
 )
@@ -167,7 +207,9 @@ class OutbreakScenarioConfiguration(BaseModel):
         if len(set(agent_ids)) != len(agent_ids):
             raise ValueError("outbreak agent configuration contains duplicate identities")
         if set(agent_ids) != set(AGENT_IDS):
-            raise ValueError("outbreak agent configuration must contain the exact twelve roles")
+            raise ValueError(
+                "outbreak agent configuration must contain the exact cross-border compact roster"
+            )
         return self
 
     def agent(self, agent_id: str) -> OutbreakAgentConfiguration:
@@ -359,7 +401,7 @@ def outbreak_fixture(
             abstraction="A bounded three-round multinational outbreak decision exercise.",
             assumptions=[
                 "Each synthetic participant owns one institutional role and one stance interface.",
-                "A joint response requires at least six executable-now support positions, nine support or conditional positions, and no more than one opposition.",
+                "A joint response requires at least thirteen executable-now support positions, twenty support or conditional positions, and no more than two opposition positions.",
                 "Responsive injects are selected only from predeclared exercise developments after observing aggregate risks.",
                 "The stabilization arm replays the accepted treatment's capacity developments and adds one predeclared authoritative allocation fact after round two without selecting participant decisions.",
             ],
@@ -393,8 +435,8 @@ def outbreak_fixture(
     scenario = CausalScenario(
         scenario_id=SCENARIO_ID,
         description=(
-            "Twelve autonomous LLM participants decide whether to mount a joint outbreak "
-            "response under common feedback, responsive exercise injects, or a replay of "
+            "Twenty-six autonomous LLM participants decide whether to activate a Cross-Border "
+            "Early Warning Compact under common feedback, responsive exercise injects, or a replay of "
             "the treatment's capacity injects plus an authoritative allocation intervention."
         ),
         time_unit="outbreak_hour",
@@ -404,7 +446,7 @@ def outbreak_fixture(
             AnalyticalBoundary(
                 boundary_id="regional_coalition",
                 label="Regional coalition",
-                description="All twelve participating institutional roles.",
+                description="All twenty-six participating institutional roles.",
                 member_refs=list(AGENT_IDS),
             ),
             *[
@@ -414,7 +456,7 @@ def outbreak_fixture(
                     description=f"The three national roles representing {country.title()}.",
                     member_refs=[agent for agent in AGENT_IDS if agent.startswith(country)],
                 )
-                for country in ("alba", "borin", "cyrenia")
+                for country in ("alba", "borin", "cyrenia", "darsia")
             ],
         ],
         fidelity_questions=[
@@ -607,7 +649,7 @@ def outbreak_readout(result: ActiveRuntimeResult) -> tuple[dict[str, object], st
         else "The coalition failed to approve a joint outbreak response"
     )
     summary = (
-        f"Across three rounds, {decisions['support'] + decisions['conditional']} of 12 "
+        f"Across three rounds, {decisions['support'] + decisions['conditional']} of {len(AGENT_IDS)} "
         f"participants ended in support or conditional support, with {decisions['oppose']} "
         f"opposed. The {condition.replace('_', ' ')} condition ended in "
         f"{outcome.replace('_', ' ')}."
@@ -644,9 +686,9 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
             cast(dict[str, str], item)["decision"] for item in updated_stances.values()
         )
         approved = (
-            decisions["support"] >= 6
-            and decisions["support"] + decisions["conditional"] >= 9
-            and decisions["oppose"] <= 1
+            decisions["support"] >= 13
+            and decisions["support"] + decisions["conditional"] >= 20
+            and decisions["oppose"] <= 2
         )
         return MechanismOutcome(
             outcome_code="coalition_decision_recorded",
@@ -785,6 +827,7 @@ def _select_inject(
                 "alba": "Alba's laboratory finds a high-risk lineage but cannot release raw sequences until its national review is complete.",
                 "borin": "Borin's hub surveillance finds rapid spread inconsistent with Alba's preliminary lineage report and requests immediate operational action.",
                 "cyrenia": "Cyrenia's local laboratories cannot reproduce either regional finding and public-health leaders demand local validation before escalation.",
+                "darsia": "Darsia's remote-border network reports delayed signals and requests a joint verification protocol before it releases its corridor data.",
                 "regional": "The regional analysis cell receives three non-comparable datasets and must decide whether any common finding is actionable.",
             },
         ),
@@ -794,6 +837,7 @@ def _select_inject(
                 "alba": "An Alba court temporarily bars line-level data export and unescorted foreign investigation teams pending national review.",
                 "borin": "New cases at Borin's transport hub require named cross-border contact lists within six hours to preserve the containment window.",
                 "cyrenia": "Cyrenian civil-society monitors demand independent regional access because they distrust data filtered only through national authorities.",
+                "darsia": "Darsia's border authority will not release corridor movement data until the compact publishes a time-bounded authority and audit protocol.",
                 "regional": "The regional secretariat must reconcile incompatible demands for immediate named tracing, national data control, and independent access.",
             },
         ),
@@ -803,6 +847,7 @@ def _select_inject(
                 "alba": "An equipment failure forces Alba's strongest laboratory to reserve half its capacity for domestic confirmation testing.",
                 "borin": "Borin can keep the transport hub open only if regional partners immediately supply clinical staff to its strained hospitals.",
                 "cyrenia": "Cyrenia will release its field teams only with a visible reciprocal shipment of diagnostics and protective equipment.",
+                "darsia": "Darsia can keep its remote surveillance corridor open only if cold-chain transport and fuel reserves are confirmed before the next 48 hours.",
                 "regional": "The regional roster and supply stock cannot satisfy all three national requests during the next 48 hours.",
             },
         ),
@@ -812,6 +857,7 @@ def _select_inject(
                 "alba": "Alba's cabinet will defend the response publicly only if national authorities visibly retain command and foreign access stays bounded.",
                 "borin": "Borin's parliament threatens to withhold surge funding unless regional cost shares and operational burdens are published immediately.",
                 "cyrenia": "Cyrenian local leaders reject another capital-led assurance and demand an independent regional validation event before cooperation.",
+                "darsia": "Darsian community monitors require public confirmation that corridor communities receive reciprocal protection rather than only data-extraction demands.",
                 "regional": "No single public assurance currently satisfies national command, burden transparency, and independent-validation demands together.",
             },
         ),

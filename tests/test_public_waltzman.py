@@ -256,9 +256,9 @@ def test_public_app_serves_defaults_and_rejects_misrouted_agent_configuration(
     assert response.status_code == 200
     outbreak = response.json()["scenarios"]["regional_outbreak"]
     configuration = outbreak["editable_configuration"]
-    assert len(configuration["agents"]) == 12
+    assert len(configuration["agents"]) == 26
     assert configuration["agents"][0]["agent_id"] == "alba_epidemiologist"
-    assert outbreak["maximum_live_calls"] == 36
+    assert outbreak["maximum_live_calls"] == 78
 
     invalid = client.post(
         "/api/runs",

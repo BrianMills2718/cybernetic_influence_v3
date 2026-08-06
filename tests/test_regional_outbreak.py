@@ -76,10 +76,10 @@ def _run(
     return fixture, result, outbreak_readout(result)[0]
 
 
-def test_baseline_runs_twelve_autonomous_roles_for_three_rounds() -> None:
+def test_baseline_runs_the_cross_border_compact_for_three_rounds() -> None:
     fixture, result, readout = _run("baseline")
 
-    assert len(fixture.active_specs) == len(AGENT_IDS) == 12
+    assert len(fixture.active_specs) == len(AGENT_IDS) == 26
     assert len(result.attempts) == 3
     assert result.model_calls == 0
     assert readout["rounds_completed"] == 3
@@ -164,9 +164,9 @@ def test_responsive_condition_selects_declared_injects_from_reported_risk() -> N
         for observation in result.core_result.final_state.observations.values()
         if observation.apparent_source_ref == "exercise_control"
     ]
-    assert len(inject_observations) == 24
-    first_round = inject_observations[:12]
-    assert len({item.apparent_content for item in first_round}) == 4
+    assert len(inject_observations) == len(AGENT_IDS) * 2
+    first_round = inject_observations[: len(AGENT_IDS)]
+    assert len({item.apparent_content for item in first_round}) == 5
 
 
 def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() -> None:
@@ -184,6 +184,6 @@ def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() 
         for observation in result.core_result.final_state.observations.values()
         if observation.apparent_source_ref == "regional_allocation_authority"
     ]
-    assert len(stabilization_observations) == 12
+    assert len(stabilization_observations) == len(AGENT_IDS)
     assert len({item.apparent_content for item in stabilization_observations}) == 1
     assert "not a command about which stance" in stabilization_observations[0].apparent_content
