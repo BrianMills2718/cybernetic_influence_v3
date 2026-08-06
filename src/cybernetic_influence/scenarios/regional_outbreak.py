@@ -453,7 +453,7 @@ def outbreak_fixture(
                 AnalyticalBoundary(
                     boundary_id=f"{country}_delegation",
                     label=f"{country.title()} delegation",
-                    description=f"The three national roles representing {country.title()}.",
+                    description=f"The compact roles representing {country.title()}.",
                     member_refs=[agent for agent in AGENT_IDS if agent.startswith(country)],
                 )
                 for country in ("alba", "borin", "cyrenia", "darsia")
@@ -848,7 +848,7 @@ def _select_inject(
                 "borin": "Borin can keep the transport hub open only if regional partners immediately supply clinical staff to its strained hospitals.",
                 "cyrenia": "Cyrenia will release its field teams only with a visible reciprocal shipment of diagnostics and protective equipment.",
                 "darsia": "Darsia can keep its remote surveillance corridor open only if cold-chain transport and fuel reserves are confirmed before the next 48 hours.",
-                "regional": "The regional roster and supply stock cannot satisfy all three national requests during the next 48 hours.",
+                "regional": "The regional roster and supply stock cannot satisfy all four national requests during the next 48 hours.",
             },
         ),
         "legitimacy": (
@@ -943,7 +943,7 @@ def _country_context(agent_id: str) -> str:
     country = _country(agent_id)
     return _COUNTRY_CONTEXT.get(
         country,
-        "You serve the regional institution and must consider all three national contexts without pretending to represent them.",
+        "You serve the regional institution and must consider all four national contexts without pretending to represent them.",
     )
 
 
