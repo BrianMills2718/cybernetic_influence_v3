@@ -332,7 +332,7 @@ class OutbreakStance(BaseModel):
     decision: Decision
     risk: Risk
     request: Request
-    rationale: str = Field(min_length=1, max_length=600)
+    rationale: str = Field(min_length=1, max_length=800)
     coordination_action: CoordinationActionKind
     coordination_target_ref: str = Field(min_length=1, max_length=80)
     coordination_content: str = Field(min_length=1, max_length=800)
@@ -351,7 +351,7 @@ class SourceSignal(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
     signal_id: Literal["escalate", "verify"]
-    rationale: str = Field(min_length=1, max_length=300)
+    rationale: str = Field(min_length=1, max_length=800)
 
 
 class CsoDetection(BaseModel):
@@ -361,7 +361,7 @@ class CsoDetection(BaseModel):
     trust_structure: Literal["stable", "conditional", "fragmented"]
     perceived_risk: Literal["bounded", "expanding", "high"]
     coordination_readiness: Literal["ready", "degrading", "blocked"]
-    evidence_summary: str = Field(min_length=1, max_length=600)
+    evidence_summary: str = Field(min_length=1, max_length=800)
 
     @model_validator(mode="before")
     @classmethod
@@ -405,7 +405,7 @@ class CsoDiagnosis(BaseModel):
         "multiple_groups",
         "coalition_wide",
     ]
-    rationale: str = Field(min_length=1, max_length=500)
+    rationale: str = Field(min_length=1, max_length=800)
 
     @model_validator(mode="before")
     @classmethod
@@ -442,7 +442,7 @@ class CsoIntervention(BaseModel):
         "coordination_readiness",
         "cross_dimension",
     ]
-    rationale: str = Field(min_length=1, max_length=500)
+    rationale: str = Field(min_length=1, max_length=800)
 
     @model_validator(mode="before")
     @classmethod
@@ -2091,7 +2091,7 @@ def _native_policy(
         "keys and enum values described by that interface. The payload must also include "
         "the three flat fields coordination_action, coordination_target_ref, and "
         "coordination_content. Do not encode them as a nested object or JSON string. "
-        "Keep coordination_content at or below 800 characters. "
+        "Keep rationale and coordination_content at or below 800 characters each. "
         "A targeted message is a separate attempted interaction: it does not change your stance, "
         "does not guarantee delivery or agreement, and the exact world records its outcome. "
         "For send_message, target_ref must be another participant ID. Valid target_ref values are: "
@@ -2122,7 +2122,8 @@ def _source_policy(source_id: str, *, model: str, reasoning_effort: str | None, 
         "Observe the completed public coalition snapshot and emit exactly one signal through your own source port. "
         "Choose escalate for a concrete external incompatibility or verify when confirmation is the material need. "
         "Use only signal_id and rationale in the payload. You cannot represent a coalition participant, "
-        "use a stance port, recommend a vote, or modify the decision gate."
+        "use a stance port, recommend a vote, or modify the decision gate. "
+        "Keep rationale at or below 800 characters."
     )
     return NativeLlmActiveSystem.from_bound_configuration(
         implementation_family_id=f"native_outbreak_{source_id}_v1",
@@ -2175,7 +2176,7 @@ def _cso_policy(
     }
     return NativeLlmActiveSystem.from_bound_configuration(
         implementation_family_id=f"native_outbreak_{cso_id}_v1",
-        persona=personas[cso_id],
+        persona=personas[cso_id] + " Keep every free-text field at or below 800 characters.",
         model=model,
         task=CSO_TASK,
         trace_id_prefix=trace_id_prefix,
