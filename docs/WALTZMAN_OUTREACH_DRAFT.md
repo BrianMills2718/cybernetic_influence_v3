@@ -19,8 +19,8 @@ community signals. The sources cannot vote, recommend a vote, or modify a
 participant.
 
 In the baseline, all 26 roles support activation throughout. Under autonomous
-source pressure, the coalition moves to 7 conditional positions and 19
-deferrals, so the decision gate fails. With the same source process plus a
+source pressure, the coalition moves to 17 conditional positions and 9
+deferrals, so the decision gate fails. With the same bounded source process plus a
 verified package resolving the four classes of requirements, all 26 return to
 support.
 

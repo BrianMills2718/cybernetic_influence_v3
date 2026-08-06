@@ -38,25 +38,28 @@ coalition. The sources cannot vote, recommend a vote, write a participant’s
 stance, or modify the decision gate.
 
 The same 26-role configuration, model, reasoning setting, and decision rule are
-used for the matched trio:
+used for the configuration-matched trio:
 
 | Environment | Round 1 | Round 2 | Round 3 | Outcome |
 | --- | --- | --- | --- | --- |
 | Baseline | 26 support | 26 support | 26 support | Approved |
-| Autonomous source pressure | 26 support | 20 conditional, 6 defer | 7 conditional, 19 defer | Not approved |
-| Pressure plus verified compact package | 26 support | 21 conditional, 5 defer | 26 support | Approved |
+| Autonomous source pressure | 26 support | 3 support, 17 conditional, 6 defer | 17 conditional, 9 defer | Not approved |
+| Pressure plus verified compact package | 26 support | 1 support, 24 conditional, 1 defer | 26 support | Approved |
 
-Retained runs: `run_b2f48cbdbb3d`, `run_a679fde37844`, and
-`run_461bf953f9ac`. Their configuration SHA-256 is identical:
+Retained runs: `run_ef3763b4d477`, `run_3303c9302a36`, and
+`run_78cfee99640c`. Their configuration SHA-256 is identical:
 `d55c080a0c5ddaa7d6b18a87d5976fd03c34bc51c5b55d07e661f70910de5d26`.
 
-In both source conditions, all four sources chose verification after round one
-and escalation after round two. Under pressure alone, technical, sovereignty,
-capacity, and legitimacy requirements accumulated into a jointly blocking set.
-The coalition did not reject the shared objective; by the final round, none of
-the 26 roles considered the compact executable immediately.
+The source agents made bounded, heterogeneous choices from the reviewed
+developments. Under pressure, the first source phase contained three
+verification selections and one escalation; the second contained two of each.
+Technical, sovereignty, capacity, and legitimacy requirements accumulated into
+a jointly blocking set. The coalition did not reject the shared objective; by
+the final round, none of the 26 roles considered the compact executable
+immediately.
 
-The stabilization condition kept the source process active. After round two, a
+The stabilization condition kept the autonomous source process active; in this
+trajectory all four sources selected verification in both phases. After round two, a
 verified cross-domain package clarified evidentiary standards, bounded data and
 access authority, assigned staff and supplies, protected national reserves, and
 specified reciprocal community safeguards. All 26 roles then returned to
@@ -92,7 +95,9 @@ the simulation does not directly measure.
 ## Limits and proposed discussion
 
 This is one fictional scenario with synthetic LLM behavior and one stochastic
-trajectory per environment. It does not estimate effects in people, establish
+trajectory per environment. The autonomous source choices differ between the
+pressure and stabilization runs, so this is not a package-only counterfactual.
+It does not estimate effects in people, establish
 hostile intent, validate the paper’s state variables, or show that the same
 direction generalizes across contexts. The source agents are domain-bounded and
 observe public coalition feedback; they are not an unconstrained influence
