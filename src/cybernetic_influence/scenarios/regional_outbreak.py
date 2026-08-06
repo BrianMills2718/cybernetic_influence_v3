@@ -211,7 +211,22 @@ class CsoDetection(BaseModel):
     trust_structure: Literal["stable", "conditional", "fragmented"]
     perceived_risk: Literal["bounded", "expanding", "high"]
     coordination_readiness: Literal["ready", "degrading", "blocked"]
-    evidence: str = Field(min_length=1, max_length=600)
+    evidence_summary: str = Field(min_length=1, max_length=600)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_evidence(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        normalized = dict(value)
+        evidence = normalized.pop("evidence", None)
+        if "evidence_summary" not in normalized and evidence is not None:
+            normalized["evidence_summary"] = (
+                "; ".join(str(item) for item in evidence)
+                if isinstance(evidence, list)
+                else str(evidence)
+            )
+        return normalized
 
 
 class CsoDiagnosis(BaseModel):
@@ -242,6 +257,22 @@ class CsoDiagnosis(BaseModel):
     ]
     rationale: str = Field(min_length=1, max_length=500)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_scope(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        normalized = dict(value)
+        groups = normalized.pop("affected_groups", None)
+        if "affected_scope" not in normalized and groups is not None:
+            if isinstance(groups, list):
+                normalized["affected_scope"] = (
+                    str(groups[0]) if len(groups) == 1 else "multiple_groups"
+                )
+            else:
+                normalized["affected_scope"] = str(groups)
+        return normalized
+
 
 class CsoIntervention(BaseModel):
     """One authorized action selected by the stabilization planner."""
@@ -262,6 +293,22 @@ class CsoIntervention(BaseModel):
         "cross_dimension",
     ]
     rationale: str = Field(min_length=1, max_length=500)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_target_dimension(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        normalized = dict(value)
+        dimensions = normalized.pop("target_dimensions", None)
+        if "target_dimension" not in normalized and dimensions is not None:
+            if isinstance(dimensions, list):
+                normalized["target_dimension"] = (
+                    str(dimensions[0]) if len(dimensions) == 1 else "cross_dimension"
+                )
+            else:
+                normalized["target_dimension"] = str(dimensions)
+        return normalized
 
 
 class OutbreakAgentConfiguration(BaseModel):
@@ -1730,7 +1777,7 @@ def _cso_policy(
             "Operations cell. Observe only the retained coalition snapshot and external source "
             "documents. Classify trust_structure as stable|conditional|fragmented, perceived_risk "
             "as bounded|expanding|high, and coordination_readiness as ready|degrading|blocked. "
-            "Give one concise evidence summary. Do not infer hostile intent, "
+            "Give one concise evidence_summary. Do not infer hostile intent, "
             "diagnose a mechanism, propose an intervention, or recommend a vote. Submit exactly "
             "one action through cso_detection_out using only those four payload keys."
         ),

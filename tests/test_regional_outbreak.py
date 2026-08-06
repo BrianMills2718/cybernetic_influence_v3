@@ -72,14 +72,18 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                 payload = {
                     "primary_dimension": "cross_dimension",
                     "mechanism": "incompatible_requirements",
-                    "affected_scope": "coalition_wide",
+                    "affected_groups": ["alba", "borin", "cyrenia", "darsia"],
                     "rationale": "Several locally valid requirements cannot be met together.",
                 }
                 output_port_id = "cso_diagnosis_out"
             elif active_system_id == "cso_stabilization_planner":
                 payload = {
                     "action_id": "cross_domain_compact",
-                    "target_dimension": "cross_dimension",
+                    "target_dimensions": [
+                        "trust_structure",
+                        "perceived_risk",
+                        "coordination_readiness",
+                    ],
                     "rationale": "The diagnosis spans evidence, authority, and resources.",
                 }
                 output_port_id = "cso_intervention_out"
@@ -276,6 +280,11 @@ def test_adaptive_cso_cell_detects_diagnoses_and_selects_before_round_three() ->
         CSO_IDS
     )
     assert readout["cso_records"][-1]["payload"]["action_id"] == "cross_domain_compact"
+    assert readout["cso_records"][0]["payload"]["evidence_summary"].startswith(
+        "Most coalition roles"
+    )
+    assert readout["cso_records"][1]["payload"]["affected_scope"] == "multiple_groups"
+    assert readout["cso_records"][2]["payload"]["target_dimension"] == "cross_dimension"
     assert readout["stabilization_events"] == ["cso_cross_domain_compact"]
     assert [attempt.logical_time for attempt in result.attempts] == list(range(8))
 
