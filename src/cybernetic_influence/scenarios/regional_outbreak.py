@@ -6,12 +6,13 @@ from collections import Counter
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 import json
-from typing import Literal, TypeAlias, cast
+from typing import Any, Literal, TypeAlias, cast
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from cybernetic_influence.active_runtime import (
     ActiveProposal,
+    ActionIntent,
     ActiveRuntimeCheckpoint,
     ActiveRuntimeConfig,
     ActiveRuntimeResult,
@@ -58,6 +59,14 @@ Risk: TypeAlias = Literal[
 ]
 Request: TypeAlias = Literal["none", "data", "validation", "safeguards", "resources"]
 CoordinationActionKind: TypeAlias = Literal["send_message", "no_action"]
+CsoInterventionAction: TypeAlias = Literal[
+    "independent_validation",
+    "authority_clarification",
+    "resource_coordination",
+    "cross_domain_compact",
+    "process_reset",
+    "no_action",
+]
 
 SCENARIO_ID = "regional_outbreak_v3"
 TASK = "regional_outbreak_coordination_step"
@@ -384,6 +393,8 @@ class ResourceAllocation(BaseModel):
     ] = Field(min_length=1, max_length=6)
     verification_status: Literal["proposed", "verified"]
     manifest_ref: str = Field(min_length=3, max_length=120)
+    delivery_mode: Literal["world_update", "cso_stabilization"] = "world_update"
+    intervention_action_id: CsoInterventionAction = "resource_coordination"
 
     @model_validator(mode="after")
     def require_unique_commitments(self) -> "ResourceAllocation":
@@ -466,14 +477,7 @@ class CsoIntervention(BaseModel):
     """One authorized action selected by the stabilization planner."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
-    action_id: Literal[
-        "independent_validation",
-        "authority_clarification",
-        "resource_coordination",
-        "cross_domain_compact",
-        "process_reset",
-        "no_action",
-    ]
+    action_id: CsoInterventionAction
     target_dimension: Literal[
         "trust_structure",
         "perceived_risk",
@@ -709,6 +713,60 @@ class RequiredCsoSystem:
         )
 
 
+@dataclass(frozen=True)
+class AllocationAuthoritySystem:
+    """A deterministic authority that realizes a selected resource class as objects.
+
+    The CSO selects a class. This authority owns the resource port and performs
+    the bounded allocation; neither actor can emit a coalition stance.
+    """
+
+    implementation_id: str = "regional_allocation_authority_v1"
+
+    @property
+    def provider_bound(self) -> bool:
+        return False
+
+    def step(self, active_input: ActiveSystemInput) -> ActiveStepResult:
+        requests = [
+            json.loads(item.apparent_content)
+            for item in active_input.observations
+            if item.apparent_source_ref == "cso_stabilization_planner"
+        ]
+        if len(requests) != 1:
+            raise ValueError("allocation authority requires exactly one CSO allocation request")
+        action_id = cast(CsoInterventionAction, requests[0]["action_id"])
+        commitments = (
+            list(_RESOURCE_DESTINATIONS)
+            if action_id in {"resource_coordination", "cross_domain_compact"}
+            else []
+        )
+        if not commitments:
+            raise ValueError(f"CSO action {action_id} does not authorize resource allocation")
+        allocation = ResourceAllocation(
+            commitment_ids=cast(Any, commitments),
+            verification_status="verified",
+            manifest_ref=f"{action_id}-48h-allocation-manifest",
+            delivery_mode="cso_stabilization",
+            intervention_action_id=action_id,
+        )
+        return ActiveStepResult(
+            proposal=ActiveProposal(
+                active_system_id=active_input.active_system_id,
+                implementation_id=self.implementation_id,
+                private_state=active_input.private_state,
+                actions=[
+                    ActionIntent(
+                        output_port_id="resource_allocation_out",
+                        payload=allocation.model_dump(mode="json"),
+                        public_summary="Committed the selected named resource package.",
+                    )
+                ],
+                update_schedule=UpdateScheduleDirective(mode="dormant"),
+            )
+        )
+
+
 def outbreak_fixture(
     condition: OutbreakCondition,
     *,
@@ -893,28 +951,27 @@ def outbreak_fixture(
             delay=0,
             description="Routes one explicit experiment-control action at the fork boundary.",
         )
-    if world_resource_probe:
-        ports["resource_allocation_out"] = PortState(
-            port_id="resource_allocation_out",
-            owner_ref="regional_allocation_authority",
-            direction="output",
-            effect_type="outbreak_resource_allocation",
-            description="Commit named resources and publish a proposed or verified allocation manifest.",
-        )
-        ports["resource_allocation_in"] = PortState(
-            port_id="resource_allocation_in",
-            owner_ref="outbreak_resource_allocation",
-            direction="input",
-            effect_type="outbreak_resource_allocation",
-            description="Exact intake for one bounded resource-allocation authority action.",
-        )
-        connections["route_resource_allocation"] = ConnectionState(
-            connection_id="route_resource_allocation",
-            source_port_id="resource_allocation_out",
-            target_port_id="resource_allocation_in",
-            delay=0,
-            description="Moves named resources through the allocation authority into exact world state.",
-        )
+    ports["resource_allocation_out"] = PortState(
+        port_id="resource_allocation_out",
+        owner_ref="regional_allocation_authority",
+        direction="output",
+        effect_type="outbreak_resource_allocation",
+        description="Commit named resources and publish a proposed or verified allocation manifest.",
+    )
+    ports["resource_allocation_in"] = PortState(
+        port_id="resource_allocation_in",
+        owner_ref="outbreak_resource_allocation",
+        direction="input",
+        effect_type="outbreak_resource_allocation",
+        description="Exact intake for one bounded resource-allocation authority action.",
+    )
+    connections["route_resource_allocation"] = ConnectionState(
+        connection_id="route_resource_allocation",
+        source_port_id="resource_allocation_out",
+        target_port_id="resource_allocation_in",
+        delay=0,
+        description="Moves named resources through the allocation authority into exact world state.",
+    )
 
     cso_ports = {
         "cso_detection": (
@@ -1088,7 +1145,7 @@ def outbreak_fixture(
             "outbreak_decision.cso_records",
             "outbreak_decision.coordination_messages",
         ],
-        observation_target_ids=list(AGENT_IDS),
+        observation_target_ids=[*AGENT_IDS, "regional_allocation_authority"],
         substrate_refs=["outbreak_decision", "regional_allocation_authority"],
         invariant_ids=["bounded_cso_intervention"],
         fidelity=FidelityNote(
@@ -1131,6 +1188,11 @@ def outbreak_fixture(
         read_fact_ids=[
             *[f"{resource_id}.availability" for resource_id in _RESOURCE_DESTINATIONS],
             "regional_allocation_manifest.status",
+            "outbreak_decision.current_round",
+            "outbreak_decision.history",
+            "outbreak_decision.coordination_messages",
+            "outbreak_decision.injects_delivered",
+            "outbreak_decision.stabilizations_delivered",
         ],
         write_fact_ids=[
             *[f"{resource_id}.availability" for resource_id in _RESOURCE_DESTINATIONS],
@@ -1138,6 +1200,8 @@ def outbreak_fixture(
             "regional_allocation_manifest.status",
             "regional_allocation_manifest.manifest_ref",
             "regional_allocation_manifest.commitment_ids",
+            "outbreak_decision.coordination_messages",
+            "outbreak_decision.stabilizations_delivered",
         ],
         observation_target_ids=list(AGENT_IDS),
         substrate_refs=[*_RESOURCE_DESTINATIONS, "regional_allocation_manifest"],
@@ -1159,8 +1223,7 @@ def outbreak_fixture(
     }
     if message_fork_probe:
         mechanisms[message_fork_control.mechanism_id] = message_fork_control
-    if world_resource_probe:
-        mechanisms[resource_allocation.mechanism_id] = resource_allocation
+    mechanisms[resource_allocation.mechanism_id] = resource_allocation
 
     state = CausalState(
         entities=entities,
@@ -1233,6 +1296,7 @@ def outbreak_fixture(
                     "coalition_round_in",
                     "source_signal_in",
                     "cso_intervention_in",
+                    "resource_allocation_in",
                 ],
                 output_port_ids=[f"stance_{agent_id}_out"],
                 initial_private_state={
@@ -1298,6 +1362,18 @@ def outbreak_fixture(
                     initial_next_update_at=None,
                 )
             )
+        specs.append(
+            ActiveSystemSpec(
+                active_system_id="regional_allocation_authority",
+                entity_id="regional_allocation_authority",
+                implementation_id="regional_allocation_authority_v1",
+                description="Deterministic authority for the CSO-selected resource class.",
+                observation_port_ids=["cso_intervention_in"],
+                output_port_ids=["resource_allocation_out"],
+                initial_private_state={"memory": []},
+                initial_next_update_at=None,
+            )
+        )
 
     exact = ExactMechanismBinding(
         implementation_id="outbreak_stance_recorder_v1",
@@ -1339,12 +1415,11 @@ def outbreak_fixture(
                 "bounded_message_fork_control": _bounded_message_fork_control
             },
         )
-    if world_resource_probe:
-        exact_bindings[resource_allocation.mechanism_id] = ExactMechanismBinding(
-            implementation_id="outbreak_resource_allocation_v1",
-            handler=_apply_resource_allocation,
-            invariant_checkers={"bounded_resource_allocation": _bounded_resource_allocation},
-        )
+    exact_bindings[resource_allocation.mechanism_id] = ExactMechanismBinding(
+        implementation_id="outbreak_resource_allocation_v1",
+        handler=_apply_resource_allocation,
+        invariant_checkers={"bounded_resource_allocation": _bounded_resource_allocation},
+    )
 
     return OutbreakFixture(
         condition=condition,
@@ -1402,6 +1477,10 @@ def outbreak_bindings(
             )
             cso = RequiredCsoSystem(cso_id, output_port_id, payload_model, inner)
             bindings[cso_id] = ActiveSystemBinding(cso.implementation_id, cso)
+        authority = AllocationAuthoritySystem()
+        bindings["regional_allocation_authority"] = ActiveSystemBinding(
+            authority.implementation_id, authority
+        )
     return bindings
 
 
@@ -1805,18 +1884,83 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
             "Decide independently from your position, memory, and delivered evidence."
         ),
     }
-    return MechanismOutcome(
-        outcome_code="resource_allocation_committed",
-        updates=updates,
-        observations=[
+    if allocation.delivery_mode == "cso_stabilization":
+        completed_round = cast(int, context.read("outbreak_decision.current_round"))
+        if completed_round != 2:
+            raise ValueError("CSO allocation may occur only after round two")
+        history = cast(list[dict[str, JsonValue]], context.read("outbreak_decision.history"))
+        delivered = cast(list[str], context.read("outbreak_decision.injects_delivered"))
+        messages = cast(list[JsonValue], context.read("outbreak_decision.coordination_messages"))
+        snapshot = {
+            "document_kind": "cso_stabilization_bundle",
+            "after_round": completed_round,
+            "coalition_snapshot": {
+                "document_kind": "coalition_round_snapshot",
+                "completed_round": completed_round,
+                "next_round": completed_round + 1,
+                "stances": history[-1]["stances"],
+            },
+            "documents": cast(
+                JsonValue,
+                _source_documents_for_target(delivered, completed_round, "regional_coordinator"),
+            ),
+            "intervention": {
+                "action_id": allocation.intervention_action_id,
+                "authority": "regional_allocation_authority",
+            },
+            "resource_world": {
+                "manifest": {
+                    "manifest_ref": allocation.manifest_ref,
+                    "verification_status": allocation.verification_status,
+                },
+                "resource_commitments": cast(JsonValue, resources),
+            },
+            "instruction": (
+                "These are exact world-state changes, not instructions about your stance. "
+                "Decide independently from your position, memory, and delivered evidence."
+            ),
+        }
+        updates.extend(
+            [
+                FactUpdate(
+                    fact_id="outbreak_decision.coordination_messages",
+                    value=cast(JsonValue, _mark_round_messages_delivered(messages, completed_round)),
+                ),
+                FactUpdate(
+                    fact_id="outbreak_decision.stabilizations_delivered",
+                    value=cast(
+                        JsonValue,
+                        [
+                            *cast(list[str], context.read("outbreak_decision.stabilizations_delivered")),
+                            f"world_{allocation.intervention_action_id}",
+                        ],
+                    ),
+                ),
+            ]
+        )
+    observations = []
+    for agent_id in AGENT_IDS:
+        apparent = snapshot
+        if allocation.delivery_mode == "cso_stabilization":
+            apparent = {
+                **snapshot,
+                "documents": cast(
+                    JsonValue,
+                    _source_documents_for_target(delivered, completed_round, agent_id),
+                ),
+            }
+        observations.append(
             ObservationDraft(
                 target_entity_id=agent_id,
                 via_port_id=context.target_port.port_id,
-                apparent_content=json.dumps(snapshot, sort_keys=True),
+                apparent_content=json.dumps(apparent, sort_keys=True),
                 apparent_source_ref="regional_allocation_authority",
             )
-            for agent_id in AGENT_IDS
-        ],
+        )
+    return MechanismOutcome(
+        outcome_code="resource_allocation_committed",
+        updates=updates,
+        observations=observations,
     )
 
 
@@ -1825,7 +1969,9 @@ def _bounded_resource_allocation(
 ) -> bool:
     allocation = ResourceAllocation.model_validate(context.effect.payload)
     return (
-        len(outcome.updates) == len(allocation.commitment_ids) * 2 + 3
+        len(outcome.updates)
+        == len(allocation.commitment_ids) * 2 + 3
+        + (2 if allocation.delivery_mode == "cso_stabilization" else 0)
         and len(outcome.observations) == len(AGENT_IDS)
         and all(item.apparent_source_ref == "regional_allocation_authority" for item in outcome.observations)
     )
@@ -2274,6 +2420,27 @@ def _record_cso_intervention(context: MechanismContext) -> MechanismOutcome:
     completed_round = cast(int, context.read("outbreak_decision.current_round"))
     if completed_round != 2:
         raise ValueError("the CSO intervention is authorized only after round two")
+    if intervention.action_id in {"resource_coordination", "cross_domain_compact"}:
+        request = {
+            "document_kind": "cso_allocation_request",
+            "action_id": intervention.action_id,
+            "instruction": (
+                "Select no coalition stance. If the requested package is feasible, "
+                "commit its named objects through the allocation-authority port."
+            ),
+        }
+        return MechanismOutcome(
+            outcome_code="cso_resource_allocation_requested",
+            updates=[FactUpdate(fact_id="outbreak_decision.cso_records", value=records)],
+            observations=[
+                ObservationDraft(
+                    target_entity_id="regional_allocation_authority",
+                    via_port_id=context.target_port.port_id,
+                    apparent_content=json.dumps(request, sort_keys=True),
+                    apparent_source_ref="cso_stabilization_planner",
+                )
+            ],
+        )
     development_id, content = _cso_intervention_development(intervention.action_id)
     delivered = cast(
         list[str], context.read("outbreak_decision.injects_delivered")
@@ -2361,6 +2528,10 @@ def _bounded_cso_stage(context: MechanismContext, outcome: MechanismOutcome) -> 
 def _bounded_cso_intervention(
     context: MechanismContext, outcome: MechanismOutcome
 ) -> bool:
+    if outcome.outcome_code == "cso_resource_allocation_requested":
+        return len(outcome.observations) == 1 and (
+            outcome.observations[0].target_entity_id == "regional_allocation_authority"
+        )
     return len(outcome.observations) == len(AGENT_IDS) and all(
         item.apparent_source_ref == "cso_stabilization_planner"
         for item in outcome.observations

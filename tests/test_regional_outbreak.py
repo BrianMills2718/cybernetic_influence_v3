@@ -42,6 +42,36 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
         ) -> ActiveStepResult:
             active_system_id = item.active_system_id
             private_state = item.private_state
+            if active_system_id == "regional_allocation_authority":
+                request = json.loads(item.observations[0].apparent_content)
+                return ActiveStepResult(
+                    proposal=ActiveProposal(
+                        active_system_id=active_system_id,
+                        implementation_id=implementation_id,
+                        private_state=private_state,
+                        actions=[
+                            ActionIntent(
+                                output_port_id="resource_allocation_out",
+                                payload={
+                                    "commitment_ids": [
+                                        "alba_mobile_lab",
+                                        "borin_clinician_roster",
+                                        "cyrenia_diagnostic_kits",
+                                        "cyrenia_protective_equipment",
+                                        "darsia_cold_chain_route",
+                                        "darsia_fuel_lot",
+                                    ],
+                                    "verification_status": "verified",
+                                    "manifest_ref": "scripted-cso-allocation",
+                                    "delivery_mode": "cso_stabilization",
+                                    "intervention_action_id": request["action_id"],
+                                },
+                                public_summary="Committed the CSO-selected resources.",
+                            )
+                        ],
+                        update_schedule=UpdateScheduleDirective(mode="dormant"),
+                    )
+                )
             if active_system_id in SOURCE_IDS:
                 snapshot = json.loads(item.observations[0].apparent_content)
                 signal_id = "verify" if snapshot["completed_round"] == 1 else "escalate"
@@ -415,7 +445,7 @@ def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() 
 def test_adaptive_cso_cell_detects_diagnoses_and_selects_before_round_three() -> None:
     fixture, result, readout = _run("adaptive_cso_stabilization")
 
-    assert len(fixture.active_specs) == len(AGENT_IDS) + len(SOURCE_IDS) + len(CSO_IDS)
+    assert len(fixture.active_specs) == len(AGENT_IDS) + len(SOURCE_IDS) + len(CSO_IDS) + 1
     assert [record["stage"] for record in readout["cso_records"]] == [
         "detection",
         "diagnosis",
@@ -430,13 +460,16 @@ def test_adaptive_cso_cell_detects_diagnoses_and_selects_before_round_three() ->
     )
     assert readout["cso_records"][1]["payload"]["affected_scope"] == "multiple_groups"
     assert readout["cso_records"][2]["payload"]["target_dimension"] == "cross_dimension"
-    assert readout["stabilization_events"] == ["cso_cross_domain_compact"]
-    assert [attempt.logical_time for attempt in result.attempts] == list(range(8))
+    assert readout["stabilization_events"] == ["world_cross_domain_compact"]
+    assert [attempt.logical_time for attempt in result.attempts] == [
+        *range(8),
+        7,
+    ]
 
     final_inputs = [
         json.loads(observation.apparent_content)
         for observation in result.core_result.final_state.observations.values()
-        if observation.apparent_source_ref == "cso_stabilization_planner"
+        if observation.apparent_source_ref == "regional_allocation_authority"
     ]
     assert len(final_inputs) == len(AGENT_IDS)
     assert {item["document_kind"] for item in final_inputs} == {
