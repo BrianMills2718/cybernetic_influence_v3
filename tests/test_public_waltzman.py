@@ -98,7 +98,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Edit personal character and memory" in page
     assert "Mechanism analysis and retained evidence" in page
     assert shape.stylesheets == ["assets/styles.css?v=waltzman-cso-v1"]
-    assert shape.scripts == ["assets/app.js?v=action-world-v1"]
+    assert shape.scripts == ["assets/app.js?v=message-trace-v2"]
     assert {
         "overview-view",
         "case-view",
@@ -304,7 +304,9 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "adaptive_cso_stabilization",
         "cso_records:raw.outcome?.cso_records",
         "coordination_messages:raw.outcome?.coordination_messages",
-        "Action → world outcome",
+        "Messages received before this decision",
+        "Message attempt → delivery outcome",
+        "data-message-target",
         "case-cso-records",
     ):
         assert capability in script

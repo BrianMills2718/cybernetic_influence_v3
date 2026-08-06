@@ -572,12 +572,29 @@ function renderAgentDetail(run, round) {
   const messages = run.coordination_messages || []
   const attempted = messages.find((item) => item.round === round.round && item.actor_id === stance.person_id)
   const received = messages.filter((item) => item.delivered_round === round.round && item.target_ref === stance.person_id)
-  const interaction = attempted
-    ? `<div class="interaction-trace"><strong>Action → world outcome</strong><p>${attempted.kind === 'no_action' ? 'No direct message attempted' : `Message to ${escapeHtml(labelPerson(attempted.target_ref))}`}: ${escapeHtml(attempted.content)}</p><small>${escapeHtml(sentence(attempted.outcome))}${attempted.delivered_round ? ` · available to the recipient in round ${attempted.delivered_round}` : ''}${received.length ? ` · ${received.length} message${received.length === 1 ? '' : 's'} received before this decision` : ''}</small></div>`
+  const incoming = received.length
+    ? `<details class="interaction-incoming"${received.length <= 3 ? ' open' : ''}><summary>Messages received before this decision · ${received.length}</summary><div>${received.map((item) => `<article><strong>${escapeHtml(labelPerson(item.actor_id))}</strong><p>${escapeHtml(item.content)}</p></article>`).join('')}</div></details>`
     : ''
+  const deliveryLink = attempted?.kind === 'send_message' && attempted.delivered_round
+    ? `<button type="button" class="interaction-link" data-message-target="${escapeHtml(attempted.target_ref)}" data-message-round="${attempted.delivered_round}">View ${escapeHtml(labelPerson(attempted.target_ref))} in round ${attempted.delivered_round} →</button>`
+    : ''
+  const outgoing = attempted
+    ? `<div class="interaction-outgoing"><strong>Message attempt → delivery outcome</strong><p>${attempted.kind === 'no_action' ? 'No direct message attempted' : `To ${escapeHtml(labelPerson(attempted.target_ref))}`}: ${escapeHtml(attempted.content)}</p><small>${escapeHtml(sentence(attempted.outcome))}${attempted.delivered_round ? ` · available in round ${attempted.delivered_round}` : ''}</small>${deliveryLink}</div>`
+    : ''
+  const interaction = incoming || outgoing ? `<div class="interaction-trace">${incoming}${outgoing}</div>` : ''
   $('#agent-detail').innerHTML = `<header class="agent-detail-header"><div><span class="eyebrow">Round ${round.round} stance</span><h4>${escapeHtml(stance.person_label)}</h4><span class="group-label">${escapeHtml(stance.group_label)}</span></div>${decisionPill(stance.decision)}</header><div class="stance-meta"><span>Risk · ${escapeHtml(sentence(stance.risk))}</span><span>Request · ${escapeHtml(sentence(stance.request))}</span></div><p class="rationale">${escapeHtml(stance.rationale)}</p>${interaction}<div class="person-trajectory">${personRounds.map((item, index) => `<button type="button" class="person-round ${index + 1 === state.round ? 'active' : ''}" data-person-round="${index + 1}"><small>Round ${index + 1}</small>${decisionPill(item.decision)}<span>Risk · ${escapeHtml(sentence(item.risk))}</span></button>`).join('')}</div><div class="evidence-id">Exact structured evidence · ${escapeHtml(run.run_id)} · round ${round.round} · ${escapeHtml(stance.person_id)}</div>`
   all('[data-person-round]').forEach((button) => {
     button.onclick = () => { state.round = Number(button.dataset.personRound); renderInspector(); syncUrl() }
+  })
+  all('[data-message-target]').forEach((button) => {
+    button.onclick = () => {
+      state.personId = button.dataset.messageTarget
+      state.round = Number(button.dataset.messageRound)
+      state.group = 'all'
+      renderInspector()
+      syncUrl()
+      $('#agent-detail').scrollIntoView({behavior:'auto', block:'start'})
+    }
   })
   renderRunInputs(run, stance.person_id)
 }
