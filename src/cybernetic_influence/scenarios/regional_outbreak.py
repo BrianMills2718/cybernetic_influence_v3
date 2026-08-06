@@ -954,22 +954,26 @@ def _bounded_source_delivery(context: MechanismContext, outcome: MechanismOutcom
 
 
 def _stabilization_development() -> tuple[str, str]:
-    """Return one exogenous capacity package that changes resources, not minds."""
+    """Return one verified package that resolves facts and constraints, not votes."""
 
     return (
         "round_2_verified_minimum_capacity_package",
         (
-            "The regional allocation authority has published and confirmed a feasible, "
-            "binding 48-hour package against its stock and staffing ledgers. Alba keeps "
-            "half of its laboratory for domestic confirmation and receives a mobile unit "
-            "that restores the shared testing commitment. Borin receives 24 regional "
-            "clinicians before the transport-hub surge. Cyrenia receives its named "
-            "diagnostics and protective-equipment shipment before field teams release. "
-            "Darsia receives protected cold-chain transport and fuel for its remote corridor. "
-            "A ten-percent regional reserve remains after all four minimums. All four "
-            "governments pre-signed contingent commitments that activate on these now-"
-            "confirmed deliveries, and the allocation dashboard will publish receipts "
-            "within six hours."
+            "The four national authorities, courts, laboratories, and independent local "
+            "validation boards have signed and verified one executable 48-hour compact package. "
+            "A joint laboratory panel reproduced the common outbreak finding from comparable "
+            "samples and published its methods and signed results. A time-bounded emergency "
+            "protocol keeps line-level records under national custody, prohibits raw export, "
+            "requires national escorts for foreign teams, permits only purpose-limited logged "
+            "contact matching, and gives independent monitors audit access without custody of "
+            "identifiable data; all four courts and border authorities approved it. Alba keeps "
+            "half its laboratory for domestic confirmation and receives a mobile unit. Borin "
+            "receives 24 clinicians before the hub surge. Cyrenia receives its named diagnostics "
+            "and protective equipment before field-team release. Darsia receives protected "
+            "cold-chain transport and fuel for its remote corridor. A ten-percent reserve remains. "
+            "Public receipts name reciprocal protection for corridor communities, national command, "
+            "cost shares, deliveries, and the independent 72-hour review. All four governments and "
+            "local validation boards pre-signed activation on these now-confirmed conditions."
         ),
     )
 

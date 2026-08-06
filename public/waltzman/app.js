@@ -217,7 +217,7 @@ function renderRunSetup() {
     ? 'No exercise-control development is introduced between rounds.'
     : selectedCondition === 'responsive_exercise_injects'
       ? 'After each round, four source agents observe the public snapshot. Their complete signal bundle arrives before participants decide again; none can access a stance port.'
-      : 'The four source agents remain active. After round two, a verified allocation package joins their complete signal bundle before participants decide again. No source can select a participant stance.'
+      : 'The four source agents remain active. After round two, a verified technical, legal, capacity, and legitimacy package joins their complete signal bundle before participants decide again. No source can select a participant stance.'
   $('#control-preview').innerHTML = `<strong>${escapeHtml(condition.label)}</strong><p>${escapeHtml(condition.description)}</p><small>${escapeHtml(controlNote)}</small>`
 
   $('#agent-config-select').onchange = (event) => {

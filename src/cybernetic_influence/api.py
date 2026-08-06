@@ -1267,10 +1267,10 @@ def create_app(
                         },
                         {
                             "id": "capacity_inject_replay_with_stabilization",
-                            "label": "Autonomous source pressure + allocation stabilization",
+                            "label": "Autonomous source pressure + verified compact package",
                             "description": (
-                                "The four source agents remain active, then a verified minimum-"
-                                "capacity package enters the complete round-two bundle."
+                                "The four source agents remain active, then a verified technical, "
+                                "legal, capacity, and legitimacy package enters the round-two bundle."
                             ),
                         },
                     ],
