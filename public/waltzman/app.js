@@ -576,12 +576,13 @@ function sourcePhaseText(signals) {
   for (const signal of signals || []) {
     const [round, , move] = String(signal).split(':')
     if (!round || !move) continue
-    if (!phases.has(round)) phases.set(round, new Set())
-    phases.get(round).add(move)
+    if (!phases.has(round)) phases.set(round, new Map())
+    const moves = phases.get(round)
+    moves.set(move, (moves.get(move) || 0) + 1)
   }
   return [...phases.entries()].map(([round, moves]) => {
     const phase = Number(round.replace('round_', ''))
-    return `phase ${phase} ${[...moves].map(sentence).join(' / ')}`
+    return `phase ${phase} ${[...moves.entries()].map(([move, count]) => `${count} ${sentence(move)}`).join(' / ')}`
   }).join(' · ')
 }
 
