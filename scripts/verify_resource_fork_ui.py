@@ -40,9 +40,10 @@ def main() -> int:
             wait_until="domcontentloaded",
         )
         page.locator("#case-view").wait_for(state="visible")
-        assert "four different resource packages" in page.locator(
+        assert "fixing a resource shortage" in page.locator(
             "#research-case-title"
         ).inner_text()
+        assert "Conditional" in page.locator(".case-decision-key").inner_text()
         assert page.locator("[data-case-branch]").count() == 4
         assert page.locator('[data-case-branch="complete"]').get_attribute("class").find(
             "active"
@@ -52,11 +53,13 @@ def main() -> int:
             '[data-case-branch="complete"]'
         ).inner_text()
         page.locator('[data-case-branch="false_claim"]').click()
-        assert "6 contradicted" in page.locator("#case-branch-detail").inner_text()
+        assert "6 rejected by the audit" in page.locator(
+            "#case-branch-detail"
+        ).inner_text()
         assert "21 defer" in page.locator(
             '[data-case-branch="false_claim"]'
         ).inner_text()
-        assert "contradicted" in page.locator("#case-evidence-records").inner_text()
+        assert "exact reasoning" in page.locator("#case-evidence-records").inner_text()
         assert page.locator("#case-evidence-records article").count() == 3
         page.locator("[data-open-lab]").first.click()
         page.locator("#run-view").wait_for(state="visible")

@@ -77,9 +77,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Configure the actors, pressure, and response loop" in page
     assert "Define the coalition" in page
     assert "Current demo template" in page
-    assert "The same pressured coalition receives four different resource packages" in page
-    assert "One history, four continuations" in page
-    assert "Why approval still failed—or why a claim was rejected" in page
+    assert "Can fixing a resource shortage make a stalled group ready to act?" in page
+    assert "The experiment in three steps" in page
+    assert "What the resource package did not solve" in page
+    assert "Shared intent is not enough for collective action" in page
     assert "Inspect all agent decisions" in page
     assert "Waltzman mechanism probe" in page
     assert "From Minds to Coordination · autonomous influence probe" in page
@@ -98,8 +99,8 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Institutional oughts—not personal commands" in page
     assert "Edit personal character and memory" in page
     assert "Mechanism analysis and retained evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=resource-fork-v1"]
-    assert shape.scripts == ["assets/app.js?v=resource-fork-v2"]
+    assert shape.stylesheets == ["assets/styles.css?v=case-explainer-v1"]
+    assert shape.scripts == ["assets/app.js?v=case-explainer-v1"]
     assert {
         "overview-view",
         "case-view",

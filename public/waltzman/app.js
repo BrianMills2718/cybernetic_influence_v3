@@ -657,10 +657,16 @@ function renderResearchCase() {
 
   $('#case-open-comparison').disabled = false
   const stories = {
-    no_intervention:'No regional resource package was issued.',
-    partial:'Two verified resources were committed: Alba laboratory capacity and Borin clinicians.',
-    complete:'All six named resources were verified and committed.',
-    false_claim:'All six resources were claimed as verified; the world audit found custody mismatches and changed no custody.',
+    no_intervention:{label:'Nothing changes', short:'No new help arrives.', event:'No resource package enters the world.', result:'Without new capacity, most agents become less ready to proceed. Twenty-one defer the decision.', why:'The operational shortages remain, so the group has no executable path forward.'},
+    partial:{label:'Two real resources', short:'Some shortages are fixed.', event:'Verified laboratory capacity and clinicians become available.', result:'Most agents become willing to proceed if their remaining conditions are met, but three still defer.', why:'The package resolves two capacity gaps, not the coalition’s other operational, legal, and scientific prerequisites.'},
+    complete:{label:'Six real resources', short:'Every named shortage is fixed.', event:'All six requested resources are verified, assigned, and committed.', result:'Twenty-four agents become conditionally ready. Two still defer, so the group does not approve the response.', why:'Capacity is no longer the main blocker. Legal authority and the comparability of the scientific evidence remain unresolved.'},
+    false_claim:{label:'Six false claims', short:'The audit catches them.', event:'Six resources are announced, but the simulated audit finds that none has a valid custodian.', result:'The claims change no real capacity. Twenty-one agents defer—the same final distribution as when nothing is provided.', why:'The intervention is not credible because the world model cannot verify that the resources exist or can be used.'},
+  }
+  const blockerSummaries = {
+    no_intervention:{regional_logistics_coordinator:'The required resources still have no verified owners, release authority, or delivery sequence.', regional_coordinator:'Operational capacity, legal authority, and comparable evidence all remain unresolved.', regional_scientific_advisor:'The available datasets still cannot support one shared operational conclusion.'},
+    partial:{regional_logistics_coordinator:'Several deployment resources and their delivery sequence remain unresolved.', regional_coordinator:'The partial package does not resolve legal authority or the evidence gap.', regional_scientific_advisor:'The available datasets still need a documented comparability assessment.'},
+    complete:{regional_logistics_coordinator:'Remaining deployment dependencies need named owners and a timed release sequence.', regional_coordinator:'National data custody and independent audit authority still need a written protocol.', regional_scientific_advisor:'The three datasets still need a documented comparability and actionability assessment.'},
+    false_claim:{regional_logistics_coordinator:'The announced resources have no verified custody or release authority.', regional_coordinator:'The resource claims fail audit and leave every operational dependency unresolved.', regional_scientific_advisor:'The allocation claims contradict the audit and cannot count as usable capacity.'},
   }
   const renderBranch = () => {
     const branch = resourceFork.branches.find((item) => item.id === state.caseBranch) || resourceFork.branches[0]
@@ -671,23 +677,26 @@ function renderResearchCase() {
     const contradicted = resources.filter((item) => item.audit_status === 'contradicted').length
     const support = Number(branch.final_decisions.support || 0)
     const ready = support + Number(branch.final_decisions.conditional || 0)
-    const gateText = support >= resourceFork.gate.minimum_support ? 'Support threshold passed' : `Support threshold failed · ${support} of ${resourceFork.gate.minimum_support}`
-    $('#case-branch-detail').innerHTML = `<div class="fork-readout">
-      <div><span>World event</span><strong>${escapeHtml(stories[branch.id])}</strong></div>
-      <div><span>Audit</span><strong>${verified} verified${contradicted ? ` · ${contradicted} contradicted` : ''}</strong></div>
-      <div><span>Readiness</span><strong>${ready} support or conditional</strong></div>
-      <div><span>Decision gate</span><strong>${escapeHtml(gateText)}</strong></div>
+    const story = stories[branch.id]
+    const gateText = support >= resourceFork.gate.minimum_support
+      ? 'The group approves the response.'
+      : `The group does not approve: ${support} agents give an unconditional yes, and the rule requires ${resourceFork.gate.minimum_support}.`
+    $('#case-branch-detail').innerHTML = `<div class="fork-explanation">
+      <div><span>What changed</span><strong>${escapeHtml(story.event)}</strong></div>
+      <div><span>How the agents responded</span><strong>${escapeHtml(story.result)}</strong></div>
+      <div><span>Why</span><strong>${escapeHtml(story.why)}</strong></div>
+      <div class="fork-verdict"><span>Collective result</span><strong>${escapeHtml(gateText)}</strong><small>${verified} verified resource${verified === 1 ? '' : 's'}${contradicted ? ` · ${contradicted} rejected by the audit` : ''} · ${ready} agents ready only conditionally or fully</small></div>
     </div>`
     const evidenceIds = ['regional_logistics_coordinator', 'regional_coordinator', 'regional_scientific_advisor']
     $('#case-evidence-records').innerHTML = evidenceIds.map((personId) => {
       const stance = branch.final_stances[personId]
-      return `<article><header><span>${escapeHtml(labelPerson(personId))}</span>${decisionPill(stance.decision)}</header><p>${escapeHtml(stance.rationale)}</p></article>`
+      return `<article><header><span>${escapeHtml(labelPerson(personId))}</span>${decisionPill(stance.decision)}</header><strong>${escapeHtml(blockerSummaries[branch.id][personId])}</strong><details><summary>Read the agent's exact reasoning</summary><p>${escapeHtml(stance.rationale)}</p></details></article>`
     }).join('')
   }
   $('#research-case-runs').innerHTML = resourceFork.branches.map((branch) => `<button type="button" class="research-case-run ${branch.id === state.caseBranch ? 'active' : ''}" data-case-branch="${escapeHtml(branch.id)}">
-    <header><span>Final-round fork</span><h4>${escapeHtml(branch.label)}</h4>${outcomeBadge(branch)}</header>
+    <header><span>${escapeHtml(stories[branch.id].short)}</span><h4>${escapeHtml(stories[branch.id].label)}</h4></header>
     ${stackedBar(branch.final_decisions, 'case-result-bar', resourceFork.agent_count)}
-    <strong>${escapeHtml(countsText(branch.final_decisions))}</strong>
+    <strong>${escapeHtml(countsText(branch.final_decisions))}</strong><small>${branch.outcome === 'joint_response_approved' ? 'Group approves' : 'Group remains blocked'}</small>
   </button>`).join('')
   all('[data-case-branch]').forEach((button) => { button.onclick = () => { state.caseBranch = button.dataset.caseBranch; renderBranch() } })
   renderBranch()

@@ -6,7 +6,7 @@
   <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=resource-fork-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=case-explainer-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -75,35 +75,55 @@
 
       <section id="case-view" class="workspace-view research-case" aria-labelledby="research-case-title" hidden>
         <header class="research-case-hero">
-          <span class="case-label">From Minds to Coordination · exact checkpoint experiment</span>
-          <h2 id="research-case-title">The same pressured coalition receives four different resource packages. What changes?</h2>
-          <p>Twenty-six autonomous AI roles completed two decision rounds under the same distributed technical, legal, logistical, and community pressure. We saved that exact state, forked it four ways, and let every role decide again.</p>
-          <div class="case-facts"><span><b>26</b> coalition agents</span><span><b>1</b> shared checkpoint</span><span><b>4</b> exact forks</span><span><b>160</b> retained model calls</span></div>
+          <span class="case-label">Worked example</span>
+          <h2 id="research-case-title">Can fixing a resource shortage make a stalled group ready to act?</h2>
+          <p>Twenty-six AI agents are deciding whether to launch a joint outbreak response. They agree that a response matters, but technical, legal, logistical, and community concerns leave the group unable to approve one.</p>
         </header>
 
-        <section class="case-mechanism" aria-labelledby="case-mechanism-title">
-          <h3 id="case-mechanism-title">One history, four continuations</h3>
-          <div><span>Distributed pressure</span><i>→</i><span>Round-two state saved</span><i>→</i><span>Package changes</span><i>→</i><span>All 26 decide independently</span></div>
-          <p>The agents, memories, source history, model, prompts, and decision gate are identical at the fork. Only the resource package changes.</p>
+        <section class="case-answer" aria-labelledby="case-answer-title">
+          <span>What happened</span>
+          <h3 id="case-answer-title">Real resources removed most capacity objections—but they did not resolve the coalition’s legal and scientific blockers.</h3>
+          <p>Fake resource claims were caught by the simulated audit and produced the same practical result as providing nothing.</p>
+        </section>
+
+        <section class="case-story" aria-labelledby="case-story-title">
+          <h3 id="case-story-title">The experiment in three steps</h3>
+          <ol>
+            <li><b>1</b><div><strong>The group comes under pressure</strong><p>Different agents receive locally relevant problems: laboratory failures, staffing shortages, supply constraints, legal demands, and conflicting evidence.</p></div></li>
+            <li><b>2</b><div><strong>We pause the simulation</strong><p>We save every agent, memory, message, and world state after the same two decision rounds.</p></div></li>
+            <li><b>3</b><div><strong>We replay only the resource decision</strong><p>The identical group continues four times: with nothing, two real resources, six real resources, or six false claims.</p></div></li>
+          </ol>
         </section>
 
         <section class="case-results" aria-labelledby="case-results-title">
-          <div class="case-section-heading"><span>Choose a continuation</span><h3 id="case-results-title">Valid resources increased readiness. They did not force approval.</h3></div>
+          <div class="case-section-heading"><span>Four continuations of the same moment</span><h3 id="case-results-title">Choose one to see what changed</h3></div>
+          <p class="case-decision-key"><strong>Conditional</strong> means an agent is willing to proceed only after named requirements are met. <strong>Defer</strong> means the agent is not ready to decide.</p>
           <div id="research-case-runs" class="research-case-runs"></div>
         </section>
 
         <section class="case-interpretation" aria-labelledby="case-interpretation-title">
-          <div><span>Selected continuation</span><h3 id="case-interpretation-title">What entered the world—and how the coalition responded</h3></div>
+          <div><span>Selected continuation</span><h3 id="case-interpretation-title">Why did the group respond this way?</h3></div>
           <div id="case-branch-detail"></div>
         </section>
 
         <section class="case-evidence" aria-labelledby="case-evidence-title">
-          <div><span>Retained role decisions</span><h3 id="case-evidence-title">Why approval still failed—or why a claim was rejected</h3></div>
+          <div><span>Remaining blockers</span><h3 id="case-evidence-title">What the resource package did not solve</h3></div>
           <div id="case-evidence-records"></div>
         </section>
 
+        <section class="case-waltzman">
+          <span>Connection to From Minds to Coordination</span>
+          <h3>Shared intent is not enough for collective action.</h3>
+          <p>The agents still want an outbreak response. What changes is whether their local requirements can fit together in one executable plan. The case tests how distributed pressures reshape coordination readiness—and whether a credible change to the decision environment removes the blockage.</p>
+        </section>
+
+        <details class="case-method">
+          <summary>Why this is a controlled comparison</summary>
+          <p>The agents, their memories, all prior messages, the world state, the AI model, the prompts, and the approval rule are identical when the four continuations begin. Only the resource package changes. The retained execution contains 26 agents, four exact continuations, and 160 model calls.</p>
+        </details>
+
         <section class="case-boundary">
-          <strong>Interpretation boundary</strong><p>This demonstrates behavior inside one controlled AI-agent simulation. It does not estimate how people or real institutions would behave.</p>
+          <strong>What this does not establish</strong><p>This is one controlled AI-agent simulation. It demonstrates a possible coordination mechanism; it does not predict how people or real institutions would behave.</p>
         </section>
 
         <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Open retained evidence</button><button class="secondary-cta" type="button" data-view="run">Build your own experiment</button></div>
@@ -418,6 +438,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=resource-fork-v2" defer></script>
+  <script src="assets/app.js?v=case-explainer-v1" defer></script>
 </body>
 </html>
