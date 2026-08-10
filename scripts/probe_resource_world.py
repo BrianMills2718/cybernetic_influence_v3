@@ -95,6 +95,7 @@ def _branch(
         ],
         "target_input": participant.input.model_dump(mode="json"),
         "target_output": participant.proposal.actions[0].model_dump(mode="json"),
+        "call_evidence": [item.model_dump(mode="json") for item in participant.call_evidence],
         "incremental_observed_cost": checkpoint.total_observed_cost - shared.total_observed_cost,
     }
 
