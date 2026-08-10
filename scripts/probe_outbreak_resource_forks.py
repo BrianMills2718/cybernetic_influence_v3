@@ -112,6 +112,7 @@ def _branch(
         logical_time=due.logical_time,
         activation_causes={agent_id: due.causes[agent_id] for agent_id in active_agents},
     )
+    session.drain_pending_exact_work()
     checkpoint = session.checkpoint()
     history = cast(
         list[dict[str, Any]],
@@ -182,6 +183,7 @@ def main() -> int:
     _activate_expected(session, set(AGENT_IDS), "round-one coalition")
     _activate_expected(session, set(SOURCE_IDS), "post-round-one sources")
     _activate_expected(session, set(AGENT_IDS), "round-two coalition")
+    session.drain_pending_exact_work()
     shared = session.checkpoint()
     history = cast(
         list[dict[str, Any]],
