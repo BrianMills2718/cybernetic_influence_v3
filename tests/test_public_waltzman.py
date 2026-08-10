@@ -324,6 +324,9 @@ def test_public_resource_fork_is_complete_and_checkpoint_paired() -> None:
     evidence = json.loads(RESOURCE_FORK.read_text(encoding="utf-8"))
     assert evidence["schema_version"] == 1
     assert evidence["model"] == "codex/gpt-5.6-luna"
+    assert evidence["llm_client_revision"] == (
+        "c608df60037ecc9a224b1e16737eeb1e7b2da381"
+    )
     assert evidence["agent_count"] == 26
     assert evidence["total_model_calls"] == 160
     assert evidence["shared_checkpoint_digest"]

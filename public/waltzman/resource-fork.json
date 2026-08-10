@@ -1119,6 +1119,7 @@
     "minimum_support": 13,
     "minimum_support_or_conditional": 20
   },
+  "llm_client_revision": "c608df60037ecc9a224b1e16737eeb1e7b2da381",
   "model": "codex/gpt-5.6-luna",
   "nonclaims": [
     "One retained execution is not a statistical sample or human-behavior estimate.",

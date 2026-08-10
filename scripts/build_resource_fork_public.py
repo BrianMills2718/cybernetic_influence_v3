@@ -26,6 +26,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--llm-client-revision", required=True)
     args = parser.parse_args()
 
     source = json.loads(args.input.read_text(encoding="utf-8"))
@@ -61,6 +62,7 @@ def main() -> int:
         "schema_version": 1,
         "experiment_id": source["probe_id"],
         "model": source["model"],
+        "llm_client_revision": args.llm_client_revision,
         "reasoning_effort": source["reasoning_effort"],
         "shared_checkpoint_digest": source["shared_checkpoint_digest"],
         "shared_prefix_model_calls": source["shared_prefix_model_calls"],
