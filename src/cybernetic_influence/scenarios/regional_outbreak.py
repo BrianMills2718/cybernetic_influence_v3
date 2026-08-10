@@ -395,7 +395,6 @@ class ResourceCommitment(BaseModel):
     dependency_refs: list[str] = Field(max_length=8)
     verification_evidence_refs: list[str] = Field(min_length=1, max_length=8)
     claim_status: Literal["claimed_verified"] = "claimed_verified"
-    audit_status: Literal["verified", "contradicted"]
 
 
 class ResourceAllocation(BaseModel):
@@ -408,7 +407,7 @@ class ResourceAllocation(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True)
     commitments: list[ResourceCommitment] = Field(min_length=1, max_length=6)
-    verification_status: Literal["verified", "contradicted"]
+    manifest_claim_status: Literal["claimed_verified"] = "claimed_verified"
     manifest_ref: str = Field(min_length=3, max_length=120)
     delivery_mode: Literal["world_update", "cso_stabilization"] = "world_update"
     intervention_action_id: CsoInterventionAction = "resource_coordination"
@@ -418,9 +417,6 @@ class ResourceAllocation(BaseModel):
         commitment_ids = [item.resource_id for item in self.commitments]
         if len(set(commitment_ids)) != len(commitment_ids):
             raise ValueError("resource allocation cannot commit the same object twice")
-        contradicted = any(item.audit_status == "contradicted" for item in self.commitments)
-        if contradicted != (self.verification_status == "contradicted"):
-            raise ValueError("manifest status must reflect its retained commitment audits")
         return self
 
 
@@ -766,7 +762,7 @@ class AllocationAuthoritySystem:
             raise ValueError(f"CSO action {action_id} does not authorize resource allocation")
         allocation = ResourceAllocation(
             commitments=cast(Any, outbreak_resource_commitments(commitments)),
-            verification_status="verified",
+            manifest_claim_status="claimed_verified",
             manifest_ref=f"{action_id}-48h-allocation-manifest",
             delivery_mode="cso_stabilization",
             intervention_action_id=action_id,
@@ -1210,6 +1206,11 @@ def outbreak_fixture(
         input_port_ids=["resource_allocation_in"],
         read_fact_ids=[
             *[f"{resource_id}.availability" for resource_id in _RESOURCE_DESTINATIONS],
+            *[
+                f"{resource_id}.{field_name}"
+                for resource_id in _RESOURCE_DESTINATIONS
+                for field_name in _RESOURCE_EVIDENCE_FACTS
+            ],
             "regional_allocation_manifest.status",
             "outbreak_decision.current_round",
             "outbreak_decision.history",
@@ -1915,19 +1916,44 @@ _RESOURCE_OPERATIONAL_EVIDENCE: dict[str, dict[str, JsonValue]] = {
 
 
 def outbreak_resource_commitments(
-    resource_ids: list[str], *, contradicted_ids: frozenset[str] = frozenset()
+    resource_ids: list[str], *, falsified_ids: frozenset[str] = frozenset()
 ) -> list[dict[str, JsonValue]]:
-    """Build the exact operational claims used by authority actions and probes."""
+    """Build operational claims; probes may falsify custody for an exact audit test."""
 
-    return [
-        {
+    commitments: list[dict[str, JsonValue]] = []
+    for resource_id in resource_ids:
+        commitment: dict[str, JsonValue] = {
             "resource_id": resource_id,
             **_RESOURCE_OPERATIONAL_EVIDENCE[resource_id],
             "claim_status": "claimed_verified",
-            "audit_status": "contradicted" if resource_id in contradicted_ids else "verified",
         }
-        for resource_id in resource_ids
+        if resource_id in falsified_ids:
+            commitment["custodian_ref"] = "unverified_external_broker"
+        commitments.append(commitment)
+    return commitments
+
+
+_RESOURCE_EVIDENCE_FACTS = (
+    "quantity",
+    "custodian_ref",
+    "current_location",
+    "availability_window",
+    "release_authority_ref",
+    "dependency_refs",
+    "verification_evidence_refs",
+)
+
+
+def _audit_resource_commitment(
+    context: MechanismContext, commitment: ResourceCommitment
+) -> tuple[str, list[str]]:
+    mismatches = [
+        field_name
+        for field_name in _RESOURCE_EVIDENCE_FACTS
+        if getattr(commitment, field_name)
+        != context.read(f"{commitment.resource_id}.{field_name}")
     ]
+    return ("contradicted" if mismatches else "verified", mismatches)
 
 
 def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
@@ -1937,10 +1963,13 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
     for commitment in allocation.commitments:
         resource_id = commitment.resource_id
         resource_record = commitment.model_dump(mode="json")
-        if commitment.audit_status == "contradicted":
+        audit_status, mismatch_fields = _audit_resource_commitment(context, commitment)
+        if audit_status == "contradicted":
             resources.append(
                 {
                     **resource_record,
+                    "audit_status": audit_status,
+                    "audit_mismatch_fields": mismatch_fields,
                     "assigned_to": "unassigned",
                     "world_outcome": "claim_rejected_no_custody_change",
                 }
@@ -1959,15 +1988,22 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
         resources.append(
             {
                 **resource_record,
+                "audit_status": audit_status,
+                "audit_mismatch_fields": [],
                 "assigned_to": destination,
                 "world_outcome": "committed",
             }
         )
+    verification_status = (
+        "contradicted"
+        if any(item["audit_status"] == "contradicted" for item in resources)
+        else "verified"
+    )
     updates.extend(
         [
             FactUpdate(
                 fact_id="regional_allocation_manifest.status",
-                value=allocation.verification_status,
+                value=verification_status,
             ),
             FactUpdate(
                 fact_id="regional_allocation_manifest.manifest_ref",
@@ -1983,7 +2019,8 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
         "document_kind": "resource_allocation_world_update",
         "manifest": {
             "manifest_ref": allocation.manifest_ref,
-            "verification_status": allocation.verification_status,
+            "claim_status": allocation.manifest_claim_status,
+            "verification_status": verification_status,
         },
         "resource_commitments": cast(JsonValue, resources),
         "instruction": (
@@ -2018,7 +2055,8 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
             "resource_world": {
                 "manifest": {
                     "manifest_ref": allocation.manifest_ref,
-                    "verification_status": allocation.verification_status,
+                    "claim_status": allocation.manifest_claim_status,
+                    "verification_status": verification_status,
                 },
                 "resource_commitments": cast(JsonValue, resources),
             },
@@ -2077,7 +2115,7 @@ def _bounded_resource_allocation(
     allocation = ResourceAllocation.model_validate(context.effect.payload)
     return (
         len(outcome.updates)
-        == sum(item.audit_status == "verified" for item in allocation.commitments) * 2 + 3
+        == sum(_audit_resource_commitment(context, item)[0] == "verified" for item in allocation.commitments) * 2 + 3
         + (2 if allocation.delivery_mode == "cso_stabilization" else 0)
         and len(outcome.observations) == len(AGENT_IDS)
         and all(item.apparent_source_ref == "regional_allocation_authority" for item in outcome.observations)

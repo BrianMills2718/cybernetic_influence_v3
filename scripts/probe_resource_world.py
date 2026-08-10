@@ -40,7 +40,7 @@ PARTIAL = ["alba_mobile_lab", "borin_clinician_roster"]
 def _branch(
     *, fixture: Any, shared: Any, commitment_ids: list[str], model: str,
     reasoning_effort: str, trace_prefix: str,
-    contradicted_ids: frozenset[str] = frozenset(),
+    falsified_ids: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     session = ActiveRuntimeSession.restore(
         fixture.scenario,
@@ -57,13 +57,13 @@ def _branch(
         "commitments": cast(
             JsonValue,
             outbreak_resource_commitments(
-                commitment_ids, contradicted_ids=contradicted_ids
+                commitment_ids, falsified_ids=falsified_ids
             ),
         ),
-        "verification_status": "contradicted" if contradicted_ids else "verified",
+        "manifest_claim_status": "claimed_verified",
         "manifest_ref": (
             f"allocation-{len(commitment_ids)}-contradicted"
-            if contradicted_ids
+            if falsified_ids
             else f"allocation-{len(commitment_ids)}-verified-48h"
         ),
     }
@@ -136,7 +136,7 @@ def main() -> int:
     false_claim = _branch(
         fixture=fixture, shared=shared, commitment_ids=FULL, model=args.model,
         reasoning_effort=args.reasoning_effort, trace_prefix=f"{probe_id}/false-claim",
-        contradicted_ids=frozenset(FULL),
+        falsified_ids=frozenset(FULL),
     )
     artifact = {
         "contract": "resource-world-checkpoint-probe.v2",

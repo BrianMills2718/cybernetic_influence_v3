@@ -59,7 +59,7 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                                         "cyrenia_diagnostic_kits", "cyrenia_protective_equipment",
                                         "darsia_cold_chain_route", "darsia_fuel_lot",
                                     ]),
-                                    "verification_status": "verified",
+                                    "manifest_claim_status": "claimed_verified",
                                     "manifest_ref": "scripted-cso-allocation",
                                     "delivery_mode": "cso_stabilization",
                                     "intervention_action_id": request["action_id"],
@@ -500,7 +500,7 @@ def test_resource_allocation_moves_conserved_objects_and_publishes_manifest() ->
                 "commitments": outbreak_resource_commitments(
                     ["alba_mobile_lab", "borin_clinician_roster"]
                 ),
-                "verification_status": "verified",
+                "manifest_claim_status": "claimed_verified",
                 "manifest_ref": "manifest-48h-001",
             },
             logical_time=0,
@@ -552,9 +552,9 @@ def test_contradicted_resource_claim_does_not_move_world_custody() -> None:
             output_port_id="resource_allocation_out",
             payload={
                 "commitments": outbreak_resource_commitments(
-                    ["darsia_fuel_lot"], contradicted_ids=frozenset({"darsia_fuel_lot"})
+                    ["darsia_fuel_lot"], falsified_ids=frozenset({"darsia_fuel_lot"})
                 ),
-                "verification_status": "contradicted",
+                "manifest_claim_status": "claimed_verified",
                 "manifest_ref": "manifest-false-001",
             },
             logical_time=0,
@@ -573,4 +573,5 @@ def test_contradicted_resource_claim_does_not_move_world_custody() -> None:
     claim = observations[0]["resource_commitments"][0]
     assert claim["claim_status"] == "claimed_verified"
     assert claim["audit_status"] == "contradicted"
+    assert claim["audit_mismatch_fields"] == ["custodian_ref"]
     assert claim["world_outcome"] == "claim_rejected_no_custody_change"
