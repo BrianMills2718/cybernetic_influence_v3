@@ -575,3 +575,36 @@ def test_contradicted_resource_claim_does_not_move_world_custody() -> None:
     assert claim["audit_status"] == "contradicted"
     assert claim["audit_mismatch_fields"] == ["custodian_ref"]
     assert claim["world_outcome"] == "claim_rejected_no_custody_change"
+
+
+def test_no_package_event_changes_no_resource_custody() -> None:
+    fixture = outbreak_fixture("baseline", world_resource_probe=True)
+    session = ActiveRuntimeSession(
+        fixture.scenario, fixture.exact_bindings, fixture.active_specs, _bindings(fixture),
+        run_id="outbreak_no_resource_package",
+        config=outbreak_runtime_config(per_call_budget=0.01, per_run_budget=0.1),
+        participant_concurrency=3,
+    )
+    step = session.apply_external_action(
+        ActionAttempt(
+            action_id="no_resource_intervention",
+            actor_entity_id="regional_allocation_authority",
+            output_port_id="resource_allocation_out",
+            payload={
+                "commitments": [],
+                "manifest_claim_status": "no_package",
+                "manifest_ref": "no-package-after-round-two",
+            },
+            logical_time=0,
+            public_summary="No regional resource package was issued.",
+        )
+    )
+    assert "outbreak_resource_allocation" in {event.mechanism_id for event in step.events}
+    assert session.core_state.fact("regional_allocation_manifest.status").value == "absent"
+    assert all(
+        session.core_state.fact(f"{resource_id}.availability").value == "available"
+        for resource_id in (
+            "alba_mobile_lab", "borin_clinician_roster", "cyrenia_diagnostic_kits",
+            "cyrenia_protective_equipment", "darsia_cold_chain_route", "darsia_fuel_lot",
+        )
+    )

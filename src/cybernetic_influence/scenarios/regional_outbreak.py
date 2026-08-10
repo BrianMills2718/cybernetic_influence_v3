@@ -406,8 +406,8 @@ class ResourceAllocation(BaseModel):
     """
 
     model_config = ConfigDict(extra="forbid", strict=True)
-    commitments: list[ResourceCommitment] = Field(min_length=1, max_length=6)
-    manifest_claim_status: Literal["claimed_verified"] = "claimed_verified"
+    commitments: list[ResourceCommitment] = Field(max_length=6)
+    manifest_claim_status: Literal["claimed_verified", "no_package"] = "claimed_verified"
     manifest_ref: str = Field(min_length=3, max_length=120)
     delivery_mode: Literal["world_update", "cso_stabilization"] = "world_update"
     intervention_action_id: CsoInterventionAction = "resource_coordination"
@@ -417,6 +417,8 @@ class ResourceAllocation(BaseModel):
         commitment_ids = [item.resource_id for item in self.commitments]
         if len(set(commitment_ids)) != len(commitment_ids):
             raise ValueError("resource allocation cannot commit the same object twice")
+        if (self.manifest_claim_status == "no_package") != (not self.commitments):
+            raise ValueError("no_package must contain no commitments; a claim must contain at least one")
         return self
 
 
@@ -1995,7 +1997,9 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
             }
         )
     verification_status = (
-        "contradicted"
+        "absent"
+        if allocation.manifest_claim_status == "no_package"
+        else "contradicted"
         if any(item["audit_status"] == "contradicted" for item in resources)
         else "verified"
     )
@@ -2103,7 +2107,11 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
             )
         )
     return MechanismOutcome(
-        outcome_code="resource_allocation_committed",
+        outcome_code=(
+            "resource_allocation_not_issued"
+            if allocation.manifest_claim_status == "no_package"
+            else "resource_allocation_committed"
+        ),
         updates=updates,
         observations=observations,
     )
