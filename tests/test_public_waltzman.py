@@ -65,19 +65,21 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
 
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
-    assert "Create a coordination experiment" in page
-    assert "Open Lab" in page
+    assert "Create a simulation" in page
+    assert "Example simulation" in page
     assert "Lab workspace" in page
     assert "Choose, configure, run" in page
     assert "Overview" in page
     assert "Terminal decision gate" in page
     assert "Open method" in page
     assert "AI coordination simulation workbench" in page
-    assert "Test how distributed influence changes a group’s ability to coordinate" in page
-    assert "Configure the actors, pressure, and response loop" in page
-    assert "Define the coalition" in page
-    assert "Current demo template" in page
-    assert "Can fixing a resource shortage make a stalled group ready to act?" in page
+    assert "Build worlds where influence moves through people" in page
+    assert "The simulation begins below the level of “the institution”" in page
+    assert "Homogeneous broadcasts" in page
+    assert "Four national response networks face one outbreak" in page
+    assert "People participate through five interdependent response networks" in page
+    assert "Should these networks activate one joint outbreak response?" in page
+    assert "After those pressures stall coordination" in page
     assert "The experiment in three steps" in page
     assert "What the resource package did not solve" in page
     assert "Shared intent is not enough for collective action" in page
@@ -99,14 +101,29 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Institutional oughts—not personal commands" in page
     assert "Edit personal character and memory" in page
     assert "Mechanism analysis and retained evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=case-explainer-v1"]
-    assert shape.scripts == ["assets/app.js?v=case-explainer-v1"]
+    assert "Generate editable configuration" in page
+    assert "Edit one person directly" in page
+    assert "Tell the authoring model what to change" in page
+    assert shape.stylesheets == ["assets/styles.css?v=sociotechnical-authoring-v1"]
+    assert shape.scripts == ["assets/app.js?v=sociotechnical-authoring-v1"]
     assert {
         "overview-view",
         "case-view",
         "research-case-runs",
         "case-branch-detail",
         "case-evidence-records",
+        "create-view",
+        "create-prompt",
+        "create-generate",
+        "create-review",
+        "create-world-facts",
+        "create-world-groups",
+        "create-people-list",
+        "create-person-select",
+        "create-save-person",
+        "create-revision-prompt",
+        "create-approve",
+        "create-run",
         "run-view",
         "condition-options",
         "agent-config-select",
@@ -295,6 +312,11 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "view:'overview'",
         "featuredRunIds",
         "renderResearchCase",
+        "renderCreateSimulation",
+        "advanceAuthoringDraft",
+        "saveAuthoringPerson",
+        "approveAuthoringDraft",
+        "runAuthoredSimulation",
         "fetch('assets/data.json'",
         "fetch('assets/autonomous-probe.json'",
         "fetch('assets/resource-fork.json'",
@@ -310,6 +332,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "Message attempt → delivery outcome",
         "data-message-target",
         "data-case-branch",
+        "api/authoring/drafts",
+        "codex/gpt-5.6-luna",
     ):
         assert capability in script
 

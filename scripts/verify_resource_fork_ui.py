@@ -40,8 +40,12 @@ def main() -> int:
             wait_until="domcontentloaded",
         )
         page.locator("#case-view").wait_for(state="visible")
-        assert "fixing a resource shortage" in page.locator(
+        assert "Four national response networks" in page.locator(
             "#research-case-title"
+        ).inner_text()
+        assert page.locator(".national-network-grid article").count() == 5
+        assert "Regional coordination network" in page.locator(
+            ".case-organizations"
         ).inner_text()
         assert "Conditional" in page.locator(".case-decision-key").inner_text()
         assert page.locator("[data-case-branch]").count() == 4
@@ -61,6 +65,11 @@ def main() -> int:
         ).inner_text()
         assert "exact reasoning" in page.locator("#case-evidence-records").inner_text()
         assert page.locator("#case-evidence-records article").count() == 3
+        page.locator('[data-view="create"]').first.click()
+        page.locator("#create-view").wait_for(state="visible")
+        assert page.locator("#create-prompt").is_visible()
+        assert page.locator("#create-generate").is_visible()
+        page.locator(".create-boundary summary").click()
         page.locator("[data-open-lab]").first.click()
         page.locator("#run-view").wait_for(state="visible")
         assert page.locator("#condition-options").is_visible()

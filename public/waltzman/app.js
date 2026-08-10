@@ -28,6 +28,9 @@ let liveModel = null
 let liveReasoning = 'medium'
 let activeRunId = null
 let pollHandle = null
+let authoringDraft = null
+let selectedAuthoringPerson = null
+let authoredRunPollHandle = null
 
 const state = {
   view:'overview',
@@ -146,7 +149,7 @@ function lineItems(value) {
 function readStateFromUrl() {
   const params = new URLSearchParams(window.location.search)
   const requestedView = params.get('view')
-  if (['overview', 'case', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
+  if (['overview', 'case', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
   const requestedRun = params.get('run')
   if (requestedRun && dataset.runs.some((run) => run.run_id === requestedRun)) state.runId = requestedRun
   const requestedRound = Number(params.get('round'))
@@ -177,7 +180,7 @@ function applyRunScopeFromUrl() {
 function syncUrl() {
   const url = new URL(window.location.href)
   url.searchParams.set('view', state.view)
-  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section']) url.searchParams.delete(key)
+  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section', 'draft']) url.searchParams.delete(key)
   if (state.view === 'inspect') {
     url.searchParams.set('run', state.runId)
     url.searchParams.set('round', String(state.round))
@@ -186,6 +189,7 @@ function syncUrl() {
   }
   if (state.view === 'mechanism') url.searchParams.set('mechanism_person', state.mechanismPersonId)
   if (['compare', 'inspect'].includes(state.view)) url.searchParams.set('section', state.labSection)
+  if (state.view === 'create' && authoringDraft?.draft_id) url.searchParams.set('draft', authoringDraft.draft_id)
   window.history.replaceState({}, '', url)
 }
 
@@ -707,11 +711,11 @@ function renderResearchCase() {
 }
 
 function renderView() {
-  const publicView = ['overview', 'case', 'mechanism'].includes(state.view)
+  const publicView = ['overview', 'case', 'create', 'mechanism'].includes(state.view)
   document.body.classList.toggle('guided-result', publicView)
   document.body.classList.toggle('public-shell', publicView)
   document.body.classList.toggle('lab-shell', !publicView)
-  for (const view of ['overview', 'case', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
+  for (const view of ['overview', 'case', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
   all('[data-view]').forEach((button) => {
     const active = button.dataset.view === state.view
     button.classList.toggle('active', active)
@@ -726,6 +730,7 @@ function renderView() {
   })
   if (state.view === 'run') renderRunSetup()
   if (state.view === 'case') renderResearchCase()
+  if (state.view === 'create') renderCreateSimulation()
   if (state.view === 'compare') renderComparison()
   if (state.view === 'mechanism') renderMechanism()
   if (state.view === 'inspect') renderInspector()
@@ -768,6 +773,23 @@ function configureControls() {
   all('[data-build-step], [data-build-next]').forEach((button) => {
     button.onclick = () => renderBuildStep(button.dataset.buildStep || button.dataset.buildNext)
   })
+  $('#create-generate').onclick = generateAuthoringDraft
+  $('#create-example-prompt').onclick = () => {
+    $('#create-prompt').value = 'Model a multinational election-monitoring network facing both centrally coordinated propaganda and locally tailored pressure. Include election officials, independent media, civil-society groups, government agencies, platforms, and technical infrastructure. Examine how the influence changes trust, perceived risk, dependencies, and readiness to coordinate without dictating any participant decision.'
+    $('#create-prompt').focus()
+  }
+  $('#create-revise').onclick = reviseAuthoringDraft
+  $('#create-person-select').onchange = (event) => { selectedAuthoringPerson = event.target.value; renderAuthoringPersonEditor() }
+  $('#create-save-person').onclick = saveAuthoringPerson
+  $('#create-approve').onclick = approveAuthoringDraft
+  $('#create-run').onclick = runAuthoredSimulation
+  $('#create-start-over').onclick = () => {
+    authoringDraft = null
+    selectedAuthoringPerson = null
+    $('#create-run-status').hidden = true
+    renderCreateSimulation()
+    syncUrl()
+  }
   all('[data-featured-example]').forEach((button) => {
     button.onclick = () => {
       const available = new Set(dataset.runs.map((run) => run.run_id))
@@ -891,6 +913,255 @@ async function apiRequest(path, options = {}) {
   return body
 }
 
+function authoringLuna() {
+  return runtimeConfig?.authoring?.models?.find((item) => item.model === preferredModel) || null
+}
+
+function draftTemplateLabel(templateId) {
+  const labels = {
+    coordination_decision_v1:'Coordination decision',
+    information_campaign_v1:'Information campaign',
+    resource_request_v1:'Resource request',
+    component_composition_v1:'Component interaction',
+  }
+  return labels[templateId] || sentence(templateId || 'unresolved template')
+}
+
+function renderAuthoringPersonEditor() {
+  const people = authoringDraft?.proposal?.people || []
+  if (!people.length) return
+  if (!people.some((person) => person.entity_id === selectedAuthoringPerson)) selectedAuthoringPerson = people[0].entity_id
+  const person = people.find((item) => item.entity_id === selectedAuthoringPerson)
+  $('#create-person-select').value = person.entity_id
+  $('#create-person-label').value = person.label
+  $('#create-person-position').value = person.position
+  $('#create-person-disposition').value = person.disposition
+  $('#create-person-memories').value = (person.memories || []).join('\n')
+  $('#create-person-values').value = (person.behavioral_profile?.values || []).join('\n')
+  $('#create-person-goals').value = (person.behavioral_profile?.goals || []).join('\n')
+  $('#create-person-beliefs').value = (person.behavioral_profile?.beliefs || []).join('\n')
+}
+
+function renderCreateSimulation() {
+  const luna = authoringLuna()
+  $('#create-generate').disabled = !luna
+  if (!authoringDraft) {
+    $('#create-review').hidden = true
+    $('#create-status').textContent = luna
+      ? 'Describe a sociotechnical world to begin. Luna will generate a retained typed draft.'
+      : 'The structured authoring route is unavailable. No provider-free fallback will be shown.'
+    return
+  }
+  $('#create-review').hidden = false
+  const proposal = authoringDraft.proposal
+  const diagnostics = authoringDraft.diagnostics || []
+  $('#create-draft-revision').textContent = `Saved revision ${authoringDraft.revision}`
+  $('#create-draft-state').textContent = sentence(authoringDraft.status)
+  $('#create-diagnostics').innerHTML = diagnostics.length
+    ? diagnostics.map((item) => `<p class="create-diagnostic ${escapeHtml(item.severity)}"><strong>${escapeHtml(sentence(item.severity))}</strong>${escapeHtml(item.message)}</p>`).join('')
+    : '<p class="create-diagnostic ready"><strong>Compiler check passed</strong>The draft can be reviewed and approved.</p>'
+  if (!proposal) {
+    $('#create-draft-title').textContent = 'Draft needs more information'
+    $('#create-draft-description').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
+    $('#create-world-facts').innerHTML = ''
+    $('#create-world-groups').innerHTML = ''
+    $('#create-people-list').innerHTML = ''
+    $('#create-person-select').innerHTML = ''
+    $('#create-raw-configuration').textContent = 'No valid typed configuration has been produced yet.'
+    $('#create-approve').hidden = true
+    $('#create-run').hidden = true
+    return
+  }
+  const workflow = proposal.workflow || {}
+  $('#create-draft-title').textContent = proposal.title
+  $('#create-draft-description').textContent = proposal.description
+  const boundaries = proposal.analytical_boundaries || []
+  const places = proposal.places || []
+  const information = proposal.information || []
+  const objects = proposal.objects || []
+  $('#create-world-facts').innerHTML = [
+    [draftTemplateLabel(workflow.template_id), 'Simulation template'],
+    [`${proposal.people?.length || 0}`, 'People'],
+    [`${objects.length}`, 'World entities and processes'],
+    [`${places.length}`, 'Places'],
+    [`${information.length}`, 'Information items'],
+    [`${boundaries.length}`, 'Analytical boundaries'],
+  ].map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
+  $('#create-world-groups').innerHTML = [
+    ['Organizations and analytical boundaries', boundaries.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span></li>`).join('')],
+    ['World entities and processes', objects.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span></li>`).join('')],
+    ['Information in the scenario', information.map((item) => `<li><strong>${escapeHtml(sentence(item.label))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')],
+  ].filter(([, items]) => items).map(([label, items]) => `<section><h4>${escapeHtml(label)}</h4><ul>${items}</ul></section>`).join('')
+  $('#create-people-list').innerHTML = proposal.people.map((person) => `<article><strong>${escapeHtml(person.label)}</strong><span>${escapeHtml(person.position)}</span><p>${escapeHtml(person.disposition)}</p></article>`).join('')
+  $('#create-person-select').innerHTML = proposal.people.map((person) => `<option value="${escapeHtml(person.entity_id)}">${escapeHtml(person.label)}</option>`).join('')
+  renderAuthoringPersonEditor()
+  $('#create-raw-configuration').textContent = JSON.stringify(proposal, null, 2)
+  const ready = authoringDraft.status === 'ready_for_review' && diagnostics.length === 0
+  $('#create-approve').hidden = !ready
+  $('#create-run').hidden = authoringDraft.status !== 'approved'
+  $('#create-status').textContent = 'Draft generated below. Edit a person, request a broader revision, or approve the exact configuration.'
+}
+
+async function advanceAuthoringDraft(message) {
+  const luna = authoringLuna()
+  if (!luna) throw new Error('Luna structured authoring is unavailable')
+  if (!authoringDraft) authoringDraft = await apiRequest('api/authoring/drafts', {method:'POST'})
+  authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/messages`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      expected_revision:authoringDraft.revision,
+      message_id:crypto.randomUUID(),
+      message,
+      model:preferredModel,
+      reasoning_effort:'medium',
+    }),
+  })
+  renderCreateSimulation()
+  syncUrl()
+}
+
+async function generateAuthoringDraft() {
+  const message = $('#create-prompt').value.trim()
+  if (!message) {
+    $('#create-status').textContent = 'Describe the world before generating a configuration.'
+    return
+  }
+  $('#create-generate').disabled = true
+  $('#create-status').textContent = 'Luna is generating and validating a typed configuration…'
+  try {
+    await advanceAuthoringDraft(message)
+    $('#create-prompt').value = ''
+  } catch (error) {
+    $('#create-status').textContent = error.message
+  } finally {
+    $('#create-generate').disabled = !authoringLuna()
+  }
+}
+
+async function reviseAuthoringDraft() {
+  const message = $('#create-revision-prompt').value.trim()
+  if (!message || !authoringDraft) {
+    $('#create-status').textContent = 'Describe the change you want to make.'
+    return
+  }
+  $('#create-revise').disabled = true
+  $('#create-status').textContent = 'Luna is producing the next retained revision…'
+  try {
+    await advanceAuthoringDraft(message)
+    $('#create-revision-prompt').value = ''
+  } catch (error) {
+    $('#create-status').textContent = error.message
+  } finally {
+    $('#create-revise').disabled = false
+  }
+}
+
+async function saveAuthoringPerson() {
+  const people = authoringDraft?.proposal?.people || []
+  const original = people.find((person) => person.entity_id === selectedAuthoringPerson)
+  if (!original) return
+  $('#create-save-person').disabled = true
+  $('#create-status').textContent = 'Saving the typed person edit without a model call…'
+  const person = clone(original)
+  person.label = $('#create-person-label').value.trim()
+  person.position = $('#create-person-position').value.trim()
+  person.disposition = $('#create-person-disposition').value.trim()
+  person.memories = lineItems($('#create-person-memories').value)
+  person.behavioral_profile.values = lineItems($('#create-person-values').value)
+  person.behavioral_profile.goals = lineItems($('#create-person-goals').value)
+  person.behavioral_profile.beliefs = lineItems($('#create-person-beliefs').value)
+  try {
+    authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/people/${encodeURIComponent(person.entity_id)}`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({expected_revision:authoringDraft.revision, edit_id:crypto.randomUUID(), person}),
+    })
+    renderCreateSimulation()
+    syncUrl()
+  } catch (error) {
+    $('#create-status').textContent = error.message
+  } finally {
+    $('#create-save-person').disabled = false
+  }
+}
+
+async function approveAuthoringDraft() {
+  if (!authoringDraft) return
+  $('#create-approve').disabled = true
+  $('#create-status').textContent = 'Freezing this exact typed configuration…'
+  try {
+    authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/approve`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({expected_revision:authoringDraft.revision}),
+    })
+    renderCreateSimulation()
+  } catch (error) {
+    $('#create-status').textContent = error.message
+  } finally {
+    $('#create-approve').disabled = false
+  }
+}
+
+function scheduleAuthoredRunPoll(runId, delay = 1800) {
+  if (authoredRunPollHandle) window.clearTimeout(authoredRunPollHandle)
+  authoredRunPollHandle = window.setTimeout(() => pollAuthoredRun(runId), delay)
+}
+
+async function pollAuthoredRun(runId) {
+  try {
+    const run = await apiRequest(`api/runs/${encodeURIComponent(runId)}`)
+    $('#create-run-heading').textContent = `Simulation ${sentence(run.status)}`
+    $('#create-run-detail').textContent = run.status === 'completed'
+      ? `${run.headline || 'Simulation completed.'} ${run.summary || ''}`
+      : `${Number(run.model_calls || 0)} retained model calls. The world is still advancing.`
+    if (run.status === 'completed') {
+      $('#create-run-evidence').href = `api/runs/${encodeURIComponent(runId)}`
+      $('#create-run-evidence').hidden = false
+      $('#create-run').disabled = false
+      return
+    }
+    if (['failed', 'interrupted', 'stopped'].includes(run.status)) throw new Error(run.error || `simulation ${run.status}`)
+    scheduleAuthoredRunPoll(runId)
+  } catch (error) {
+    $('#create-run-heading').textContent = 'Simulation failed visibly'
+    $('#create-run-detail').textContent = error.message
+    $('#create-run').disabled = false
+  }
+}
+
+async function runAuthoredSimulation() {
+  if (!authoringDraft || authoringDraft.status !== 'approved') return
+  $('#create-run').disabled = true
+  $('#create-run-status').hidden = false
+  $('#create-run-heading').textContent = 'Starting the authored simulation…'
+  $('#create-run-detail').textContent = 'Validating the approved configuration and Luna route.'
+  $('#create-run-evidence').hidden = true
+  try {
+    const run = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/runs`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({execution:'live', llm_options:{model:preferredModel, agent_reasoning_effort:'medium', max_total_cost:0.74}}),
+    })
+    $('#create-run-heading').textContent = 'Simulation running'
+    $('#create-run-detail').textContent = `Retained run ${run.run_id} has started.`
+    scheduleAuthoredRunPoll(run.run_id, 300)
+  } catch (error) {
+    $('#create-run-heading').textContent = 'Simulation did not start'
+    $('#create-run-detail').textContent = error.message
+    $('#create-run').disabled = false
+  }
+}
+
+async function loadAuthoringDraftFromUrl() {
+  const draftId = new URLSearchParams(window.location.search).get('draft')
+  if (!draftId || state.view !== 'create') return
+  try {
+    authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(draftId)}`)
+  } catch (error) {
+    $('#create-status').textContent = `Saved draft unavailable: ${error.message}`
+  }
+}
+
 async function startLiveRun() {
   persistEditor()
   $('#run-experiment').disabled = true
@@ -1004,6 +1275,7 @@ async function loadWorkbench() {
     configureRuntime()
     applyRunScopeFromUrl()
     readStateFromUrl()
+    await loadAuthoringDraftFromUrl()
     renderRail()
     configureControls()
     renderView()

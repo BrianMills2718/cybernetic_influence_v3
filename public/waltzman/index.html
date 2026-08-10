@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
+  <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=case-explainer-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=sociotechnical-authoring-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -19,8 +19,8 @@
     </div>
     <nav class="view-tabs" aria-label="Primary navigation">
       <button type="button" data-view="overview">Overview</button>
-      <button type="button" data-view="case">Research case</button>
-      <button type="button" data-open-lab>Open Lab</button>
+      <button type="button" data-view="case">Example simulation</button>
+      <button type="button" data-view="create">Create simulation</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
   </header>
@@ -56,33 +56,72 @@
     <section class="workspace">
       <section id="overview-view" class="workspace-view" aria-labelledby="overview-title" hidden>
         <header class="overview-hero">
-          <div class="artifact-type"><strong>From Minds to Coordination</strong><span>Executable AI simulation of Waltzman’s decision-environment framework</span></div>
-          <h2 id="overview-title">Test how distributed influence changes a group’s ability to coordinate—and how a defensive cell responds.</h2>
-          <p>Configure autonomous coalition roles and heterogeneous influence sources. The coalition decides; sources introduce locally different signals; an optional Coordination Security Operations cell detects shifts in trust, risk, and readiness, diagnoses the mechanism, and selects a bounded intervention.</p>
+          <div class="artifact-type"><strong>Sociotechnical simulation workbench</strong><span>Inspired by From Minds to Coordination</span></div>
+          <h2 id="overview-title">Build worlds where influence moves through people, organizations, technologies, and institutions.</h2>
+          <p>Describe a coordination situation, generate an editable simulation, and explore how information and influence change the evolving network—not only what individual agents believe.</p>
           <div class="hero-actions">
-            <button class="primary-cta" type="button" data-view="run">Create a coordination experiment</button>
-            <button class="secondary-cta" type="button" data-view="case">Inspect the complete case</button>
+            <button class="primary-cta" type="button" data-view="create">Create a simulation</button>
+            <button class="secondary-cta" type="button" data-view="case">Explore a completed simulation</button>
           </div>
-          <p class="scope-note">Produces synthetic AI-agent behavior for research and prototyping. It does not estimate how people or institutions will behave.</p>
+          <p class="scope-note">A wargaming and mechanism-exploration tool. It does not predict how real people or institutions will behave.</p>
         </header>
 
-        <section class="overview-builder-preview" aria-labelledby="overview-builder-title">
-          <span class="section-kicker">Your experiment</span><h3 id="overview-builder-title">Configure the actors, pressure, and response loop</h3>
-          <ol><li><b>1</b><div><strong>Define the coalition</strong><p>Edit each person’s values, goals, beliefs, memories, position expectations, and local context.</p></div></li><li><b>2</b><div><strong>Choose the influence environment</strong><p>Run a baseline, heterogeneous pressure, a fixed intervention, or an adaptive CSO response.</p></div></li><li><b>3</b><div><strong>Inspect the coordination process</strong><p>Trace every source choice, coalition decision, CSO finding, diagnosis, intervention, and outcome.</p></div></li></ol>
-          <p class="template-boundary">Current demo template · Cross-Border Early Warning Compact · 3 rounds · authentic model calls retained</p>
+        <section class="overview-capabilities" aria-labelledby="overview-capabilities-title">
+          <span class="section-kicker">What the workbench represents</span><h3 id="overview-capabilities-title">The simulation begins below the level of “the institution”</h3>
+          <div>
+            <article><strong>Sociotechnical world</strong><ul><li>People and positions</li><li>Organizations and analytical boundaries</li><li>Artifacts, resources, and technical systems</li><li>Communication channels and dependencies</li></ul></article>
+            <article><strong>Human agents in context</strong><ul><li>Values, goals, beliefs, and memories</li><li>Relationships and perceived expectations</li><li>Capabilities, limitations, and information access</li><li>Position expectations that influence—but do not dictate—behavior</li></ul></article>
+            <article><strong>World mechanics</strong><ul><li>Information provenance and uneven delivery</li><li>Resource custody and operational constraints</li><li>Bounded actions with independent consequences</li><li>Persistent state that changes through interaction</li></ul></article>
+          </div>
+        </section>
+
+        <section class="overview-influence" aria-labelledby="overview-influence-title">
+          <span class="section-kicker">What it can examine</span><h3 id="overview-influence-title">Different influence forms; one coordination-level question</h3>
+          <div><article><strong>Influence environments</strong><p>Homogeneous broadcasts, repeated narratives, segmented campaigns, heterogeneous local interactions, and feedback-adaptive pressure.</p></article><article><strong>System-level effects</strong><p>Changes in reliance, perceived risk, relationships, prerequisites, bottlenecks, coalition formation, and readiness to coordinate.</p></article><article><strong>Detection and response</strong><p>Whether an observer can distinguish influence from legitimate disagreement or disruption, diagnose the mechanism, and attempt a bounded response.</p></article></div>
+        </section>
+
+        <section class="overview-flow" aria-label="Product workflow">
+          <article><b>1</b><div><strong>Describe a world</strong><p>Start in ordinary language.</p></div></article><i>→</i><article><b>2</b><div><strong>Review the configuration</strong><p>Edit the generated people and scenario assumptions.</p></div></article><i>→</i><article><b>3</b><div><strong>Run and inspect</strong><p>Follow the world, actions, coordination process, and evidence.</p></div></article>
         </section>
       </section>
 
       <section id="case-view" class="workspace-view research-case" aria-labelledby="research-case-title" hidden>
-        <header class="research-case-hero">
-          <span class="case-label">Worked example</span>
-          <h2 id="research-case-title">Can fixing a resource shortage make a stalled group ready to act?</h2>
-          <p>Twenty-six AI agents are deciding whether to launch a joint outbreak response. They agree that a response matters, but technical, legal, logistical, and community concerns leave the group unable to approve one.</p>
+        <header class="case-world-hero">
+          <span class="case-label">Completed simulation · Cross-Border Early Warning Compact</span>
+          <h2 id="research-case-title">Four national response networks face one outbreak. None can act regionally on its own.</h2>
+          <p>A novel respiratory outbreak is spreading through Alba, Borin, Cyrenia, and Darsia. A proposed compact would share evidence, laboratory capacity, investigation teams, supplies, and transport—but those capabilities remain distributed across national and regional networks.</p>
         </header>
 
+        <section class="case-organizations" aria-labelledby="case-organizations-title">
+          <div class="case-section-heading"><span>The sociotechnical world</span><h3 id="case-organizations-title">People participate through five interdependent response networks</h3></div>
+          <div class="national-network-grid">
+            <article><strong>Alba</strong><p>Earliest cluster and strongest laboratories. National authorities protect patient-record custody and domestic confirmation capacity.</p><small>Epidemiology · policy · operations · community · supply</small></article>
+            <article><strong>Borin</strong><p>Largest transport hub and fastest deployment routes. Hospitals are strained and parliament scrutinizes staffing and cost sharing.</p><small>Epidemiology · policy · operations · community · supply</small></article>
+            <article><strong>Cyrenia</strong><p>Sparse surveillance outside the capital. A prior false alarm makes local validation and reciprocal aid essential.</p><small>Epidemiology · policy · operations · community · supply</small></article>
+            <article><strong>Darsia</strong><p>Controls a remote surveillance corridor. Fragile cold-chain and fuel systems make apparently regional resources locally consequential.</p><small>Epidemiology · policy · operations · community · supply</small></article>
+            <article class="regional-network"><strong>Regional coordination network</strong><p>Six people reconcile science, logistics, law, finance, public legitimacy, and the overall decision. They can coordinate but cannot command national systems.</p><small>Coordinator · science · logistics · law · finance · community</small></article>
+          </div>
+        </section>
+
+        <section class="case-coordination-situation" aria-labelledby="case-situation-title">
+          <div><span>Coordination situation</span><h3 id="case-situation-title">Should these networks activate one joint outbreak response?</h3><p>Activation requires comparable evidence, lawful data access, staff, laboratories, supplies, transport, funding, and credible local safeguards. No single person or organization controls all of them.</p></div>
+          <div class="dependency-list"><span>What must fit together</span><strong>Evidence</strong><strong>Authority</strong><strong>Operational capacity</strong><strong>Public legitimacy</strong></div>
+        </section>
+
+        <section class="case-influence-context" aria-labelledby="case-influence-title">
+          <span>Influence environment</span><h3 id="case-influence-title">Different parts of the network encounter different pressures</h3>
+          <p>Laboratory failures, staffing demands, supply constraints, legal challenges, and community concerns enter through locally relevant channels. The messages do not repeat one narrative, but together they can change whether the compact remains executable.</p>
+        </section>
+
+        <section class="case-experiment-intro" aria-labelledby="case-experiment-title">
+          <span>One controlled question inside the completed simulation</span>
+          <h3 id="case-experiment-title">After those pressures stall coordination, does fixing the resource shortage make the networks ready to act?</h3>
+          <p>We saved the exact simulation after two rounds and continued it four ways. Every person, memory, prior message, model, prompt, world state, and approval rule remained identical. Only the resource package changed.</p>
+        </section>
+
         <section class="case-answer" aria-labelledby="case-answer-title">
-          <span>What happened</span>
-          <h3 id="case-answer-title">Real resources removed most capacity objections—but they did not resolve the coalition’s legal and scientific blockers.</h3>
+          <span>Result</span>
+          <h3 id="case-answer-title">Real resources removed most capacity objections—but they did not resolve the network’s legal and scientific blockers.</h3>
           <p>Fake resource claims were caught by the simulated audit and produced the same practical result as providing nothing.</p>
         </section>
 
@@ -126,7 +165,35 @@
           <strong>What this does not establish</strong><p>This is one controlled AI-agent simulation. It demonstrates a possible coordination mechanism; it does not predict how people or real institutions would behave.</p>
         </section>
 
-        <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Open retained evidence</button><button class="secondary-cta" type="button" data-view="run">Build your own experiment</button></div>
+        <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Open retained evidence</button><button class="secondary-cta" type="button" data-view="create">Create your own simulation</button></div>
+      </section>
+
+      <section id="create-view" class="workspace-view create-simulation" aria-labelledby="create-title" hidden>
+        <header class="create-hero">
+          <span class="case-label">Create a simulation</span>
+          <h2 id="create-title">Describe the world you want to explore.</h2>
+          <p>The authoring model converts your description into a typed, reviewable configuration. It may describe people and world entities; the compiler—not the model—owns executable mechanisms and rejects unsupported requests.</p>
+        </header>
+
+        <section class="create-composer" aria-labelledby="create-prompt-title">
+          <label for="create-prompt"><strong id="create-prompt-title">What should the simulation contain?</strong><textarea id="create-prompt" rows="7" placeholder="For example: Model a multinational election-monitoring network facing both centrally coordinated propaganda and locally tailored pressure. Include election officials, independent media, civil-society groups, government agencies, platforms, and technical infrastructure."></textarea></label>
+          <div><button id="create-generate" class="primary-cta" type="button">Generate editable configuration</button><button id="create-example-prompt" class="quiet-button" type="button">Use example prompt</button></div>
+          <p id="create-status" class="create-status" aria-live="polite">Describe a sociotechnical world to begin.</p>
+        </section>
+
+        <section id="create-review" class="create-review" hidden>
+          <header><div><span>Generated configuration</span><h3 id="create-draft-title">Draft</h3><p id="create-draft-description"></p></div><div class="draft-state"><span id="create-draft-revision"></span><strong id="create-draft-state"></strong></div></header>
+          <div id="create-diagnostics"></div>
+          <section class="create-world-summary" aria-labelledby="create-world-title"><div><span>World</span><h3 id="create-world-title">What the draft contains</h3></div><div id="create-world-facts"></div><div id="create-world-groups"></div></section>
+          <section class="create-people" aria-labelledby="create-people-title"><div><span>People</span><h3 id="create-people-title">Review the simulated people</h3></div><div id="create-people-list"></div></section>
+          <details class="create-person-editor"><summary>Edit one person directly</summary><label for="create-person-select">Person<select id="create-person-select"></select></label><label for="create-person-label">Name<input id="create-person-label"></label><label for="create-person-position">Position<textarea id="create-person-position" rows="2"></textarea></label><label for="create-person-disposition">Disposition<textarea id="create-person-disposition" rows="3"></textarea></label><label for="create-person-memories">Memories <small>One per line</small><textarea id="create-person-memories" rows="4"></textarea></label><label for="create-person-values">Values <small>One per line</small><textarea id="create-person-values" rows="4"></textarea></label><label for="create-person-goals">Goals <small>One per line</small><textarea id="create-person-goals" rows="4"></textarea></label><label for="create-person-beliefs">Beliefs <small>One per line</small><textarea id="create-person-beliefs" rows="4"></textarea></label><button id="create-save-person" type="button">Save person without another model call</button></details>
+          <section class="create-revise"><label for="create-revision-prompt"><strong>Tell the authoring model what to change</strong><textarea id="create-revision-prompt" rows="4" placeholder="Add a platform trust-and-safety lead, make local radio the main communication channel, and model a homogeneous broadcast alongside the tailored pressure."></textarea></label><button id="create-revise" type="button">Generate revised configuration</button></section>
+          <details class="create-raw"><summary>Inspect complete typed configuration</summary><pre id="create-raw-configuration"></pre></details>
+          <div class="create-actions"><button id="create-approve" class="primary-cta" type="button">Approve this configuration</button><button id="create-run" class="secondary-cta" type="button" hidden>Run with Luna</button><button id="create-start-over" class="quiet-button" type="button">Start over</button></div>
+          <section id="create-run-status" class="create-run-status" hidden aria-live="polite"><strong id="create-run-heading"></strong><p id="create-run-detail"></p><a id="create-run-evidence" href="#" target="_blank" rel="noopener" hidden>Open retained run evidence</a></section>
+        </section>
+
+        <details class="create-boundary"><summary>Current authoring boundary</summary><p>The compiler currently supports the reviewed coordination template plus bounded information-campaign and resource-request templates. It does not generate new executable mechanism code. Unsupported capabilities remain visible as draft diagnostics.</p><button type="button" data-open-lab>Open the earlier outbreak-specific lab</button></details>
       </section>
 
       <section id="run-view" class="workspace-view" aria-labelledby="run-title" hidden>
@@ -438,6 +505,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=case-explainer-v1" defer></script>
+  <script src="assets/app.js?v=sociotechnical-authoring-v1" defer></script>
 </body>
 </html>
