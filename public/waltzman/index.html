@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A workbench for testing how information, resources, and constraints affect whether AI-agent groups can act together.">
+  <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=waltzman-cso-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=resource-fork-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -74,36 +75,30 @@
 
       <section id="case-view" class="workspace-view research-case" aria-labelledby="research-case-title" hidden>
         <header class="research-case-hero">
-          <span class="case-label">From Minds to Coordination · synthetic mechanism demonstration</span>
-          <h2 id="research-case-title">Can distributed influence degrade a decision environment—and can an autonomous CSO cell respond?</h2>
-          <p>Twenty-six autonomous AI roles decide whether to activate a cross-border early-warning compact. Four influence agents introduce locally different technical, legal, logistical, and community signals. In the adaptive condition, three additional agents detect the shift, diagnose the coordination problem, and select one authorized intervention.</p>
-          <div class="case-facts"><span><b>26</b> coalition agents</span><span><b>4</b> influence agents</span><span><b>3</b> CSO agents</span><span><b>4</b> environments</span></div>
+          <span class="case-label">From Minds to Coordination · exact checkpoint experiment</span>
+          <h2 id="research-case-title">The same pressured coalition receives four different resource packages. What changes?</h2>
+          <p>Twenty-six autonomous AI roles completed two decision rounds under the same distributed technical, legal, logistical, and community pressure. We saved that exact state, forked it four ways, and let every role decide again.</p>
+          <div class="case-facts"><span><b>26</b> coalition agents</span><span><b>1</b> shared checkpoint</span><span><b>4</b> exact forks</span><span><b>160</b> retained model calls</span></div>
         </header>
 
         <section class="case-mechanism" aria-labelledby="case-mechanism-title">
-          <h3 id="case-mechanism-title">The mechanism</h3>
-          <div><span>Coalition decides</span><i>→</i><span>Sources act</span><i>→</i><span>CSO detects and diagnoses</span><i>→</i><span>Planner selects an intervention</span><i>→</i><span>Coalition decides independently</span></div>
-          <p>The simulator enforces that ordering. Influence and CSO agents have no participant stance ports and cannot vote, edit mandates, or change the decision gate.</p>
+          <h3 id="case-mechanism-title">One history, four continuations</h3>
+          <div><span>Distributed pressure</span><i>→</i><span>Round-two state saved</span><i>→</i><span>Package changes</span><i>→</i><span>All 26 decide independently</span></div>
+          <p>The agents, memories, source history, model, prompts, and decision gate are identical at the fork. Only the resource package changes.</p>
         </section>
 
         <section class="case-results" aria-labelledby="case-results-title">
-          <div class="case-section-heading"><span>Authentic retained model decisions</span><h3 id="case-results-title">One coalition. Four environments. Four trajectories.</h3></div>
+          <div class="case-section-heading"><span>Choose a continuation</span><h3 id="case-results-title">Valid resources increased readiness. They did not force approval.</h3></div>
           <div id="research-case-runs" class="research-case-runs"></div>
         </section>
 
         <section class="case-interpretation" aria-labelledby="case-interpretation-title">
-          <div><span>What the demonstration shows</span><h3 id="case-interpretation-title">Coordination changed without anyone dictating the agents’ decisions.</h3></div>
-          <p>Under source pressure, locally reasonable requirements became jointly blocking. A fixed package showed that changing those conditions could restore action. The adaptive CSO run then added the missing operating loop: model agents detected the shift, diagnosed incompatible requirements, and selected the cross-domain response themselves.</p>
-          <div class="case-causal-lines"><p><b>Pressure:</b> heterogeneous signals → incompatible requirements → readiness falls → gate fails</p><p><b>Adaptive response:</b> detect → diagnose → select bounded intervention → coalition reassesses → gate passes</p></div>
-        </section>
-
-        <section class="case-evidence" aria-labelledby="case-cso-title">
-          <div><span>Autonomous defensive loop</span><h3 id="case-cso-title">What the CSO cell detected, diagnosed, and chose</h3></div>
-          <div id="case-cso-records"></div>
+          <div><span>Selected continuation</span><h3 id="case-interpretation-title">What entered the world—and how the coalition responded</h3></div>
+          <div id="case-branch-detail"></div>
         </section>
 
         <section class="case-evidence" aria-labelledby="case-evidence-title">
-          <div><span>Representative retained evidence</span><h3 id="case-evidence-title">Same role. Different environment. Different decision.</h3></div>
+          <div><span>Retained role decisions</span><h3 id="case-evidence-title">Why approval still failed—or why a claim was rejected</h3></div>
           <div id="case-evidence-records"></div>
         </section>
 
@@ -111,7 +106,7 @@
           <strong>Interpretation boundary</strong><p>This demonstrates behavior inside one controlled AI-agent simulation. It does not estimate how people or real institutions would behave.</p>
         </section>
 
-        <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Inspect the four runs</button><button class="secondary-cta" type="button" data-view="run">Build your own experiment</button></div>
+        <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Open retained evidence</button><button class="secondary-cta" type="button" data-view="run">Build your own experiment</button></div>
       </section>
 
       <section id="run-view" class="workspace-view" aria-labelledby="run-title" hidden>
@@ -423,6 +418,6 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=message-trace-v2" defer></script>
+  <script src="assets/app.js?v=resource-fork-v1" defer></script>
 </body>
 </html>

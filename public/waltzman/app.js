@@ -5,7 +5,6 @@ const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'darsia', 'regional']
 const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', darsia:'Darsia', regional:'Regional'}
 const preferredModel = 'codex/gpt-5.6-luna'
 const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
-const researchCaseRunIds = ['run_ef3763b4d477', 'run_3303c9302a36', 'run_e2f31904e10b', 'run_a27f8e4082ef']
 const personProfileFields = {
   values:'person-values',
   goals:'person-goals',
@@ -20,6 +19,7 @@ const personProfileFields = {
 let dataset = null
 let runtimeConfig = null
 let autonomousProbe = null
+let resourceFork = null
 let defaultConfiguration = null
 let editableConfiguration = null
 let selectedConfigurationPerson = 'alba_epidemiologist'
@@ -39,6 +39,7 @@ const state = {
   labSection:'overview',
   buildStep:'environment',
   exampleEnvironment:0,
+  caseBranch:'complete',
   runScopeIds:null,
 }
 
@@ -647,73 +648,52 @@ function renderMethod() {
   $('#provenance-time').dateTime = latest
 }
 
-function sourcePhaseText(signals) {
-  const phases = new Map()
-  for (const signal of signals || []) {
-    const [round, , move] = String(signal).split(':')
-    if (!round || !move) continue
-    if (!phases.has(round)) phases.set(round, new Map())
-    const moves = phases.get(round)
-    moves.set(move, (moves.get(move) || 0) + 1)
-  }
-  return [...phases.entries()].map(([round, moves]) => {
-    const phase = Number(round.replace('round_', ''))
-    return `phase ${phase}: ${[...moves.entries()].map(([move, count]) => `${count} ${sentence(move)}`).join(', ')}`
-  }).join(' · ')
-}
-
 function renderResearchCase() {
-  const indexed = new Map(dataset.runs.map((run) => [run.run_id, run]))
-  const missing = researchCaseRunIds.filter((runId) => !indexed.has(runId))
-  if (missing.length) {
-    $('#research-case-runs').innerHTML = `<p class="case-data-error"><strong>Research case unavailable.</strong> Missing retained runs: ${escapeHtml(missing.join(', '))}</p>`
+  if (!resourceFork?.branches?.length) {
+    $('#research-case-runs').innerHTML = '<p class="case-data-error"><strong>Research case unavailable.</strong> The exact checkpoint evidence could not be loaded.</p>'
     $('#case-open-comparison').disabled = true
     return
   }
 
   $('#case-open-comparison').disabled = false
-  const stories = [
-    {label:'Baseline', change:'No source agents enter between rounds.'},
-    {label:'Autonomous source pressure', change:'Four source agents introduce technical, legal, logistical, and community constraints.'},
-    {label:'Fixed verified package', change:'The source process remains; a preselected package resolves all four constraint classes after round two.'},
-    {label:'Adaptive CSO cell', change:'Three defensive agents detect the shift, diagnose its mechanism, and select one authorized response.'},
-  ]
-  $('#research-case-runs').innerHTML = researchCaseRunIds.map((runId, index) => {
-    const run = indexed.get(runId)
-    const sourceSummary = sourcePhaseText(run.source_signals)
-    return `<article class="research-case-run">
-      <header><span>Environment ${index + 1}</span><h4>${escapeHtml(stories[index].label)}</h4>${outcomeBadge(run)}</header>
-      <p>${escapeHtml(stories[index].change)}</p>
-      <div class="case-run-rounds">${run.rounds.map((round) => `<div class="case-run-round"><b>R${round.round}</b>${stackedBar(round.decision_counts, 'case-result-bar', run.agent_count || 26)}<span>${escapeHtml(countsText(round.decision_counts))}</span></div>`).join('')}</div>
-      ${sourceSummary ? `<small>Source choices · ${escapeHtml(sourceSummary)}</small>` : '<small>No source phase</small>'}
-    </article>`
-  }).join('')
-
-  const evidenceRole = 'alba_epidemiologist'
-  $('#case-evidence-records').innerHTML = [indexed.get(researchCaseRunIds[1]), indexed.get(researchCaseRunIds[3])].map((run, index) => {
-    const stance = run.rounds.at(-1).stances.find((item) => item.person_id === evidenceRole)
-    if (!stance) throw new Error(`representative evidence is unavailable for ${evidenceRole}`)
-    return `<article><header><span>${index === 0 ? 'Under source pressure' : 'After the CSO-selected intervention'}</span>${decisionPill(stance.decision)}</header><p>${escapeHtml(stance.rationale)}</p></article>`
-  }).join('')
-
-  const csoRun = indexed.get(researchCaseRunIds[3])
-  const stageLabels = {detection:'Detected', diagnosis:'Diagnosed', intervention:'Selected'}
-  $('#case-cso-records').innerHTML = (csoRun.cso_records || []).map((record) => {
-    const payload = record.payload || {}
-    const summary = record.stage === 'detection'
-      ? `${sentence(payload.trust_structure)} trust · ${sentence(payload.perceived_risk)} risk · readiness ${sentence(payload.coordination_readiness)}`
-      : record.stage === 'diagnosis'
-        ? `${sentence(payload.mechanism)} · ${sentence(payload.affected_scope)}`
-        : `${sentence(payload.action_id)} · targets ${sentence(payload.target_dimension)}`
-    const rationale = payload.evidence_summary || payload.rationale || ''
-    return `<article><header><span>${escapeHtml(stageLabels[record.stage] || sentence(record.stage))}</span><strong>${escapeHtml(labelPerson(record.actor_id))}</strong></header><p><b>${escapeHtml(summary)}</b></p><p>${escapeHtml(rationale)}</p></article>`
-  }).join('')
+  const stories = {
+    no_intervention:'No regional resource package was issued.',
+    partial:'Two verified resources were committed: Alba laboratory capacity and Borin clinicians.',
+    complete:'All six named resources were verified and committed.',
+    false_claim:'All six resources were claimed as verified; the world audit found custody mismatches and changed no custody.',
+  }
+  const renderBranch = () => {
+    const branch = resourceFork.branches.find((item) => item.id === state.caseBranch) || resourceFork.branches[0]
+    state.caseBranch = branch.id
+    all('[data-case-branch]').forEach((button) => button.classList.toggle('active', button.dataset.caseBranch === branch.id))
+    const resources = branch.resource_commitments || []
+    const verified = resources.filter((item) => item.audit_status === 'verified').length
+    const contradicted = resources.filter((item) => item.audit_status === 'contradicted').length
+    const support = Number(branch.final_decisions.support || 0)
+    const ready = support + Number(branch.final_decisions.conditional || 0)
+    const gateText = support >= resourceFork.gate.minimum_support ? 'Support threshold passed' : `Support threshold failed · ${support} of ${resourceFork.gate.minimum_support}`
+    $('#case-branch-detail').innerHTML = `<div class="fork-readout">
+      <div><span>World event</span><strong>${escapeHtml(stories[branch.id])}</strong></div>
+      <div><span>Audit</span><strong>${verified} verified${contradicted ? ` · ${contradicted} contradicted` : ''}</strong></div>
+      <div><span>Readiness</span><strong>${ready} support or conditional</strong></div>
+      <div><span>Decision gate</span><strong>${escapeHtml(gateText)}</strong></div>
+    </div>`
+    const evidenceIds = ['regional_logistics_coordinator', 'regional_coordinator', 'regional_scientific_advisor']
+    $('#case-evidence-records').innerHTML = evidenceIds.map((personId) => {
+      const stance = branch.final_stances[personId]
+      return `<article><header><span>${escapeHtml(labelPerson(personId))}</span>${decisionPill(stance.decision)}</header><p>${escapeHtml(stance.rationale)}</p></article>`
+    }).join('')
+  }
+  $('#research-case-runs').innerHTML = resourceFork.branches.map((branch) => `<button type="button" class="research-case-run ${branch.id === state.caseBranch ? 'active' : ''}" data-case-branch="${escapeHtml(branch.id)}">
+    <header><span>Final-round fork</span><h4>${escapeHtml(branch.label)}</h4>${outcomeBadge(branch)}</header>
+    ${stackedBar(branch.final_decisions, 'case-result-bar', resourceFork.agent_count)}
+    <strong>${escapeHtml(countsText(branch.final_decisions))}</strong>
+  </button>`).join('')
+  all('[data-case-branch]').forEach((button) => { button.onclick = () => { state.caseBranch = button.dataset.caseBranch; renderBranch() } })
+  renderBranch()
 
   $('#case-open-comparison').onclick = () => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('view', 'compare')
-    url.searchParams.set('runs', researchCaseRunIds.join(','))
-    window.location.assign(url)
+    window.open('assets/resource-fork.json', '_blank', 'noopener')
   }
 }
 
@@ -1004,6 +984,12 @@ async function loadWorkbench() {
       if (!probeResponse.ok) throw new Error(`autonomous probe request failed with ${probeResponse.status}`)
       autonomousProbe = await probeResponse.json()
     } catch (error) { console.warn(`autonomous probe unavailable: ${error.message}`) }
+    try {
+      const forkResponse = await fetch('assets/resource-fork.json', {cache:'no-store'})
+      if (!forkResponse.ok) throw new Error(`resource fork request failed with ${forkResponse.status}`)
+      resourceFork = await forkResponse.json()
+      if (resourceFork.schema_version !== 1 || resourceFork.branches?.length !== 4) throw new Error('resource fork contract is invalid')
+    } catch (error) { console.warn(`resource fork unavailable: ${error.message}`) }
     state.runId = dataset.runs[0].run_id
     try { runtimeConfig = await apiRequest('api/config') } catch (error) { console.warn(`live simulator unavailable: ${error.message}`) }
     configureRuntime()

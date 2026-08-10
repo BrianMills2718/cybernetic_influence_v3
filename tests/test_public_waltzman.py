@@ -20,6 +20,7 @@ REVIEW_PAGE = PUBLIC_ROOT / "review.html"
 REVIEW_STYLE = PUBLIC_ROOT / "review.css"
 REVIEW_TRACE = PUBLIC_ROOT / "simulation-trace.md"
 AUTONOMOUS_PROBE = PUBLIC_ROOT / "autonomous-probe.json"
+RESOURCE_FORK = PUBLIC_ROOT / "resource-fork.json"
 PLIST = ROOT / "deploy" / "com.cybernetic-influence.waltzman-public.plist"
 
 RUN_IDS = {
@@ -76,9 +77,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Configure the actors, pressure, and response loop" in page
     assert "Define the coalition" in page
     assert "Current demo template" in page
-    assert "can an autonomous CSO cell respond?" in page
-    assert "CSO detects and diagnoses" in page
-    assert "Same role. Different environment. Different decision." in page
+    assert "The same pressured coalition receives four different resource packages" in page
+    assert "One history, four continuations" in page
+    assert "Why approval still failed—or why a claim was rejected" in page
     assert "Inspect all agent decisions" in page
     assert "Waltzman mechanism probe" in page
     assert "From Minds to Coordination · autonomous influence probe" in page
@@ -97,14 +98,14 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Institutional oughts—not personal commands" in page
     assert "Edit personal character and memory" in page
     assert "Mechanism analysis and retained evidence" in page
-    assert shape.stylesheets == ["assets/styles.css?v=waltzman-cso-v1"]
-    assert shape.scripts == ["assets/app.js?v=message-trace-v2"]
+    assert shape.stylesheets == ["assets/styles.css?v=resource-fork-v1"]
+    assert shape.scripts == ["assets/app.js?v=resource-fork-v1"]
     assert {
         "overview-view",
         "case-view",
         "research-case-runs",
+        "case-branch-detail",
         "case-evidence-records",
-        "case-cso-records",
         "run-view",
         "condition-options",
         "agent-config-select",
@@ -292,10 +293,10 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "syncUrl",
         "view:'overview'",
         "featuredRunIds",
-        "researchCaseRunIds",
         "renderResearchCase",
         "fetch('assets/data.json'",
         "fetch('assets/autonomous-probe.json'",
+        "fetch('assets/resource-fork.json'",
         "apiRequest('api/runs'",
         "regional_outbreak_configuration:editableConfiguration",
         "personProfileFields",
@@ -307,7 +308,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "Messages received before this decision",
         "Message attempt → delivery outcome",
         "data-message-target",
-        "case-cso-records",
+        "data-case-branch",
     ):
         assert capability in script
 
@@ -317,6 +318,25 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "for (const run of dataset.runs) run.configuration" not in script
     assert "cannot launch new model runs" not in json.dumps(_dataset())
     assert "[hidden] { display: none !important; }" in style
+
+
+def test_public_resource_fork_is_complete_and_checkpoint_paired() -> None:
+    evidence = json.loads(RESOURCE_FORK.read_text(encoding="utf-8"))
+    assert evidence["schema_version"] == 1
+    assert evidence["model"] == "codex/gpt-5.6-luna"
+    assert evidence["agent_count"] == 26
+    assert evidence["total_model_calls"] == 160
+    assert evidence["shared_checkpoint_digest"]
+    assert {item["id"] for item in evidence["branches"]} == {
+        "no_intervention", "partial", "complete", "false_claim"
+    }
+    assert all(len(item["trace_ids"]) == 26 for item in evidence["branches"])
+    false_claim = next(item for item in evidence["branches"] if item["id"] == "false_claim")
+    assert false_claim["manifest"]["verification_status"] == "contradicted"
+    assert all(
+        item["world_outcome"] == "claim_rejected_no_custody_change"
+        for item in false_claim["resource_commitments"]
+    )
 
 
 def test_public_app_serves_defaults_and_rejects_misrouted_agent_configuration(
