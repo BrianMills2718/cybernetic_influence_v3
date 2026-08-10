@@ -13,6 +13,7 @@ from typing import Any, cast
 from pydantic import JsonValue
 
 from cybernetic_influence.active_runtime import ActiveRuntimeCheckpoint, ActiveRuntimeSession
+from cybernetic_influence.active_runtime.protocol import ActiveSystemExecutionError
 from cybernetic_influence.causal_core.models import ActionAttempt
 from cybernetic_influence.scenarios.regional_outbreak import (
     AGENT_IDS,
@@ -159,88 +160,143 @@ def main() -> int:
     parser.add_argument("--reasoning-effort", default="medium")
     args = parser.parse_args()
 
-    probe_id = f"outbreak_resource_forks_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
     fixture = outbreak_fixture(
         "responsive_exercise_injects",
         model=args.model,
         reasoning_effort=args.reasoning_effort,
         world_resource_probe=True,
     )
-    session = ActiveRuntimeSession(
-        fixture.scenario,
-        fixture.exact_bindings,
-        fixture.active_specs,
-        outbreak_bindings(
-            fixture,
-            model=args.model,
-            reasoning_effort=args.reasoning_effort,
-            trace_id_prefix=f"{probe_id}/shared-prefix",
-        ),
-        run_id=probe_id,
-        config=outbreak_runtime_config(per_call_budget=0.05, per_run_budget=1.0),
-        participant_concurrency=8,
-    )
-    _activate_expected(session, set(AGENT_IDS), "round-one coalition")
-    _activate_expected(session, set(SOURCE_IDS), "post-round-one sources")
-    _activate_expected(session, set(AGENT_IDS), "round-two coalition")
-    session.drain_pending_exact_work()
-    shared = session.checkpoint()
-    history = cast(
-        list[dict[str, Any]],
-        shared.core_checkpoint.state.fact("outbreak_decision.history").value,
-    )
-    if len(history) != 2:
-        raise RuntimeError("shared prefix did not end immediately after round two")
-
-    branches = {
-        branch: _branch(
-            fixture=fixture,
-            shared=shared,
-            branch=branch,
-            model=args.model,
-            reasoning_effort=args.reasoning_effort,
-            trace_prefix=f"{probe_id}/{branch}",
+    if args.output.exists():
+        artifact = json.loads(args.output.read_text(encoding="utf-8"))
+        if artifact.get("contract") != "outbreak-resource-checkpoint-forks.v1":
+            raise ValueError("refusing to resume an incompatible artifact")
+        if artifact.get("model") != args.model:
+            raise ValueError("resume model differs from the retained artifact")
+        probe_id = str(artifact["probe_id"])
+        shared = ActiveRuntimeCheckpoint.model_validate(artifact["shared_checkpoint"])
+        history = cast(list[dict[str, Any]], artifact["shared_round_history"])
+        branches = cast(dict[str, dict[str, Any]], artifact.get("branches", {}))
+    else:
+        probe_id = f"outbreak_resource_forks_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+        session = ActiveRuntimeSession(
+            fixture.scenario,
+            fixture.exact_bindings,
+            fixture.active_specs,
+            outbreak_bindings(
+                fixture,
+                model=args.model,
+                reasoning_effort=args.reasoning_effort,
+                trace_id_prefix=f"{probe_id}/shared-prefix",
+            ),
+            run_id=probe_id,
+            config=outbreak_runtime_config(per_call_budget=0.05, per_run_budget=1.0),
+            participant_concurrency=8,
         )
-        for branch in ("no_intervention", "partial", "complete", "false_claim")
-    }
+        _activate_expected(session, set(AGENT_IDS), "round-one coalition")
+        _activate_expected(session, set(SOURCE_IDS), "post-round-one sources")
+        _activate_expected(session, set(AGENT_IDS), "round-two coalition")
+        session.drain_pending_exact_work()
+        shared = session.checkpoint()
+        history = cast(
+            list[dict[str, Any]],
+            shared.core_checkpoint.state.fact("outbreak_decision.history").value,
+        )
+        if len(history) != 2:
+            raise RuntimeError("shared prefix did not end immediately after round two")
+        branches = {}
+        artifact = {
+            "contract": "outbreak-resource-checkpoint-forks.v1",
+            "status": "running",
+            "probe_id": probe_id,
+            "created_at": datetime.now(UTC).isoformat(),
+            "model": args.model,
+            "reasoning_effort": args.reasoning_effort,
+            "claim": (
+                "Four final-round coalition continuations share one exact authentic prefix "
+                "through every round-two coalition output."
+            ),
+            "nonclaims": [
+                "One retained execution is not a statistical sample or human-behavior estimate.",
+                "The packages and resource mechanics are scenario-authored experiment controls.",
+                "Only the final-round continuations are checkpoint-paired; model sampling is not seeded.",
+            ],
+            "shared_checkpoint_digest": shared.record_digest,
+            "shared_core_checkpoint_digest": shared.core_checkpoint.record_digest,
+            "shared_prefix_model_calls": sum(
+                len(participant.call_evidence)
+                for attempt in shared.attempts
+                for participant in attempt.participants
+            ),
+            "shared_prefix_observed_cost": shared.total_observed_cost,
+            "shared_round_history": history,
+            "shared_checkpoint": shared.model_dump(mode="json"),
+            "branches": branches,
+            "branch_attempts": {},
+            "failures": [],
+        }
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(artifact, indent=2, sort_keys=True), encoding="utf-8")
+
+    for branch in ("no_intervention", "partial", "complete", "false_claim"):
+        if branch in branches:
+            continue
+        attempts = cast(dict[str, int], artifact.setdefault("branch_attempts", {}))
+        while branch not in branches:
+            attempt_number = int(attempts.get(branch, 0)) + 1
+            attempts[branch] = attempt_number
+            args.output.write_text(
+                json.dumps(artifact, indent=2, sort_keys=True), encoding="utf-8"
+            )
+            try:
+                branches[branch] = _branch(
+                    fixture=fixture,
+                    shared=shared,
+                    branch=branch,
+                    model=args.model,
+                    reasoning_effort=args.reasoning_effort,
+                    trace_prefix=f"{probe_id}/{branch}/attempt-{attempt_number}",
+                )
+            except ActiveSystemExecutionError as error:
+                failures = cast(list[dict[str, Any]], artifact.setdefault("failures", []))
+                failures.append(
+                    {
+                        "branch": branch,
+                        "attempt": attempt_number,
+                        "error_type": type(error).__name__,
+                        "error_message": str(error),
+                    }
+                )
+                args.output.write_text(
+                    json.dumps(artifact, indent=2, sort_keys=True), encoding="utf-8"
+                )
+                if attempt_number >= 3:
+                    raise
+                continue
+            args.output.write_text(
+                json.dumps(artifact, indent=2, sort_keys=True), encoding="utf-8"
+            )
+
     shared_calls = sum(
         len(participant.call_evidence)
         for attempt in shared.attempts
         for participant in attempt.participants
     )
-    artifact = {
-        "contract": "outbreak-resource-checkpoint-forks.v1",
-        "probe_id": probe_id,
-        "created_at": datetime.now(UTC).isoformat(),
-        "model": args.model,
-        "reasoning_effort": args.reasoning_effort,
-        "claim": (
-            "Four final-round coalition continuations share one exact authentic prefix "
-            "through every round-two coalition output."
-        ),
-        "nonclaims": [
-            "One retained execution is not a statistical sample or human-behavior estimate.",
-            "The packages and resource mechanics are scenario-authored experiment controls.",
-            "Only the final-round continuations are checkpoint-paired; model sampling is not seeded.",
-        ],
-        "shared_checkpoint_digest": shared.record_digest,
-        "shared_core_checkpoint_digest": shared.core_checkpoint.record_digest,
-        "shared_prefix_model_calls": shared_calls,
-        "shared_prefix_observed_cost": shared.total_observed_cost,
-        "shared_round_history": history,
-        "shared_checkpoint": shared.model_dump(mode="json"),
-        "branches": branches,
-        "observed_outcomes": {
+    artifact.update(
+        {
+            "status": "complete",
+            "shared_prefix_model_calls": shared_calls,
+            "branches": branches,
+            "observed_outcomes": {
             branch: {
                 "outcome": result["outcome"],
                 "final_decisions": result["final_decisions"],
             }
             for branch, result in branches.items()
-        },
-        "unique_provider_cost": shared.total_observed_cost
-        + sum(result["incremental_observed_cost"] for result in branches.values()),
-    }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
+            },
+            "unique_provider_cost": shared.total_observed_cost
+            + sum(result["incremental_observed_cost"] for result in branches.values()),
+        }
+    )
     args.output.write_text(json.dumps(artifact, indent=2, sort_keys=True), encoding="utf-8")
     print(
         json.dumps(
