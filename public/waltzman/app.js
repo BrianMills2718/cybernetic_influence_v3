@@ -31,6 +31,7 @@ let pollHandle = null
 let authoringDraft = null
 let selectedAuthoringPerson = null
 let authoredRunPollHandle = null
+let authoringBusy = false
 
 const state = {
   view:'overview',
@@ -917,6 +918,14 @@ function authoringLuna() {
   return runtimeConfig?.authoring?.models?.find((item) => item.model === preferredModel) || null
 }
 
+function setAuthoringBusy(busy) {
+  authoringBusy = busy
+  for (const id of ['create-generate', 'create-revise', 'create-save-person', 'create-approve', 'create-start-over']) {
+    const control = $(`#${id}`)
+    if (control) control.disabled = busy
+  }
+}
+
 function draftTemplateLabel(templateId) {
   const labels = {
     coordination_decision_v1:'Coordination decision',
@@ -944,7 +953,7 @@ function renderAuthoringPersonEditor() {
 
 function renderCreateSimulation() {
   const luna = authoringLuna()
-  $('#create-generate').disabled = !luna
+  $('#create-generate').disabled = !luna || authoringBusy
   if (!authoringDraft) {
     $('#create-review').hidden = true
     $('#create-status').textContent = luna
@@ -999,6 +1008,7 @@ function renderCreateSimulation() {
   const ready = authoringDraft.status === 'ready_for_review' && diagnostics.length === 0
   $('#create-approve').hidden = !ready
   $('#create-run').hidden = authoringDraft.status !== 'approved'
+  setAuthoringBusy(authoringBusy)
   $('#create-status').textContent = 'Draft generated below. Edit a person, request a broader revision, or approve the exact configuration.'
 }
 
@@ -1027,7 +1037,7 @@ async function generateAuthoringDraft() {
     $('#create-status').textContent = 'Describe the world before generating a configuration.'
     return
   }
-  $('#create-generate').disabled = true
+  setAuthoringBusy(true)
   $('#create-status').textContent = 'Luna is generating and validating a typed configuration…'
   try {
     await advanceAuthoringDraft(message)
@@ -1035,6 +1045,7 @@ async function generateAuthoringDraft() {
   } catch (error) {
     $('#create-status').textContent = error.message
   } finally {
+    setAuthoringBusy(false)
     $('#create-generate').disabled = !authoringLuna()
   }
 }
@@ -1045,7 +1056,7 @@ async function reviseAuthoringDraft() {
     $('#create-status').textContent = 'Describe the change you want to make.'
     return
   }
-  $('#create-revise').disabled = true
+  setAuthoringBusy(true)
   $('#create-status').textContent = 'Luna is producing the next retained revision…'
   try {
     await advanceAuthoringDraft(message)
@@ -1053,7 +1064,7 @@ async function reviseAuthoringDraft() {
   } catch (error) {
     $('#create-status').textContent = error.message
   } finally {
-    $('#create-revise').disabled = false
+    setAuthoringBusy(false)
   }
 }
 
@@ -1061,7 +1072,7 @@ async function saveAuthoringPerson() {
   const people = authoringDraft?.proposal?.people || []
   const original = people.find((person) => person.entity_id === selectedAuthoringPerson)
   if (!original) return
-  $('#create-save-person').disabled = true
+  setAuthoringBusy(true)
   $('#create-status').textContent = 'Saving the typed person edit without a model call…'
   const person = clone(original)
   person.label = $('#create-person-label').value.trim()
@@ -1082,13 +1093,13 @@ async function saveAuthoringPerson() {
   } catch (error) {
     $('#create-status').textContent = error.message
   } finally {
-    $('#create-save-person').disabled = false
+    setAuthoringBusy(false)
   }
 }
 
 async function approveAuthoringDraft() {
   if (!authoringDraft) return
-  $('#create-approve').disabled = true
+  setAuthoringBusy(true)
   $('#create-status').textContent = 'Freezing this exact typed configuration…'
   try {
     authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/approve`, {
@@ -1099,7 +1110,7 @@ async function approveAuthoringDraft() {
   } catch (error) {
     $('#create-status').textContent = error.message
   } finally {
-    $('#create-approve').disabled = false
+    setAuthoringBusy(false)
   }
 }
 

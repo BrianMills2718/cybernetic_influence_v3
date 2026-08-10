@@ -313,6 +313,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "featuredRunIds",
         "renderResearchCase",
         "renderCreateSimulation",
+        "setAuthoringBusy",
         "advanceAuthoringDraft",
         "saveAuthoringPerson",
         "approveAuthoringDraft",
