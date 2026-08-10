@@ -99,7 +99,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Edit personal character and memory" in page
     assert "Mechanism analysis and retained evidence" in page
     assert shape.stylesheets == ["assets/styles.css?v=resource-fork-v1"]
-    assert shape.scripts == ["assets/app.js?v=resource-fork-v1"]
+    assert shape.scripts == ["assets/app.js?v=resource-fork-v2"]
     assert {
         "overview-view",
         "case-view",
@@ -316,6 +316,10 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "websocket" not in script.lower()
     assert "openrouter" not in script.lower()
     assert "for (const run of dataset.runs) run.configuration" not in script
+    assert "await loadRetainedLiveRuns()" not in script
+    assert script.index("$('#workbench').hidden = false") < script.index(
+        "void loadRetainedLiveRuns().then"
+    )
     assert "cannot launch new model runs" not in json.dumps(_dataset())
     assert "[hidden] { display: none !important; }" in style
 

@@ -35,7 +35,10 @@ def main() -> int:
                 f"{request.method} {request.url}: {request.failure}"
             ),
         )
-        page.goto(f"{args.base_url.rstrip('/')}?view=case", wait_until="networkidle")
+        page.goto(
+            f"{args.base_url.rstrip('/')}?view=case",
+            wait_until="domcontentloaded",
+        )
         page.locator("#case-view").wait_for(state="visible")
         assert "four different resource packages" in page.locator(
             "#research-case-title"

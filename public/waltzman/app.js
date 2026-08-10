@@ -993,7 +993,6 @@ async function loadWorkbench() {
     state.runId = dataset.runs[0].run_id
     try { runtimeConfig = await apiRequest('api/config') } catch (error) { console.warn(`live simulator unavailable: ${error.message}`) }
     configureRuntime()
-    await loadRetainedLiveRuns()
     applyRunScopeFromUrl()
     readStateFromUrl()
     renderRail()
@@ -1001,6 +1000,12 @@ async function loadWorkbench() {
     renderView()
     $('#loading').hidden = true
     $('#workbench').hidden = false
+    void loadRetainedLiveRuns().then(() => {
+      applyRunScopeFromUrl()
+      renderRail()
+      configureControls()
+      renderView()
+    })
   } catch (error) {
     $('#loading').hidden = true
     $('#load-error').hidden = false
