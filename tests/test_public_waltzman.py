@@ -318,6 +318,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "saveAuthoringPerson",
         "approveAuthoringDraft",
         "runAuthoredSimulation",
+        "run.completion?.public_summary",
+        "run.outcome?.final_status",
         "fetch('assets/data.json'",
         "fetch('assets/autonomous-probe.json'",
         "fetch('assets/resource-fork.json'",

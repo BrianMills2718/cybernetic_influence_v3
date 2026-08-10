@@ -1122,16 +1122,22 @@ function scheduleAuthoredRunPoll(runId, delay = 1800) {
 async function pollAuthoredRun(runId) {
   try {
     const run = await apiRequest(`api/runs/${encodeURIComponent(runId)}`)
-    $('#create-run-heading').textContent = `Simulation ${sentence(run.status)}`
-    $('#create-run-detail').textContent = run.status === 'completed'
-      ? `${run.headline || 'Simulation completed.'} ${run.summary || ''}`
-      : `${Number(run.model_calls || 0)} retained model calls. The world is still advancing.`
     if (run.status === 'completed') {
+      const outcome = run.outcome?.final_status || run.completion?.reason || 'completed'
+      const publicSummary = run.completion?.public_summary || run.summary || 'The simulation reached a terminal state.'
+      const callSummary = [
+        Number(run.agent_model_calls || 0) ? `${Number(run.agent_model_calls)} participant calls` : '',
+        Number(run.narration_model_calls || 0) ? `${Number(run.narration_model_calls)} narration calls` : '',
+      ].filter(Boolean).join(' and ')
+      $('#create-run-heading').textContent = `Result: ${sentence(outcome)}`
+      $('#create-run-detail').textContent = `${publicSummary}${callSummary ? ` ${callSummary} retained.` : ''}`
       $('#create-run-evidence').href = `api/runs/${encodeURIComponent(runId)}`
       $('#create-run-evidence').hidden = false
       $('#create-run').disabled = false
       return
     }
+    $('#create-run-heading').textContent = `Simulation ${sentence(run.status)}`
+    $('#create-run-detail').textContent = `${Number(run.model_calls || 0)} retained model calls. The world is still advancing.`
     if (['failed', 'interrupted', 'stopped'].includes(run.status)) throw new Error(run.error || `simulation ${run.status}`)
     scheduleAuthoredRunPoll(runId)
   } catch (error) {
