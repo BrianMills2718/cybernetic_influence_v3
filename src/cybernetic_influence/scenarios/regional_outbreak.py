@@ -372,6 +372,32 @@ class MessageForkControl(BaseModel):
     round: int = Field(ge=1, le=MAX_ROUNDS)
 
 
+ResourceId = Literal[
+    "alba_mobile_lab",
+    "borin_clinician_roster",
+    "cyrenia_diagnostic_kits",
+    "cyrenia_protective_equipment",
+    "darsia_cold_chain_route",
+    "darsia_fuel_lot",
+]
+
+
+class ResourceCommitment(BaseModel):
+    """One inspectable resource claim and its independently retained audit result."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    resource_id: ResourceId
+    quantity: str = Field(min_length=1, max_length=120)
+    custodian_ref: str = Field(min_length=1, max_length=120)
+    current_location: str = Field(min_length=1, max_length=120)
+    availability_window: str = Field(min_length=1, max_length=120)
+    release_authority_ref: str = Field(min_length=1, max_length=120)
+    dependency_refs: list[str] = Field(max_length=8)
+    verification_evidence_refs: list[str] = Field(min_length=1, max_length=8)
+    claim_status: Literal["claimed_verified"] = "claimed_verified"
+    audit_status: Literal["verified", "contradicted"]
+
+
 class ResourceAllocation(BaseModel):
     """A bounded allocation authority action over concrete scenario objects.
 
@@ -381,25 +407,20 @@ class ResourceAllocation(BaseModel):
     """
 
     model_config = ConfigDict(extra="forbid", strict=True)
-    commitment_ids: list[
-        Literal[
-            "alba_mobile_lab",
-            "borin_clinician_roster",
-            "cyrenia_diagnostic_kits",
-            "cyrenia_protective_equipment",
-            "darsia_cold_chain_route",
-            "darsia_fuel_lot",
-        ]
-    ] = Field(min_length=1, max_length=6)
-    verification_status: Literal["proposed", "verified"]
+    commitments: list[ResourceCommitment] = Field(min_length=1, max_length=6)
+    verification_status: Literal["verified", "contradicted"]
     manifest_ref: str = Field(min_length=3, max_length=120)
     delivery_mode: Literal["world_update", "cso_stabilization"] = "world_update"
     intervention_action_id: CsoInterventionAction = "resource_coordination"
 
     @model_validator(mode="after")
     def require_unique_commitments(self) -> "ResourceAllocation":
-        if len(set(self.commitment_ids)) != len(self.commitment_ids):
+        commitment_ids = [item.resource_id for item in self.commitments]
+        if len(set(commitment_ids)) != len(commitment_ids):
             raise ValueError("resource allocation cannot commit the same object twice")
+        contradicted = any(item.audit_status == "contradicted" for item in self.commitments)
+        if contradicted != (self.verification_status == "contradicted"):
+            raise ValueError("manifest status must reflect its retained commitment audits")
         return self
 
 
@@ -744,7 +765,7 @@ class AllocationAuthoritySystem:
         if not commitments:
             raise ValueError(f"CSO action {action_id} does not authorize resource allocation")
         allocation = ResourceAllocation(
-            commitment_ids=cast(Any, commitments),
+            commitments=cast(Any, outbreak_resource_commitments(commitments)),
             verification_status="verified",
             manifest_ref=f"{action_id}-48h-allocation-manifest",
             delivery_mode="cso_stabilization",
@@ -837,6 +858,7 @@ def outbreak_fixture(
         ),
     )
     for resource_id, destination in _RESOURCE_DESTINATIONS.items():
+        operational = _RESOURCE_OPERATIONAL_EVIDENCE[resource_id]
         entities[resource_id] = EntityState(
             entity_id=resource_id,
             entity_kind="conserved_operational_resource",
@@ -845,14 +867,15 @@ def outbreak_fixture(
                 "availability": FactState(value="available"),
                 "assigned_to": FactState(value="unassigned"),
                 "quantity": FactState(
-                    value={
-                        "alba_mobile_lab": "one mobile laboratory unit",
-                        "borin_clinician_roster": "24 clinicians",
-                        "cyrenia_diagnostic_kits": "named diagnostic kits",
-                        "cyrenia_protective_equipment": "named protective equipment",
-                        "darsia_cold_chain_route": "one protected cold-chain route",
-                        "darsia_fuel_lot": "one fuel lot",
-                    }[resource_id]
+                    value=operational["quantity"]
+                ),
+                "custodian_ref": FactState(value=operational["custodian_ref"]),
+                "current_location": FactState(value=operational["current_location"]),
+                "availability_window": FactState(value=operational["availability_window"]),
+                "release_authority_ref": FactState(value=operational["release_authority_ref"]),
+                "dependency_refs": FactState(value=operational["dependency_refs"]),
+                "verification_evidence_refs": FactState(
+                    value=operational["verification_evidence_refs"]
                 ),
             },
         )
@@ -1833,12 +1856,96 @@ _RESOURCE_DESTINATIONS: dict[str, str] = {
     "darsia_fuel_lot": "Darsia remote corridor",
 }
 
+_RESOURCE_OPERATIONAL_EVIDENCE: dict[str, dict[str, JsonValue]] = {
+    "alba_mobile_lab": {
+        "quantity": "1 mobile BSL-2 laboratory with 400 tests/day capacity",
+        "custodian_ref": "regional_laboratory_reserve",
+        "current_location": "Alba north logistics depot",
+        "availability_window": "hour 6 through hour 72",
+        "release_authority_ref": "regional_allocation_authority",
+        "dependency_refs": ["route_alba_north", "alba_site_power_connection"],
+        "verification_evidence_refs": ["inventory_scan:MLAB-07", "custodian_signature:RLR-204"],
+    },
+    "borin_clinician_roster": {
+        "quantity": "24 clinicians in 3 eight-person rotations",
+        "custodian_ref": "regional_emergency_staffing_pool",
+        "current_location": "Borin transport hub staging area",
+        "availability_window": "hour 4 through hour 52",
+        "release_authority_ref": "regional_allocation_authority",
+        "dependency_refs": ["borin_shift_clearance", "staff_transport_manifest"],
+        "verification_evidence_refs": ["signed_roster:BOR-24", "credential_audit:CLIN-88"],
+    },
+    "cyrenia_diagnostic_kits": {
+        "quantity": "1,200 diagnostic kits",
+        "custodian_ref": "regional_medical_stockpile",
+        "current_location": "Cyrenia central warehouse",
+        "availability_window": "hour 3 through hour 96",
+        "release_authority_ref": "regional_allocation_authority",
+        "dependency_refs": ["cyrenia_dispatch_order"],
+        "verification_evidence_refs": ["lot_count:DX-1200", "expiry_audit:DX-2028"],
+    },
+    "cyrenia_protective_equipment": {
+        "quantity": "600 field PPE sets",
+        "custodian_ref": "regional_medical_stockpile",
+        "current_location": "Cyrenia central warehouse",
+        "availability_window": "hour 3 through hour 96",
+        "release_authority_ref": "regional_allocation_authority",
+        "dependency_refs": ["cyrenia_dispatch_order"],
+        "verification_evidence_refs": ["lot_count:PPE-600", "seal_check:PPE-41"],
+    },
+    "darsia_cold_chain_route": {
+        "quantity": "1 protected route with 2 refrigerated vehicles",
+        "custodian_ref": "darsia_relief_logistics_cell",
+        "current_location": "Darsia east distribution yard",
+        "availability_window": "hour 8 through hour 80",
+        "release_authority_ref": "regional_allocation_authority",
+        "dependency_refs": ["darsia_fuel_lot", "remote_corridor_access_window"],
+        "verification_evidence_refs": ["vehicle_telematics:COLD-2", "route_clearance:DR-19"],
+    },
+    "darsia_fuel_lot": {
+        "quantity": "2,400 liters of reserved diesel",
+        "custodian_ref": "darsia_relief_logistics_cell",
+        "current_location": "Darsia east distribution yard",
+        "availability_window": "hour 8 through hour 80",
+        "release_authority_ref": "regional_allocation_authority",
+        "dependency_refs": ["fuel_release_receipt"],
+        "verification_evidence_refs": ["tank_gauge:FUEL-2400", "custodian_signature:DRLC-51"],
+    },
+}
+
+
+def outbreak_resource_commitments(
+    resource_ids: list[str], *, contradicted_ids: frozenset[str] = frozenset()
+) -> list[dict[str, JsonValue]]:
+    """Build the exact operational claims used by authority actions and probes."""
+
+    return [
+        {
+            "resource_id": resource_id,
+            **_RESOURCE_OPERATIONAL_EVIDENCE[resource_id],
+            "claim_status": "claimed_verified",
+            "audit_status": "contradicted" if resource_id in contradicted_ids else "verified",
+        }
+        for resource_id in resource_ids
+    ]
+
 
 def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
     allocation = ResourceAllocation.model_validate(context.effect.payload)
     resources: list[dict[str, JsonValue]] = []
     updates: list[FactUpdate] = []
-    for resource_id in allocation.commitment_ids:
+    for commitment in allocation.commitments:
+        resource_id = commitment.resource_id
+        resource_record = commitment.model_dump(mode="json")
+        if commitment.audit_status == "contradicted":
+            resources.append(
+                {
+                    **resource_record,
+                    "assigned_to": "unassigned",
+                    "world_outcome": "claim_rejected_no_custody_change",
+                }
+            )
+            continue
         availability = context.read(f"{resource_id}.availability")
         if availability != "available":
             raise ValueError(f"resource {resource_id} is no longer available")
@@ -1851,7 +1958,7 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
         )
         resources.append(
             {
-                "resource_id": resource_id,
+                **resource_record,
                 "assigned_to": destination,
                 "world_outcome": "committed",
             }
@@ -1868,7 +1975,7 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
             ),
             FactUpdate(
                 fact_id="regional_allocation_manifest.commitment_ids",
-                value=cast(JsonValue, allocation.commitment_ids),
+                value=cast(JsonValue, [item.resource_id for item in allocation.commitments]),
             ),
         ]
     )
@@ -1970,7 +2077,7 @@ def _bounded_resource_allocation(
     allocation = ResourceAllocation.model_validate(context.effect.payload)
     return (
         len(outcome.updates)
-        == len(allocation.commitment_ids) * 2 + 3
+        == sum(item.audit_status == "verified" for item in allocation.commitments) * 2 + 3
         + (2 if allocation.delivery_mode == "cso_stabilization" else 0)
         and len(outcome.observations) == len(AGENT_IDS)
         and all(item.apparent_source_ref == "regional_allocation_authority" for item in outcome.observations)

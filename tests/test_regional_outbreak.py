@@ -28,6 +28,7 @@ from cybernetic_influence.scenarios.regional_outbreak import (
     outbreak_bindings,
     outbreak_fixture,
     outbreak_readout,
+    outbreak_resource_commitments,
     outbreak_runtime_config,
     run_outbreak,
 )
@@ -53,14 +54,11 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                             ActionIntent(
                                 output_port_id="resource_allocation_out",
                                 payload={
-                                    "commitment_ids": [
-                                        "alba_mobile_lab",
-                                        "borin_clinician_roster",
-                                        "cyrenia_diagnostic_kits",
-                                        "cyrenia_protective_equipment",
-                                        "darsia_cold_chain_route",
-                                        "darsia_fuel_lot",
-                                    ],
+                                    "commitments": outbreak_resource_commitments([
+                                        "alba_mobile_lab", "borin_clinician_roster",
+                                        "cyrenia_diagnostic_kits", "cyrenia_protective_equipment",
+                                        "darsia_cold_chain_route", "darsia_fuel_lot",
+                                    ]),
                                     "verification_status": "verified",
                                     "manifest_ref": "scripted-cso-allocation",
                                     "delivery_mode": "cso_stabilization",
@@ -499,7 +497,9 @@ def test_resource_allocation_moves_conserved_objects_and_publishes_manifest() ->
             actor_entity_id="regional_allocation_authority",
             output_port_id="resource_allocation_out",
             payload={
-                "commitment_ids": ["alba_mobile_lab", "borin_clinician_roster"],
+                "commitments": outbreak_resource_commitments(
+                    ["alba_mobile_lab", "borin_clinician_roster"]
+                ),
                 "verification_status": "verified",
                 "manifest_ref": "manifest-48h-001",
             },
@@ -533,3 +533,44 @@ def test_resource_allocation_moves_conserved_objects_and_publishes_manifest() ->
         "alba_mobile_lab",
         "borin_clinician_roster",
     }
+    assert all(item["audit_status"] == "verified" for item in payload["resource_commitments"])
+    assert all(item["availability_window"] for item in payload["resource_commitments"])
+
+
+def test_contradicted_resource_claim_does_not_move_world_custody() -> None:
+    fixture = outbreak_fixture("baseline", world_resource_probe=True)
+    session = ActiveRuntimeSession(
+        fixture.scenario, fixture.exact_bindings, fixture.active_specs, _bindings(fixture),
+        run_id="outbreak_false_resource_claim",
+        config=outbreak_runtime_config(per_call_budget=0.01, per_run_budget=0.1),
+        participant_concurrency=3,
+    )
+    session.apply_external_action(
+        ActionAttempt(
+            action_id="contradicted_allocation_manifest",
+            actor_entity_id="regional_allocation_authority",
+            output_port_id="resource_allocation_out",
+            payload={
+                "commitments": outbreak_resource_commitments(
+                    ["darsia_fuel_lot"], contradicted_ids=frozenset({"darsia_fuel_lot"})
+                ),
+                "verification_status": "contradicted",
+                "manifest_ref": "manifest-false-001",
+            },
+            logical_time=0,
+            public_summary="Audited a claimed allocation whose evidence was contradicted.",
+        )
+    )
+    state = session.core_state
+    assert state.fact("darsia_fuel_lot.availability").value == "available"
+    assert state.fact("darsia_fuel_lot.assigned_to").value == "unassigned"
+    assert state.fact("regional_allocation_manifest.status").value == "contradicted"
+    observations = [
+        json.loads(item.apparent_content)
+        for item in state.observations.values()
+        if item.apparent_source_ref == "regional_allocation_authority"
+    ]
+    claim = observations[0]["resource_commitments"][0]
+    assert claim["claim_status"] == "claimed_verified"
+    assert claim["audit_status"] == "contradicted"
+    assert claim["world_outcome"] == "claim_rejected_no_custody_change"
