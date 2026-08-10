@@ -36,7 +36,7 @@ def main() -> int:
             ),
         )
         page.goto(
-            f"{args.base_url.rstrip('/')}?view=case",
+            f"{args.base_url.rstrip('/')}/?view=case",
             wait_until="domcontentloaded",
         )
         page.locator("#case-view").wait_for(state="visible")
