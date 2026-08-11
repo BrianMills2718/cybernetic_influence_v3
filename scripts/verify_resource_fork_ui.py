@@ -14,6 +14,8 @@ def main() -> int:
     parser.add_argument("--base-url", default="http://127.0.0.1:8765")
     parser.add_argument("--screenshot", type=Path)
     parser.add_argument("--overview-screenshot", type=Path)
+    parser.add_argument("--guided-screenshot", type=Path)
+    parser.add_argument("--guided-start-screenshot", type=Path)
     parser.add_argument("--chromium", type=Path)
     parser.add_argument(
         "--require-network-graph",
@@ -41,6 +43,39 @@ def main() -> int:
                 f"{request.method} {request.url}: {request.failure}"
             ),
         )
+        page.goto(
+            f"{args.base_url.rstrip('/')}/?view=guide&guide_step=1",
+            wait_until="domcontentloaded",
+        )
+        page.locator("#guide-view").wait_for(state="visible")
+        assert "Get one generator to the clinic by 6:00 PM" in page.locator(
+            "#guide-step-title"
+        ).inner_text()
+        page.locator("#guide-graph .react-flow__node").nth(1).wait_for(state="attached", timeout=5_000)
+        assert page.locator("#guide-graph .react-flow__node").count() == 2
+        if args.guided_start_screenshot:
+            args.guided_start_screenshot.parent.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(args.guided_start_screenshot), full_page=True)
+        page.locator("#guide-next").click()
+        page.locator("#guide-graph .react-flow__node").nth(6).wait_for(state="attached", timeout=5_000)
+        assert "No single person" in page.locator("#guide-step-title").inner_text()
+        page.locator('[data-guide-step="3"]').click()
+        page.wait_for_timeout(1_000)
+        message_node_count = page.locator("#guide-graph .react-flow__node").count()
+        assert message_node_count == 12, (message_node_count, console_errors)
+        assert "Four different messages" in page.locator("#guide-step-title").inner_text()
+        assert "Heterogeneous inputs" in page.locator(
+            "#guide-step-language"
+        ).inner_text()
+        page.locator('[data-guide-step="6"]').click()
+        final_facts = page.locator("#guide-step-facts").inner_text()
+        assert "delivery readiness" in final_facts.lower(), final_facts
+        assert "blocked" in final_facts.lower(), final_facts
+        if args.guided_screenshot:
+            args.guided_screenshot.parent.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(args.guided_screenshot), full_page=True)
+        page.locator("#guide-next").click()
+        page.locator("#case-view").wait_for(state="visible")
         page.goto(
             f"{args.base_url.rstrip('/')}/?view=case",
             wait_until="domcontentloaded",
@@ -122,7 +157,7 @@ def main() -> int:
     if failed_requests:
         raise RuntimeError(f"failed browser requests: {failed_requests}")
     graph_status = " and both retained network projections" if args.require_network_graph else ""
-    print(f"Resource-fork case{graph_status} and preserved Lab entry rendered without browser errors.")
+    print(f"Guided example, resource-fork case{graph_status}, and preserved Lab entry rendered without browser errors.")
     return 0
 
 

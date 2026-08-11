@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=92a310c">
-  <link rel="stylesheet" href="assets/styles.css?v=goals-graph-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=guided-example-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -20,7 +20,8 @@
     </div>
     <nav class="view-tabs" aria-label="Primary navigation">
       <button type="button" data-view="overview">Overview</button>
-      <button type="button" data-view="case">Example simulation</button>
+      <button type="button" data-view="guide">Guided example</button>
+      <button type="button" data-view="case">Full outbreak case</button>
       <button type="button" data-view="create">Create simulation</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
@@ -62,7 +63,7 @@
           <p>Build a world, let autonomous people perceive and act within it, and inspect how local interactions accumulate into changes in collective decision-making.</p>
           <div class="hero-actions">
             <button class="primary-cta" type="button" data-view="create">Create a simulation</button>
-            <button class="secondary-cta" type="button" data-view="case">Explore a completed simulation</button>
+            <button class="secondary-cta" type="button" data-view="guide">Learn through a simple example</button>
           </div>
           <p class="scope-note">A wargaming and mechanism-exploration tool. It does not predict how real people or social systems will behave.</p>
         </header>
@@ -85,6 +86,41 @@
         <section class="overview-flow" aria-label="Product workflow">
           <article><b>1</b><div><strong>Describe a world</strong><p>Start in ordinary language.</p></div></article><i>→</i><article><b>2</b><div><strong>Review the configuration</strong><p>Edit the generated people and scenario assumptions.</p></div></article><i>→</i><article><b>3</b><div><strong>Run and inspect</strong><p>Follow the world, actions, coordination process, and evidence.</p></div></article>
         </section>
+      </section>
+
+      <section id="guide-view" class="workspace-view guided-example" aria-labelledby="guide-title" hidden>
+        <header class="guide-header">
+          <div><span class="case-label">Illustrative tutorial · authored teaching sequence</span><h2 id="guide-title">Deliver one generator before the clinic loses power.</h2><p>Learn the simulation’s visual and conceptual language in seven short steps. Each step adds one idea to the same picture.</p></div>
+          <button class="quiet-button" type="button" data-view="case">Skip to the full outbreak case</button>
+        </header>
+
+        <div class="guide-stage">
+          <section class="guide-visual" aria-labelledby="guide-visual-title">
+            <header><span>World view</span><strong id="guide-visual-title">What exists and how it connects</strong></header>
+            <div id="guide-graph" class="guide-graph react-canvas-host" aria-label="Interactive generator delivery network"></div>
+            <div class="guide-legend" aria-label="Visual language">
+              <span data-guide-kind="person"><i></i><b>Person</b> perceives and acts</span>
+              <span data-guide-kind="thing"><i></i><b>Thing</b> can be used or moved</span>
+              <span data-guide-kind="information"><i></i><b>Message</b> is received, not automatically true</span>
+              <span data-guide-kind="mechanism"><i></i><b>Process</b> applies world rules</span>
+            </div>
+            <p id="guide-selection" class="guide-selection"><strong>Picture language:</strong> an arrow is a possible path for information, action, or a resource—not proof that anything traveled.</p>
+          </section>
+
+          <aside class="guide-explanation" aria-live="polite">
+            <div class="guide-progress-label"><span id="guide-step-count">Step 1 of 7</span><span id="guide-step-kicker">Start with the objective</span></div>
+            <h3 id="guide-step-title"></h3>
+            <p id="guide-step-body"></p>
+            <div id="guide-step-facts" class="guide-step-facts"></div>
+            <section class="guide-language"><span>What the language means</span><dl id="guide-step-language"></dl></section>
+            <section id="guide-step-takeaway" class="guide-takeaway"></section>
+          </aside>
+        </div>
+
+        <footer class="guide-controls">
+          <div id="guide-progress" class="guide-progress" aria-label="Walkthrough progress"></div>
+          <div><button id="guide-previous" type="button">Previous</button><button id="guide-next" class="primary-cta" type="button">Next</button></div>
+        </footer>
       </section>
 
       <section id="case-view" class="workspace-view research-case" aria-labelledby="research-case-title" hidden>
@@ -514,6 +550,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=92a310c" defer></script>
-  <script src="assets/app.js?v=goals-graph-v1" defer></script>
+  <script src="assets/app.js?v=guided-example-v1" defer></script>
 </body>
 </html>

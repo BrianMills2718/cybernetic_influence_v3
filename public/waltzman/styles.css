@@ -994,6 +994,59 @@ tbody tr:last-child td { border-bottom: 0; }
 .overview-purpose { border-left: 3px solid var(--accent); color: var(--muted); line-height: 1.65; margin: 26px 0 0; padding: 10px 0 10px 18px; }
 .overview-purpose strong { color: var(--text); }
 
+/* Progressive visual-language tutorial. */
+#guide-view:not([hidden]) { display: grid; }
+.guided-result #guide-view { margin: 0 auto; max-width: 1320px; }
+.guided-example { gap: 22px; }
+.guide-header { align-items: end; display: flex; gap: 30px; justify-content: space-between; }
+.guide-header > div { max-width: 880px; }
+.guide-header h2 { font-size: clamp(1.8rem, 3vw, 2.75rem); letter-spacing: -0.04em; line-height: 1.05; margin: 9px 0 9px; max-width: 30ch; }
+.guide-header p { color: var(--muted); font-size: 0.92rem; line-height: 1.55; margin: 0; max-width: 76ch; }
+.guide-header > button { flex: 0 0 auto; }
+.guide-stage { align-items: stretch; display: grid; gap: 18px; grid-template-columns: minmax(0, 1.55fr) minmax(330px, 0.65fr); }
+.guide-visual, .guide-explanation { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; min-width: 0; overflow: hidden; }
+.guide-visual > header { align-items: baseline; display: flex; gap: 10px; padding: 13px 16px; }
+.guide-visual > header span, .guide-progress-label span:last-child, .guide-language > span, .guide-takeaway > span { color: var(--accent); font-size: 0.69rem; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
+.guide-visual > header strong { font-size: 0.86rem; }
+.guide-graph { background: #0b151f; border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); height: 500px; overflow: hidden; }
+.guide-graph .cy-graph-shell { min-height: 500px; }
+.guide-graph .cy-graph-canvas { min-height: 500px; }
+.guide-graph .cy-graph-bar { display: none; }
+.guide-legend { display: grid; gap: 1px; grid-template-columns: repeat(4, 1fr); }
+.guide-legend > span { align-items: center; background: #0c1721; color: var(--muted); display: grid; font-size: 0.67rem; gap: 2px 7px; grid-template-columns: 10px 1fr; line-height: 1.35; min-height: 54px; padding: 8px 10px; }
+.guide-legend i { border: 2px solid #57b49d; border-radius: 3px; grid-row: 1 / span 2; height: 10px; width: 10px; }
+.guide-legend [data-guide-kind="person"] i { border-color: #58a6ff; }
+.guide-legend [data-guide-kind="information"] i { border-color: #ef79b7; }
+.guide-legend [data-guide-kind="mechanism"] i { border-color: #e8a84d; }
+.guide-legend b { color: var(--text); font-size: 0.7rem; }
+.guide-selection { color: var(--muted); font-size: 0.7rem; line-height: 1.5; margin: 0; min-height: 48px; padding: 10px 14px; }
+.guide-selection strong { color: var(--text); }
+.guide-explanation { display: flex; flex-direction: column; padding: 24px; }
+.guide-progress-label { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
+.guide-progress-label span:first-child { color: var(--faint); font-size: 0.72rem; font-weight: 750; }
+.guide-explanation h3 { font-size: clamp(1.65rem, 2.4vw, 2.2rem); letter-spacing: -0.035em; line-height: 1.08; margin: 22px 0 12px; }
+.guide-explanation > p { color: var(--muted); line-height: 1.65; margin: 0; }
+.guide-step-facts { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; margin-top: 22px; }
+.guide-step-facts > div { background: #0b151f; border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; }
+.guide-step-facts span, .guide-step-facts strong { display: block; }
+.guide-step-facts span { color: var(--faint); font-size: 0.64rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.guide-step-facts strong { font-size: 0.78rem; line-height: 1.35; margin-top: 4px; }
+.guide-language { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 18px; }
+.guide-language dl { margin: 12px 0 0; }
+.guide-language dl > div + div { margin-top: 12px; }
+.guide-language dt { font-size: 0.78rem; font-weight: 800; }
+.guide-language dd { color: var(--muted); font-size: 0.72rem; line-height: 1.5; margin: 3px 0 0; }
+.guide-takeaway { background: #102231; border-left: 3px solid var(--accent); display: grid; gap: 7px; margin-top: auto; padding: 14px 16px; }
+.guide-takeaway strong { font-size: 0.8rem; line-height: 1.5; }
+.guide-controls { align-items: center; border-top: 1px solid var(--line); display: flex; gap: 24px; justify-content: space-between; padding-top: 16px; }
+.guide-controls > div:last-child { display: flex; gap: 9px; }
+.guide-controls button { cursor: pointer; }
+#guide-previous { background: transparent; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); font-weight: 750; padding: 10px 16px; }
+#guide-previous:disabled { cursor: default; opacity: 0.35; }
+.guide-progress { display: flex; gap: 7px; }
+.guide-progress button { background: #102231; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); height: 28px; padding: 0; width: 28px; }
+.guide-progress button.active { background: var(--accent); border-color: var(--accent); color: #06111a; font-weight: 900; }
+
 /* Completed simulation world briefing. */
 .case-world-hero { max-width: 940px; }
 .case-world-hero h2 { font-size: clamp(2.4rem, 4.7vw, 4.3rem); letter-spacing: -0.05em; line-height: 1.02; margin: 14px 0 22px; max-width: 21ch; }
@@ -1099,6 +1152,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .runtime-status { display: none; }
   .trajectory-grid { grid-template-columns: repeat(3, 1fr); }
   .condition-options { grid-template-columns: 1fr; }
+  .guide-stage { grid-template-columns: minmax(0, 1.35fr) minmax(310px, 0.65fr); }
 }
 
 @media (max-width: 860px) {
@@ -1171,6 +1225,9 @@ tbody tr:last-child td { border-bottom: 0; }
   .experiment-in-one-line .changed-variable { border-left: 0; border-top: 1px solid var(--line-strong); }
   .outcome-strip { grid-template-columns: 1fr; }
   .hero-actions { align-items: stretch; flex-direction: column; }
+  .guide-header { align-items: stretch; flex-direction: column; }
+  .guide-stage { grid-template-columns: 1fr; }
+  .guide-explanation { min-height: 560px; }
   .primary-cta, .secondary-cta { text-align: center; width: 100%; }
   .result-card { min-height: 0; }
   .advanced-evidence-heading { align-items: stretch; flex-direction: column; }
@@ -1188,6 +1245,11 @@ tbody tr:last-child td { border-bottom: 0; }
   .case-network-graph { height: 560px; }
   .case-network-graph .cy-graph-shell { min-height: 560px; }
   .case-network-graph .cy-graph-canvas { min-height: 510px; }
+  .guide-graph, .guide-graph .cy-graph-shell, .guide-graph .cy-graph-canvas { height: 420px; min-height: 420px; }
+  .guide-legend { grid-template-columns: 1fr 1fr; }
+  .guide-step-facts { grid-template-columns: 1fr; }
+  .guide-controls { align-items: stretch; flex-direction: column; }
+  .guide-controls > div:last-child { display: grid; grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 520px) {

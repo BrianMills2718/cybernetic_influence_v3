@@ -71,7 +71,8 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
     assert "Create a simulation" in page
-    assert "Example simulation" in page
+    assert "Guided example" in page
+    assert "Full outbreak case" in page
     assert "Lab workspace" in page
     assert "Choose, configure, run" in page
     assert "Overview" in page
@@ -87,6 +88,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Explore detection and bounded response" in page
     assert "below the level of “the institution”" not in page
     assert "Homogeneous broadcasts" in page
+    assert "Deliver one generator before the clinic loses power" in page
+    assert "Illustrative tutorial · authored teaching sequence" in page
+    assert "Message</b> is received, not automatically true" in page
     assert "Four national response networks face one outbreak" in page
     assert "How local pressure can become a collective decision problem" in page
     assert "Complete network" in page
@@ -119,14 +123,24 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Tell the authoring model what to change" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=92a310c",
-        "assets/styles.css?v=goals-graph-v1",
+        "assets/styles.css?v=guided-example-v1",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=92a310c",
-        "assets/app.js?v=goals-graph-v1",
+        "assets/app.js?v=guided-example-v1",
     ]
     assert {
         "overview-view",
+        "guide-view",
+        "guide-graph",
+        "guide-step-title",
+        "guide-step-body",
+        "guide-step-facts",
+        "guide-step-language",
+        "guide-step-takeaway",
+        "guide-progress",
+        "guide-previous",
+        "guide-next",
         "case-view",
         "research-case-runs",
         "case-branch-detail",
@@ -354,6 +368,10 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "renderCaseNetworkGraph",
         "ensureCaseNetwork",
         "window.CyberneticGraph.render",
+        "guideSteps",
+        "renderGuideGraph",
+        "renderGuide",
+        "advanceGuide",
         "renderCreateSimulation",
         "setAuthoringBusy",
         "advanceAuthoringDraft",

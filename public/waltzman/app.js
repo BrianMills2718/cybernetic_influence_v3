@@ -48,6 +48,7 @@ const state = {
   labSection:'overview',
   buildStep:'environment',
   exampleEnvironment:0,
+  guideStep:0,
   caseBranch:'complete',
   runScopeIds:null,
 }
@@ -155,7 +156,9 @@ function lineItems(value) {
 function readStateFromUrl() {
   const params = new URLSearchParams(window.location.search)
   const requestedView = params.get('view')
-  if (['overview', 'case', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
+  if (['overview', 'guide', 'case', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
+  const requestedGuideStep = Number(params.get('guide_step'))
+  if (Number.isInteger(requestedGuideStep) && requestedGuideStep >= 1 && requestedGuideStep <= 7) state.guideStep = requestedGuideStep - 1
   const requestedRun = params.get('run')
   if (requestedRun && dataset.runs.some((run) => run.run_id === requestedRun)) state.runId = requestedRun
   const requestedRound = Number(params.get('round'))
@@ -186,7 +189,8 @@ function applyRunScopeFromUrl() {
 function syncUrl() {
   const url = new URL(window.location.href)
   url.searchParams.set('view', state.view)
-  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section', 'draft']) url.searchParams.delete(key)
+  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section', 'draft', 'guide_step']) url.searchParams.delete(key)
+  if (state.view === 'guide') url.searchParams.set('guide_step', String(state.guideStep + 1))
   if (state.view === 'inspect') {
     url.searchParams.set('run', state.runId)
     url.searchParams.set('round', String(state.round))
@@ -658,6 +662,168 @@ function renderMethod() {
   $('#provenance-time').dateTime = latest
 }
 
+const guideNodes = [
+  {id:'guide_clinic', kind:'thing', label:'Riverside clinic', description:'A clinic whose backup power fails at 6:00 PM.'},
+  {id:'guide_generator', kind:'thing', label:'Emergency generator', description:'A physical generator held at the municipal depot.'},
+  {id:'guide_truck', kind:'thing', label:'Delivery truck', description:'The vehicle that can move the generator to the clinic.'},
+  {id:'guide_depot_manager', kind:'person', label:'Depot manager', description:'Can release the generator but cannot choose the route or drive the truck.'},
+  {id:'guide_dispatcher', kind:'person', label:'Dispatcher', description:'Can choose and communicate a route but cannot release or transport the generator.'},
+  {id:'guide_driver', kind:'person', label:'Driver', description:'Can drive the truck when a generator, route, and valid permit are available.'},
+  {id:'guide_clinic_manager', kind:'person', label:'Clinic manager', description:'Can prepare the clinic to receive and connect the generator.'},
+  {id:'guide_delivery_gate', kind:'mechanism', label:'Delivery readiness', description:'A world rule: release, route, transport, and receipt must all be ready before delivery can occur.'},
+  {id:'guide_allocation_message', kind:'information', label:'“Generator allocated elsewhere”', description:'An unverified message delivered only to the depot manager.'},
+  {id:'guide_bridge_message', kind:'information', label:'“Bridge is closed”', description:'An unverified message delivered only to the dispatcher.'},
+  {id:'guide_permit_message', kind:'information', label:'“Truck permit is invalid”', description:'An unverified message delivered only to the driver.'},
+  {id:'guide_power_message', kind:'information', label:'“Clinic power is restored”', description:'An unverified message delivered only to the clinic manager.'},
+]
+
+const guideEdges = [
+  {id:'guide_depot_releases', kind:'authorizes_release', source:'guide_depot_manager', target:'guide_generator', enabled:true, description:'The depot manager may authorize release.', routeIds:['guide_depot_releases']},
+  {id:'guide_generator_loaded', kind:'loaded_onto', source:'guide_generator', target:'guide_truck', enabled:true, description:'The released generator may be loaded onto the truck.', routeIds:['guide_generator_loaded']},
+  {id:'guide_dispatcher_routes', kind:'assigns_route', source:'guide_dispatcher', target:'guide_truck', enabled:true, description:'The dispatcher may assign the truck a route.', routeIds:['guide_dispatcher_routes']},
+  {id:'guide_driver_moves', kind:'operates', source:'guide_driver', target:'guide_truck', enabled:true, description:'The driver may operate the truck.', routeIds:['guide_driver_moves']},
+  {id:'guide_truck_delivers', kind:'carries_to', source:'guide_truck', target:'guide_clinic', enabled:true, description:'The truck may carry the generator to the clinic.', routeIds:['guide_truck_delivers']},
+  {id:'guide_clinic_receives', kind:'prepares_to_receive', source:'guide_clinic_manager', target:'guide_clinic', enabled:true, description:'The clinic manager may prepare for and accept delivery.', routeIds:['guide_clinic_receives']},
+  {id:'guide_depot_ready', kind:'requires_release', source:'guide_depot_manager', target:'guide_delivery_gate', enabled:true, description:'Generator release is one required part of readiness.', routeIds:['guide_depot_ready']},
+  {id:'guide_dispatch_ready', kind:'requires_route', source:'guide_dispatcher', target:'guide_delivery_gate', enabled:true, description:'A usable route is one required part of readiness.', routeIds:['guide_dispatch_ready']},
+  {id:'guide_driver_ready', kind:'requires_transport', source:'guide_driver', target:'guide_delivery_gate', enabled:true, description:'Transport is one required part of readiness.', routeIds:['guide_driver_ready']},
+  {id:'guide_clinic_ready', kind:'requires_receipt', source:'guide_clinic_manager', target:'guide_delivery_gate', enabled:true, description:'Receiving capacity is one required part of readiness.', routeIds:['guide_clinic_ready']},
+  {id:'guide_gate_delivers', kind:'enables_delivery', source:'guide_delivery_gate', target:'guide_clinic', enabled:true, description:'When every requirement is ready, delivery can proceed.', routeIds:['guide_gate_delivers']},
+  {id:'guide_allocation_delivered', kind:'delivered_to', source:'guide_allocation_message', target:'guide_depot_manager', enabled:true, description:'Only the depot manager receives this message.', routeIds:['guide_allocation_delivered']},
+  {id:'guide_bridge_delivered', kind:'delivered_to', source:'guide_bridge_message', target:'guide_dispatcher', enabled:true, description:'Only the dispatcher receives this message.', routeIds:['guide_bridge_delivered']},
+  {id:'guide_permit_delivered', kind:'delivered_to', source:'guide_permit_message', target:'guide_driver', enabled:true, description:'Only the driver receives this message.', routeIds:['guide_permit_delivered']},
+  {id:'guide_power_delivered', kind:'delivered_to', source:'guide_power_message', target:'guide_clinic_manager', enabled:true, description:'Only the clinic manager receives this message.', routeIds:['guide_power_delivered']},
+]
+
+const guidePeopleAndThings = ['guide_clinic', 'guide_generator', 'guide_truck', 'guide_depot_manager', 'guide_dispatcher', 'guide_driver', 'guide_clinic_manager']
+const guideWorld = [...guidePeopleAndThings, 'guide_delivery_gate']
+const guideMessages = ['guide_allocation_message', 'guide_bridge_message', 'guide_permit_message', 'guide_power_message']
+const guideInformationEdges = ['guide_allocation_delivered', 'guide_bridge_delivered', 'guide_permit_delivered', 'guide_power_delivered']
+const guideSteps = [
+  {
+    kicker:'Start with the objective', title:'Get one generator to the clinic by 6:00 PM.',
+    body:'This is the coordination situation: a concrete outcome that requires several people and things to line up in time.',
+    nodes:['guide_clinic', 'guide_generator'], edges:[], focus:['guide_clinic', 'guide_generator'],
+    facts:[['Deadline','6:00 PM'], ['Generator','At municipal depot'], ['Clinic','Backup power failing']],
+    language:[['World','Everything that exists and can change in the simulation.'], ['Coordination situation','An outcome that depends on several local actions fitting together.']],
+    takeaway:'Begin with what must happen—not with agents, votes, or institutional labels.',
+  },
+  {
+    kicker:'Meet the participants', title:'No single person can complete the delivery.',
+    body:'Each person perceives only part of the situation and can attempt only actions available to them. The generator and truck do not decide anything, but people can act through them.',
+    nodes:guidePeopleAndThings, edges:[], focus:['guide_depot_manager', 'guide_dispatcher', 'guide_driver', 'guide_clinic_manager'],
+    facts:[['Depot manager','Releases generator'], ['Dispatcher','Chooses route'], ['Driver','Moves truck'], ['Clinic manager','Receives delivery']],
+    language:[['Person','A simulated individual who perceives, remembers, reasons, and attempts actions.'], ['Thing','A resource or technical object that can be used or moved but does not act autonomously.']],
+    takeaway:'Positions shape access and capability; they do not dictate what a person decides.',
+  },
+  {
+    kicker:'Connect the dependencies', title:'The arrows show what can travel or be attempted.',
+    body:'Release, routing, transport, and receipt must all be ready. The process node applies that world rule; it is not another person making a decision.',
+    nodes:guideWorld, edges:guideEdges.filter((edge) => !guideInformationEdges.includes(edge.id)).map((edge) => edge.id), focus:['guide_delivery_gate'],
+    facts:[['Release','Generator can be loaded'], ['Route','Truck has a usable path'], ['Transport','Driver can depart'], ['Receipt','Clinic can accept delivery']],
+    language:[['Arrow','A possible path—not evidence that something actually traveled.'], ['Process','A world mechanism that applies a rule or consequence without pretending to be a person.']],
+    takeaway:'The network represents concrete dependencies beneath the collective outcome.',
+  },
+  {
+    kicker:'Add uneven inputs', title:'Four different messages enter through four different channels.',
+    body:'There is no shared slogan. Each unverified message targets a locally relevant uncertainty. At this point it could be influence, error, or ordinary disruption.',
+    nodes:[...guideWorld, ...guideMessages], edges:guideEdges.map((edge) => edge.id), focus:guideMessages,
+    facts:[['Depot','“Allocated elsewhere”'], ['Dispatcher','“Bridge closed”'], ['Driver','“Permit invalid”'], ['Clinic','“Power restored”']],
+    language:[['Message','Information delivered to someone. Its presence does not make it true.'], ['Heterogeneous inputs','Different local signals that can still produce an aligned system-level effect.']],
+    takeaway:'A coordinated effect does not require everyone to receive or believe the same story.',
+  },
+  {
+    kicker:'Observe local reactions', title:'Each person adds a different prerequisite before acting.',
+    body:'The people interpret their own messages in light of their memories, goals, relationships, and uncertainty. The simulation does not directly assign their decisions.',
+    nodes:[...guideWorld, ...guideMessages], edges:guideEdges.map((edge) => edge.id), focus:['guide_depot_manager', 'guide_dispatcher', 'guide_driver', 'guide_clinic_manager'],
+    facts:[['Depot manager','Verify allocation'], ['Dispatcher','Confirm bridge status'], ['Driver','Validate permit'], ['Clinic manager','Recheck power']],
+    language:[['Prerequisite','Something a person now believes must be resolved before acting.'], ['Local reaction','A person’s response to what they perceived—not a centrally dictated vote.']],
+    takeaway:'The local reasons differ even when their practical effect points in the same direction.',
+  },
+  {
+    kicker:'See the collective effect', title:'The delivery stalls without a shared stop order.',
+    body:'Every required action is now waiting on something else. Nobody needs to oppose the clinic or coordinate with any message source for the joint outcome to fail.',
+    nodes:[...guideWorld, ...guideMessages], edges:guideEdges.map((edge) => edge.id), focus:['guide_delivery_gate'], blocked:true,
+    facts:[['Release','Waiting'], ['Route','Waiting'], ['Transport','Waiting'], ['Receipt','Waiting']],
+    language:[['Blocked pathway','A route that exists but cannot currently carry the required action or resource.'], ['Coordination readiness','Whether the required local actions can presently fit together.']],
+    takeaway:'A macro-level coordination failure can emerge from several locally reasonable pauses.',
+  },
+  {
+    kicker:'Read the system—not only the messages', title:'The useful evidence is the change in the network.',
+    body:'The simulator can inspect which reliance paths weakened, which prerequisites appeared, where bottlenecks formed, and whether the group’s ability to act changed over time.',
+    nodes:[...guideWorld, ...guideMessages], edges:guideEdges.map((edge) => edge.id), focus:['guide_delivery_gate'], blocked:true,
+    facts:[['Reliance paths','Four weakened'], ['New prerequisites','Four unresolved'], ['Delivery readiness','Blocked'], ['Shared narrative','None required']],
+    language:[['Coordination-level effect','A change in the system’s ability to produce joint action.'], ['Detection question','Is the directional change consistent with influence, ordinary disruption, or legitimate disagreement?']],
+    takeaway:'This is the bridge to Waltzman: detect directional changes in coordination conditions across heterogeneous local interactions.',
+  },
+]
+
+function guideProjection(step) {
+  const nodeIds = new Set(step.nodes)
+  const edgeIds = new Set(step.edges)
+  return {
+    nodes:guideNodes.filter((node) => nodeIds.has(node.id)),
+    edges:guideEdges.filter((edge) => edgeIds.has(edge.id) && nodeIds.has(edge.source) && nodeIds.has(edge.target)).map((edge) => ({
+      ...edge,
+      enabled:step.blocked && !guideInformationEdges.includes(edge.id) ? false : edge.enabled,
+    })),
+  }
+}
+
+function renderGuideSelection(item, relationship = false) {
+  $('#guide-selection').innerHTML = `<strong>${escapeHtml(item.label || sentence(item.id))}:</strong> ${escapeHtml(item.description || (relationship ? 'A retained possible path.' : 'A simulated world entity.'))}`
+}
+
+function renderGuideGraph(step) {
+  const graph = $('#guide-graph')
+  const projection = guideProjection(step)
+  window.CyberneticGraph.render(graph, {
+    nodes:projection.nodes,
+    edges:projection.edges,
+    boundaries:[], world:null, trajectory:{nodes:[], edges:[]},
+    graphDiagnostics:{nodeClassification:{}, edgeClassification:{}, warnings:[]},
+    viewMode:'causal', event:{event_id:`guide_step_${state.guideStep + 1}`, state_revision:state.guideStep, focus_ids:step.focus, focus_edges:[], spatial_focus_ids:[], spatial_link_ids:[], boundary_ids:[]}, initialRevision:state.guideStep,
+    selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
+    onSelectNode:(nodeId) => {
+      const node = projection.nodes.find((candidate) => candidate.id === nodeId)
+      if (node) renderGuideSelection(node)
+    },
+    onSelectEdge:(edge) => renderGuideSelection(edge, true),
+  })
+}
+
+function renderGuide() {
+  const step = guideSteps[state.guideStep]
+  $('#guide-step-count').textContent = `Step ${state.guideStep + 1} of ${guideSteps.length}`
+  $('#guide-step-kicker').textContent = step.kicker
+  $('#guide-step-title').textContent = step.title
+  $('#guide-step-body').textContent = step.body
+  $('#guide-step-facts').innerHTML = step.facts.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')
+  $('#guide-step-language').innerHTML = step.language.map(([term, definition]) => `<div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(definition)}</dd></div>`).join('')
+  $('#guide-step-takeaway').innerHTML = `<span>Why this matters</span><strong>${escapeHtml(step.takeaway)}</strong>`
+  $('#guide-progress').innerHTML = guideSteps.map((candidate, index) => `<button type="button" data-guide-step="${index}" class="${index === state.guideStep ? 'active' : ''}" aria-label="Open step ${index + 1}: ${escapeHtml(candidate.title)}" aria-current="${index === state.guideStep ? 'step' : 'false'}">${index + 1}</button>`).join('')
+  $('#guide-previous').disabled = state.guideStep === 0
+  $('#guide-next').textContent = state.guideStep === guideSteps.length - 1 ? 'Open full outbreak case' : 'Next'
+  all('[data-guide-step]').forEach((button) => {
+    button.onclick = () => { state.guideStep = Number(button.dataset.guideStep); renderGuide(); syncUrl() }
+  })
+  renderGuideGraph(step)
+}
+
+function advanceGuide(direction) {
+  const next = state.guideStep + direction
+  if (next >= guideSteps.length) {
+    state.view = 'case'
+    renderView()
+    syncUrl()
+    window.scrollTo({top:0, behavior:'auto'})
+    return
+  }
+  state.guideStep = Math.max(0, next)
+  renderGuide()
+  syncUrl()
+}
+
 function caseSystemProjection(raw) {
   const indexed = new Map((raw.nodes || []).map((node) => [node.id, node]))
   const sourceIds = [
@@ -844,11 +1010,11 @@ function renderResearchCase() {
 }
 
 function renderView() {
-  const publicView = ['overview', 'case', 'create', 'mechanism'].includes(state.view)
+  const publicView = ['overview', 'guide', 'case', 'create', 'mechanism'].includes(state.view)
   document.body.classList.toggle('guided-result', publicView)
   document.body.classList.toggle('public-shell', publicView)
   document.body.classList.toggle('lab-shell', !publicView)
-  for (const view of ['overview', 'case', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
+  for (const view of ['overview', 'guide', 'case', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
   all('[data-view]').forEach((button) => {
     const active = button.dataset.view === state.view
     button.classList.toggle('active', active)
@@ -862,6 +1028,7 @@ function renderView() {
     button.setAttribute('aria-current', active ? 'page' : 'false')
   })
   if (state.view === 'run') renderRunSetup()
+  if (state.view === 'guide') renderGuide()
   if (state.view === 'case') {
     renderResearchCase()
     void ensureCaseNetwork()
@@ -905,6 +1072,8 @@ function configureControls() {
   all('[data-case-graph]').forEach((button) => {
     button.onclick = () => { caseGraphMode = button.dataset.caseGraph; renderCaseNetworkGraph() }
   })
+  $('#guide-previous').onclick = () => advanceGuide(-1)
+  $('#guide-next').onclick = () => advanceGuide(1)
   all('[data-open-lab]').forEach((button) => { button.onclick = () => navigateLab('run') })
   all('[data-lab-view]').forEach((button) => {
     button.onclick = () => navigateLab(button.dataset.labView, button.dataset.labSection || 'overview')
