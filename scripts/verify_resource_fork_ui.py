@@ -76,11 +76,6 @@ def main() -> int:
             page.screenshot(path=str(args.guided_screenshot), full_page=True)
         page.locator("#guide-next").click()
         page.locator("#case-view").wait_for(state="visible")
-        page.goto(
-            f"{args.base_url.rstrip('/')}/?view=case",
-            wait_until="domcontentloaded",
-        )
-        page.locator("#case-view").wait_for(state="visible")
         assert "Four national response networks" in page.locator(
             "#research-case-title"
         ).inner_text()
