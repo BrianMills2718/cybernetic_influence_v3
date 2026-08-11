@@ -62,6 +62,16 @@ def main() -> int:
         assert "No single person" in page.locator("#guide-step-title").inner_text()
         assert "Next: Connect the dependencies" in page.locator("#guide-next").inner_text()
         assert page.locator("#guide-graph .react-flow__edge").count() == 4
+        page.wait_for_timeout(500)
+        graph_box = page.locator("#guide-graph").bounding_box()
+        assert graph_box is not None
+        for index in range(7):
+            node_box = page.locator("#guide-graph .react-flow__node").nth(index).bounding_box()
+            assert node_box is not None
+            assert node_box["x"] >= graph_box["x"]
+            assert node_box["y"] >= graph_box["y"]
+            assert node_box["x"] + node_box["width"] <= graph_box["x"] + graph_box["width"]
+            assert node_box["y"] + node_box["height"] <= graph_box["y"] + graph_box["height"]
         if args.guided_second_screenshot:
             args.guided_second_screenshot.parent.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(args.guided_second_screenshot), full_page=True)
