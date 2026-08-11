@@ -90,7 +90,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Homogeneous broadcasts" in page
     assert "Deliver one generator before the clinic loses power" in page
     assert "Illustrative tutorial · authored teaching sequence" in page
+    assert "Click Next to reveal one part of the system at a time" in page
     assert "Message</b> is received, not automatically true" in page
+    assert page.index('class="guide-controls"') < page.index('class="guide-stage"')
     assert "Four national response networks face one outbreak" in page
     assert "How local pressure can become a collective decision problem" in page
     assert "Complete network" in page
@@ -123,11 +125,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Tell the authoring model what to change" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=92a310c",
-        "assets/styles.css?v=guided-example-v1",
+        "assets/styles.css?v=guided-example-v2",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=92a310c",
-        "assets/app.js?v=guided-example-v1",
+        "assets/app.js?v=guided-example-v2",
     ]
     assert {
         "overview-view",
@@ -372,6 +374,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "renderGuideGraph",
         "renderGuide",
         "advanceGuide",
+        "Next: ${guideSteps[state.guideStep + 1].kicker}",
         "renderCreateSimulation",
         "setAuthoringBusy",
         "advanceAuthoringDraft",

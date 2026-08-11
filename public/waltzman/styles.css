@@ -1038,9 +1038,13 @@ tbody tr:last-child td { border-bottom: 0; }
 .guide-language dd { color: var(--muted); font-size: 0.72rem; line-height: 1.5; margin: 3px 0 0; }
 .guide-takeaway { background: #102231; border-left: 3px solid var(--accent); display: grid; gap: 7px; margin-top: auto; padding: 14px 16px; }
 .guide-takeaway strong { font-size: 0.8rem; line-height: 1.5; }
-.guide-controls { align-items: center; border-top: 1px solid var(--line); display: flex; gap: 24px; justify-content: space-between; padding-top: 16px; }
+.guide-controls { align-items: center; background: #102231; border: 1px solid var(--line-strong); border-left: 4px solid var(--accent); border-radius: 10px; display: grid; gap: 18px; grid-template-columns: minmax(220px, 1fr) auto auto; padding: 12px 14px; }
 .guide-controls > div:last-child { display: flex; gap: 9px; }
 .guide-controls button { cursor: pointer; }
+.guide-control-hint { display: grid; gap: 2px; }
+.guide-control-hint strong { font-size: 0.82rem; }
+.guide-control-hint span { color: var(--muted); font-size: 0.72rem; }
+#guide-next { min-width: 245px; }
 #guide-previous { background: transparent; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); font-weight: 750; padding: 10px 16px; }
 #guide-previous:disabled { cursor: default; opacity: 0.35; }
 .guide-progress { display: flex; gap: 7px; }
@@ -1226,6 +1230,8 @@ tbody tr:last-child td { border-bottom: 0; }
   .outcome-strip { grid-template-columns: 1fr; }
   .hero-actions { align-items: stretch; flex-direction: column; }
   .guide-header { align-items: stretch; flex-direction: column; }
+  .guide-controls { grid-template-columns: 1fr auto; }
+  .guide-control-hint { grid-column: 1 / -1; }
   .guide-stage { grid-template-columns: 1fr; }
   .guide-explanation { min-height: 560px; }
   .primary-cta, .secondary-cta { text-align: center; width: 100%; }
@@ -1249,7 +1255,11 @@ tbody tr:last-child td { border-bottom: 0; }
   .guide-legend { grid-template-columns: 1fr 1fr; }
   .guide-step-facts { grid-template-columns: 1fr; }
   .guide-controls { align-items: stretch; flex-direction: column; }
-  .guide-controls > div:last-child { display: grid; grid-template-columns: 1fr 1fr; }
+  .guide-controls { display: grid; grid-template-columns: 1fr; }
+  .guide-control-hint { grid-column: auto; }
+  .guide-progress { flex-wrap: wrap; }
+  .guide-controls > div:last-child { display: grid; grid-template-columns: 0.7fr 1.3fr; }
+  #guide-next { min-width: 0; }
 }
 
 @media (max-width: 520px) {

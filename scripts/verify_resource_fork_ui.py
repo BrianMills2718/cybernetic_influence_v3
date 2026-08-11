@@ -16,6 +16,7 @@ def main() -> int:
     parser.add_argument("--overview-screenshot", type=Path)
     parser.add_argument("--guided-screenshot", type=Path)
     parser.add_argument("--guided-start-screenshot", type=Path)
+    parser.add_argument("--guided-second-screenshot", type=Path)
     parser.add_argument("--chromium", type=Path)
     parser.add_argument(
         "--require-network-graph",
@@ -59,6 +60,11 @@ def main() -> int:
         page.locator("#guide-next").click()
         page.locator("#guide-graph .react-flow__node").nth(6).wait_for(state="attached", timeout=5_000)
         assert "No single person" in page.locator("#guide-step-title").inner_text()
+        assert "Next: Connect the dependencies" in page.locator("#guide-next").inner_text()
+        assert page.locator("#guide-graph .react-flow__edge").count() == 4
+        if args.guided_second_screenshot:
+            args.guided_second_screenshot.parent.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(args.guided_second_screenshot), full_page=True)
         page.locator('[data-guide-step="3"]').click()
         page.wait_for_timeout(1_000)
         message_node_count = page.locator("#guide-graph .react-flow__node").count()

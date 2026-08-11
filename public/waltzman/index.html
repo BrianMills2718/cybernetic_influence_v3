@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=92a310c">
-  <link rel="stylesheet" href="assets/styles.css?v=guided-example-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=guided-example-v2">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -94,6 +94,12 @@
           <button class="quiet-button" type="button" data-view="case">Skip to the full outbreak case</button>
         </header>
 
+        <nav class="guide-controls" aria-label="Walkthrough controls">
+          <div class="guide-control-hint"><strong>Walkthrough</strong><span>Click Next to reveal one part of the system at a time.</span></div>
+          <div id="guide-progress" class="guide-progress" aria-label="Walkthrough progress"></div>
+          <div><button id="guide-previous" type="button">Previous</button><button id="guide-next" class="primary-cta" type="button">Next: Meet the participants →</button></div>
+        </nav>
+
         <div class="guide-stage">
           <section class="guide-visual" aria-labelledby="guide-visual-title">
             <header><span>World view</span><strong id="guide-visual-title">What exists and how it connects</strong></header>
@@ -117,10 +123,6 @@
           </aside>
         </div>
 
-        <footer class="guide-controls">
-          <div id="guide-progress" class="guide-progress" aria-label="Walkthrough progress"></div>
-          <div><button id="guide-previous" type="button">Previous</button><button id="guide-next" class="primary-cta" type="button">Next</button></div>
-        </footer>
       </section>
 
       <section id="case-view" class="workspace-view research-case" aria-labelledby="research-case-title" hidden>
@@ -550,6 +552,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=92a310c" defer></script>
-  <script src="assets/app.js?v=guided-example-v1" defer></script>
+  <script src="assets/app.js?v=guided-example-v2" defer></script>
 </body>
 </html>

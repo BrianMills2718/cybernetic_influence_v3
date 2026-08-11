@@ -711,7 +711,7 @@ const guideSteps = [
   {
     kicker:'Meet the participants', title:'No single person can complete the delivery.',
     body:'Each person perceives only part of the situation and can attempt only actions available to them. The generator and truck do not decide anything, but people can act through them.',
-    nodes:guidePeopleAndThings, edges:[], focus:['guide_depot_manager', 'guide_dispatcher', 'guide_driver', 'guide_clinic_manager'],
+    nodes:guidePeopleAndThings, edges:['guide_depot_releases', 'guide_dispatcher_routes', 'guide_driver_moves', 'guide_clinic_receives'], focus:['guide_depot_manager', 'guide_dispatcher', 'guide_driver', 'guide_clinic_manager'],
     facts:[['Depot manager','Releases generator'], ['Dispatcher','Chooses route'], ['Driver','Moves truck'], ['Clinic manager','Receives delivery']],
     language:[['Person','A simulated individual who perceives, remembers, reasons, and attempts actions.'], ['Thing','A resource or technical object that can be used or moved but does not act autonomously.']],
     takeaway:'Positions shape access and capability; they do not dictate what a person decides.',
@@ -803,7 +803,9 @@ function renderGuide() {
   $('#guide-step-takeaway').innerHTML = `<span>Why this matters</span><strong>${escapeHtml(step.takeaway)}</strong>`
   $('#guide-progress').innerHTML = guideSteps.map((candidate, index) => `<button type="button" data-guide-step="${index}" class="${index === state.guideStep ? 'active' : ''}" aria-label="Open step ${index + 1}: ${escapeHtml(candidate.title)}" aria-current="${index === state.guideStep ? 'step' : 'false'}">${index + 1}</button>`).join('')
   $('#guide-previous').disabled = state.guideStep === 0
-  $('#guide-next').textContent = state.guideStep === guideSteps.length - 1 ? 'Open full outbreak case' : 'Next'
+  $('#guide-next').textContent = state.guideStep === guideSteps.length - 1
+    ? 'Continue: Open full outbreak case →'
+    : `Next: ${guideSteps[state.guideStep + 1].kicker} →`
   all('[data-guide-step]').forEach((button) => {
     button.onclick = () => { state.guideStep = Number(button.dataset.guideStep); renderGuide(); syncUrl() }
   })
