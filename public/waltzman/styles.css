@@ -984,6 +984,16 @@ tbody tr:last-child td { border-bottom: 0; }
 .overview-flow p { color: var(--muted); font-size: 0.82rem; margin: 5px 0 0; }
 .overview-flow i { align-self: center; color: var(--accent); font-style: normal; }
 
+.overview-goals { border-top: 1px solid var(--line); margin-top: 54px; max-width: 980px; padding-top: 34px; }
+.overview-goals > h3 { font-size: clamp(1.7rem, 3vw, 2.4rem); letter-spacing: -0.035em; margin: 8px 0 26px; }
+.overview-goals > ol { counter-reset: product-goal; list-style: none; margin: 0; padding: 0; }
+.overview-goals > ol > li { border-top: 1px solid var(--line); display: grid; gap: 6px 18px; grid-template-columns: 34px minmax(0, 1fr); padding: 18px 0; }
+.overview-goals > ol > li::before { color: var(--accent); content: counter(product-goal, decimal-leading-zero); counter-increment: product-goal; font-size: 0.74rem; font-weight: 850; grid-row: 1 / span 2; letter-spacing: 0.08em; padding-top: 3px; }
+.overview-goals li strong { font-size: 1.04rem; }
+.overview-goals li p { color: var(--muted); line-height: 1.65; margin: 0; max-width: 80ch; }
+.overview-purpose { border-left: 3px solid var(--accent); color: var(--muted); line-height: 1.65; margin: 26px 0 0; padding: 10px 0 10px 18px; }
+.overview-purpose strong { color: var(--text); }
+
 /* Completed simulation world briefing. */
 .case-world-hero { max-width: 940px; }
 .case-world-hero h2 { font-size: clamp(2.4rem, 4.7vw, 4.3rem); letter-spacing: -0.05em; line-height: 1.02; margin: 14px 0 22px; max-width: 21ch; }
@@ -1004,6 +1014,28 @@ tbody tr:last-child td { border-bottom: 0; }
 .dependency-list strong { font-size: 0.9rem; }
 .case-influence-context, .case-experiment-intro { border-top: 1px solid var(--line); padding-top: 32px; }
 .case-influence-context p, .case-experiment-intro p { max-width: 78ch; }
+.case-network { border-top: 1px solid var(--line); margin-left: 50%; padding-top: 32px; transform: translateX(-50%); width: min(1440px, calc(100vw - 48px)); }
+.case-network > header { align-items: end; display: flex; gap: 28px; justify-content: space-between; margin: 0 auto 18px; max-width: 1180px; }
+.case-network > header > div:first-child { max-width: 760px; }
+.case-network > header span { color: var(--accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.case-network > header h3 { font-size: clamp(1.55rem, 2.8vw, 2.2rem); letter-spacing: -0.03em; margin: 7px 0 9px; }
+.case-network > header p { color: var(--muted); line-height: 1.6; margin: 0; }
+.case-network-tabs { background: #0a141e; border: 1px solid var(--line); border-radius: 9px; display: flex; flex: 0 0 auto; padding: 3px; }
+.case-network-tabs button { background: transparent; border: 0; border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 0.78rem; font-weight: 750; padding: 8px 11px; }
+.case-network-tabs button.active { background: #1d3d55; color: #fff; }
+.case-network-graph { align-items: center; background: #0b151f; border: 1px solid var(--line); border-radius: 12px; display: flex; height: 700px; justify-content: center; overflow: hidden; }
+.case-network-graph > p { color: var(--muted); }
+.case-network-graph.react-canvas-host { display: block; }
+.case-network-graph .cy-graph-shell { min-height: 700px; }
+.case-network-graph .cy-graph-canvas { min-height: 650px; }
+.case-network-graph .cy-graph-bar { display: none; }
+.case-network-footer { align-items: start; display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.45fr); margin: 14px auto 0; max-width: 1180px; }
+#case-network-status { color: var(--muted); font-size: 0.78rem; margin: 0; }
+#case-network-inspector { border-left: 2px solid var(--accent); display: grid; gap: 4px; padding-left: 14px; }
+#case-network-inspector strong { font-size: 0.86rem; }
+#case-network-inspector span { color: var(--muted); font-size: 0.75rem; line-height: 1.5; }
+.case-network-unavailable { max-width: 540px; text-align: center; }
+.case-network-unavailable strong { color: var(--oppose); display: block; }
 
 /* Conversational typed authoring. */
 .guided-result #create-view { margin: 0 auto; max-width: 1120px; }
@@ -1104,6 +1136,8 @@ tbody tr:last-child td { border-bottom: 0; }
   .overview-flow { grid-template-columns: 1fr; }
   .overview-flow i { text-align: center; transform: rotate(90deg); }
   .case-coordination-situation { grid-template-columns: 1fr; }
+  .case-network > header { align-items: start; flex-direction: column; }
+  .case-network-footer { grid-template-columns: 1fr; }
   .dependency-list { border-left: 0; border-top: 1px solid var(--line-strong); padding-left: 0; padding-top: 18px; }
   #create-world-facts, #create-world-groups { grid-template-columns: 1fr 1fr; }
   .create-review > header { flex-direction: column; }
@@ -1150,6 +1184,10 @@ tbody tr:last-child td { border-bottom: 0; }
   .overview-capabilities > div, .overview-influence > div, .national-network-grid, #create-world-facts, #create-world-groups { grid-template-columns: 1fr; }
   .national-network-grid .regional-network { grid-column: auto; }
   .create-composer > div, .create-actions { align-items: stretch; flex-direction: column; }
+  .case-network { width: calc(100vw - 24px); }
+  .case-network-graph { height: 560px; }
+  .case-network-graph .cy-graph-shell { min-height: 560px; }
+  .case-network-graph .cy-graph-canvas { min-height: 510px; }
 }
 
 @media (max-width: 520px) {

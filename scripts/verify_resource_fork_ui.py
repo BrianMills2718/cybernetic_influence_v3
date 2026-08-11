@@ -13,7 +13,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://127.0.0.1:8765")
     parser.add_argument("--screenshot", type=Path)
+    parser.add_argument("--overview-screenshot", type=Path)
     parser.add_argument("--chromium", type=Path)
+    parser.add_argument(
+        "--require-network-graph",
+        action="store_true",
+        help="Require the retained run API and exercise both network projections.",
+    )
     args = parser.parse_args()
     console_errors: list[str] = []
     failed_requests: list[str] = []
@@ -48,6 +54,28 @@ def main() -> int:
             ".case-organizations"
         ).inner_text()
         assert "Conditional" in page.locator(".case-decision-key").inner_text()
+        assert "How local pressure can become a collective decision problem" in page.locator(
+            "#case-network-title"
+        ).inner_text()
+        if args.require_network_graph:
+            page.locator("#case-network-graph .react-flow__node").first.wait_for(
+                state="visible", timeout=60_000
+            )
+            assert "40 exact entities and 138 routes" in page.locator(
+                "#case-network-status"
+            ).inner_text()
+            page.locator('[data-case-graph="exact"]').click()
+            page.wait_for_timeout(1_000)
+            exact_node_count = page.locator("#case-network-graph .react-flow__node").count()
+            assert exact_node_count == 40, exact_node_count
+            assert "40 exact entities · 138 exact routes" in page.locator(
+                "#case-network-status"
+            ).inner_text()
+            page.locator("#case-network-graph .react-flow__node").first.click(force=True)
+            assert "Select a node or connection" not in page.locator(
+                "#case-network-inspector"
+            ).inner_text()
+            page.locator('[data-case-graph="system"]').click()
         assert page.locator("[data-case-branch]").count() == 4
         assert page.locator('[data-case-branch="complete"]').get_attribute("class").find(
             "active"
@@ -78,12 +106,23 @@ def main() -> int:
             page.locator('[data-view="case"]').first.click()
             page.locator("#case-view").wait_for(state="visible")
             page.screenshot(path=str(args.screenshot), full_page=True)
+        page.locator('[data-view="overview"]').first.click()
+        page.locator("#overview-view").wait_for(state="visible")
+        assert page.locator(".overview-goals li").count() == 7
+        assert "Model people as people—not as role labels" in page.locator(
+            ".overview-goals"
+        ).inner_text()
+        assert "Homogeneous broadcasts" in page.locator(".overview-goals").inner_text()
+        if args.overview_screenshot:
+            args.overview_screenshot.parent.mkdir(parents=True, exist_ok=True)
+            page.screenshot(path=str(args.overview_screenshot), full_page=True)
         browser.close()
     if console_errors:
         raise RuntimeError(f"browser console errors: {console_errors}")
     if failed_requests:
         raise RuntimeError(f"failed browser requests: {failed_requests}")
-    print("Resource-fork case and preserved Lab entry rendered without browser errors.")
+    graph_status = " and both retained network projections" if args.require_network_graph else ""
+    print(f"Resource-fork case{graph_status} and preserved Lab entry rendered without browser errors.")
     return 0
 
 

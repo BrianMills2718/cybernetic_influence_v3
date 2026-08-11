@@ -6,7 +6,8 @@
   <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/styles.css?v=sociotechnical-authoring-v1">
+  <link rel="stylesheet" href="assets/graph-canvas.css?v=92a310c">
+  <link rel="stylesheet" href="assets/styles.css?v=goals-graph-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -56,28 +57,29 @@
     <section class="workspace">
       <section id="overview-view" class="workspace-view" aria-labelledby="overview-title" hidden>
         <header class="overview-hero">
-          <div class="artifact-type"><strong>Sociotechnical simulation workbench</strong><span>Inspired by From Minds to Coordination</span></div>
-          <h2 id="overview-title">Build worlds where influence moves through people, organizations, technologies, and institutions.</h2>
-          <p>Describe a coordination situation, generate an editable simulation, and explore how information and influence change the evolving network—not only what individual agents believe.</p>
+          <div class="artifact-type"><strong>Simulation workbench</strong><span>Inspired by From Minds to Coordination</span></div>
+          <h2 id="overview-title">Explore how influence changes a sociotechnical system’s ability to coordinate.</h2>
+          <p>Build a world, let autonomous people perceive and act within it, and inspect how local interactions accumulate into changes in collective decision-making.</p>
           <div class="hero-actions">
             <button class="primary-cta" type="button" data-view="create">Create a simulation</button>
             <button class="secondary-cta" type="button" data-view="case">Explore a completed simulation</button>
           </div>
-          <p class="scope-note">A wargaming and mechanism-exploration tool. It does not predict how real people or institutions will behave.</p>
+          <p class="scope-note">A wargaming and mechanism-exploration tool. It does not predict how real people or social systems will behave.</p>
         </header>
 
-        <section class="overview-capabilities" aria-labelledby="overview-capabilities-title">
-          <span class="section-kicker">What the workbench represents</span><h3 id="overview-capabilities-title">The simulation begins below the level of “the institution”</h3>
-          <div>
-            <article><strong>Sociotechnical world</strong><ul><li>People and positions</li><li>Organizations and analytical boundaries</li><li>Artifacts, resources, and technical systems</li><li>Communication channels and dependencies</li></ul></article>
-            <article><strong>Human agents in context</strong><ul><li>Values, goals, beliefs, and memories</li><li>Relationships and perceived expectations</li><li>Capabilities, limitations, and information access</li><li>Position expectations that influence—but do not dictate—behavior</li></ul></article>
-            <article><strong>World mechanics</strong><ul><li>Information provenance and uneven delivery</li><li>Resource custody and operational constraints</li><li>Bounded actions with independent consequences</li><li>Persistent state that changes through interaction</li></ul></article>
-          </div>
-        </section>
-
-        <section class="overview-influence" aria-labelledby="overview-influence-title">
-          <span class="section-kicker">What it can examine</span><h3 id="overview-influence-title">Different influence forms; one coordination-level question</h3>
-          <div><article><strong>Influence environments</strong><p>Homogeneous broadcasts, repeated narratives, segmented campaigns, heterogeneous local interactions, and feedback-adaptive pressure.</p></article><article><strong>System-level effects</strong><p>Changes in reliance, perceived risk, relationships, prerequisites, bottlenecks, coalition formation, and readiness to coordinate.</p></article><article><strong>Detection and response</strong><p>Whether an observer can distinguish influence from legitimate disagreement or disruption, diagnose the mechanism, and attempt a bounded response.</p></article></div>
+        <section class="overview-goals" aria-labelledby="overview-goals-title">
+          <span class="section-kicker">What this workbench is for</span>
+          <h3 id="overview-goals-title">From local interactions to collective coordination</h3>
+          <ol>
+            <li><strong>Represent a sociotechnical world.</strong><p>People, groups, technical systems, resources, artifacts, communication channels, dependencies, and external events exist in one persistent environment.</p></li>
+            <li><strong>Model people as people—not as role labels.</strong><p>Personalities, values, beliefs, memories, goals, relationships, incentives, attention, uncertainty, capabilities, and limitations shape behavior. Positions create expectations and access without dictating decisions.</p></li>
+            <li><strong>Let information and action remain local.</strong><p>Different people observe different signals through different sources and judge their provenance and credibility. They interpret those observations and attempt bounded actions autonomously; the simulation does not dictate the behavior being studied.</p></li>
+            <li><strong>Give the world independent causal mechanics.</strong><p>Resource custody, logistics, records, communication paths, action costs, and consequences exist beyond an LLM merely asserting that they exist.</p></li>
+            <li><strong>Compare different forms of influence.</strong><p>Homogeneous broadcasts, repeated narratives, segmented campaigns, heterogeneous local interactions, and feedback-adaptive pressure can operate in the same kind of world.</p></li>
+            <li><strong>Look for coordination-level effects.</strong><p>Inspect directional changes in reliance, perceived risk, relationships, dependencies, bottlenecks, coalition formation, and readiness to coordinate—not only message similarity or individual persuasion.</p></li>
+            <li><strong>Explore detection and bounded response.</strong><p>Can an observer distinguish influence from legitimate disagreement or ordinary disruption, diagnose what is changing, and attempt an intervention that may work, fail, arrive late, or create new problems—without controlling participant decisions?</p></li>
+          </ol>
+          <p class="overview-purpose"><strong>The intended use is exploratory:</strong> simulations are wargames for discovering mechanisms, dependencies, failure modes, and strategic questions—not forecasts of human behavior.</p>
         </section>
 
         <section class="overview-flow" aria-label="Product workflow">
@@ -91,6 +93,12 @@
           <h2 id="research-case-title">Four national response networks face one outbreak. None can act regionally on its own.</h2>
           <p>A novel respiratory outbreak is spreading through Alba, Borin, Cyrenia, and Darsia. A proposed compact would share evidence, laboratory capacity, investigation teams, supplies, and transport—but those capabilities remain distributed across national and regional networks.</p>
         </header>
+
+        <section class="case-network" aria-labelledby="case-network-title">
+          <header><div><span>The simulated network</span><h3 id="case-network-title">How local pressure can become a collective decision problem</h3><p>The first view groups exact people and mechanisms so the system is legible. Switch to the complete network to inspect every retained entity and route.</p></div><div class="case-network-tabs" aria-label="Network projection"><button type="button" class="active" data-case-graph="system" aria-pressed="true">System map</button><button type="button" data-case-graph="exact" aria-pressed="false">Complete network</button></div></header>
+          <div id="case-network-graph" class="case-network-graph" aria-label="Interactive sociotechnical network graph"><p>Loading the retained network…</p></div>
+          <div class="case-network-footer"><p id="case-network-status">Loading exact entities and routes from the retained simulation.</p><aside id="case-network-inspector"><strong>Select a node or connection</strong><span>Inspect what it represents and how it participates in the simulated world.</span></aside></div>
+        </section>
 
         <section class="case-organizations" aria-labelledby="case-organizations-title">
           <div class="case-section-heading"><span>The sociotechnical world</span><h3 id="case-organizations-title">People participate through five interdependent response networks</h3></div>
@@ -505,6 +513,7 @@
     </section>
   </main>
 
-  <script src="assets/app.js?v=sociotechnical-authoring-v1" defer></script>
+  <script src="assets/graph-canvas.js?v=92a310c" defer></script>
+  <script src="assets/app.js?v=goals-graph-v1" defer></script>
 </body>
 </html>

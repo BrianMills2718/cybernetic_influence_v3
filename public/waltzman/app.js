@@ -5,6 +5,7 @@ const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'darsia', 'regional']
 const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', darsia:'Darsia', regional:'Regional'}
 const preferredModel = 'codex/gpt-5.6-luna'
 const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
+const caseNetworkRunId = 'run_5010214f2466'
 const personProfileFields = {
   values:'person-values',
   goals:'person-goals',
@@ -20,6 +21,10 @@ let dataset = null
 let runtimeConfig = null
 let autonomousProbe = null
 let resourceFork = null
+let caseNetworkRun = null
+let caseNetworkLoad = null
+let caseNetworkError = null
+let caseGraphMode = 'system'
 let defaultConfiguration = null
 let editableConfiguration = null
 let selectedConfigurationPerson = 'alba_epidemiologist'
@@ -653,6 +658,132 @@ function renderMethod() {
   $('#provenance-time').dateTime = latest
 }
 
+function caseSystemProjection(raw) {
+  const indexed = new Map((raw.nodes || []).map((node) => [node.id, node]))
+  const sourceIds = [
+    'technical_pressure_source',
+    'legal_pressure_source',
+    'logistics_pressure_source',
+    'community_pressure_source',
+  ]
+  const exactNodes = [
+    ...sourceIds.map((id) => indexed.get(id)).filter(Boolean),
+    indexed.get('outbreak_source_delivery'),
+    indexed.get('outbreak_stance_recorder'),
+    indexed.get('outbreak_decision'),
+    indexed.get('regional_allocation_authority'),
+    indexed.get('cso_intervention_recorder'),
+  ].filter(Boolean)
+  const groups = [
+    ['alba_network', 'Alba response network', 'Five people working through Alba’s evidence, policy, operations, community, and supply relationships.'],
+    ['borin_network', 'Borin response network', 'Five people working through Borin’s evidence, policy, operations, community, and supply relationships.'],
+    ['cyrenia_network', 'Cyrenia response network', 'Five people working through Cyrenia’s evidence, policy, operations, community, and supply relationships.'],
+    ['darsia_network', 'Darsia response network', 'Five people working through Darsia’s evidence, policy, operations, community, and supply relationships.'],
+    ['regional_network', 'Regional coordination network', 'Six people coordinating science, logistics, law, finance, public legitimacy, and the shared decision.'],
+    ['cso_network', 'Defensive coordination cell', 'Three observer roles can detect, diagnose, and select a bounded intervention; they cannot choose participant stances.'],
+  ].map(([id, label, description]) => ({id, label, description, kind:'analytical_boundary', state:{projection:'analytical_group'}}))
+  const edges = []
+  const addEdge = (source, target, description) => edges.push({
+    id:`case_${source}_to_${target}`,
+    kind:'connection', source, target, enabled:true, description, routeIds:[],
+  })
+  sourceIds.forEach((source) => addEdge(source, 'outbreak_source_delivery', 'A retained external source contributes a bounded signal; it cannot choose a participant stance.'))
+  const participantGroups = ['alba_network', 'borin_network', 'cyrenia_network', 'darsia_network', 'regional_network']
+  participantGroups.forEach((group) => {
+    addEdge('outbreak_source_delivery', group, 'Analytical aggregation of exact observation routes carrying locally relevant signals to people in this network.')
+    addEdge(group, 'outbreak_stance_recorder', 'Analytical aggregation of the network members’ exact autonomous stance routes.')
+  })
+  addEdge('outbreak_stance_recorder', 'outbreak_decision', 'The exact decision mechanism evaluates the retained participant stances against the fixed gate.')
+  addEdge('outbreak_decision', 'cso_network', 'The defensive cell observes retained decision-environment evidence; it cannot edit participant decisions.')
+  addEdge('cso_network', 'cso_intervention_recorder', 'The defensive planner may select one bounded response class from its authorized catalogue.')
+  addEdge('regional_allocation_authority', 'cso_intervention_recorder', 'External resource facts require independent custody, release authority, and verification.')
+  participantGroups.forEach((group) => addEdge('cso_intervention_recorder', group, 'Intervention facts enter the world; people in the network reassess them autonomously.'))
+  return {nodes:[...exactNodes, ...groups], edges}
+}
+
+function caseExactProjection(raw) {
+  return {
+    nodes:raw.nodes || [],
+    edges:(raw.edges || []).map((edge) => ({
+      ...edge,
+      kind:edge.kind || 'connection',
+      routeIds:edge.exact_route_ids || [edge.id],
+    })),
+  }
+}
+
+function renderCaseNetworkSelection(item, relationship = false) {
+  const inspector = $('#case-network-inspector')
+  inspector.innerHTML = `<strong>${escapeHtml(item.label || sentence(item.id))}</strong><span>${escapeHtml(relationship ? `${sentence(item.kind)} · ${item.description || 'Retained connection.'}` : `${sentence(item.kind)} · ${item.description || 'Retained entity.'}`)}</span>`
+}
+
+function renderCaseNetworkGraph() {
+  const graph = $('#case-network-graph')
+  if (!graph) return
+  all('[data-case-graph]').forEach((button) => {
+    const active = button.dataset.caseGraph === caseGraphMode
+    button.classList.toggle('active', active)
+    button.setAttribute('aria-pressed', String(active))
+  })
+  if (caseNetworkError) {
+    graph.classList.remove('react-canvas-host')
+    graph.innerHTML = `<p class="case-network-unavailable"><strong>Network unavailable.</strong> ${escapeHtml(caseNetworkError)}</p>`
+    $('#case-network-status').textContent = 'The completed result remains available below; the network projection failed visibly.'
+    return
+  }
+  if (!caseNetworkRun || !window.CyberneticGraph) {
+    graph.classList.remove('react-canvas-host')
+    graph.innerHTML = '<p>Loading the retained network…</p>'
+    return
+  }
+  const projection = caseGraphMode === 'exact' ? caseExactProjection(caseNetworkRun) : caseSystemProjection(caseNetworkRun)
+  if (!graph.classList.contains('case-network-mounted')) graph.innerHTML = ''
+  graph.classList.add('react-canvas-host', 'case-network-mounted')
+  window.CyberneticGraph.render(graph, {
+    nodes:projection.nodes,
+    edges:projection.edges,
+    boundaries:[],
+    world:null,
+    trajectory:{nodes:[], edges:[]},
+    graphDiagnostics:{nodeClassification:{}, edgeClassification:{}, warnings:[]},
+    viewMode:'causal',
+    event:null,
+    initialRevision:caseNetworkRun.initial_revision ?? 0,
+    selectedNodeId:null,
+    selectedEdgeId:null,
+    boundary:null,
+    collapsedBoundaryId:null,
+    onSelectNode:(nodeId) => {
+      const node = projection.nodes.find((candidate) => candidate.id === nodeId)
+      if (node) renderCaseNetworkSelection(node)
+    },
+    onSelectEdge:(edge) => renderCaseNetworkSelection(edge, true),
+  })
+  $('#case-network-status').textContent = caseGraphMode === 'exact'
+    ? `${projection.nodes.length} exact entities · ${projection.edges.length} exact routes · drag, zoom, or select any item.`
+    : `${projection.nodes.length} visible groups, sources, and mechanisms · analytical grouping over ${caseNetworkRun.nodes.length} exact entities and ${caseNetworkRun.edges.length} routes.`
+}
+
+async function ensureCaseNetwork() {
+  if (caseNetworkRun || caseNetworkLoad) return caseNetworkLoad
+  caseNetworkLoad = fetch('assets/case-network.json', {cache:'no-store'})
+    .then((response) => {
+      if (!response.ok) throw new Error(`retained network request failed with ${response.status}`)
+      return response.json()
+    })
+    .then((artifact) => {
+      if (artifact.schema_version !== 1 || artifact.status !== 'completed' || artifact.scenario !== 'regional_outbreak' || artifact.source_run_id !== caseNetworkRunId || !artifact.nodes?.length || !artifact.edges?.length) throw new Error('the retained outbreak network is incomplete')
+      caseNetworkRun = artifact
+      caseNetworkError = null
+      if (state.view === 'case') renderCaseNetworkGraph()
+    })
+    .catch((error) => {
+      caseNetworkError = error.message
+      if (state.view === 'case') renderCaseNetworkGraph()
+    })
+  return caseNetworkLoad
+}
+
 function renderResearchCase() {
   if (!resourceFork?.branches?.length) {
     $('#research-case-runs').innerHTML = '<p class="case-data-error"><strong>Research case unavailable.</strong> The exact checkpoint evidence could not be loaded.</p>'
@@ -705,6 +836,7 @@ function renderResearchCase() {
   </button>`).join('')
   all('[data-case-branch]').forEach((button) => { button.onclick = () => { state.caseBranch = button.dataset.caseBranch; renderBranch() } })
   renderBranch()
+  renderCaseNetworkGraph()
 
   $('#case-open-comparison').onclick = () => {
     window.open('assets/resource-fork.json', '_blank', 'noopener')
@@ -730,7 +862,10 @@ function renderView() {
     button.setAttribute('aria-current', active ? 'page' : 'false')
   })
   if (state.view === 'run') renderRunSetup()
-  if (state.view === 'case') renderResearchCase()
+  if (state.view === 'case') {
+    renderResearchCase()
+    void ensureCaseNetwork()
+  }
   if (state.view === 'create') renderCreateSimulation()
   if (state.view === 'compare') renderComparison()
   if (state.view === 'mechanism') renderMechanism()
@@ -766,6 +901,9 @@ function configureControls() {
   $('#run-select').onchange = (event) => openRun(event.target.value)
   all('[data-view]').forEach((button) => {
     button.onclick = () => { state.view = button.dataset.view; renderView(); syncUrl() }
+  })
+  all('[data-case-graph]').forEach((button) => {
+    button.onclick = () => { caseGraphMode = button.dataset.caseGraph; renderCaseNetworkGraph() }
   })
   all('[data-open-lab]').forEach((button) => { button.onclick = () => navigateLab('run') })
   all('[data-lab-view]').forEach((button) => {
@@ -997,7 +1135,7 @@ function renderCreateSimulation() {
     [`${boundaries.length}`, 'Analytical boundaries'],
   ].map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
   $('#create-world-groups').innerHTML = [
-    ['Organizations and analytical boundaries', boundaries.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span></li>`).join('')],
+    ['Groups and analytical boundaries', boundaries.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span></li>`).join('')],
     ['World entities and processes', objects.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span></li>`).join('')],
     ['Information in the scenario', information.map((item) => `<li><strong>${escapeHtml(sentence(item.label))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')],
   ].filter(([, items]) => items).map(([label, items]) => `<section><h4>${escapeHtml(label)}</h4><ul>${items}</ul></section>`).join('')
@@ -1258,7 +1396,14 @@ async function loadRetainedLiveRuns() {
   const retained = []
   for (const summary of summaries) {
     try {
-      retained.push(projectLiveRun(await apiRequest(`api/runs/${encodeURIComponent(summary.run_id)}`)))
+      const raw = summary.run_id === caseNetworkRunId && caseNetworkRun
+        ? caseNetworkRun
+        : await apiRequest(`api/runs/${encodeURIComponent(summary.run_id)}`)
+      if (summary.run_id === caseNetworkRunId) {
+        caseNetworkRun = raw
+        caseNetworkError = null
+      }
+      retained.push(projectLiveRun(raw))
     } catch (error) {
       console.warn(`retained run ${summary.run_id} unavailable: ${error.message}`)
     }

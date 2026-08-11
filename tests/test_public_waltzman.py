@@ -16,11 +16,16 @@ PAGE = PUBLIC_ROOT / "index.html"
 DATA = PUBLIC_ROOT / "data.json"
 SCRIPT = PUBLIC_ROOT / "app.js"
 STYLE = PUBLIC_ROOT / "styles.css"
+PUBLIC_GRAPH_SCRIPT = PUBLIC_ROOT / "graph-canvas.js"
+PUBLIC_GRAPH_STYLE = PUBLIC_ROOT / "graph-canvas.css"
+CANONICAL_GRAPH_SCRIPT = ROOT / "web" / "graph-canvas.js"
+CANONICAL_GRAPH_STYLE = ROOT / "web" / "graph-canvas.css"
 REVIEW_PAGE = PUBLIC_ROOT / "review.html"
 REVIEW_STYLE = PUBLIC_ROOT / "review.css"
 REVIEW_TRACE = PUBLIC_ROOT / "simulation-trace.md"
 AUTONOMOUS_PROBE = PUBLIC_ROOT / "autonomous-probe.json"
 RESOURCE_FORK = PUBLIC_ROOT / "resource-fork.json"
+CASE_NETWORK = PUBLIC_ROOT / "case-network.json"
 PLIST = ROOT / "deploy" / "com.cybernetic-influence.waltzman-public.plist"
 
 RUN_IDS = {
@@ -73,10 +78,18 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Terminal decision gate" in page
     assert "Open method" in page
     assert "AI coordination simulation workbench" in page
-    assert "Build worlds where influence moves through people" in page
-    assert "The simulation begins below the level of “the institution”" in page
+    assert "Explore how influence changes a sociotechnical system’s ability to coordinate" in page
+    assert "What this workbench is for" in page
+    assert "Model people as people—not as role labels" in page
+    assert "Let information and action remain local" in page
+    assert "Give the world independent causal mechanics" in page
+    assert "Look for coordination-level effects" in page
+    assert "Explore detection and bounded response" in page
+    assert "below the level of “the institution”" not in page
     assert "Homogeneous broadcasts" in page
     assert "Four national response networks face one outbreak" in page
+    assert "How local pressure can become a collective decision problem" in page
+    assert "Complete network" in page
     assert "People participate through five interdependent response networks" in page
     assert "Should these networks activate one joint outbreak response?" in page
     assert "After those pressures stall coordination" in page
@@ -104,14 +117,23 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Generate editable configuration" in page
     assert "Edit one person directly" in page
     assert "Tell the authoring model what to change" in page
-    assert shape.stylesheets == ["assets/styles.css?v=sociotechnical-authoring-v1"]
-    assert shape.scripts == ["assets/app.js?v=sociotechnical-authoring-v1"]
+    assert shape.stylesheets == [
+        "assets/graph-canvas.css?v=92a310c",
+        "assets/styles.css?v=goals-graph-v1",
+    ]
+    assert shape.scripts == [
+        "assets/graph-canvas.js?v=92a310c",
+        "assets/app.js?v=goals-graph-v1",
+    ]
     assert {
         "overview-view",
         "case-view",
         "research-case-runs",
         "case-branch-detail",
         "case-evidence-records",
+        "case-network-graph",
+        "case-network-status",
+        "case-network-inspector",
         "create-view",
         "create-prompt",
         "create-generate",
@@ -176,6 +198,21 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     lowered = page.lower()
     assert "localhost" not in lowered
     assert "tail9c321e" not in lowered
+
+
+def test_public_graph_renderer_has_one_canonical_compiled_lineage() -> None:
+    assert PUBLIC_GRAPH_SCRIPT.read_bytes() == CANONICAL_GRAPH_SCRIPT.read_bytes()
+    assert PUBLIC_GRAPH_STYLE.read_bytes() == CANONICAL_GRAPH_STYLE.read_bytes()
+
+
+def test_completed_case_retains_its_exact_network() -> None:
+    network = json.loads(CASE_NETWORK.read_text(encoding="utf-8"))
+    assert network["schema_version"] == 1
+    assert network["source_run_id"] == "run_5010214f2466"
+    assert network["status"] == "completed"
+    assert network["scenario"] == "regional_outbreak"
+    assert len(network["nodes"]) == 40
+    assert len(network["edges"]) == 138
 
 
 def test_external_review_dossier_is_concise_and_auditable() -> None:
@@ -312,6 +349,11 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "view:'overview'",
         "featuredRunIds",
         "renderResearchCase",
+        "caseSystemProjection",
+        "caseExactProjection",
+        "renderCaseNetworkGraph",
+        "ensureCaseNetwork",
+        "window.CyberneticGraph.render",
         "renderCreateSimulation",
         "setAuthoringBusy",
         "advanceAuthoringDraft",
