@@ -534,6 +534,12 @@ class DraftAuthoringService:
                             "from a bounded natural-language situation."
                         ),
                         reasoning_effort=reasoning_effort,
+                        # llm_client's own default structured-call timeout is
+                        # 60s; a real workspace_agent draft call measured 65s
+                        # end to end (2026-08-12 diagnostic), so the untouched
+                        # default was losing the race on nearly every call.
+                        # This must stay comfortably under AUTHORING_CALL_TIMEOUT_S.
+                        timeout=100,
                         **backend_options,
                     )
                 if isinstance(parsed, ScenarioDraftProposal):
