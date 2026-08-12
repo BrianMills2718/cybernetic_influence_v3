@@ -1428,8 +1428,23 @@ function projectLiveRun(raw) {
   }
 }
 
+const DEFAULT_API_TIMEOUT_MS = 20000
+
 async function apiRequest(path, options = {}) {
-  const response = await fetch(path, {cache:'no-store', ...options})
+  const {timeoutMs = DEFAULT_API_TIMEOUT_MS, ...fetchOptions} = options
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  let response
+  try {
+    response = await fetch(path, {cache:'no-store', signal:controller.signal, ...fetchOptions})
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(`${path} did not respond within ${Math.round(timeoutMs / 1000)}s`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+  }
   const body = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(body.detail || `${path} failed with ${response.status}`)
   return body
@@ -1585,6 +1600,10 @@ async function advanceAuthoringDraft(message) {
       model:preferredAuthoringModel,
       reasoning_effort:'medium',
     }),
+    // The server retries a stalled provider call up to three times at 45s
+    // each before giving up gracefully; give it room to finish that cycle
+    // instead of timing out first and hiding its actual explanation.
+    timeoutMs:170000,
   })
   renderCreateSimulation()
   syncUrl()

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from hashlib import sha256
 from importlib import resources
 from typing import Annotated, Any, Literal, TypedDict, cast
@@ -60,6 +62,36 @@ AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
 AUTHORING_MAX_TOKENS = 8000
 AUTHORING_PROMPT_VERSION = "scenario_draft.v8"
+# No provider call in this module currently passes its own request timeout,
+# and the Codex-subscription CLI transport (structured_backend_options) has
+# hung past two minutes in production with no error. This is a caller-owned
+# deadline so one stalled provider call can no longer block the draft
+# indefinitely; the retry loop already treats a raised error here as one
+# ordinary provider_error attempt.
+AUTHORING_CALL_TIMEOUT_S = 45
+
+
+def _call_with_deadline(
+    func: Callable[..., tuple[Any, Any]], *args: Any, **kwargs: Any
+) -> tuple[Any, Any]:
+    """Run one structured provider call under a hard wall-clock deadline.
+
+    A stalled call keeps its worker thread running in the background; the
+    caller stops waiting on it rather than joining it, so the abandoned call
+    cannot re-block a later request through the shared authoring lock.
+    """
+
+    pool = ThreadPoolExecutor(max_workers=1)
+    future = pool.submit(func, *args, **kwargs)
+    try:
+        return future.result(timeout=AUTHORING_CALL_TIMEOUT_S)
+    except FutureTimeoutError as error:
+        raise TimeoutError(
+            f"authoring provider call exceeded {AUTHORING_CALL_TIMEOUT_S}s "
+            "without responding"
+        ) from error
+    finally:
+        pool.shutdown(wait=False)
 
 
 class AuthoringModelOption(TypedDict):
@@ -485,7 +517,8 @@ class DraftAuthoringService:
             )
             try:
                 with structured_backend_options(model) as backend_options:
-                    parsed, meta = self.call(
+                    parsed, meta = _call_with_deadline(
+                        self.call,
                         model,
                         [{"role": "system", "content": system}, {"role": "user", "content": user}],
                         response_model=_ProposalConsumer,
