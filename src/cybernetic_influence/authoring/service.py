@@ -55,11 +55,11 @@ AuthoringModel = Literal[
     "openrouter/openai/gpt-5.6-sol",
 ]
 AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
-AUTHORING_MODEL: AuthoringModel = OPENROUTER_TERRA_MODEL
+AUTHORING_MODEL: AuthoringModel = CODEX_LUNA_MODEL
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
 AUTHORING_MAX_TOKENS = 8000
-AUTHORING_PROMPT_VERSION = "scenario_draft.v7"
+AUTHORING_PROMPT_VERSION = "scenario_draft.v8"
 
 
 class AuthoringModelOption(TypedDict):
@@ -261,6 +261,13 @@ class _InfluenceNetworkWorkflowConsumer(BaseModel):
     template_id: Literal["influence_network_v1"]
     collective_question: str
     round_minutes: list[int]
+    round_feedback: Literal["none", "stances", "stances_and_reasons"] = Field(
+        default="stances_and_reasons",
+        description=(
+            "Whether later rounds expose no prior decisions, public stances, "
+            "or public stances with stated reasons."
+        ),
+    )
     deliveries: list[_InfluenceDeliveryConsumer]
     decision_rule: _InfluenceDecisionRuleConsumer
 

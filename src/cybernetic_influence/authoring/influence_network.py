@@ -183,6 +183,7 @@ def influence_network_fixture(proposal: ScenarioDraftProposal) -> InfluenceNetwo
             "question": FactState(value=workflow.collective_question),
             "participant_ids": FactState(value=cast(Any, sorted(people))),
             "positions": FactState(value=[]),
+            "round_feedback": FactState(value=workflow.round_feedback),
             "decision_rule": FactState(value=workflow.decision_rule.model_dump(mode="json")),
             "outcome": FactState(value=None),
             "counts": FactState(value={}),
@@ -245,7 +246,11 @@ def influence_network_fixture(proposal: ScenarioDraftProposal) -> InfluenceNetwo
         "round_snapshot_builder",
         ["round_wake_in"],
         output_ports=["round_snapshot_out"],
-        read_facts=["decision_register.question", "decision_register.positions"],
+        read_facts=[
+            "decision_register.question",
+            "decision_register.positions",
+            "decision_register.round_feedback",
+        ],
         write_carriers=["round_snapshot_carrier"],
     )
 
@@ -276,8 +281,10 @@ def influence_network_fixture(proposal: ScenarioDraftProposal) -> InfluenceNetwo
             (
                 "Record your current stance. Payload must contain person_id equal to "
                 f"{person_id!r}, stance equal to support, conditional, defer, or oppose, "
-                "and a concise reason string grounded in your memories and delivered "
-                "observations. This records a decision; it does not force anyone else."
+                "a concise reason, source_assessment, primary_risk, and "
+                "blocking_dependency (a string or null), all grounded in your memories "
+                "and delivered observations. This records a decision; it does not "
+                "force anyone else."
             ),
         )
         connections[f"stance_{person_id}_route"] = _connection(
@@ -397,7 +404,9 @@ def influence_network_fixture(proposal: ScenarioDraftProposal) -> InfluenceNetwo
                 *sorted(observation_ports[person_id]),
                 f"round_snapshot_{person_id}_in",
             ],
+            activation_observation_port_ids=[f"round_snapshot_{person_id}_in"],
             output_port_ids=[f"stance_{person_id}_out"],
+            required_output_port_ids=[f"stance_{person_id}_out"],
             initial_private_state={
                 "memory": cast(Any, people[person_id].memories)
             },
@@ -487,6 +496,9 @@ def influence_network_scripted_bindings(
                                 "person_id": bound_person_id,
                                 "stance": "support",
                                 "reason": "The scripted integration fixture supports the proposal.",
+                                "source_assessment": "The delivered evidence is sufficient for this scripted integration check.",
+                                "primary_risk": "No unresolved risk in the scripted integration check.",
+                                "blocking_dependency": None,
                             },
                             public_summary=f"{bound_person_id} recorded support.",
                         )
@@ -817,12 +829,33 @@ def _build_round_snapshot(context: MechanismContext) -> MechanismOutcome:
     round_index = context.effect.payload.get("round_index")
     if not isinstance(round_index, int) or isinstance(round_index, bool) or round_index < 1:
         raise ValueError("decision round requires a positive integer round_index")
+    positions = context.read("decision_register.positions")
+    feedback = context.read("decision_register.round_feedback")
+    if not isinstance(positions, list):
+        raise ValueError("decision register positions are malformed")
+    if feedback == "none":
+        visible_positions: list[object] = []
+    elif feedback == "stances":
+        visible_positions = [
+            {
+                "person_id": item.get("person_id"),
+                "stance": item.get("stance"),
+                "logical_time": item.get("logical_time"),
+            }
+            for item in positions
+            if isinstance(item, dict)
+        ]
+    elif feedback == "stances_and_reasons":
+        visible_positions = cast(list[object], positions)
+    else:
+        raise ValueError("decision register round feedback is malformed")
     content = json.dumps(
         {
             "document_kind": "decision_round_snapshot",
             "round_index": round_index,
             "collective_question": context.read("decision_register.question"),
-            "current_public_positions": context.read("decision_register.positions"),
+            "round_feedback": feedback,
+            "current_public_positions": visible_positions,
         },
         ensure_ascii=True,
         separators=(",", ":"),
@@ -854,6 +887,9 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
     person_id = context.effect.payload.get("person_id")
     stance_value = context.effect.payload.get("stance")
     reason = context.effect.payload.get("reason")
+    source_assessment = context.effect.payload.get("source_assessment")
+    primary_risk = context.effect.payload.get("primary_risk")
+    blocking_dependency = context.effect.payload.get("blocking_dependency")
     if not isinstance(person_id, str):
         raise ValueError("decision stance requires person_id")
     expected_person_id = context.effect.source_port_id.removeprefix("stance_").removesuffix("_out")
@@ -863,6 +899,14 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
         raise ValueError("decision stance must be support, conditional, defer, or oppose")
     if not isinstance(reason, str) or not reason.strip():
         raise ValueError("decision stance requires a concise reason")
+    if not isinstance(source_assessment, str) or not source_assessment.strip():
+        raise ValueError("decision stance requires a concise source_assessment")
+    if not isinstance(primary_risk, str) or not primary_risk.strip():
+        raise ValueError("decision stance requires a concise primary_risk")
+    if blocking_dependency is not None and (
+        not isinstance(blocking_dependency, str) or not blocking_dependency.strip()
+    ):
+        raise ValueError("blocking_dependency must be a non-empty string or null")
     positions = context.read("decision_register.positions")
     if not isinstance(positions, list):
         raise ValueError("decision register positions are malformed")
@@ -876,6 +920,13 @@ def _record_stance(context: MechanismContext) -> MechanismOutcome:
             "person_id": person_id,
             "stance": cast(InfluenceStance, stance_value),
             "reason": reason.strip(),
+            "source_assessment": source_assessment.strip(),
+            "primary_risk": primary_risk.strip(),
+            "blocking_dependency": (
+                blocking_dependency.strip()
+                if isinstance(blocking_dependency, str)
+                else None
+            ),
             "logical_time": context.effect.logical_time,
         }
     )

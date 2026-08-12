@@ -66,7 +66,16 @@ class ActiveSystemSpec(_StrictModel):
     implementation_id: str = Field(pattern=_ID_PATTERN)
     description: str = Field(min_length=1)
     observation_port_ids: list[str] = Field(default_factory=list)
+    activation_observation_port_ids: list[str] | None = None
+    """Declared observations that schedule this system.
+
+    ``None`` preserves the original behavior: every observation port may wake
+    the system.  An explicit subset lets information accumulate until a
+    decision round, meeting, alarm, or other declared trigger arrives.
+    """
     output_port_ids: list[str] = Field(default_factory=list)
+    required_output_port_ids: list[str] = Field(default_factory=list)
+    """Outputs that every successful activation must emit exactly once."""
     output_port_representation_sources: dict[str, list[str]] = Field(
         default_factory=dict,
         exclude_if=lambda value: not value,
@@ -92,13 +101,34 @@ class ActiveSystemSpec(_StrictModel):
     def validate_unique_surfaces(self) -> "ActiveSystemSpec":
         """Keep each declared projection and authority surface unambiguous."""
         _require_unique(self.observation_port_ids, "observation port ids")
+        if self.activation_observation_port_ids is not None:
+            _require_unique(
+                self.activation_observation_port_ids,
+                "activation observation port ids",
+            )
         _require_unique(self.output_port_ids, "output port ids")
+        _require_unique(self.required_output_port_ids, "required output port ids")
         _require_unique(
             self.initial_representation_ids,
             "initial representation ids",
         )
         declared_outputs = set(self.output_port_ids)
+        unknown_required = set(self.required_output_port_ids) - declared_outputs
+        if unknown_required:
+            raise ValueError(
+                "required output ports must be declared output ports; unknown "
+                f"{sorted(unknown_required)!r}"
+            )
         declared_observations = set(self.observation_port_ids)
+        if self.activation_observation_port_ids is not None:
+            unknown_triggers = (
+                set(self.activation_observation_port_ids) - declared_observations
+            )
+            if unknown_triggers:
+                raise ValueError(
+                    "activation observation ports must be declared observation "
+                    f"ports; unknown {sorted(unknown_triggers)!r}"
+                )
         for output_port_id, source_port_ids in (
             self.output_port_representation_sources.items()
         ):
@@ -207,6 +237,7 @@ class ActionInterfaceSurface(_StrictModel):
     effect_type: str = Field(pattern=_ID_PATTERN)
     description: str = Field(min_length=1)
     representation_ids: list[str] = Field(default_factory=list)
+    required: bool = False
 
     @model_validator(mode="after")
     def validate_representations(self) -> "ActionInterfaceSurface":
@@ -362,6 +393,7 @@ def project_action_interfaces(
                 effect_type=port.effect_type,
                 description=port.description,
                 representation_ids=sorted(representation_ids),
+                required=output_port_id in spec.required_output_port_ids,
             )
         )
     return surfaces

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping, Sequence
 from typing import Literal, cast
@@ -77,6 +78,12 @@ def coordination_measurement_readout(
 ) -> CoordinationMeasurementReadout:
     """Validate and project analysis without changing the retained world run."""
 
+    authoring = document.get("authoring")
+    if (
+        isinstance(authoring, Mapping)
+        and authoring.get("template_id") == "influence_network_v1"
+    ):
+        return _influence_network_readout(document)
     if document.get("scenario") != "coordination_decision":
         return CoordinationMeasurementReadout(
             status="not_applicable",
@@ -186,6 +193,243 @@ def coordination_measurement_readout(
             ),
             error_type=type(error).__name__,
         )
+
+
+def _influence_network_readout(
+    document: Mapping[str, object],
+) -> CoordinationMeasurementReadout:
+    """Project exact round evidence without claiming an inferred construct."""
+
+    try:
+        traces = document.get("traces")
+        if not isinstance(traces, Sequence) or isinstance(traces, (str, bytes)):
+            raise ValueError("influence-network run lacks retained traces")
+        events = _retained_events(document.get("events"))
+        action_events: dict[str, list[str]] = {}
+        information_delivery_event_ids: list[str] = []
+        decision_gate_event_ids: list[str] = []
+        for event_id, event in events.items():
+            actor = event.get("actor_entity_id")
+            if (
+                event.get("event_kind") == "action_attempted"
+                and isinstance(actor, str)
+            ):
+                action_events.setdefault(actor, []).append(event_id)
+                if actor == "network_clock":
+                    decision_gate_event_ids.append(event_id)
+            if event.get("event_kind") == "observation_delivered":
+                representation_id = event.get("representation_id")
+                if isinstance(representation_id, str) and not representation_id.startswith(
+                    "round_snapshot_"
+                ):
+                    information_delivery_event_ids.append(event_id)
+
+        by_round: dict[int, dict[str, object]] = {}
+        delivered_by_round: dict[int, list[dict[str, object]]] = {}
+        source_event_ids: list[str] = []
+        action_event_indexes: dict[str, int] = {}
+        for raw_trace in traces:
+            if not isinstance(raw_trace, Mapping):
+                continue
+            person_id = raw_trace.get("person")
+            logical_time = raw_trace.get("logical_time")
+            if (
+                raw_trace.get("participant_kind") != "person"
+                or not isinstance(person_id, str)
+                or not isinstance(logical_time, int)
+                or isinstance(logical_time, bool)
+            ):
+                continue
+            round_index: int | None = None
+            new_messages: list[dict[str, object]] = []
+            raw_observations = raw_trace.get("observations")
+            observations = (
+                raw_observations
+                if isinstance(raw_observations, Sequence)
+                and not isinstance(raw_observations, (str, bytes))
+                else []
+            )
+            for observation in observations:
+                if not isinstance(observation, Mapping):
+                    continue
+                content = _json_mapping(observation.get("apparent_content"))
+                if content is None:
+                    continue
+                if content.get("document_kind") == "decision_round_snapshot":
+                    candidate = content.get("round_index")
+                    if isinstance(candidate, int) and not isinstance(candidate, bool):
+                        round_index = candidate
+                elif content.get("document_kind") == "influence_message":
+                    new_messages.append(
+                        {
+                            "delivery_id": content.get("delivery_id"),
+                            "topic": content.get("topic"),
+                            "apparent_source_ref": observation.get(
+                                "apparent_source_ref"
+                            ),
+                        }
+                    )
+            if round_index is None:
+                continue
+            raw_actions = raw_trace.get("actions")
+            actions = (
+                raw_actions
+                if isinstance(raw_actions, Sequence)
+                and not isinstance(raw_actions, (str, bytes))
+                else []
+            )
+            payload: Mapping[str, object] | None = None
+            for action in actions:
+                if isinstance(action, Mapping) and isinstance(
+                    action.get("payload"), Mapping
+                ):
+                    candidate = cast(Mapping[str, object], action["payload"])
+                    if isinstance(candidate.get("stance"), str):
+                        payload = candidate
+                        break
+            stance = payload.get("stance") if payload is not None else "defer"
+            if stance not in {"support", "conditional", "defer", "oppose"}:
+                raise ValueError("influence-network trace contains an invalid stance")
+            round_item = by_round.setdefault(
+                round_index,
+                {
+                    "round_index": round_index,
+                    "logical_time": logical_time,
+                    "counts": {
+                        "support": 0,
+                        "conditional": 0,
+                        "defer": 0,
+                        "oppose": 0,
+                    },
+                    "actor_reports": [],
+                },
+            )
+            counts = cast(dict[str, int], round_item["counts"])
+            counts[stance] += 1
+            actor_reports = cast(list[dict[str, object]], round_item["actor_reports"])
+            actor_reports.append(
+                {
+                    "person_id": person_id,
+                    "stance": stance,
+                    "reason": payload.get("reason") if payload is not None else None,
+                    "source_assessment": (
+                        payload.get("source_assessment") if payload is not None else None
+                    ),
+                    "primary_risk": (
+                        payload.get("primary_risk") if payload is not None else None
+                    ),
+                    "blocking_dependency": (
+                        payload.get("blocking_dependency")
+                        if payload is not None
+                        else None
+                    ),
+                }
+            )
+            if new_messages:
+                delivered_by_round.setdefault(round_index, []).append(
+                    {"person_id": person_id, "new_messages": new_messages}
+                )
+            if payload is not None:
+                actor_events = action_events.get(person_id, [])
+                event_index = action_event_indexes.get(person_id, 0)
+                if event_index >= len(actor_events):
+                    raise ValueError(
+                        "influence-network trace lacks its retained stance event"
+                    )
+                source_event_ids.append(actor_events[event_index])
+                action_event_indexes[person_id] = event_index + 1
+
+        rounds = [by_round[index] for index in sorted(by_round)]
+        if not rounds:
+            raise ValueError("influence-network run has no decision-round evidence")
+        outcome = document.get("outcome")
+        gate = dict(outcome) if isinstance(outcome, Mapping) else {}
+        evidence_ids = list(dict.fromkeys(source_event_ids))
+        exact = [
+            ExactMeasureReadout(
+                measure_id="influence_round_stance_trajectory",
+                construct_name="coordination_readiness",
+                label="Decision-round trajectory",
+                unit="actor-reported stances and reasons",
+                value=cast(JsonValue, rounds),
+                limitations=[
+                    "Stances and explanations are synthetic model outputs, not observations of people.",
+                    "Actor-reported risks, source assessments, and dependencies are not validated latent constructs.",
+                ],
+                source_event_ids=evidence_ids,
+                evidence_basis="embedded_citation",
+            ),
+            ExactMeasureReadout(
+                measure_id="influence_final_decision_gate",
+                construct_name="collective_coordination_result",
+                label="Final collective decision gate",
+                unit="exact authored threshold checks",
+                value=cast(JsonValue, gate),
+                limitations=[
+                    "The decision rule is an authored institutional mechanism.",
+                    "A passed or failed gate does not establish successful real-world collective action.",
+                ],
+                source_event_ids=(
+                    decision_gate_event_ids[-1:]
+                    if decision_gate_event_ids
+                    else evidence_ids
+                ),
+                evidence_basis="embedded_citation",
+            ),
+            ExactMeasureReadout(
+                measure_id="influence_observation_topology",
+                construct_name="distributed_information_exposure",
+                label="New information visible at each decision round",
+                unit="delivered message-recipient records",
+                value=cast(
+                    JsonValue,
+                    [
+                        {
+                            "round_index": index,
+                            "recipients": delivered_by_round[index],
+                        }
+                        for index in sorted(delivered_by_round)
+                    ],
+                ),
+                limitations=[
+                    "Delivery establishes availability to an actor, not belief, persuasion, truth, or source intent."
+                ],
+                source_event_ids=information_delivery_event_ids,
+                evidence_basis="embedded_citation",
+            ),
+        ]
+        return CoordinationMeasurementReadout(
+            status="available",
+            headline="What changed across the decision rounds",
+            explanation=(
+                "This readout preserves who received which messages, each person's "
+                "reported assessment, and the exact collective decision gate."
+            ),
+            measurement_id=f"{document.get('run_id')}_influence_network_exact_v1",
+            exact_measures=exact,
+            limitations=[
+                "This is one synthetic LLM execution and does not estimate human or institutional behavior.",
+                "Without a matched comparison, the run cannot attribute a change to influence rather than other modeled causes.",
+                "Trust structure is not established unless relationships and reliance pathways are explicitly represented and analyzed.",
+            ],
+        )
+    except (TypeError, ValueError) as error:
+        return CoordinationMeasurementReadout(
+            status="invalid",
+            headline="The simulation completed, but its round analysis is invalid",
+            explanation="The retained outcome remains available, but the round evidence could not be projected.",
+            error_type=type(error).__name__,
+        )
+
+
+def _json_mapping(value: object) -> Mapping[str, object] | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return None
+    return cast(Mapping[str, object], parsed) if isinstance(parsed, Mapping) else None
 
 
 def _exact_readout(

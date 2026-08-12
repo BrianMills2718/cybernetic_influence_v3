@@ -659,6 +659,8 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
     traces = raw_traces if isinstance(raw_traces, list) else []
     participants: dict[str, dict[str, object]] = {}
     decision_steps: list[dict[str, object]] = []
+    influence_messages: dict[str, dict[str, object]] = {}
+    influence_routes: set[tuple[str, str, str]] = set()
     for raw_trace in traces:
         if (
             not isinstance(raw_trace, dict)
@@ -672,6 +674,8 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
             raw_observations if isinstance(raw_observations, list) else []
         )
         observed_commitments: dict[str, str] = {}
+        round_index: int | None = None
+        projected_observations: list[dict[str, object]] = []
         for observation in observations:
             if not isinstance(observation, dict):
                 continue
@@ -682,6 +686,40 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                 content = json.loads(apparent_content)
             except json.JSONDecodeError:
                 continue
+            if isinstance(content, dict) and content.get("document_kind") == (
+                "decision_round_snapshot"
+            ):
+                candidate_round = content.get("round_index")
+                if isinstance(candidate_round, int) and not isinstance(
+                    candidate_round, bool
+                ):
+                    round_index = candidate_round
+                    projected_observations.append(
+                        {
+                            "kind": "decision_round",
+                            "round_index": candidate_round,
+                            "collective_question": content.get(
+                                "collective_question"
+                            ),
+                            "round_feedback": content.get("round_feedback"),
+                        }
+                    )
+            elif isinstance(content, dict) and content.get("document_kind") == (
+                "influence_message"
+            ):
+                delivery_id = content.get("delivery_id")
+                source_ref = observation.get("apparent_source_ref")
+                if isinstance(delivery_id, str) and isinstance(source_ref, str):
+                    projected = {
+                        "kind": "influence_message",
+                        "delivery_id": delivery_id,
+                        "topic": content.get("topic"),
+                        "content": content.get("content"),
+                        "apparent_source_ref": source_ref,
+                    }
+                    projected_observations.append(projected)
+                    influence_messages.setdefault(delivery_id, projected)
+                    influence_routes.add((source_ref, delivery_id, person_id))
             if (
                 not isinstance(content, dict)
                 or content.get("document_kind") != "meeting_snapshot"
@@ -770,6 +808,8 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                     "person_label": participants[person_id]["label"],
                     "orientation": orientation,
                     "actions": projected_actions,
+                    "round_index": round_index,
+                    "observations": projected_observations,
                     "model_call_count": raw_trace.get("model_call_count", 0),
                 }
             )
@@ -817,6 +857,105 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
             )
     raw_events = document.get("events", [])
     raw_moments = document.get("moments", [])
+    rounds: dict[int, dict[str, object]] = {}
+    for step in decision_steps:
+        raw_round_index = step.get("round_index")
+        if not isinstance(raw_round_index, int) or isinstance(raw_round_index, bool):
+            continue
+        round_index = raw_round_index
+        round_item = rounds.setdefault(
+            round_index,
+            {"round_index": round_index, "decisions": [], "new_information": []},
+        )
+        cast(list[dict[str, object]], round_item["decisions"]).append(step)
+        for observation in cast(list[dict[str, object]], step["observations"]):
+            if observation.get("kind") == "influence_message":
+                cast(list[dict[str, object]], round_item["new_information"]).append(
+                    {**observation, "recipient_id": step["person_id"]}
+                )
+
+    network_nodes: list[dict[str, object]] = []
+    network_edges: list[dict[str, object]] = []
+    for source_ref in sorted({item[0] for item in influence_routes}):
+        network_nodes.append(
+            {
+                "id": source_ref,
+                "kind": "thing",
+                "label": labels.get(source_ref, source_ref.replace("_", " ").title()),
+                "description": "Configured source of one or more delivered messages.",
+            }
+        )
+    for delivery_id, message in sorted(influence_messages.items()):
+        network_nodes.append(
+            {
+                "id": f"message_{delivery_id}",
+                "kind": "information",
+                "label": message.get("topic") or delivery_id.replace("_", " ").title(),
+                "description": message.get("content") or "A delivered information item.",
+            }
+        )
+    for person in participants.values():
+        person_id = str(person["person_id"])
+        network_nodes.append(
+            {
+                "id": person_id,
+                "kind": "person",
+                "label": person["label"],
+                "description": person.get("position") or "A simulated decision participant.",
+            }
+        )
+    if participants:
+        network_nodes.append(
+            {
+                "id": "collective_decision",
+                "kind": "mechanism",
+                "label": "Collective decision gate",
+                "description": "The authored rule evaluates the latest independent stances.",
+            }
+        )
+    connected_source_messages: set[tuple[str, str]] = set()
+    for source_ref, delivery_id, person_id in sorted(influence_routes):
+        message_id = f"message_{delivery_id}"
+        if (source_ref, message_id) not in connected_source_messages:
+            edge_id = f"source_{source_ref}_{delivery_id}"
+            network_edges.append(
+                {
+                    "id": edge_id,
+                    "kind": "connection",
+                    "source": source_ref,
+                    "target": message_id,
+                    "enabled": True,
+                    "description": "This source introduced the retained message.",
+                    "routeIds": [edge_id],
+                }
+            )
+            connected_source_messages.add((source_ref, message_id))
+        delivery_edge_id = f"delivery_{delivery_id}_{person_id}"
+        network_edges.append(
+            {
+                "id": delivery_edge_id,
+                "kind": "connection",
+                "source": message_id,
+                "target": person_id,
+                "enabled": True,
+                "description": "The retained route delivered this message to this person.",
+                "routeIds": [delivery_edge_id],
+            }
+        )
+    for person_id in sorted(participants):
+        edge_id = f"decision_{person_id}"
+        network_edges.append(
+            {
+                "id": edge_id,
+                "kind": "connection",
+                "source": person_id,
+                "target": "collective_decision",
+                "enabled": True,
+                "description": "This person's latest stance enters the exact decision gate.",
+                "routeIds": [edge_id],
+            }
+        )
+    readout = coordination_measurement_readout(document).model_dump(mode="json")
     return {
         "run_id": document.get("run_id"),
         "status": document.get("status"),
@@ -835,6 +974,9 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "narration_model_calls": document.get("narration_model_calls", 0),
         "participants": list(participants.values()),
         "decision_steps": decision_steps,
+        "rounds": [rounds[index] for index in sorted(rounds)],
+        "influence_network": {"nodes": network_nodes, "edges": network_edges},
+        "coordination_measurement_readout": readout,
         "evidence_counts": {
             "events": len(raw_events)
             if isinstance(raw_events, list)

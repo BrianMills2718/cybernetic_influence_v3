@@ -126,11 +126,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Tell the authoring model what to change" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=92a310c",
-        "assets/styles.css?v=influence-network-v2",
+        "assets/styles.css?v=influence-network-v3",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=92a310c",
-        "assets/app.js?v=influence-network-v2",
+        "assets/app.js?v=influence-network-v3",
     ]
     assert {
         "overview-view",
@@ -167,11 +167,16 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-result",
         "create-result-people",
         "create-result-steps",
+        "create-result-round-tabs",
+        "create-result-round",
+        "create-result-network-graph",
+        "create-result-analysis",
         "create-coverage",
         "create-scenario-editor",
         "create-save-scenario",
         "create-scenario-concerns",
         "create-network-editor",
+        "create-network-feedback",
         "create-network-deliveries",
         "create-save-network",
         "run-view",

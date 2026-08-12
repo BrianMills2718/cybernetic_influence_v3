@@ -123,8 +123,27 @@ def test_influence_network_can_be_edited_approved_and_run(tmp_path: Path) -> Non
     assert document["outcome"]["final_status"] == "approved"
     summary = api.get(f"/api/runs/{document['run_id']}/summary")
     assert summary.status_code == 200
-    assert summary.json()["template_id"] == "influence_network_v1"
-    assert {person["last_explicit_commitment"] for person in summary.json()["participants"]} == {"support"}
+    compact = summary.json()
+    assert compact["template_id"] == "influence_network_v1"
+    assert {person["last_explicit_commitment"] for person in compact["participants"]} == {"support"}
+    assert len(compact["rounds"]) == 2
+    assert [len(item["decisions"]) for item in compact["rounds"]] == [3, 3]
+    assert compact["evidence_counts"]["decision_steps"] == 6
+    assert compact["coordination_measurement_readout"]["status"] == "available"
+    assert compact["coordination_measurement_readout"]["measurement_id"].endswith(
+        "_influence_network_exact_v1"
+    )
+    assert all(
+        measure["source_event_ids"]
+        for measure in compact["coordination_measurement_readout"]["exact_measures"]
+    )
+    network = compact["influence_network"]
+    assert {node["kind"] for node in network["nodes"]} >= {
+        "person",
+        "information",
+        "mechanism",
+    }
+    assert len(network["edges"]) == 10
 
 
 def test_public_authoring_advertises_and_dispatches_only_certified_models(
@@ -761,7 +780,7 @@ def test_authoring_and_theory_call_contracts_are_exact_and_provider_free(
     config = _client(tmp_path).get("/api/config").json()
     authoring = config["authoring"]["structured_contract"]
     assert authoring["task"] == "cybernetic_influence_v3_scenario_draft"
-    assert authoring["prompt_version"] == "scenario_draft.v7"
+    assert authoring["prompt_version"] == "scenario_draft.v8"
     assert len(authoring["prompt_digest"]) == 64
     assert len(authoring["schema_digest"]) == 64
     assert authoring["maximum_attempts_per_message"] == 3
@@ -899,6 +918,15 @@ def test_failed_authored_live_run_is_retained_with_provider_evidence(
         api_module,
         "resolve_live_configuration",
         lambda _options: effective,
+    )
+    monkeypatch.setattr(
+        api_module,
+        "model_catalog",
+        lambda: [
+            {"model": "codex/gpt-5.6-luna"},
+            {"model": "openrouter/openai/gpt-5.6-terra"},
+            {"model": effective.model},
+        ],
     )
     evidence = ModelCallEvidence(
         status="failed",
@@ -1513,7 +1541,7 @@ def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) ->
         )
     )
     config = api.get("/api/config").json()["authoring"]
-    assert config["model"] == "openrouter/openai/gpt-5.6-terra"
+    assert config["model"] == "codex/gpt-5.6-luna"
     assert config["reasoning_effort"] == "medium"
     draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
     drafted = api.post(

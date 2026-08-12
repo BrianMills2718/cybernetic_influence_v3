@@ -91,6 +91,13 @@ class DueActivation:
 RuntimeProgressObserver = Callable[[RuntimeProgressUpdate, ActiveRuntimeCheckpoint], None]
 
 
+def _activation_observation_ports(spec: ActiveSystemSpec) -> set[str]:
+    """Return the observations that schedule work, preserving legacy behavior."""
+
+    selected = spec.activation_observation_port_ids
+    return set(spec.observation_port_ids if selected is None else selected)
+
+
 class ActiveRuntimeSession:
     """One canonical active run composing a single exact causal-core session."""
 
@@ -172,13 +179,13 @@ class ActiveRuntimeSession:
             for active_system_id, spec in self._specs.items():
                 state = self._states[active_system_id]
                 consumed = set(state.consumed_observation_ids)
-                declared_ports = set(spec.observation_port_ids)
+                trigger_ports = _activation_observation_ports(spec)
                 if any(
                     observation_id not in consumed
                     and self._core.state.observations[
                         observation_id
                     ].via_port_id
-                    in declared_ports
+                    in trigger_ports
                     for observation_id in self._core.state.inboxes.get(
                         spec.entity_id, []
                     )
@@ -212,6 +219,7 @@ class ActiveRuntimeSession:
                 if state.next_update_at is not None:
                     times.append(state.next_update_at)
                 consumed = set(state.consumed_observation_ids)
+                trigger_ports = _activation_observation_ports(spec)
                 times.extend(
                     self._core.state.observations[observation_id].logical_time
                     for observation_id in self._core.state.inboxes.get(
@@ -219,7 +227,7 @@ class ActiveRuntimeSession:
                     )
                     if observation_id not in consumed
                     and self._core.state.observations[observation_id].via_port_id
-                    in set(spec.observation_port_ids)
+                    in trigger_ports
                 )
             return min(times) if times else None
 
@@ -253,6 +261,7 @@ class ActiveRuntimeSession:
                 state = self._states[active_system_id]
                 consumed = set(state.consumed_observation_ids)
                 declared_ports = set(spec.observation_port_ids)
+                trigger_ports = _activation_observation_ports(spec)
                 observations = [
                     ActiveObservation(
                         observation_id=observation.observation_id,
@@ -272,7 +281,11 @@ class ActiveRuntimeSession:
                     in declared_ports
                 ]
                 pending_observations[active_system_id] = observations
-                times = [item.logical_time for item in observations]
+                times = [
+                    item.logical_time
+                    for item in observations
+                    if item.via_port_id in trigger_ports
+                ]
                 if state.next_update_at is not None:
                     times.append(state.next_update_at)
                 if times:
@@ -314,7 +327,12 @@ class ActiveRuntimeSession:
                     for item in pending_observations[active_system_id]
                     if item.logical_time <= logical_time
                 ]
-                due_for_observation = bool(observations)
+                trigger_ports = _activation_observation_ports(
+                    self._specs[active_system_id]
+                )
+                due_for_observation = any(
+                    item.via_port_id in trigger_ports for item in observations
+                )
                 due_for_wake = (
                     state.next_update_at is not None
                     and state.next_update_at <= logical_time
@@ -1084,6 +1102,21 @@ class ActiveRuntimeSession:
                 surface.output_port_id: surface
                 for surface in item.active_input.action_interfaces
             }
+            action_port_ids = [intent.output_port_id for intent in proposal.actions]
+            missing_required = sorted(
+                set(spec.required_output_port_ids) - set(action_port_ids)
+            )
+            duplicated_required = sorted(
+                port_id
+                for port_id in set(spec.required_output_port_ids)
+                if action_port_ids.count(port_id) > 1
+            )
+            if missing_required or duplicated_required:
+                raise ParticipantContractError(
+                    f"active system {active_system_id!r} must emit each required "
+                    "output exactly once; "
+                    f"missing={missing_required!r}, duplicated={duplicated_required!r}"
+                )
             for intent in proposal.actions:
                 surface = interfaces.get(intent.output_port_id)
                 if surface is None:

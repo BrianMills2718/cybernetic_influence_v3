@@ -335,6 +335,14 @@ class InfluenceNetworkWorkflowDraft(_StrictModel):
     template_id: Literal["influence_network_v1"]
     collective_question: str = Field(min_length=1)
     round_minutes: list[int] = Field(min_length=2, max_length=5)
+    round_feedback: Literal["none", "stances", "stances_and_reasons"] = Field(
+        default="stances_and_reasons",
+        description=(
+            "The prior public decision information included in each later "
+            "round snapshot."
+        ),
+    )
+    """What prior public decisions enter each later decision round."""
     deliveries: list[InfluenceDeliveryDraft] = Field(min_length=1, max_length=12)
     decision_rule: InfluenceDecisionRuleDraft
 

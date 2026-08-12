@@ -53,6 +53,7 @@ user: |
   {% for interface in action_interfaces %}
   - {{ interface.output_port_id }} (effect type {{ interface.effect_type }}):
     {{ interface.description }}
+    requirement: {% if interface.required %}you must use this interface exactly once in this response{% else %}optional{% endif %}
     permitted representation IDs:
     {% if interface.representation_ids %}{{ interface.representation_ids | join(", ") }}{% else %}(none){% endif %}
   {% else %}
@@ -63,6 +64,7 @@ user: |
   listed output_port_id, use a listed representation_id or null, provide only
   the payload required by the response schema for that interface, and give a
   concise public_summary.
+  Every interface marked required must appear exactly once in actions.
   representation_id is a separate action field and must never also appear
   inside payload.
   If you take no action, return an empty actions list and a nonempty

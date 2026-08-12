@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
+from cybernetic_influence.active_runtime import ParticipantContractError
 from cybernetic_influence.authoring import ScenarioDraftProposal, compile_scenario
 from cybernetic_influence.authoring.compiler import AuthoringCompilationError
 from cybernetic_influence.authoring.influence_network import influence_network_outcome
@@ -231,33 +233,31 @@ def test_influence_network_live_people_receive_only_routed_messages() -> None:
             if f"/{person_id}/" in trace_id
         )
         response_model = kwargs["response_model"]
-        actions = (
-            []
-            if person_id == "community_leader"
-            else [
-                {
-                    "output_port_id": f"stance_{person_id}_out",
-                    "representation_id": None,
-                    "payload": (
-                        '{"person_id":"'
-                        + person_id
-                        + '","stance":"support","reason":"The evidence I received supports certification."}'
-                    ),
-                    "public_summary": f"{person_id} stated support.",
-                }
-            ]
-        )
+        stance = "defer" if person_id == "community_leader" else "support"
+        actions = [
+            {
+                "output_port_id": f"stance_{person_id}_out",
+                "representation_id": None,
+                "payload": (
+                    '{"person_id":"'
+                    + person_id
+                    + '","stance":"'
+                    + stance
+                    + '","reason":"The evidence I received supports certification.",'
+                    '"source_assessment":"I rely on the delivered audit evidence and treat the anonymous allegation as unverified.",'
+                    '"primary_risk":"Certifying against incomplete evidence.",'
+                    '"blocking_dependency":null}'
+                ),
+                "public_summary": f"{person_id} stated {stance}.",
+            }
+        ]
         return (
             response_model.model_validate(
                 {
                     "orientation": "I will decide from my memories and delivered evidence.",
                     "memory_update": "I retain my latest stated position.",
                     "actions": actions,
-                    "silence_reason": (
-                        "I am not ready to state a position."
-                        if not actions
-                        else None
-                    ),
+                    "silence_reason": None,
                 }
             ),
             SimpleNamespace(cost=0.01, cost_source="provider_reported"),
@@ -282,7 +282,8 @@ def test_influence_network_live_people_receive_only_routed_messages() -> None:
         "oppose": 0,
         "support": 2,
     }
-    assert result.model_calls == 11
+    assert result.model_calls == 6
+    assert len(calls) == 6
     director_inputs = [
         call["messages"][1]["content"]
         for call in calls
@@ -296,3 +297,87 @@ def test_influence_network_live_people_receive_only_routed_messages() -> None:
         if "/journalist/" in str(call["trace_id"])
     ]
     assert any("targeted_message_representation" in item for item in journalist_inputs)
+    assert all("decision_round_snapshot" in item for item in director_inputs)
+
+
+def test_influence_network_live_people_must_emit_each_round_stance() -> None:
+    compiled = compile_scenario(influence_network_proposal())
+
+    def remain_silent(
+        _model: str,
+        _messages: list[dict[str, str]],
+        **kwargs: Any,
+    ) -> tuple[object, object]:
+        response_model = kwargs["response_model"]
+        return (
+            response_model.model_validate(
+                {
+                    "orientation": "I will not state a position.",
+                    "memory_update": "No position was recorded.",
+                    "actions": [],
+                    "silence_reason": "I decline to answer.",
+                }
+            ),
+            SimpleNamespace(cost=0.01, cost_source="provider_reported"),
+        )
+
+    with pytest.raises(ParticipantContractError, match="required output exactly once"):
+        compiled.run_live(
+            run_id="influence_network_missing_required_stance",
+            model="openrouter/openai/gpt-5.6-luna",
+            reasoning_effort="medium",
+            per_call_budget=0.05,
+            per_run_budget=0.50,
+            structured_call=remain_silent,
+            participant_concurrency=3,
+        )
+
+
+def test_influence_network_messages_accumulate_until_decision_round() -> None:
+    compiled = compile_scenario(influence_network_proposal())
+    specs = {spec.active_system_id: spec for spec in compiled.fixture.active_specs}
+
+    director = specs["election_director"]
+    assert director.activation_observation_port_ids == [
+        "round_snapshot_election_director_in"
+    ]
+    assert "public_broadcast_election_director_in" in director.observation_port_ids
+    assert "targeted_message_election_director_in" not in director.observation_port_ids
+    assert director.required_output_port_ids == ["stance_election_director_out"]
+
+
+@pytest.mark.parametrize(
+    ("feedback", "expected_positions", "includes_reason"),
+    [("none", 0, False), ("stances", 3, False), ("stances_and_reasons", 3, True)],
+)
+def test_influence_network_round_feedback_is_explicit(
+    feedback: str,
+    expected_positions: int,
+    includes_reason: bool,
+) -> None:
+    payload = influence_network_proposal().model_dump(mode="json")
+    payload["workflow"]["round_feedback"] = feedback
+    result = compile_scenario(ScenarioDraftProposal.model_validate(payload)).run_scripted(
+        run_id=f"feedback_{feedback}"
+    )
+    second_round = next(
+        participant
+        for attempt in result.attempts
+        for participant in attempt.participants
+        if any(
+            json.loads(observation.apparent_content).get("round_index") == 2
+            for observation in participant.input.observations
+            if observation.apparent_content.startswith("{")
+            and json.loads(observation.apparent_content).get("document_kind")
+            == "decision_round_snapshot"
+        )
+    )
+    snapshot = next(
+        json.loads(observation.apparent_content)
+        for observation in second_round.input.observations
+        if json.loads(observation.apparent_content).get("document_kind")
+        == "decision_round_snapshot"
+    )
+    positions = snapshot["current_public_positions"]
+    assert len(positions) == expected_positions
+    assert bool(positions and "reason" in positions[0]) is includes_reason
