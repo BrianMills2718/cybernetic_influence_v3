@@ -134,21 +134,23 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Edit the influence network directly" in page
     assert "Tell the authoring model what to change" in page
     assert "How the simulator represents a world, produces change, and retains evidence" in page
-    assert "One canonical world—not one narrative per agent" in page
-    assert "Information is represented, delivered, and interpreted" in page
+    assert "The ontology is a set of separations—not a list of agent types" in page
+    assert "One typed world—not one narrative per agent" in page
+    assert "Information has a carrier, representation, provenance, route" in page
     assert "Project-owned ActiveRuntimeSession + CausalSession" in page
     assert "production integration not yet implemented" in page
-    assert "Mechanisms also carry n-ary semantics" in page
-    assert "Spatial links are explicitly undirected" in page
-    assert "Natural-language authoring compiles into reviewed machinery" in page
-    assert "Visual graphs are projections" in page
+    assert "N-ary mechanism semantics" in page
+    assert "Undirected spatial links" in page
+    assert "Natural language proposes semantic configuration" in page
+    assert "Configured structure, spatial topology, and causal history" in page
+    assert "Authority boundary: now versus adopted" in page
     assert shape.stylesheets == [
-        "assets/graph-canvas.css?v=ontology1",
-        "assets/styles.css?v=ontology1",
+        "assets/graph-canvas.css?v=ontology2",
+        "assets/styles.css?v=ontology2",
     ]
     assert shape.scripts == [
-        "assets/graph-canvas.js?v=ontology1",
-        "assets/app.js?v=ontology1",
+        "assets/graph-canvas.js?v=ontology2",
+        "assets/app.js?v=ontology2",
     ]
     assert {
         "overview-view",
@@ -166,13 +168,18 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "method-view",
         "method-title",
         "method-purpose",
+        "method-ontology",
         "method-world",
+        "method-relations",
         "method-agency",
         "method-information",
+        "method-affordances",
         "method-transitions",
         "method-time",
+        "method-systems",
         "method-analysis",
         "method-authoring",
+        "method-architecture",
         "method-limits",
         "case-view",
         "research-case-runs",
