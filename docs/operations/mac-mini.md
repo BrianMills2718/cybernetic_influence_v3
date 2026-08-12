@@ -110,28 +110,38 @@ currently adds a matched three-run custom triad. Its role-aligned comparison is
 
 Current natural-language authoring and guided-replay deployment 2026-08-12: the
 public service now runs exact revision
-`49eb780c5cc0383e7862c3ac375b7b68233a54ef`. The direct authoring entry is
+`cae8dbc6338e0dc924410773b8b1a3f010aa993b`. The direct authoring entry is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=create>. A deployed
 Luna execution proved the bounded `influence_network_v1` path from analyst prose
 through typed generation, direct edit, approval, six autonomous person calls,
 an exact collective gate, retained evidence, and public result rendering. The
 retained example is
-<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=create&draft=draft_68240a512235&authored_run=run_ffe88e1c15d5>.
-Every completed run now opens as a staged replay. For the retained influence
-network, that replay reveals the collective question, configured people and
-sources, each round's delivered information, individual decisions, and the
-collective outcome in seven steps. Its graph distinguishes source, information,
-person, and decision-process nodes and labels directed issue, delivery, and
-decision-contribution edges. Public desktop and 390-pixel browser checks loaded
-the retained run without console or request failures; invalid and missing run
-identifiers returned explicit `422` and `404` responses.
+<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=simulations&simulation=run_ffe88e1c15d5>.
+The `Simulations` page lists every retained completed run; it currently exposes
+29. Each opens through the same automatically generated staged replay rather
+than requiring a scenario-specific results page. The influence-network example
+reveals the question, configured people and sources, delivered information,
+individual decisions, and collective outcome in seven steps. A structurally
+different coordination run (`run_37bc6e802787`) uses the same presentation seam
+to produce a 13-step replay from its canonical events and network. Node and
+directed-edge keys are derived from the types present in each selected run.
+Public desktop and 390-pixel Chromium checks switched between both runs,
+reloaded a direct link, and rendered the mobile graph without unexpected
+console, page, or request failures. Invalid and missing run identifiers return
+explicit `422` and `404` responses, and the missing run is reported visibly in
+the UI. The graph component is explicitly unmounted while switching retained
+runs so a hidden canvas cannot emit invalid geometry.
 The focused certification record is
-`docs/experiments/2026-08-12-public-influence-network-v2-certification.md`.
-This evidence is intentionally limited to the reviewed workflow and does not
-establish arbitrary-world authoring or stakeholder usefulness. The prior target
+`docs/experiments/2026-08-12-public-influence-network-v2-certification.md`; the
+automatic presentation deployment is separately recorded in
+`docs/experiments/2026-08-12-automatic-simulation-replay-certification.md`.
+The deployment evidence establishes automatic presentation for retained
+completed runs with canonical graph/event evidence; it does not establish that
+arbitrary analyst prose can compile into arbitrary executable worlds or that a
+stakeholder will find the interface useful. The immediately prior target
 revision and LaunchAgent are retained respectively at
-`refs/deployments/waltzman-public-pre-49eb780` and
-`~/Library/LaunchAgents/com.cybernetic-influence.waltzman-public.plist.pre-49eb780`.
+`refs/deployments/waltzman-public-pre-cae8dbc` and
+`~/Library/LaunchAgents/com.cybernetic-influence.waltzman-public.plist.pre-cae8dbc`.
 
 Report-only deployment certification refreshed at `2026-08-05T04:19:15Z`:
 
