@@ -795,6 +795,43 @@ tbody tr:last-child td { border-bottom: 0; }
 .provenance-panel code { overflow-wrap: anywhere; }
 .provenance-panel time, .provenance-panel strong { color: var(--muted); font-size: 0.8rem; }
 
+/* Methodology is a calm reading surface, not another dashboard. */
+#method-view:not([hidden]) { display: block; }
+.guided-result #method-view { margin: 0 auto; max-width: 1180px; }
+.methodology-hero { max-width: 970px; padding: 28px 0 36px; }
+.methodology-hero h2 { font-size: clamp(2.4rem, 4.5vw, 4.4rem); letter-spacing: -.05em; line-height: 1.03; margin: 12px 0 18px; max-width: 17ch; }
+.methodology-hero > p { color: var(--muted); font-size: 1rem; line-height: 1.75; margin: 0; max-width: 82ch; }
+.methodology-principle { background: #0d1b27; border-left: 3px solid var(--accent); display: grid; gap: 8px; margin-top: 28px; padding: 17px 20px; }
+.methodology-principle strong { color: var(--accent); font-size: .68rem; letter-spacing: .09em; text-transform: uppercase; }
+.methodology-principle span { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; line-height: 1.6; }
+.methodology-status { display: grid; gap: 5px 16px; grid-template-columns: max-content minmax(0, 1fr); margin-top: 15px; }
+.methodology-status strong { color: var(--faint); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; }
+.methodology-status span { color: var(--muted); font-size: .76rem; }
+.methodology-toc { border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 3px 20px; margin-bottom: 20px; padding: 15px 0; }
+.methodology-toc a { color: var(--muted); font-size: .74rem; font-weight: 750; padding: 5px 0; text-decoration: none; }
+.methodology-toc a:hover, .methodology-toc a:focus-visible { color: var(--accent); }
+.methodology-paper { margin: 0 auto; max-width: 1040px; }
+.methodology-paper > section { border-top: 1px solid var(--line); display: grid; gap: 28px; grid-template-columns: 54px minmax(0, 1fr); padding: 48px 0; scroll-margin-top: 90px; }
+.methodology-paper > section:first-child { border-top: 0; }
+.methodology-number { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; padding-top: 6px; }
+.methodology-paper h3 { font-size: clamp(1.35rem, 2.2vw, 1.9rem); letter-spacing: -.025em; margin: 0 0 16px; }
+.methodology-paper p, .methodology-paper li { color: var(--muted); font-size: .91rem; line-height: 1.75; }
+.methodology-paper p { margin: 0; max-width: 82ch; }
+.methodology-paper p + p { margin-top: 14px; }
+.methodology-paper ul { margin: 0; padding-left: 20px; }
+.methodology-paper li + li { margin-top: 10px; }
+.methodology-paper em { color: var(--text); }
+.methodology-paper code { color: #b8dfff; }
+.methodology-contracts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; }
+.methodology-contracts code { background: #0b151f; border: 1px solid var(--line); border-radius: 4px; font-size: .7rem; padding: 6px 8px; }
+.methodology-pipeline { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.methodology-pipeline span { background: #102231; border: 1px solid var(--line-strong); border-radius: 5px; font-size: .72rem; font-weight: 750; padding: 8px 10px; }
+.methodology-pipeline i { color: var(--accent); font-style: normal; }
+.methodology-appendix { border-top: 1px solid var(--line); margin-top: 12px; padding: 30px 0 70px; }
+.methodology-appendix > summary { cursor: pointer; font-size: 1rem; font-weight: 800; }
+.methodology-appendix > p { margin: 12px 0 22px; }
+.methodology-appendix .limitations-panel { margin-top: 12px; }
+
 /* Focused, game-loop presentation */
 .lab-shell .rail-heading, .lab-shell .rail-facts, .lab-shell .dataset-id { display: none; }
 .lab-shell .lab-navigation { border-bottom: 0; }
@@ -1008,10 +1045,12 @@ tbody tr:last-child td { border-bottom: 0; }
 .guide-visual > header { align-items: baseline; display: flex; gap: 10px; padding: 13px 16px; }
 .guide-visual > header span, .guide-progress-label span:last-child, .guide-language > span, .guide-takeaway > span { color: var(--accent); font-size: 0.69rem; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
 .guide-visual > header strong { font-size: 0.86rem; }
-.guide-graph { background: #0b151f; border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); height: 500px; overflow: hidden; }
-.guide-graph .cy-graph-shell { min-height: 500px; }
-.guide-graph .cy-graph-canvas { min-height: 500px; }
+.guide-graph { background: #0b151f; border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); height: 580px; overflow: hidden; }
+.guide-graph .cy-graph-shell { min-height: 580px; }
+.guide-graph .cy-graph-canvas { min-height: 480px; }
 .guide-graph .cy-graph-bar { display: none; }
+.guide-loading, .guide-load-error { color: var(--muted); margin: 0; padding: 40px; }
+.guide-load-error strong { color: var(--danger); }
 .guide-legend { display: grid; gap: 1px; grid-template-columns: repeat(4, 1fr); }
 .guide-legend > span { align-items: center; background: #0c1721; color: var(--muted); display: grid; font-size: 0.67rem; gap: 2px 7px; grid-template-columns: 10px 1fr; line-height: 1.35; min-height: 54px; padding: 8px 10px; }
 .guide-legend i { border: 2px solid #57b49d; border-radius: 3px; grid-row: 1 / span 2; height: 10px; width: 10px; }
@@ -1353,6 +1392,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .create-replay-stage { grid-template-columns: 1fr; }
   .create-replay-explanation { min-height: 320px; }
   .guide-explanation { min-height: 560px; }
+  .methodology-paper > section { gap: 18px; grid-template-columns: 38px minmax(0, 1fr); padding: 38px 0; }
   .primary-cta, .secondary-cta { text-align: center; width: 100%; }
   .result-card { min-height: 0; }
   .advanced-evidence-heading { align-items: stretch; flex-direction: column; }
@@ -1379,7 +1419,8 @@ tbody tr:last-child td { border-bottom: 0; }
   .case-network-graph { height: 560px; }
   .case-network-graph .cy-graph-shell { min-height: 560px; }
   .case-network-graph .cy-graph-canvas { min-height: 510px; }
-  .guide-graph, .guide-graph .cy-graph-shell, .guide-graph .cy-graph-canvas { height: 420px; min-height: 420px; }
+  .guide-graph, .guide-graph .cy-graph-shell { height: 500px; min-height: 500px; }
+  .guide-graph .cy-graph-canvas { min-height: 400px; }
   .guide-legend { grid-template-columns: 1fr 1fr; }
   .guide-step-facts { grid-template-columns: 1fr; }
   .guide-controls { align-items: stretch; flex-direction: column; }
@@ -1388,6 +1429,12 @@ tbody tr:last-child td { border-bottom: 0; }
   .guide-progress { flex-wrap: wrap; }
   .guide-controls > div:last-child { display: grid; grid-template-columns: 0.7fr 1.3fr; }
   #guide-next { min-width: 0; }
+  .methodology-hero h2 { font-size: 2.35rem; }
+  .methodology-paper > section { display: block; }
+  .methodology-number { display: block; margin-bottom: 10px; }
+  .methodology-pipeline i { display: none; }
+  .methodology-status { grid-template-columns: 1fr; }
+  .methodology-status span + strong { margin-top: 7px; }
 }
 
 @media (max-width: 520px) {

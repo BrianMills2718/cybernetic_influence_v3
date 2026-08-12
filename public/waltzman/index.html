@@ -6,8 +6,8 @@
   <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/graph-canvas.css?v=replay3">
-  <link rel="stylesheet" href="assets/styles.css?v=replay3">
+  <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology1">
+  <link rel="stylesheet" href="assets/styles.css?v=ontology1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -23,6 +23,7 @@
       <button type="button" data-view="guide">Guided example</button>
       <button type="button" data-view="simulations">Simulations</button>
       <button type="button" data-view="create">New simulation</button>
+      <button type="button" data-view="method">Methodology</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
   </header>
@@ -90,27 +91,21 @@
 
       <section id="guide-view" class="workspace-view guided-example" aria-labelledby="guide-title" hidden>
         <header class="guide-header">
-          <div><span class="case-label">Illustrative tutorial · authored teaching sequence</span><h2 id="guide-title">Deliver one generator before the clinic loses power.</h2><p>Learn the simulation’s visual and conceptual language in seven short steps. Each step adds one idea to the same picture.</p></div>
-          <button class="quiet-button" type="button" data-view="case">Skip to the full outbreak case</button>
+          <div><span class="case-label">Canonical walkthrough · retained Luna execution</span><h2 id="guide-title">See how the simulator turns a configured world into a causal record.</h2><p>This walkthrough reveals one completed election-certification simulation in seven steps. Every displayed node, connection, mechanism, and event comes from the retained run—not from a separate teaching ontology.</p></div>
+          <button class="quiet-button" type="button" data-view="simulations">Explore completed simulations</button>
         </header>
 
         <nav class="guide-controls" aria-label="Walkthrough controls">
-          <div class="guide-control-hint"><strong>Walkthrough</strong><span>Click Next to reveal one part of the system at a time.</span></div>
+          <div class="guide-control-hint"><strong>Guided inspection</strong><span>Click Next. The view switches from configured structure to realized causal events.</span></div>
           <div id="guide-progress" class="guide-progress" aria-label="Walkthrough progress"></div>
           <div><button id="guide-previous" type="button">Previous</button><button id="guide-next" class="primary-cta" type="button">Next: Meet the participants →</button></div>
         </nav>
 
         <div class="guide-stage">
           <section class="guide-visual" aria-labelledby="guide-visual-title">
-            <header><span>World view</span><strong id="guide-visual-title">What exists and how it connects</strong></header>
-            <div id="guide-graph" class="guide-graph react-canvas-host" aria-label="Interactive generator delivery network"></div>
-            <div class="guide-legend" aria-label="Visual language">
-              <span data-guide-kind="person"><i></i><b>Person</b> perceives and acts</span>
-              <span data-guide-kind="thing"><i></i><b>Thing</b> can be used or moved</span>
-              <span data-guide-kind="information"><i></i><b>Message</b> is received, not automatically true</span>
-              <span data-guide-kind="mechanism"><i></i><b>Process</b> applies world rules</span>
-            </div>
-            <p id="guide-selection" class="guide-selection"><strong>Picture language:</strong> an arrow is a possible path for information, action, or a resource—not proof that anything traveled.</p>
+            <header><span id="guide-visual-mode">Configured structure</span><strong id="guide-visual-title">Exact retained records</strong></header>
+            <div id="guide-graph" class="guide-graph react-canvas-host" aria-label="Interactive retained simulation graph"><p>Loading retained execution…</p></div>
+            <p id="guide-selection" class="guide-selection"><strong>Loading:</strong> fetching the exact retained run used by this walkthrough.</p>
           </section>
 
           <aside class="guide-explanation" aria-live="polite">
@@ -584,43 +579,76 @@
         </section>
       </section>
 
-      <section id="method-view" class="workspace-view" aria-labelledby="method-title" hidden>
-        <header class="workspace-header">
-          <div>
-            <span class="eyebrow">Scenario specification</span>
-            <h2 id="method-title">What is configured, varied, and measured?</h2>
-            <p>This view distinguishes the authored environment, model-generated participant decisions, exact institutional rule, and analyst interpretation.</p>
-          </div>
+      <section id="method-view" class="workspace-view methodology" aria-labelledby="method-title" hidden>
+        <header class="methodology-hero">
+          <span class="case-label">System methodology · architecture and interpretation</span>
+          <h2 id="method-title">How the simulator represents a world, produces change, and retains evidence.</h2>
+          <p>The simulator is a hybrid causal environment. Language models may perceive, remember, interpret, and propose actions for active systems. They do not own canonical truth. Typed mechanisms decide how an attempted action interacts with the world, validated patches commit changes, and an append-only event record preserves what actually happened.</p>
+          <div class="methodology-principle"><strong>Core separation</strong><span>world truth → authorized observation → private interpretation → action attempt → transition authority → validated commit → new observation and evidence</span></div>
+          <div class="methodology-status"><strong>Current engine</strong><span>Project-owned ActiveRuntimeSession + CausalSession</span><strong>Adopted next foundation</strong><span>Concordia outer lifecycle · production integration not yet implemented</span></div>
         </header>
-        <div class="method-grid">
-          <section><span class="phase-number">01</span><h3>Initial executable plan</h3><ul id="initial-plan"></ul></section>
-          <section><span class="phase-number">02</span><h3>Participant cognition</h3><p>Each LLM-modeled person receives reviewed values, goals, beliefs, tendencies, social perceptions, current state, capabilities, limitations, personal memory, position expectations, and only the information delivered to them. Each independently returns a decision, primary risk, requested next step, and rationale.</p></section>
-          <section><span class="phase-number">03</span><h3>Exercise control</h3><p>After a round closes, exercise control may select a preauthored external development from the dominant reported risk. It cannot write, select, or override participant stances.</p></section>
-          <section><span class="phase-number">04</span><h3>Coalition decision gate</h3><p>After round three, approval requires at least six support positions, at least nine support-or-conditional positions, and no more than one opposition.</p></section>
-        </div>
-        <section class="condition-specs">
-          <div class="section-title-row"><div><span class="eyebrow">Experiment specification</span><h3>Three conditions</h3></div></div>
-          <div class="condition-grid">
-            <article><strong>Baseline</strong><p>Only the common structured round snapshot is delivered between rounds.</p></article>
-            <article><strong>Responsive capacity pressure</strong><p>The common snapshot is followed by country-specific capacity developments selected from the risks participants reported.</p></article>
-            <article><strong>Pressure replay + stabilization</strong><p>The same two capacity developments are replayed, then a verified allocation package supplies named staff, laboratory capacity, supplies, commitments, and reserve.</p></article>
-          </div>
-        </section>
-        <section class="limitations-panel">
-          <div class="section-title-row"><div><span class="eyebrow">Interpretation boundary</span><h3>Limitations and non-claims</h3></div></div>
-          <ul id="limitations"></ul>
-        </section>
-        <section class="provenance-panel">
-          <div><span>Dataset</span><code id="provenance-dataset"></code></div>
-          <div><span id="provenance-source-label">Source digest</span><code id="provenance-digest"></code></div>
-          <div><span>Latest retained evidence</span><time id="provenance-time"></time></div>
-          <div><span>Execution</span><strong>Authentic retained LLM runs</strong></div>
-        </section>
+
+        <nav class="methodology-toc" aria-label="Methodology contents">
+          <a href="#method-purpose">Purpose</a><a href="#method-world">World model</a><a href="#method-agency">Agency</a><a href="#method-information">Information</a><a href="#method-transitions">Transitions</a><a href="#method-time">Time and evidence</a><a href="#method-analysis">Coordination analysis</a><a href="#method-authoring">Authoring</a><a href="#method-limits">Limitations</a>
+        </nav>
+
+        <article class="methodology-paper">
+          <section id="method-purpose">
+            <span class="methodology-number">01</span><div><h3>Purpose and claim boundary</h3><p>The workbench is intended for exploratory wargaming and mechanism discovery. An analyst describes a sociotechnical situation, reviews the compiled configuration, runs autonomous and non-autonomous systems in a shared causal world, and inspects how local interactions accumulate into system-level outcomes.</p><p>A run supports conditional claims about the implemented world: <em>under these assumptions, components, information paths, and transition rules, this trajectory occurred.</em> It does not predict how real people or institutions will behave, estimate an intervention effect, or validate a social theory by itself.</p></div>
+          </section>
+
+          <section id="method-world">
+            <span class="methodology-number">02</span><div><h3>One canonical world—not one narrative per agent</h3><p>Each run has one authoritative causal state. It records entities, state-bearing facts, places and placements, spatial links, ports, directed connections, information carriers and representations, observations, analytical boundaries, and registered mechanisms. These are commitments the runtime can validate and replay; they are not merely vocabulary in a prompt.</p><p>The kernel deliberately separates existence from agency. A person, vehicle, document, software service, committee, or organization may exist as an entity without acting autonomously. It becomes an active system only when a separate active-system specification and trusted implementation are bound to it.</p><p>The visualization is a typed projection of these records, not the ontology itself. Current projected node kinds include people, information sources, documents, representations, resources, places, processes, decision records, mechanisms, and analytical boundaries. Connection, read, write, substrate, observation-target, information-location, lineage, and causal-parent relations are directed. Spatial links are explicitly undirected. Configured connections express possible routes; causal-parent edges express realized event ancestry.</p><div class="methodology-contracts"><code>FactState</code><code>EntityState</code><code>PlaceState</code><code>PlacementState</code><code>SpatialLinkState</code><code>PortState</code><code>ConnectionState</code><code>CarrierState</code><code>RepresentationToken</code><code>ObservationRecord</code><code>MechanismSpec</code><code>AnalyticalBoundary</code></div></div>
+          </section>
+
+          <section id="method-agency">
+            <span class="methodology-number">03</span><div><h3>Active systems, people, and bounded action</h3><p>An active person is configured with personal character and memory as well as a current position in the world. Values, goals, beliefs, decision tendencies, social perceptions, capabilities, limitations, and observations shape the context supplied to the model. Position expectations and authorizations are institutional “oughts”; they are not treated as the person’s own values, as physical possibility, or as a command to choose a result.</p><p>The architecture distinguishes capability, competency, affordance, authorization, attempt, and outcome. A person may be able to operate a computer, be permitted or forbidden to access a record, attempt an open-ended action, and still fail when the relevant transition authority evaluates the world. Inert objects can be used, moved, consumed, connected, or damaged without being turned into agents.</p><p>Natural-language memory remains available for relationships, interpretations, loyalties, distrust, and other meanings that should not be prematurely reduced to privileged numeric state. Concrete deliveries, custody, routes, resources, and commitments remain independently observable runtime records.</p></div>
+          </section>
+
+          <section id="method-information">
+            <span class="methodology-number">04</span><div><h3>Information is represented, delivered, and interpreted</h3><p>The simulator keeps world truth separate from what any actor knows. A carrier can hold a representation; the representation records content, lineage, and actual provenance; a delivery mechanism may create an observation for a specific recipient; and the recipient may interpret or ignore it. Apparent source and actual source can differ.</p><p>A configured connection is only a directed possibility. It does not prove that a message traveled. A retained <code>effect_routed</code>, <code>state_committed</code>, and <code>observation_delivered</code> chain is evidence that a representation actually reached an actor. An omniscient adjudicator may inspect hidden state when authorized, but actor-visible text must be projected from committed actor-authorized observations rather than copied from adjudicator prose.</p></div>
+          </section>
+
+          <section id="method-transitions">
+            <span class="methodology-number">05</span><div><h3>From intent to world change</h3><p>An active system emits a typed <code>ActionIntent</code>. The runtime records an <code>ActionAttempt</code>, routes its effect through an explicit port and connection, and invokes a registered transition authority. Current public runs use exact registered mechanisms for delivery and decision bookkeeping. The adopted general architecture also permits stochastic processes, LLM semantic adjudicators, external models, scripted coarse processes, and replayed receipts, but those authority classes are not all implemented as production paths today.</p><p>The authority proposes a structured change. Validation checks references, authority, topology, information boundaries, declared conservation rules, and mechanism-specific invariants. Only then does a <code>StatePatch</code> become a new canonical revision. Failed or unsupported actions must fail visibly; prose alone cannot silently rewrite the world.</p><p>Mechanisms also carry n-ary semantics. A mechanism may read several facts, representations, placements, or links and write several outcomes in one validated transition. The two-ended arrows in a graph show those declared dependencies around the mechanism; they do not reduce the underlying rule to a set of independent binary causes.</p><div class="methodology-pipeline"><span>Intent</span><i>→</i><span>Attempt</span><i>→</i><span>Effect</span><i>→</i><span>Route</span><i>→</i><span>Mechanism</span><i>→</i><span>Validate</span><i>→</i><span>Commit</span></div></div>
+          </section>
+
+          <section id="method-time">
+            <span class="methodology-number">06</span><div><h3>Time, causality, persistence, and replay</h3><p>In the current implementation, <code>ActiveRuntimeSession</code> owns active-system scheduling and composes one <code>CausalSession</code>; the causal session owns exact queued work, logical time, mechanisms, commits, and the event log. Concordia is the adopted future outer lifecycle foundation, but that production integration is still unimplemented. Under the adopted boundary, Concordia will own activation, time, and checkpoint invocation while the project-owned canonical-world component retains state, validation, commit, and transition evidence—and must not recreate a hidden second scheduler.</p><p>Each event retains logical time, state revision, causal parents, involved action/effect/mechanism/observation identifiers, variance source, invariant results, and any committed patch. The event log distinguishes configured structure from realized history. Checkpoints preserve canonical state and private active-system state so a run can be resumed or forked. Exact causal ancestry supports guided replay without inventing links after the fact. Future concurrent moments require all intents to reason from one frozen revision and conflict before joint commit; current runs should not be interpreted as establishing general concurrency semantics.</p><div class="methodology-contracts"><code>ActionIntent</code><code>ActionAttempt</code><code>EffectEnvelope</code><code>MechanismOutcome</code><code>StatePatch</code><code>CausalEvent</code><code>Checkpoint</code><code>Trace receipt</code></div></div>
+          </section>
+
+          <section id="method-analysis">
+            <span class="methodology-number">07</span><div><h3>Coordination and influence are analyses of trajectories</h3><p>The irreducible world does not contain a magic global variable called “institution,” “trust,” or “coordination.” Organizations may be represented in detail as sociotechnical networks or, at a declared coarser resolution, by an active surrogate. Analytical boundaries can group people, artifacts, resources, mechanisms, and software without becoming executors themselves.</p><p>Waltzman-inspired analysis looks for directional changes across heterogeneous interactions: shifts in who or what actors rely on, how risks are perceived, which dependencies or prerequisites appear, where bottlenecks form, and whether locally reasonable behavior remains jointly compatible. Homogeneous broadcasts, segmented campaigns, adaptive pressure, ordinary disruption, and legitimate disagreement can all be modeled. Classifications such as “fragmented trust” or “blocked readiness” are derived interpretations and must remain traceable to lower-level evidence.</p></div>
+          </section>
+
+          <section id="method-authoring">
+            <span class="methodology-number">08</span><div><h3>Natural-language authoring compiles into reviewed machinery</h3><p>The analyst describes a world in ordinary language. An authoring model proposes semantic configuration: people and other entities, information sources and deliveries, places, analytical boundaries, timing, decision rules, fidelity assumptions, and unresolved questions. The analyst can edit this proposal before approving it.</p><p>The compiler resolves requested behavior against a registry of trusted components. Existing templates are convenience paths into the same causal substrate, not claims that “outbreak,” “election,” or “port” are fundamental world types. Every material request should ultimately be classified as a registered explicit authority, coarse LLM-adjudicated behavior, descriptive/inert context, or unsupported behavior. The retained composition receipt records what actually resolved; declaration alone is not proof of adoption.</p><p>Current natural-language authoring is not fully open-ended. The influence-network workflow can generically configure participants, character and memory, sources, representations, directed deliveries, rounds, feedback, and a decision gate. Arbitrary new physical or institutional mechanics still require an existing registered component or future coarse semantic adjudication.</p></div>
+          </section>
+
+          <section id="method-limits">
+            <span class="methodology-number">09</span><div><h3>What the current system does not establish</h3><ul><li>LLM behavior is synthetic and shares dependence on the selected base model; model calls are audit artifacts, not independent human observations.</li><li>Mechanism plausibility and diagnostic usefulness are the target. Predictive validity for a chaotic social system is not claimed.</li><li>The current runtime has stronger information delivery, exact routing, decision bookkeeping, persistence, and replay than it has general physical dynamics, dynamic topology, simultaneous action, or empirically calibrated human cognition.</li><li>A coarse LLM adjudicator can be a legitimate wargaming mechanism, but it must declare its authority and cannot bypass protected information pathways or generic invariants.</li><li>Visual graphs are projections. Node and edge types identify retained record roles; a configured arrow is not evidence of a realized event, while the trajectory view contains only retained causal events and causal-parent links.</li></ul></div>
+          </section>
+
+          <details class="methodology-appendix">
+            <summary>Current outbreak demonstration appendix</summary>
+            <p>This appendix preserves the exact configuration and provenance of the curated outbreak demonstration. It is one scenario built on the machinery above, not the definition of the product.</p>
+            <div class="method-grid">
+              <section><span class="phase-number">A1</span><h3>Initial executable plan</h3><ul id="initial-plan"></ul></section>
+              <section><span class="phase-number">A2</span><h3>Participant cognition</h3><p>Each LLM-modeled person receives reviewed personal character, position context, memory, and only the information delivered to them, then independently returns a decision, risk, request, and rationale.</p></section>
+              <section><span class="phase-number">A3</span><h3>Exercise control</h3><p>External sources and defensive controllers may introduce authorized developments. They cannot write, select, or override participant stances.</p></section>
+              <section><span class="phase-number">A4</span><h3>Decision gate</h3><p>The retained gate applies fixed numeric thresholds to the participant positions after the final round.</p></section>
+            </div>
+            <section class="limitations-panel"><h3>Dataset limitations</h3><ul id="limitations"></ul></section>
+            <section class="provenance-panel">
+              <div><span>Dataset</span><code id="provenance-dataset"></code></div><div><span id="provenance-source-label">Source digest</span><code id="provenance-digest"></code></div><div><span>Latest retained evidence</span><time id="provenance-time"></time></div><div><span>Execution</span><strong>Authentic retained LLM runs</strong></div>
+            </section>
+          </details>
+        </article>
       </section>
     </section>
   </main>
 
-  <script src="assets/graph-canvas.js?v=replay3" defer></script>
-  <script src="assets/app.js?v=replay3" defer></script>
+  <script src="assets/graph-canvas.js?v=ontology1" defer></script>
+  <script src="assets/app.js?v=ontology1" defer></script>
 </body>
 </html>

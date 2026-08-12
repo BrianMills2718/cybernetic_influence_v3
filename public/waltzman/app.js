@@ -7,6 +7,7 @@ const preferredModel = 'codex/gpt-5.6-luna'
 const preferredAuthoringModel = 'codex/gpt-5.6-luna'
 const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
 const caseNetworkRunId = 'run_5010214f2466'
+const guideRunId = 'run_ffe88e1c15d5'
 const personProfileFields = {
   values:'person-values',
   goals:'person-goals',
@@ -37,6 +38,9 @@ let resourceFork = null
 let caseNetworkRun = null
 let caseNetworkLoad = null
 let caseNetworkError = null
+let guideRun = null
+let guideRunLoad = null
+let guideRunError = null
 let caseGraphMode = 'system'
 let defaultConfiguration = null
 let editableConfiguration = null
@@ -818,132 +822,134 @@ function renderMethod() {
   $('#provenance-time').dateTime = latest
 }
 
-const guideNodes = [
-  {id:'guide_clinic', kind:'thing', label:'Riverside clinic', description:'A clinic whose backup power fails at 6:00 PM.'},
-  {id:'guide_generator', kind:'thing', label:'Emergency generator', description:'A physical generator held at the municipal depot.'},
-  {id:'guide_truck', kind:'thing', label:'Delivery truck', description:'The vehicle that can move the generator to the clinic.'},
-  {id:'guide_depot_manager', kind:'person', label:'Depot manager', description:'Can release the generator but cannot choose the route or drive the truck.'},
-  {id:'guide_dispatcher', kind:'person', label:'Dispatcher', description:'Can choose and communicate a route but cannot release or transport the generator.'},
-  {id:'guide_driver', kind:'person', label:'Driver', description:'Can drive the truck when a generator, route, and valid permit are available.'},
-  {id:'guide_clinic_manager', kind:'person', label:'Clinic manager', description:'Can prepare the clinic to receive and connect the generator.'},
-  {id:'guide_delivery_gate', kind:'mechanism', label:'Delivery readiness', description:'A world rule: release, route, transport, and receipt must all be ready before delivery can occur.'},
-  {id:'guide_allocation_message', kind:'information', label:'“Generator allocated elsewhere”', description:'An unverified message delivered only to the depot manager.'},
-  {id:'guide_bridge_message', kind:'information', label:'“Bridge is closed”', description:'An unverified message delivered only to the dispatcher.'},
-  {id:'guide_permit_message', kind:'information', label:'“Truck permit is invalid”', description:'An unverified message delivered only to the driver.'},
-  {id:'guide_power_message', kind:'information', label:'“Clinic power is restored”', description:'An unverified message delivered only to the clinic manager.'},
-]
-
-const guideEdges = [
-  {id:'guide_depot_releases', kind:'authorizes_release', source:'guide_depot_manager', target:'guide_generator', enabled:true, description:'The depot manager may authorize release.', routeIds:['guide_depot_releases']},
-  {id:'guide_generator_loaded', kind:'loaded_onto', source:'guide_generator', target:'guide_truck', enabled:true, description:'The released generator may be loaded onto the truck.', routeIds:['guide_generator_loaded']},
-  {id:'guide_dispatcher_routes', kind:'assigns_route', source:'guide_dispatcher', target:'guide_truck', enabled:true, description:'The dispatcher may assign the truck a route.', routeIds:['guide_dispatcher_routes']},
-  {id:'guide_driver_moves', kind:'operates', source:'guide_driver', target:'guide_truck', enabled:true, description:'The driver may operate the truck.', routeIds:['guide_driver_moves']},
-  {id:'guide_truck_delivers', kind:'carries_to', source:'guide_truck', target:'guide_clinic', enabled:true, description:'The truck may carry the generator to the clinic.', routeIds:['guide_truck_delivers']},
-  {id:'guide_clinic_receives', kind:'prepares_to_receive', source:'guide_clinic_manager', target:'guide_clinic', enabled:true, description:'The clinic manager may prepare for and accept delivery.', routeIds:['guide_clinic_receives']},
-  {id:'guide_depot_ready', kind:'requires_release', source:'guide_depot_manager', target:'guide_delivery_gate', enabled:true, description:'Generator release is one required part of readiness.', routeIds:['guide_depot_ready']},
-  {id:'guide_dispatch_ready', kind:'requires_route', source:'guide_dispatcher', target:'guide_delivery_gate', enabled:true, description:'A usable route is one required part of readiness.', routeIds:['guide_dispatch_ready']},
-  {id:'guide_driver_ready', kind:'requires_transport', source:'guide_driver', target:'guide_delivery_gate', enabled:true, description:'Transport is one required part of readiness.', routeIds:['guide_driver_ready']},
-  {id:'guide_clinic_ready', kind:'requires_receipt', source:'guide_clinic_manager', target:'guide_delivery_gate', enabled:true, description:'Receiving capacity is one required part of readiness.', routeIds:['guide_clinic_ready']},
-  {id:'guide_gate_delivers', kind:'enables_delivery', source:'guide_delivery_gate', target:'guide_clinic', enabled:true, description:'When every requirement is ready, delivery can proceed.', routeIds:['guide_gate_delivers']},
-  {id:'guide_allocation_delivered', kind:'delivered_to', source:'guide_allocation_message', target:'guide_depot_manager', enabled:true, description:'Only the depot manager receives this message.', routeIds:['guide_allocation_delivered']},
-  {id:'guide_bridge_delivered', kind:'delivered_to', source:'guide_bridge_message', target:'guide_dispatcher', enabled:true, description:'Only the dispatcher receives this message.', routeIds:['guide_bridge_delivered']},
-  {id:'guide_permit_delivered', kind:'delivered_to', source:'guide_permit_message', target:'guide_driver', enabled:true, description:'Only the driver receives this message.', routeIds:['guide_permit_delivered']},
-  {id:'guide_power_delivered', kind:'delivered_to', source:'guide_power_message', target:'guide_clinic_manager', enabled:true, description:'Only the clinic manager receives this message.', routeIds:['guide_power_delivered']},
-]
-
-const guidePeopleAndThings = ['guide_clinic', 'guide_generator', 'guide_truck', 'guide_depot_manager', 'guide_dispatcher', 'guide_driver', 'guide_clinic_manager']
-const guideWorld = [...guidePeopleAndThings, 'guide_delivery_gate']
-const guideMessages = ['guide_allocation_message', 'guide_bridge_message', 'guide_permit_message', 'guide_power_message']
-const guideInformationEdges = ['guide_allocation_delivered', 'guide_bridge_delivered', 'guide_permit_delivered', 'guide_power_delivered']
 const guideSteps = [
   {
-    kicker:'Start with the objective', title:'Get one generator to the clinic by 6:00 PM.',
-    body:'This is the coordination situation: a concrete outcome that requires several people and things to line up in time.',
-    nodes:['guide_clinic', 'guide_generator'], edges:[], focus:['guide_clinic', 'guide_generator'],
-    facts:[['Deadline','6:00 PM'], ['Generator','At municipal depot'], ['Clinic','Backup power failing']],
-    language:[['World','Everything that exists and can change in the simulation.'], ['Coordination situation','An outcome that depends on several local actions fitting together.']],
-    takeaway:'Begin with what must happen—not with agents, votes, or institutional labels.',
+    kicker:'Start with retained evidence',
+    title:'One configured world produced one retained execution.',
+    body:'This is not an illustrative story. It is a projection of run_ffe88e1c15d5: a completed city-election certification simulation authored in natural language, compiled into reviewed components, and executed with six retained Luna participant calls.',
+    mode:'causal',
+    nodeIds:['network_clock', 'election_director_mara_chen', 'investigative_journalist_eli_navarro', 'neighborhood_coalition_organizer_priya_shah', 'stance_recorder', 'decision_gate', 'decision_register'],
+    edgeIds:['stance_election_director_mara_chen_route', 'stance_investigative_journalist_eli_navarro_route', 'stance_neighborhood_coalition_organizer_priya_shah_route', 'decision_evaluate_route', 'reads_decision_register_to_stance_recorder', 'writes_stance_recorder_to_decision_register', 'reads_decision_register_to_decision_gate', 'writes_decision_gate_to_decision_register'],
+    focus:['decision_register'],
+    facts:[['Run','run_ffe88e1c15d5'], ['Execution','Live · Luna'], ['World events','97 retained'], ['State revisions','20 committed']],
+    language:[['Configured structure','Records and routes present in canonical state.'], ['Retained execution','The append-only evidence produced when that configuration ran.']],
+    takeaway:'The walkthrough and raw run share one source of truth; there is no separate tutorial ontology.',
   },
   {
-    kicker:'Meet the participants', title:'No single person can complete the delivery.',
-    body:'Each person perceives only part of the situation and can attempt only actions available to them. The generator and truck do not decide anything, but people can act through them.',
-    nodes:guidePeopleAndThings, edges:['guide_depot_releases', 'guide_dispatcher_routes', 'guide_driver_moves', 'guide_clinic_receives'], focus:['guide_depot_manager', 'guide_dispatcher', 'guide_driver', 'guide_clinic_manager'],
-    facts:[['Depot manager','Releases generator'], ['Dispatcher','Chooses route'], ['Driver','Moves truck'], ['Clinic manager','Receives delivery']],
-    language:[['Person','A simulated individual who perceives, remembers, reasons, and attempts actions.'], ['Thing','A resource or technical object that can be used or moved but does not act autonomously.']],
-    takeaway:'Positions shape access and capability; they do not dictate what a person decides.',
+    kicker:'Separate existence from agency',
+    title:'Entities can exist without being autonomous agents.',
+    body:'Three person entities are bound to LLM active systems and produced six model traces. The information source, network clock, decision register, and exact mechanisms also exist and can participate causally, but they are not all people and they do not all reason with an LLM.',
+    mode:'causal',
+    nodeIds:['official_audit_bulletin_source', 'audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'election_director_mara_chen', 'network_clock', 'decision_gate', 'decision_register'],
+    edgeIds:['audit_bulletin_to_all_participants_election_director_mara_chen_route', 'observation_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_election_director_mara_chen', 'decision_evaluate_route', 'reads_decision_register_to_decision_gate', 'writes_decision_gate_to_decision_register'],
+    focus:['election_director_mara_chen', 'network_clock'],
+    facts:[['People','3 LLM active systems'], ['Participant activations','6 model calls'], ['Clock','Exact scripted process'], ['Gate','Exact registered mechanism']],
+    language:[['Entity','Something with identity and state; agency is not implied.'], ['Active system','A separate trusted binding that may perceive and attempt actions for an entity.']],
+    takeaway:'A car, document, source, organization, or process need not be made into a human-like agent to matter.',
   },
   {
-    kicker:'Connect the dependencies', title:'The arrows show what can travel or be attempted.',
-    body:'Release, routing, transport, and receipt must all be ready. The process node applies that world rule; it is not another person making a decision.',
-    nodes:guideWorld, edges:guideEdges.filter((edge) => !guideInformationEdges.includes(edge.id)).map((edge) => edge.id), focus:['guide_delivery_gate'],
-    facts:[['Release','Generator can be loaded'], ['Route','Truck has a usable path'], ['Transport','Driver can depart'], ['Receipt','Clinic can accept delivery']],
-    language:[['Arrow','A possible path—not evidence that something actually traveled.'], ['Process','A world mechanism that applies a rule or consequence without pretending to be a person.']],
-    takeaway:'The network represents concrete dependencies beneath the collective outcome.',
+    kicker:'Inspect information structure',
+    title:'Source, representation, route, delivery, and observation are different records.',
+    body:'The official audit source holds a specific representation. A directed connection can carry it to a delivery mechanism, and that mechanism is authorized to create an observation for Mara. Lineage records provenance; the observation-target relation records who may receive the result.',
+    mode:'causal',
+    nodeIds:['official_audit_bulletin_source', 'audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'election_director_mara_chen', 'decision_register'],
+    edgeIds:['location_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'lineage_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_route', 'observation_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_election_director_mara_chen', 'substrate_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_decision_register'],
+    focus:['audit_bulletin_to_all_participants_representation'],
+    facts:[['Actual source','Official audit office'], ['Representation','Typed influence-message JSON'], ['Recipient','Mara Chen only on this route'], ['Belief','Not implied by delivery']],
+    language:[['Representation','Content with encoding, lineage, carrier revision, and actual provenance.'], ['Observation target','An authorized recipient of a mechanism outcome—not proof of belief.']],
+    takeaway:'The system can distinguish what is true, what was represented, what arrived, and what an actor later inferred.',
   },
   {
-    kicker:'Add uneven inputs', title:'Four different messages enter through four different channels.',
-    body:'There is no shared slogan. Each unverified message targets a locally relevant uncertainty. At this point it could be influence, error, or ordinary disruption.',
-    nodes:[...guideWorld, ...guideMessages], edges:guideEdges.map((edge) => edge.id), focus:guideMessages,
-    facts:[['Depot','“Allocated elsewhere”'], ['Dispatcher','“Bridge closed”'], ['Driver','“Permit invalid”'], ['Clinic','“Power restored”']],
-    language:[['Message','Information delivered to someone. Its presence does not make it true.'], ['Heterogeneous inputs','Different local signals that can still produce an aligned system-level effect.']],
-    takeaway:'A coordinated effect does not require everyone to receive or believe the same story.',
+    kicker:'Read configured arrows correctly',
+    title:'A configured arrow is a possible directed relation—not an event.',
+    body:'This graph is still the pre-execution structure. Connection arrows identify explicit output-port to input-port routes; read, write, substrate, lineage, location, and observation-target arrows identify other typed directed relations. They do not claim that an effect traveled during this run.',
+    mode:'causal',
+    nodeIds:['official_audit_bulletin_source', 'audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'election_director_mara_chen', 'stance_recorder', 'decision_register'],
+    edgeIds:['location_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'lineage_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_route', 'observation_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_election_director_mara_chen', 'stance_election_director_mara_chen_route', 'reads_decision_register_to_stance_recorder', 'writes_stance_recorder_to_decision_register'],
+    focus:['audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'stance_recorder'],
+    facts:[['Connection','Directed possible route'], ['Reads','Declared state dependency'], ['Writes','Declared mutation authority'], ['Lineage','Directed provenance relation']],
+    language:[['Topology','What is connected or related in the configured world.'], ['Trajectory','Which attempts, routes, mechanisms, and commits actually occurred.']],
+    takeaway:'Configured topology and realized causality are shown separately because confusing them would misrepresent the simulation.',
   },
   {
-    kicker:'Observe local reactions', title:'Each person adds a different prerequisite before acting.',
-    body:'The people interpret their own messages in light of their memories, goals, relationships, and uncertainty. The simulation does not directly assign their decisions.',
-    nodes:[...guideWorld, ...guideMessages], edges:guideEdges.map((edge) => edge.id), focus:['guide_depot_manager', 'guide_dispatcher', 'guide_driver', 'guide_clinic_manager'],
-    facts:[['Depot manager','Verify allocation'], ['Dispatcher','Confirm bridge status'], ['Driver','Validate permit'], ['Clinic manager','Recheck power']],
-    language:[['Prerequisite','Something a person now believes must be resolved before acting.'], ['Local reaction','A person’s response to what they perceived—not a centrally dictated vote.']],
-    takeaway:'The local reasons differ even when their practical effect points in the same direction.',
+    kicker:'Follow one realized delivery',
+    title:'Six retained events prove that the audit became Mara’s observation.',
+    body:'Now the visualization switches to causal trajectory. The source attempted an injection, emitted an effect, routed it through the named connection, invoked an exact delivery mechanism, committed revision 1, and delivered observation_000000 to Mara. Every arrow here is a retained causal-parent link.',
+    mode:'trajectory', eventSequences:[1, 2, 3, 4, 5, 6],
+    facts:[['Attempt','event_000001'], ['Route','event_000003'], ['Commit','revision 1'], ['Observation','observation_000000']],
+    language:[['Causal-parent arrow','The target event explicitly names the source event as a cause.'], ['State commit','The validated patch changed canonical state and produced a new revision.']],
+    takeaway:'Only the event chain—not the configured route by itself—establishes that information actually arrived.',
   },
   {
-    kicker:'See the collective effect', title:'The delivery stalls without a shared stop order.',
-    body:'Every required action is now waiting on something else. Nobody needs to oppose the clinic or coordinate with any message source for the joint outcome to fail.',
-    nodes:[...guideWorld, ...guideMessages], edges:guideEdges.map((edge) => edge.id), focus:['guide_delivery_gate'], blocked:true,
-    facts:[['Release','Waiting'], ['Route','Waiting'], ['Transport','Waiting'], ['Receipt','Waiting']],
-    language:[['Blocked pathway','A route that exists but cannot currently carry the required action or resource.'], ['Coordination readiness','Whether the required local actions can presently fit together.']],
-    takeaway:'A macro-level coordination failure can emerge from several locally reasonable pauses.',
+    kicker:'Follow an autonomous decision',
+    title:'Mara proposed a stance; an exact mechanism recorded it.',
+    body:'After receiving her authorized observations, Mara’s Luna active system supported certification while retaining a residual risk. Her action emitted and routed a typed stance. The exact stance recorder validated its contract and committed the position to revision 8.',
+    mode:'trajectory', eventSequences:[33, 34, 39, 40, 41],
+    facts:[['Actor','Election Director Mara Chen'], ['Model output','Support with stated risk'], ['Recorder','stance_recorder_v1'], ['Commit','revision 8']],
+    language:[['Action attempt','What an active system tried to do; it is not yet world truth.'], ['Transition authority','The registered mechanism permitted to validate and propose the resulting patch.']],
+    takeaway:'The LLM chose the proposed stance; exact world machinery decided how that proposal became retained state.',
   },
   {
-    kicker:'Read the system—not only the messages', title:'The useful evidence is the change in the network.',
-    body:'The simulator can inspect which reliance paths weakened, which prerequisites appeared, where bottlenecks formed, and whether the group’s ability to act changed over time.',
-    nodes:[...guideWorld, ...guideMessages], edges:guideEdges.map((edge) => edge.id), focus:['guide_delivery_gate'], blocked:true,
-    facts:[['Reliance paths','Four weakened'], ['New prerequisites','Four unresolved'], ['Delivery readiness','Blocked'], ['Shared narrative','None required']],
-    language:[['Coordination-level effect','A change in the system’s ability to produce joint action.'], ['Detection question','Is the directional change consistent with influence, ordinary disruption, or legitimate disagreement?']],
-    takeaway:'This is the bridge to Waltzman: detect directional changes in coordination conditions across heterogeneous local interactions.',
+    kicker:'Inspect the collective result',
+    title:'The fixed gate read retained positions and committed the outcome.',
+    body:'The network clock requested evaluation. The effect reached the exact decision gate, which read the retained positions and rule, passed its invariant, and committed the final counts and outcome at revision 20. The run then completed with a durable causal tail.',
+    mode:'trajectory', eventSequences:[91, 92, 93, 94, 95, 96],
+    facts:[['Final positions','1 support · 2 conditional'], ['Gate','Support threshold failed'], ['Outcome','Not approved'], ['Final revision','20']],
+    language:[['Decision gate','A deterministic mechanism over retained positions and configured thresholds.'], ['Analysis','A later interpretation of evidence; it is not allowed to rewrite the trajectory.']],
+    takeaway:'The result is inspectable from model output through typed action, exact mechanism, validated patch, and final evidence.',
   },
 ]
 
-function guideProjection(step) {
-  const nodeIds = new Set(step.nodes)
-  const edgeIds = new Set(step.edges)
+function canonicalGuideProjection(step) {
+  const nodeIds = new Set(step.nodeIds || [])
+  const edgeIds = new Set(step.edgeIds || [])
   return {
-    nodes:guideNodes.filter((node) => nodeIds.has(node.id)),
-    edges:guideEdges.filter((edge) => edgeIds.has(edge.id) && nodeIds.has(edge.source) && nodeIds.has(edge.target)).map((edge) => ({
-      ...edge,
-      enabled:step.blocked && !guideInformationEdges.includes(edge.id) ? false : edge.enabled,
-    })),
+    nodes:(guideRun.nodes || []).filter((node) => nodeIds.has(node.id)),
+    edges:(guideRun.edges || [])
+      .filter((edge) => edgeIds.has(edge.id) && nodeIds.has(edge.source) && nodeIds.has(edge.target))
+      .map((edge) => ({...edge, routeIds:edge.exact_route_ids || [edge.id]})),
+  }
+}
+
+function canonicalGuideTrajectory(step) {
+  const eventIds = new Set((step.eventSequences || []).map((sequence) => `event_${String(sequence).padStart(6, '0')}`))
+  return {
+    nodes:(guideRun.trajectory?.nodes || []).filter((node) => eventIds.has(node.id)),
+    edges:(guideRun.trajectory?.edges || []).filter((edge) => eventIds.has(edge.source) && eventIds.has(edge.target)),
   }
 }
 
 function renderGuideSelection(item, relationship = false) {
-  $('#guide-selection').innerHTML = `<strong>${escapeHtml(item.label || sentence(item.id))}:</strong> ${escapeHtml(item.description || (relationship ? 'A retained possible path.' : 'A simulated world entity.'))}`
+  const type = relationship ? sentence(item.kind || 'relation') : sentence(item.event_kind || item.kind || 'record')
+  const identity = item.event_id || item.id
+  const description = item.summary || item.description || item.label || 'Retained runtime record.'
+  $('#guide-selection').innerHTML = `<strong>${escapeHtml(identity)} · ${escapeHtml(type)}:</strong> ${escapeHtml(description)}`
 }
 
 function renderGuideGraph(step) {
   const graph = $('#guide-graph')
-  const projection = guideProjection(step)
+  const trajectory = step.mode === 'trajectory' ? canonicalGuideTrajectory(step) : {nodes:[], edges:[]}
+  const projection = step.mode === 'causal' ? canonicalGuideProjection(step) : {nodes:[], edges:[]}
+  const lastSequence = step.eventSequences?.at(-1)
+  const lastEvent = Number.isInteger(lastSequence) ? guideRun.events.find((event) => event.sequence === lastSequence) : null
   window.CyberneticGraph.render(graph, {
     nodes:projection.nodes,
     edges:projection.edges,
-    boundaries:[], world:null, trajectory:{nodes:[], edges:[]},
+    boundaries:[], world:null, trajectory,
     graphDiagnostics:{nodeClassification:{}, edgeClassification:{}, warnings:[]},
-    viewMode:'causal', event:{event_id:`guide_step_${state.guideStep + 1}`, state_revision:state.guideStep, focus_ids:step.focus, focus_edges:[], spatial_focus_ids:[], spatial_link_ids:[], boundary_ids:[]}, initialRevision:state.guideStep,
-    showLegend:false,
+    viewMode:step.mode,
+    event:step.mode === 'causal' ? {event_id:`guide_structure_${state.guideStep + 1}`, state_revision:0, focus_ids:step.focus || [], focus_edges:[], spatial_focus_ids:[], spatial_link_ids:[], boundary_ids:[]} : null,
+    initialRevision:lastEvent?.state_revision ?? 0,
+    title:step.mode === 'trajectory' ? 'Realized causal events' : 'Configured canonical structure',
+    subtitle:step.mode === 'trajectory' ? `${trajectory.nodes.length} retained events` : `${projection.nodes.length} records · ${projection.edges.length} typed relations`,
+    showLegend:true,
+    showMiniMap:false,
     selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
-      const node = projection.nodes.find((candidate) => candidate.id === nodeId)
-      if (node) renderGuideSelection(node)
+      const item = step.mode === 'trajectory'
+        ? guideRun.events.find((event) => event.event_id === nodeId)
+        : projection.nodes.find((node) => node.id === nodeId)
+      if (item) renderGuideSelection(item)
     },
     onSelectEdge:(edge) => renderGuideSelection(edge, true),
   })
@@ -955,24 +961,58 @@ function renderGuide() {
   $('#guide-step-kicker').textContent = step.kicker
   $('#guide-step-title').textContent = step.title
   $('#guide-step-body').textContent = step.body
+  $('#guide-visual-mode').textContent = step.mode === 'trajectory' ? 'Realized trajectory' : 'Configured structure'
+  $('#guide-visual-title').textContent = step.mode === 'trajectory' ? 'Exact causal events and parent links' : 'Exact canonical records and typed relations'
   $('#guide-step-facts').innerHTML = step.facts.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')
   $('#guide-step-language').innerHTML = step.language.map(([term, definition]) => `<div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(definition)}</dd></div>`).join('')
   $('#guide-step-takeaway').innerHTML = `<span>Why this matters</span><strong>${escapeHtml(step.takeaway)}</strong>`
   $('#guide-progress').innerHTML = guideSteps.map((candidate, index) => `<button type="button" data-guide-step="${index}" class="${index === state.guideStep ? 'active' : ''}" aria-label="Open step ${index + 1}: ${escapeHtml(candidate.title)}" aria-current="${index === state.guideStep ? 'step' : 'false'}">${index + 1}</button>`).join('')
   $('#guide-previous').disabled = state.guideStep === 0
   $('#guide-next').textContent = state.guideStep === guideSteps.length - 1
-    ? 'Continue: Open full outbreak case →'
+    ? 'Continue: Explore all simulations →'
     : `Next: ${guideSteps[state.guideStep + 1].kicker} →`
   all('[data-guide-step]').forEach((button) => {
     button.onclick = () => { state.guideStep = Number(button.dataset.guideStep); renderGuide(); syncUrl() }
   })
+  if (guideRunError) {
+    $('#guide-graph').innerHTML = `<p class="guide-load-error"><strong>Retained walkthrough unavailable.</strong> ${escapeHtml(guideRunError)}</p>`
+    $('#guide-selection').innerHTML = '<strong>No substitute is shown:</strong> this guide requires its exact canonical run.'
+    return
+  }
+  if (!guideRun || !window.CyberneticGraph) {
+    $('#guide-graph').innerHTML = '<p class="guide-loading">Loading the retained canonical execution…</p>'
+    $('#guide-selection').innerHTML = '<strong>Loading:</strong> fetching the exact run, graph projection, events, and model traces.'
+    return
+  }
   renderGuideGraph(step)
+  const selected = step.mode === 'trajectory'
+    ? guideRun.events.find((event) => event.sequence === step.eventSequences[0])
+    : canonicalGuideProjection(step).nodes[0]
+  if (selected) renderGuideSelection(selected)
+}
+
+async function ensureGuideRun() {
+  if (guideRun || guideRunLoad) return guideRunLoad
+  guideRunLoad = apiRequest(`api/runs/${encodeURIComponent(guideRunId)}`)
+    .then((run) => {
+      if (run.run_id !== guideRunId || run.status !== 'completed' || run.scenario !== 'city_election_certification_influence' || run.execution !== 'live' || run.llm_configuration?.model !== preferredModel || run.model_calls !== 6 || !run.nodes?.length || !run.edges?.length || !run.events?.length || !run.trajectory?.nodes?.length || !run.traces?.length) throw new Error('the retained canonical run is incomplete or no longer matches the reviewed walkthrough')
+      guideRun = run
+      guideRunError = null
+      if (state.view === 'guide') renderGuide()
+      return run
+    })
+    .catch((error) => {
+      guideRunError = error.message
+      if (state.view === 'guide') renderGuide()
+      return null
+    })
+  return guideRunLoad
 }
 
 function advanceGuide(direction) {
   const next = state.guideStep + direction
   if (next >= guideSteps.length) {
-    state.view = 'case'
+    state.view = 'simulations'
     renderView()
     syncUrl()
     window.scrollTo({top:0, behavior:'auto'})
@@ -1169,7 +1209,7 @@ function renderResearchCase() {
 }
 
 function renderView() {
-  const publicView = ['overview', 'guide', 'case', 'simulations', 'create', 'mechanism'].includes(state.view)
+  const publicView = ['overview', 'guide', 'case', 'simulations', 'create', 'mechanism', 'method'].includes(state.view)
   document.body.classList.toggle('guided-result', publicView)
   document.body.classList.toggle('public-shell', publicView)
   document.body.classList.toggle('lab-shell', !publicView)
@@ -1187,7 +1227,10 @@ function renderView() {
     button.setAttribute('aria-current', active ? 'page' : 'false')
   })
   if (state.view === 'run') renderRunSetup()
-  if (state.view === 'guide') renderGuide()
+  if (state.view === 'guide') {
+    renderGuide()
+    void ensureGuideRun()
+  }
   if (state.view === 'case') {
     renderResearchCase()
     void ensureCaseNetwork()

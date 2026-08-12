@@ -136,6 +136,7 @@ interface CanvasOptions {
   title?: string
   subtitle?: string
   showLegend?: boolean
+  showMiniMap?: boolean
   legendNodes?: AnalystNode[]
   legendEdges?: AnalystEdge[]
   activity?: {
@@ -212,12 +213,24 @@ function nodeColor(node: Node<CanvasNodeData>): string {
   return {
     person: '#58a6ff',
     source: '#f2a65a',
+    information_source: '#f2a65a',
     thing: '#57b49d',
     information: '#ef79b7',
+    information_document: '#c36fa1',
     resource: '#81c784',
     mechanism: '#e8a84d',
+    process: '#f6c667',
+    decision_record: '#b891ff',
     analytical_boundary: '#b891ff',
     place: '#83d6c0',
+    run_started: '#8fa0b5',
+    action_attempted: '#58a6ff',
+    effect_emitted: '#c08cff',
+    effect_routed: '#79c7ff',
+    mechanism_executed: '#e8a84d',
+    state_committed: '#81c784',
+    observation_delivered: '#ef79b7',
+    run_completed: '#57b49d',
   }[node.data.raw.kind] ?? '#57b49d'
 }
 
@@ -225,12 +238,24 @@ function nodeGlyph(kind: string): string {
   return {
     person: '●',
     source: '◆',
+    information_source: '◆',
     thing: '◆',
     information: '▤',
+    information_document: '▧',
     resource: '■',
     place: '⌂',
     mechanism: '⚙',
+    process: '◷',
+    decision_record: '▦',
     analytical_boundary: '⬚',
+    run_started: '▶',
+    action_attempted: '●',
+    effect_emitted: '◇',
+    effect_routed: '→',
+    mechanism_executed: '⚙',
+    state_committed: '✓',
+    observation_delivered: '▤',
+    run_completed: '■',
   }[kind] ?? '◇'
 }
 
@@ -238,12 +263,24 @@ function nodeTypeLabel(kind: string): string {
   return {
     person: 'person',
     source: 'source',
+    information_source: 'information source',
     thing: 'thing / object',
-    information: 'message / information',
+    information: 'representation',
+    information_document: 'information document',
     resource: 'resource',
     place: 'place',
-    mechanism: 'decision / world process',
+    mechanism: 'transition mechanism',
+    process: 'scheduled process',
+    decision_record: 'decision state record',
     analytical_boundary: 'group / boundary',
+    run_started: 'run started event',
+    action_attempted: 'action attempted event',
+    effect_emitted: 'effect emitted event',
+    effect_routed: 'effect routed event',
+    mechanism_executed: 'mechanism executed event',
+    state_committed: 'state committed event',
+    observation_delivered: 'observation delivered event',
+    run_completed: 'run completed event',
   }[kind] ?? kind.replaceAll('_', ' ')
 }
 
@@ -346,7 +383,7 @@ function toCanvasEdge(
       opacity: item.enabled ? 0.9 : 0.3,
       strokeDasharray: edgeDash(item.kind),
     },
-    markerEnd: {
+    markerEnd: item.kind === 'spatial_link' ? undefined : {
       type: MarkerType.ArrowClosed,
       color,
       width: 16,
@@ -449,6 +486,33 @@ function dagreLayout(
       position: {
         x: point.x - width / 2,
         y: point.y - height / 2,
+      },
+    }
+  })
+}
+
+function trajectoryGridLayout(
+  nodes: Node<CanvasNodeData>[],
+): Node<CanvasNodeData>[] {
+  const ordered = [...nodes].sort((left, right) => {
+    const leftTime = Number((left.data.raw.state as TrajectoryNode).logical_time ?? 0)
+    const rightTime = Number((right.data.raw.state as TrajectoryNode).logical_time ?? 0)
+    return leftTime - rightTime || left.id.localeCompare(right.id)
+  })
+  const columns = ordered.length <= 6
+    ? Math.min(3, Math.max(1, ordered.length))
+    : Math.ceil(Math.sqrt(ordered.length))
+  const columnGap = 94
+  const rowGap = 96
+  return ordered.map((node, index) => {
+    const row = Math.floor(index / columns)
+    const withinRow = index % columns
+    const column = row % 2 === 0 ? withinRow : columns - 1 - withinRow
+    return {
+      ...node,
+      position: {
+        x: 50 + column * (NODE_WIDTH + columnGap),
+        y: 50 + row * (NODE_HEIGHT + rowGap),
       },
     }
   })
@@ -772,9 +836,11 @@ function buildGraph(options: CanvasOptions): {
     const nodes = options.trajectory?.nodes.map((item) => toCanvasNode(
       {
         id: item.id,
-        kind: 'realized_event',
+        kind: item.kind,
         label: `t${item.logical_time} · ${item.kind.replaceAll('_', ' ')}`,
-        description: item.label,
+        description: item.label.length > 78
+          ? `${item.label.slice(0, 75)}…`
+          : item.label,
         state: item,
       },
       selectedEventId === item.id,
@@ -793,7 +859,7 @@ function buildGraph(options: CanvasOptions): {
       null,
       options.selectedEdgeId === item.id,
     )) ?? []
-    return { nodes: dagreLayout(nodes, edges), edges }
+    return { nodes: trajectoryGridLayout(nodes), edges }
   }
   const event = options.event
   const activeIds = new Set([
@@ -990,9 +1056,9 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
             ))}
           </div>
           <div>
-            <strong>Arrows</strong>
+            <strong>Relations</strong>
             {legendEdgeKinds.map((kind) => (
-              <span key={kind} className="cy-legend-edge">
+              <span key={kind} className={`cy-legend-edge cy-legend-edge--${kind}`}>
                 <i style={{ borderColor: relationColor(kind) }} aria-hidden="true" />
                 {relationLabel(kind)}
               </span>
@@ -1032,12 +1098,14 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
             size={1}
             color="#293440"
           />
-          <MiniMap
-            pannable
-            zoomable
-            nodeColor={nodeColor}
-            maskColor="rgba(6, 10, 15, .72)"
-          />
+          {options.showMiniMap === false ? null : (
+            <MiniMap
+              pannable
+              zoomable
+              nodeColor={nodeColor}
+              maskColor="rgba(6, 10, 15, .72)"
+            />
+          )}
           <Controls position="bottom-left" />
         </ReactFlow>
       </div>

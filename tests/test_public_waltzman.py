@@ -73,6 +73,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "New simulation" in page
     assert "Guided example" in page
     assert "Simulations" in page
+    assert "Methodology" in page
     assert "Every completed simulation automatically becomes the same guided replay" in page
     assert "Open the curated outbreak case" in page
     assert "Lab workspace" in page
@@ -90,10 +91,12 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Explore detection and bounded response" in page
     assert "below the level of “the institution”" not in page
     assert "Homogeneous broadcasts" in page
-    assert "Deliver one generator before the clinic loses power" in page
-    assert "Illustrative tutorial · authored teaching sequence" in page
-    assert "Click Next to reveal one part of the system at a time" in page
-    assert "Message</b> is received, not automatically true" in page
+    assert "See how the simulator turns a configured world into a causal record" in page
+    assert "Canonical walkthrough · retained Luna execution" in page
+    assert "Every displayed node, connection, mechanism, and event comes from the retained run" in page
+    assert "The view switches from configured structure to realized causal events" in page
+    assert "Deliver one generator before the clinic loses power" not in page
+    assert "Person</b> perceives and acts" not in page
     assert page.index('class="guide-controls"') < page.index('class="guide-stage"')
     assert "Four national response networks face one outbreak" in page
     assert "How local pressure can become a collective decision problem" in page
@@ -130,18 +133,28 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Edit one person directly" in page
     assert "Edit the influence network directly" in page
     assert "Tell the authoring model what to change" in page
+    assert "How the simulator represents a world, produces change, and retains evidence" in page
+    assert "One canonical world—not one narrative per agent" in page
+    assert "Information is represented, delivered, and interpreted" in page
+    assert "Project-owned ActiveRuntimeSession + CausalSession" in page
+    assert "production integration not yet implemented" in page
+    assert "Mechanisms also carry n-ary semantics" in page
+    assert "Spatial links are explicitly undirected" in page
+    assert "Natural-language authoring compiles into reviewed machinery" in page
+    assert "Visual graphs are projections" in page
     assert shape.stylesheets == [
-        "assets/graph-canvas.css?v=replay3",
-        "assets/styles.css?v=replay3",
+        "assets/graph-canvas.css?v=ontology1",
+        "assets/styles.css?v=ontology1",
     ]
     assert shape.scripts == [
-        "assets/graph-canvas.js?v=replay3",
-        "assets/app.js?v=replay3",
+        "assets/graph-canvas.js?v=ontology1",
+        "assets/app.js?v=ontology1",
     ]
     assert {
         "overview-view",
         "guide-view",
         "guide-graph",
+        "guide-visual-mode",
         "guide-step-title",
         "guide-step-body",
         "guide-step-facts",
@@ -150,6 +163,17 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "guide-progress",
         "guide-previous",
         "guide-next",
+        "method-view",
+        "method-title",
+        "method-purpose",
+        "method-world",
+        "method-agency",
+        "method-information",
+        "method-transitions",
+        "method-time",
+        "method-analysis",
+        "method-authoring",
+        "method-limits",
         "case-view",
         "research-case-runs",
         "case-branch-detail",
@@ -400,7 +424,12 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "renderCaseNetworkGraph",
         "ensureCaseNetwork",
         "window.CyberneticGraph.render",
+        "guideRunId",
+        "run_ffe88e1c15d5",
         "guideSteps",
+        "canonicalGuideProjection",
+        "canonicalGuideTrajectory",
+        "ensureGuideRun",
         "renderGuideGraph",
         "renderGuide",
         "advanceGuide",
@@ -451,6 +480,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "websocket" not in script.lower()
     assert "openrouter" not in script.lower()
     assert "for (const run of dataset.runs) run.configuration" not in script
+    assert "guide_clinic" not in script
+    assert "authored teaching sequence" not in script
     assert "await loadRetainedLiveRuns()" not in script
     assert script.index("$('#workbench').hidden = false") < script.index(
         "void loadRetainedLiveRuns().then"

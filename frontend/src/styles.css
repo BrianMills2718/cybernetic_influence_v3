@@ -74,10 +74,22 @@
 }
 
 .cy-legend-node--person i { color: #58a6ff; }
+.cy-legend-node--information_source i { color: #f2a65a; }
 .cy-legend-node--information i { color: #ef79b7; }
+.cy-legend-node--information_document i { color: #c36fa1; }
 .cy-legend-node--mechanism i { color: #e8a84d; }
+.cy-legend-node--process i { color: #f6c667; }
+.cy-legend-node--decision_record i { color: #b891ff; }
 .cy-legend-node--resource i { color: #81c784; }
 .cy-legend-node--place i { color: #83d6c0; }
+.cy-legend-node--run_started i { color: #8fa0b5; }
+.cy-legend-node--action_attempted i { color: #58a6ff; }
+.cy-legend-node--effect_emitted i { color: #c08cff; }
+.cy-legend-node--effect_routed i { color: #79c7ff; }
+.cy-legend-node--mechanism_executed i { color: #e8a84d; }
+.cy-legend-node--state_committed i { color: #81c784; }
+.cy-legend-node--observation_delivered i { color: #ef79b7; }
+.cy-legend-node--run_completed i { color: #57b49d; }
 
 .cy-legend-edge i {
   position: relative;
@@ -97,6 +109,8 @@
   content: '';
   transform: rotate(45deg);
 }
+
+.cy-legend-edge--spatial_link i::after { display: none; }
 
 .cy-graph-canvas {
   min-width: 0;
@@ -147,6 +161,12 @@
   clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
 }
 .cy-flow-node--source .cy-node-glyph { color: #f2a65a; }
+.cy-flow-node--information_source {
+  border-color: #f2a65a;
+  border-radius: 2px;
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+}
+.cy-flow-node--information_source .cy-node-glyph { color: #f2a65a; }
 .cy-flow-node--thing { border-color: #57b49d; border-radius: 2px; }
 .cy-flow-node--thing .cy-node-glyph { color: #57b49d; }
 .cy-flow-node--information {
@@ -155,10 +175,32 @@
   border-radius: 2px;
 }
 .cy-flow-node--information .cy-node-glyph { color: #ef79b7; }
+.cy-flow-node--information_document { border-color: #c36fa1; border-left-width: 5px; border-radius: 2px; }
+.cy-flow-node--information_document .cy-node-glyph { color: #c36fa1; }
 .cy-flow-node--resource { border-color: #81c784; border-style: double; border-width: 3px; }
 .cy-flow-node--resource .cy-node-glyph { color: #81c784; }
 .cy-flow-node--mechanism { border-color: #e8a84d; border-radius: 999px; }
 .cy-flow-node--mechanism .cy-node-glyph { color: #e8a84d; }
+.cy-flow-node--process { border-color: #f6c667; border-radius: 999px; border-style: dashed; }
+.cy-flow-node--process .cy-node-glyph { color: #f6c667; }
+.cy-flow-node--decision_record { border-color: #b891ff; border-radius: 4px; border-style: double; border-width: 3px; }
+.cy-flow-node--decision_record .cy-node-glyph { color: #b891ff; }
+.cy-flow-node--run_started { border-color: #8fa0b5; }
+.cy-flow-node--action_attempted { border-color: #58a6ff; border-radius: 28px; }
+.cy-flow-node--effect_emitted { border-color: #c08cff; }
+.cy-flow-node--effect_routed { border-color: #79c7ff; }
+.cy-flow-node--mechanism_executed { border-color: #e8a84d; border-radius: 999px; }
+.cy-flow-node--state_committed { border-color: #81c784; border-style: double; border-width: 3px; }
+.cy-flow-node--observation_delivered { border-color: #ef79b7; border-left-width: 5px; }
+.cy-flow-node--run_completed { border-color: #57b49d; }
+.cy-flow-node--run_started .cy-node-glyph { color: #8fa0b5; }
+.cy-flow-node--action_attempted .cy-node-glyph { color: #58a6ff; }
+.cy-flow-node--effect_emitted .cy-node-glyph { color: #c08cff; }
+.cy-flow-node--effect_routed .cy-node-glyph { color: #79c7ff; }
+.cy-flow-node--mechanism_executed .cy-node-glyph { color: #e8a84d; }
+.cy-flow-node--state_committed .cy-node-glyph { color: #81c784; }
+.cy-flow-node--observation_delivered .cy-node-glyph { color: #ef79b7; }
+.cy-flow-node--run_completed .cy-node-glyph { color: #57b49d; }
 .cy-flow-node--analytical_boundary {
   border: 2px dashed #b891ff;
   background: #2a2040f2;
