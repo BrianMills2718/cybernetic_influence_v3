@@ -127,6 +127,58 @@ def test_influence_network_can_be_edited_approved_and_run(tmp_path: Path) -> Non
     assert {person["last_explicit_commitment"] for person in summary.json()["participants"]} == {"support"}
 
 
+def test_public_authoring_advertises_and_dispatches_only_certified_models(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    calls: list[object] = []
+
+    def proposer(*args: object, **_kwargs: object) -> tuple[object, object]:
+        calls.append(args)
+        return influence_network_proposal(), _Meta()
+
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    monkeypatch.setattr(
+        api_module,
+        "model_catalog",
+        lambda: [{"model": "codex/gpt-5.6-luna"}],
+    )
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=proposer,
+        )
+    )
+
+    authoring = api.get("/api/config").json()["authoring"]
+    assert [item["model"] for item in authoring["models"]] == [
+        "codex/gpt-5.6-luna"
+    ]
+    assert [
+        item["model"] for item in authoring["structured_contract"]["model_options"]
+    ] == ["codex/gpt-5.6-luna"]
+    assert authoring["model"] == "codex/gpt-5.6-luna"
+
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    rejected = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "uncertified_model",
+            "message": "Model one collective decision.",
+            "model": "codex/gpt-5.6-terra",
+            "reasoning_effort": "medium",
+        },
+    )
+    assert rejected.status_code == 422
+    assert rejected.json()["detail"] == (
+        "authoring model route is not currently certified"
+    )
+    assert calls == []
+
+
 def test_draft_is_idempotent_revisioned_previewable_approved_and_runnable(tmp_path: Path) -> None:
     api = _client(tmp_path)
     created = api.post("/api/authoring/drafts")

@@ -110,6 +110,7 @@ from cybernetic_influence.run_configuration import (
     coordination_live_model_ids,
     live_options_contract,
     llm_client_revision,
+    model_catalog,
     resolve_live_configuration,
 )
 from cybernetic_influence.experiments.composite_agency import (
@@ -1344,6 +1345,26 @@ def create_app(
         live_options = live_options_contract()
         coordination_live_models = coordination_live_model_ids()
         live_defaults = cast(dict[str, object], live_options["defaults"])
+        authoring_models = list(AUTHORING_MODEL_OPTIONS)
+        if os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1":
+            certified_model_ids = {
+                str(item["model"]) for item in model_catalog()
+            }
+            authoring_models = [
+                item
+                for item in authoring_models
+                if item["model"] in certified_model_ids
+            ]
+        authoring_model_ids = {item["model"] for item in authoring_models}
+        authoring_default = (
+            AUTHORING_MODEL
+            if AUTHORING_MODEL in authoring_model_ids
+            else (authoring_models[0]["model"] if authoring_models else None)
+        )
+        structured_authoring_contract = authoring_contract()
+        structured_authoring_contract["model_options"] = deepcopy(
+            authoring_models
+        )
         return {
             "version": __version__,
             "build_commit": os.getenv("CYBERNETIC_INFLUENCE_BUILD_COMMIT", "development"),
@@ -1546,9 +1567,9 @@ def create_app(
             },
             "live_options": live_options,
             "authoring": {
-                "model": AUTHORING_MODEL,
+                "model": authoring_default,
                 "reasoning_effort": AUTHORING_REASONING_EFFORT,
-                "models": list(AUTHORING_MODEL_OPTIONS),
+                "models": authoring_models,
                 "reasoning_efforts": list(AUTHORING_REASONING_EFFORTS),
                 "maximum_attempts_per_message": AUTHORING_MAX_ATTEMPTS,
                 "maximum_cost_per_attempt": AUTHORING_MAX_BUDGET,
@@ -1559,7 +1580,7 @@ def create_app(
                     "influence_network_v1",
                 ],
                 "reviewed_coordination_example": True,
-                "structured_contract": authoring_contract(),
+                "structured_contract": structured_authoring_contract,
             },
             "theory_analysis": theory_analysis_contract(),
             "cost_baselines": runs.cost_baselines(),
@@ -1737,6 +1758,15 @@ def create_app(
         draft_id: str, body: DraftMessageRequest, request: Request
     ) -> dict[str, object]:
         _require_access(request)
+        if (
+            os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1"
+            and body.model
+            not in {str(item["model"]) for item in model_catalog()}
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="authoring model route is not currently certified",
+            )
         with authoring_lock:
             try:
                 return authoring.advance(
