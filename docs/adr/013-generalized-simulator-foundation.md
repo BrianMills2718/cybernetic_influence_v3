@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: accepted
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-11
 supersedes: proposed Candidate C revision at e8429b0e2e769931e8d211262d70fc48bc5032da
 ---
 
@@ -74,6 +74,47 @@ coarse state is acceptable elsewhere. Exact components must use Concordia's
 public component/state seams rather than recreating `CausalSession` or
 `ActiveRuntimeSession` as a second engine.
 
+### 2026-08-11 boundary clarification
+
+The [current-source and bridge/port revisit](../research/027-concordia-architecture-revisit.md)
+reaffirms Candidate A and makes its internal boundary explicit.
+
+Concordia owns the **outer simulation lifecycle**. A project-owned canonical
+world is implemented as one or more public game-master components. That world
+component may contain typed entities, things, places, representations,
+resources, topology, placements, active-system bindings, and evidence. It is
+not a second engine while Concordia still owns actor invocation, turn/moment
+progression, component lifecycle, and the call into game-master resolution.
+Calling the old causal/active runtime behind the component remains forbidden.
+
+The standard transition path is:
+
+```text
+canonical world truth
+-> actor-authorized context or observation
+-> open semantic action intent
+-> declared transition authority
+-> structured world patch proposal
+-> generic references, authority, topology, information, and declared invariant checks
+-> atomic commit or visible rejection
+-> actor-specific observation and retained evidence
+```
+
+A transition authority may be deterministic, stochastic, LLM-adjudicated,
+externally simulated, scripted, or replayed. Every authority declares what it
+may read and write, its fidelity/assumptions, and invalid questions. An LLM game
+master is therefore a legitimate first-class coarse transition authority, not
+merely a fallback, but it never writes canonical state without a validated
+patch commit.
+
+Concordia entities are used for autonomous or externally driven processes. An
+inert truck, bridge, computer, record, route, or resource normally remains a
+canonical-world record with affordances and state; it does not receive a fake
+`act` lifecycle. A coarse organizational surrogate may be an active entity
+when the internal machinery is intentionally out of resolution. It may not
+independently duplicate the causal function of a simultaneously active detailed
+representation.
+
 ## Authority boundaries
 
 | Concern | Adopted authority |
@@ -81,12 +122,12 @@ public component/state seams rather than recreating `CausalSession` or
 | Entity cognition, memory, and planning | Concordia entities/components; provider calls route through `llm_client` |
 | Simulation loop and actor selection | Concordia engine/game-master foundation |
 | World and component state | Concordia component state, with exact typed state only where declared |
-| Action interpretation | Concordia action seam plus reviewed parsers or structured components |
-| Adjudication | Game-master resolution; deterministic components own declared hard rules |
+| Action interpretation | Open semantic intents through project-owned structured components; scenario-specific verb enumeration is not the general seam |
+| Adjudication | A declared transition authority proposes a structured patch; generic validation and the canonical-world component own commit |
 | Time and scheduling | Concordia scheduling/time components, extended through public seams when needed |
-| Checkpoint and continuation | Concordia checkpoint/component state; migration artifacts must fail on silent loss |
-| Evidence and provenance | Concordia logs plus selected typed evidence projections required by the question |
-| Authoring | Adapt the existing reviewed workflow to emit Concordia configuration/components |
+| Checkpoint and continuation | Concordia-invoked checkpoint/component lifecycle with a strict lossless canonical-state codec; stock silent dropping is not acceptable |
+| Evidence and provenance | Concordia logs plus typed context, intent, proposed patch, validation, commit, observation, and selected causal projections |
+| Authoring | A general world-composition contract binds only registered components/authorities; convenience templates compile into the same contract |
 | Analysis and UI | Adapt existing CI analysis and presentation over the new retained-run projection |
 
 No component may claim predictive validity merely because its internal state is
@@ -125,9 +166,10 @@ losing behavior the product owner judges indispensable.
 - `data_contracts.composition` remains an optional compile-time authoring
   substrate. It is not a runtime authority and is deferred until authoring
   migration presents a concrete duplication or validation problem.
-- The first proof reproduces the current physical-access behavior with
-  Concordia actually executing it. The old causal/active runtime must not run
-  behind the new surface.
+- The first proof now exercises the general bridge/port world-context-intent-
+  patch path with Concordia actually executing it. The old causal/active runtime
+  must not run behind the new surface. Physical access remains a later exact-
+  mechanism parity case rather than the foundation's first discriminating test.
 - Broader parity work begins only after that proof. Cross-domain generalization
   begins only after current public capabilities have an explicit disposition.
 - A materially different exemplar must reuse the same authoring and execution
@@ -144,8 +186,15 @@ that every Cybernetic Influence feature should be ported, that exact components
 increase real-world accuracy, or that one successful scenario proves a
 generalized simulator.
 
+It also does not establish live autonomous-entity creation/removal, dynamic
+component rebinding, general simultaneous-patch conflict semantics, general
+information noninterference, reliable LLM adjudication, cross-domain authoring,
+scale, or behavioral fidelity. The evidence record separates what the current
+source proves, what the bridge/port probe indicates, and what remains unknown.
+
 ## Execution gate
 
-The replacement [Slice 27 handoff](../handoffs/027-foundation-implementation.md)
-is a bounded design for the first Concordia-owned parity proof. Begin it only
-after explicit implementation authorization.
+The amended [Slice 27 handoff](../handoffs/027-foundation-implementation.md) is
+a bounded design for the first general Concordia-owned world/transition
+vertical. Begin product implementation only after explicit implementation
+authorization; the disposable architecture probe is not production adoption.
