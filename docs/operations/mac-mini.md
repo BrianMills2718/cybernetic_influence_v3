@@ -108,22 +108,30 @@ trajectory, then reloads completed public runs after refresh. The public store
 currently adds a matched three-run custom triad. Its role-aligned comparison is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist>.
 
-Current natural-language authoring deployment 2026-08-12: the public service
-now runs exact revision
-`e563a93f4369d63480c9134bce436757d3893c64`. The direct authoring entry is
+Current natural-language authoring and guided-replay deployment 2026-08-12: the
+public service now runs exact revision
+`49eb780c5cc0383e7862c3ac375b7b68233a54ef`. The direct authoring entry is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=create>. A deployed
 Luna execution proved the bounded `influence_network_v1` path from analyst prose
 through typed generation, direct edit, approval, six autonomous person calls,
 an exact collective gate, retained evidence, and public result rendering. The
 retained example is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=create&draft=draft_68240a512235&authored_run=run_ffe88e1c15d5>.
+Every completed run now opens as a staged replay. For the retained influence
+network, that replay reveals the collective question, configured people and
+sources, each round's delivered information, individual decisions, and the
+collective outcome in seven steps. Its graph distinguishes source, information,
+person, and decision-process nodes and labels directed issue, delivery, and
+decision-contribution edges. Public desktop and 390-pixel browser checks loaded
+the retained run without console or request failures; invalid and missing run
+identifiers returned explicit `422` and `404` responses.
 The focused certification record is
 `docs/experiments/2026-08-12-public-influence-network-v2-certification.md`.
 This evidence is intentionally limited to the reviewed workflow and does not
 establish arbitrary-world authoring or stakeholder usefulness. The prior target
 revision and LaunchAgent are retained respectively at
-`refs/deployments/waltzman-public-pre-e563a93` and
-`~/Library/LaunchAgents/com.cybernetic-influence.waltzman-public.plist.pre-e563a93`.
+`refs/deployments/waltzman-public-pre-49eb780` and
+`~/Library/LaunchAgents/com.cybernetic-influence.waltzman-public.plist.pre-49eb780`.
 
 Report-only deployment certification refreshed at `2026-08-05T04:19:15Z`:
 
