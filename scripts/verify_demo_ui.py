@@ -94,21 +94,15 @@ def main() -> None:
     if args.run_id:
         response = httpx.get(f"{base_url}/api/runs/{args.run_id}", timeout=30)
         response.raise_for_status()
-        if response.json().get("status") != "completed":
+        run_payload = response.json()
+        if run_payload.get("status") != "completed":
             raise RuntimeError("the supplied browser-verification run is not completed")
         run_id = args.run_id
     else:
-        response = httpx.post(
-            f"{base_url}/api/runs",
-            json={
-                "scenario": "coordination_decision",
-                "arm_id": "stabilization",
-                "execution": "scripted",
-            },
-            timeout=240,
+        raise RuntimeError(
+            "--run-id is required; stakeholder verification must inspect an "
+            "existing retained run and never create a scripted coordination run"
         )
-        response.raise_for_status()
-        run_id = response.json()["run_id"]
     config_response = httpx.get(f"{base_url}/api/config", timeout=30)
     config_response.raise_for_status()
     config = config_response.json()
@@ -146,6 +140,85 @@ def main() -> None:
         assert_launch_controls_do_not_overlap(page)
         assert page.locator("#map-section").is_visible()
         assert page.locator("#narrative-section").is_visible()
+        if run_payload.get("theory_analysis"):
+            walkthrough = page.locator(".waltzman-demonstration")
+            assert walkthrough.is_visible()
+            walkthrough_text = walkthrough.inner_text().casefold()
+            for expected in (
+                "Single-run instrument",
+                "Trust-structure observations",
+                "Perceived-risk observations",
+                "Coordination-readiness observations",
+                "Recorded indicators",
+                "Observed chronology",
+                "Decision procedure",
+                "Exact outcome",
+                "What this does not establish",
+                "fixed scheduled scenario processes",
+                "no matched baseline",
+            ):
+                assert expected.casefold() in walkthrough_text
+            for false_claim in (
+                "accepted proposal cleared",
+                "approving a none deployment",
+                "none scope accepted",
+                "bypasss",
+                "demonstrates an implementation and an inspectable mechanism chain",
+            ):
+                assert false_claim not in walkthrough_text
+            final_status = run_payload.get("outcome", {}).get("final_status")
+            if final_status == "no_decision_by_horizon":
+                assert "reached the deadline without a decision" in walkthrough_text
+                assert "no proposal cleared the final gate" in walkthrough_text
+                assert "no deployment approved" in walkthrough_text
+            timeline = run_payload.get("timeline", [])
+            first_verification = min(
+                (
+                    item["logical_time"]
+                    for item in timeline
+                    if item.get("kind") == "action_attempted"
+                    and "verification" in str(item.get("summary", "")).casefold()
+                ),
+                default=None,
+            )
+            first_outside_source = min(
+                (
+                    item["logical_time"]
+                    for item in timeline
+                    if item.get("kind") == "action_attempted"
+                    and str(item.get("person", "")).endswith("_pressure_source")
+                ),
+                default=None,
+            )
+            if (
+                first_verification is not None
+                and first_outside_source is not None
+                and first_verification < first_outside_source
+            ):
+                assert "first verification request occurred on day 0" in walkthrough_text
+                assert "outside concern sources first acted on day 1" in walkthrough_text
+                assert "does not attribute the earlier response" in walkthrough_text
+            assert page.locator(".waltzman-observations").get_attribute("aria-label") == (
+                "Retained observations, not a causal chain"
+            )
+            assert page.locator(
+                ".waltzman-observations .waltzman-trajectory-step"
+            ).first.evaluate(
+                "element => getComputedStyle(element, '::after').content"
+            ) == "none"
+            assert page.locator("#theory-analysis-section").evaluate(
+                "section => section.compareDocumentPosition(document.querySelector('#coordination-measurement-section')) & Node.DOCUMENT_POSITION_FOLLOWING"
+            )
+            first_evidence_group = walkthrough.locator(".measurement-evidence").first
+            first_evidence_group.locator("summary").click()
+            first_evidence = first_evidence_group.locator(
+                ".measurement-evidence-button"
+            ).first
+            expected_event = first_evidence.get_attribute("data-measure-event-id")
+            first_evidence.click()
+            assert page.locator("details.advanced").get_attribute("open") is not None
+            assert page.locator("details.moment-inspector").get_attribute("open") is not None
+            assert page.locator("#event-detail small").inner_text() == expected_event
         assert page.locator("#analytical-scale-control").is_visible()
         assert page.locator("#analytical-boundary option").count() == 2
         assert page.locator("#analytical-scale-toggle").inner_text().startswith(
@@ -174,10 +247,23 @@ def main() -> None:
         assert "The people:" in initial_situation.inner_text()
         assert "What may change the decision:" in initial_situation.inner_text()
         assert first_story.locator("p").is_visible()
-        assert first_story.locator("p").inner_text().startswith("The schedule opened")
+        first_story_text = first_story.locator("p").inner_text()
+        assert "first meeting" in first_story_text
+        assert "modeled day 0" in first_story_text
         first_metadata = first_story.locator(".narrative-meta").inner_text()
         assert first_metadata.startswith("Day 0 ·")
         assert "scenario minutes into" not in first_metadata
+        story_metadata = page.locator(
+            "#turn-narratives .narrative-meta"
+        ).all_inner_texts()
+        story_days = sorted(
+            {
+                int(item.split("Day ", 1)[1].split(" ", 1)[0])
+                for item in story_metadata
+                if item.startswith("Day ")
+            }
+        )
+        assert story_days == [0, 1, 2, 3, 4], story_days
 
         page.locator("#narrative-detailed").click()
         detailed_story = page.locator("#detailed-narrative")
@@ -190,13 +276,18 @@ def main() -> None:
             "state revision",
             '{"',
             "relied_on",
+            "_pressure_source",
         ):
             assert internal_phrase not in detailed_prose
-        assert (
-            "The coordinator's request for explicit review reached 4 team members."
-            in detailed_prose
-        )
-        assert "The independent verification result was recorded." in detailed_prose
+        if live_expected:
+            assert "evidence" in detailed_prose.lower()
+            assert "review" in detailed_prose.lower()
+        else:
+            assert (
+                "The coordinator's request for explicit review reached 4 team members."
+                in detailed_prose
+            )
+            assert "The independent verification result was recorded." in detailed_prose
         assert detailed_story.locator(".causal-result").count() > 0
         assert detailed_story.locator(".detailed-narrative-moment").count() == (
             page.locator("#turn-narratives .turn-narrative").count()
@@ -256,13 +347,14 @@ def main() -> None:
         assert "took part in" in page.locator("#trace .trace-summary p").inner_text()
         assert "was activated" not in page.locator("#trace .trace-summary p").inner_text()
         first_participant_moment = page.locator("#trace .trace-step").first
-        assert first_participant_moment.locator("strong").inner_text().startswith(
+        assert first_participant_moment.locator("strong").first.inner_text().startswith(
             "Day 0"
         )
-        assert (
-            "requested explicit, reasoned review"
-            in first_participant_moment.locator("p").first.inner_text()
-        )
+        first_participant_action = first_participant_moment.locator("p").first.inner_text()
+        if live_expected:
+            assert "evidence review" in first_participant_action.lower()
+        else:
+            assert "requested explicit, reasoned review" in first_participant_action
         assert "activation_" not in first_participant_moment.inner_text()
         assert not first_participant_moment.locator("pre").is_visible()
         assert "scope_reduced" not in " ".join(
@@ -370,7 +462,20 @@ def main() -> None:
             """() => document.querySelectorAll('#analytical-boundary option').length === 2
                 && document.querySelector('#spatial-layout')?.getAttribute('aria-pressed') === 'true'"""
         )
-        assert page.locator("#live").is_checked() is live_expected
+        assert page.locator("#live").is_checked()
+        assert page.locator("#live").is_disabled()
+        assert page.locator("#run").inner_text() == "Play live simulation"
+        assert page.locator("#run").is_enabled() is live_expected
+        live_help = page.locator("#live-help").inner_text()
+        if live_expected:
+            assert "Waltzman measurements are derived after the run" in live_help
+        else:
+            assert "requires live LLM-modeled people" in live_help
+
+        page.locator("#scenario").select_option("service_desk")
+        page.wait_for_function(
+            """() => document.querySelector('#scenario-title')?.textContent === 'Service desk'"""
+        )
         if live_expected:
             page.locator("#live").uncheck()
         assert page.locator("#run").inner_text() == "Play reference simulation"
@@ -395,9 +500,11 @@ def main() -> None:
     assert not console_errors, console_errors
     assert not failed_requests, failed_requests
     print(
-        f"PASS {run_id}: narrative hierarchy and readable detailed story; deep link, "
+        f"PASS {run_id}: outcome- and chronology-correct Waltzman instrument; "
+        "narrative hierarchy and readable detailed story; deep link, "
         "all projections, projection-preserving spatial/causal collapse/expand, "
-        "both composites, service-desk preview, and coordination pause/resume"
+        "both composites, coordination live-only launch, and service-desk "
+        "reference pause/resume"
     )
 
 

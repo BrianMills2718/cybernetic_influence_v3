@@ -471,6 +471,37 @@ M6 is technically satisfied. M7 remains the operator's judgment of whether the
 corrected situation, trajectory, two theoretical readouts, evidence, and
 limitations are understandable without raw JSON.
 
+### Packet 24E — 24-hour Waltzman stakeholder demo
+
+**Classification:** canonical outcome presentation.
+
+**Status:** outcome- and chronology-correct instrument privately deployed;
+operator judgment pending.
+
+On 2026-07-31 the operator paused the generalized-foundation decision and set a
+hard 24-hour limit to finish a demo for Waltzman. The smallest accepted change
+is a presentation layer over the already retained Packet 24D evidence, not a
+new simulation runtime, a comparison study, or a scientific-validation claim.
+
+The completed run must lead with:
+
+1. a plain-language modeled result;
+2. separate trust-structure, perceived-risk, and coordination-readiness
+   observations;
+3. the retained chronology without turning event order into an unsupported
+   causal chain;
+4. direct event evidence where the retained finding cites events; and
+5. an always-visible statement that the fixed scheduled sources are not
+   adaptive influence agents and one unmatched run cannot demonstrate a
+   directional invariant, causal influence, attribution, or proportionality.
+
+The full 16-finding Waltzman readout, Levin readout, narrative, three graph
+projections, participant and boundary views, exact evidence, and pause/resume
+remain available. Private desktop verification against the retained live run
+passed exact outcome wording, day-0-before-day-1 chronology, all existing
+interaction checks, console, and failed-request checks. M7 remains open until
+the operator reviews the deployed corrected run.
+
 ## Review and Reset
 
 Review only the changed contract, one provider-free canonical path, and one

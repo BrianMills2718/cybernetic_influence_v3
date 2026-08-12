@@ -22,10 +22,16 @@ from cybernetic_influence.active_runtime import (
 )
 from cybernetic_influence.api import create_app
 from cybernetic_influence.analysis.coordination_measurement import CoderOutput
+from cybernetic_influence.experiments.coordination_experiment import (
+    LiveCoordinationProbeCondition,
+    coordination_experiment_bindings,
+    coordination_experiment_fixture,
+)
 from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 from cybernetic_influence.run_store import RunStore
 from cybernetic_influence.scenarios.coordination_decision import (
     PERSON_IDS,
+    PRESSURE_SOURCE_IDS,
     CoordinationRuntimePaused,
     baseline_coordination_fixture,
     coordination_runtime_fixture,
@@ -93,6 +99,7 @@ def client(
             ROOT / "web",
             run_root,
             measurement_call=measurement_call,
+            allow_internal_scripted_coordination=True,
         )
     )
 
@@ -139,8 +146,14 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "physical_access",
         "purchase_payment",
         "coordination_decision",
+        "regional_outbreak",
     }
     coordination = config.json()["scenarios"]["coordination_decision"]
+    assert coordination["execution_modes"] == ["live"]
+    assert coordination["scripted_execution"] == "internal_verification_only"
+    assert coordination["known_omissions"][0] == (
+        "The live LLM people are synthetic roles, not validated models of particular people or institutions."
+    )
     assert coordination["supports_live"] is True
     assert coordination["live_model_ids"] == [
         "codex/gpt-5.6-terra",
@@ -152,8 +165,21 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "baseline",
         "heterogeneous_pressure",
         "stabilization",
+        "fixed_heterogeneous_pressure",
+        "adaptive_heterogeneous_pressure",
+        "adaptive_pressure_with_stabilization",
     }
     assert coordination["run_control_options"]["max_participant_calls_cap"] == 150
+    assert {
+        item["id"]
+        for item in config.json()["scenarios"]["regional_outbreak"]["arms"]
+    } == {
+        "baseline",
+        "responsive_exercise_injects",
+        "capacity_inject_replay_with_stabilization",
+        "adaptive_cso_stabilization",
+    }
+    assert config.json()["scenarios"]["regional_outbreak"]["maximum_live_calls"] == 89
     assert config.json()["maximum_live_calls"] == 150
     assert config.json()["live_options"]["limits"]["maximum_participant_calls"] == 150
     assert config.json()["scenarios"]["physical_access"]["arms"][0]["description"]
@@ -234,6 +260,13 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert "Each entry includes its exact run ID." in page.text
     assert "Compare five matched conditions" in page.text
     assert 'id="run-composite-assay"' in page.text
+    assert "Compare pressure, adaptation, and validation" in page.text
+    assert 'id="run-coordination-experiment"' in page.text
+    assert 'id="live-probe-title"' in page.text
+    assert 'id="live-coordination-comparisons"' in page.text
+    assert "Run the same conditions with LLM-modeled participants" in page.text
+    assert "regional-outbreak-v4" in page.text
+    assert 'id="regional-outbreak-comparisons"' in page.text
     assert "Read me" in page.text
     assert "Author scenario" in page.text
     assert "Describe what you want" in page.text
@@ -252,6 +285,8 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert 'id="authoring-causal-layout"' in page.text
     assert 'id="authoring-trajectory-layout"' in page.text
     assert 'id="theory-analysis-section"' in page.text
+    assert "What this run lets us inspect" in page.text
+    assert "Decision-environment instrument" in page.text
     assert 'id="decision-environment-section"' in page.text
     assert 'id="collective-competence-section"' in page.text
     assert "How to read a cybernetic simulation" in page.text
@@ -314,6 +349,15 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"renderTheoryAnalysis" in app_script.content
     assert b"/api/composite-assays" in app_script.content
     assert b"function renderCompositeAssaySelection" in app_script.content
+    assert b"/api/coordination-experiments" in app_script.content
+    assert b"function renderCoordinationExperiment" in app_script.content
+    assert b"function renderLiveCoordinationComparison" in app_script.content
+    assert b"Authentic LLM comparison" in app_script.content
+    assert b"Every retained completed trajectory is shown" in app_script.content
+    assert b"Final support" in app_script.content
+    assert b"No separate narrator call was requested" in app_script.content
+    assert b"Final positions:" in app_script.content
+    assert b"requestedView === 'history'" in app_script.content
     assert b"What reached the group" in app_script.content
     assert b"What the group sent out" in app_script.content
     assert b"function renderAuthoring" in app_script.content
@@ -321,6 +365,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"function renderAuthoringPeople" in app_script.content
     assert b"function renderAuthoringConfiguration" in app_script.content
     assert b"Questions one run cannot answer" in app_script.content
+    assert b"fixed scheduled scenario processes" in app_script.content
+    assert b"no matched baseline" in app_script.content
+    assert b"accepted proposal cleared" not in app_script.content
+    assert b"none scope accepted" not in app_script.content
     assert (
         b"compiler-owned ids, routes, and mechanisms are deliberately absent"
         in page.content.lower()
@@ -363,6 +411,101 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert b"liveCue" in graph_script.content
     assert b"animateMotion" in graph_script.content
     assert b"prefers-reduced-motion" in graph_styles.content
+
+
+def test_history_projects_exact_live_coordination_probe_evidence(
+    tmp_path: Path,
+) -> None:
+    store = RunStore(tmp_path)
+    for index, condition in enumerate(
+        ["fixed_heterogeneous_pressure", "adaptive_heterogeneous_pressure"]
+    ):
+        store.save(
+            {
+                "run_id": f"run_{index + 1:012x}",
+                "created_at": f"2026-08-04T17:0{index}:00+00:00",
+                "status": "completed",
+                "scenario": "coordination_decision",
+                "arm": condition,
+                "execution": "live",
+                "model_calls": 42 + index,
+                "trace_id_prefix": f"coordination-live-probe/{condition}",
+                "total_observed_cost": 0.0,
+                "llm_configuration": {
+                    "model": "codex/gpt-5.6-luna",
+                    "reasoning_effort": "medium",
+                },
+                "exact_coordination_values": {
+                    "final_deployment_status": "no_decision_by_horizon",
+                    "verification_requests": {"total": 6 + index},
+                    "risk_register_expansion": {"distinct_risks": 2 + index},
+                    "unresolved_risk_load": {"final_open_count": 2 + index},
+                    "modeled_time_to_terminal": {"scenario_minutes": 5768},
+                },
+            }
+        )
+
+    response = client(tmp_path).get("/api/runs")
+
+    assert response.status_code == 200
+    probes = [item["live_coordination_probe"] for item in response.json()["runs"]]
+    assert [probe["condition"] for probe in probes] == [
+        "adaptive_heterogeneous_pressure",
+        "fixed_heterogeneous_pressure",
+    ]
+    assert probes[0]["model"] == "codex/gpt-5.6-luna"
+    assert probes[0]["model_calls"] == 43
+    assert probes[0]["metrics"] == {
+        "verification_requests": 7,
+        "risk_register_expansion": 3,
+        "unresolved_risk_load": 3,
+        "modeled_time_to_terminal": 5768,
+    }
+
+
+def test_waltzman_surface_is_an_outcome_correct_single_run_instrument(
+    tmp_path: Path,
+) -> None:
+    api = client(tmp_path)
+    page = api.get("/")
+    app_script = api.get("/assets/app.js")
+    styles = api.get("/assets/styles.css")
+
+    assert page.status_code == 200
+    assert app_script.status_code == 200
+    assert styles.status_code == 200
+    assert "What this run lets us inspect" in page.text
+    assert "Decision-environment instrument" in page.text
+    assert b"function waltzmanOutcome" in app_script.content
+    assert b"The group reached the deadline without a decision" in app_script.content
+    assert b"No proposal cleared the final gate" in app_script.content
+    assert b"fixed scheduled scenario processes" in app_script.content
+    assert b"no matched baseline" in app_script.content
+    assert b"waltzman-observations" in app_script.content
+    assert b".waltzman-observations" in styles.content
+    assert b"content:none" in styles.content
+    assert b"accepted proposal cleared" not in app_script.content
+    assert b"none scope accepted" not in app_script.content
+
+
+def test_production_api_rejects_scripted_coordination_execution(tmp_path: Path) -> None:
+    api = TestClient(create_app(ROOT / "web", tmp_path))
+
+    response = api.post(
+        "/api/runs",
+        json={
+            "scenario": "coordination_decision",
+            "arm_id": "stabilization",
+            "execution": "scripted",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "coordination scenarios require live agent execution; "
+        "scripted people are internal verification fixtures"
+    )
+    assert api.get("/api/runs").json()["runs"] == []
 
 
 def test_scenario_preview_exposes_the_initial_map_without_creating_a_run(tmp_path: Path) -> None:
@@ -2037,8 +2180,18 @@ def test_coordination_live_execution_requires_scenario_schema_certification(
     assert "coordination participant schemas" in response.json()["detail"]
 
 
+@pytest.mark.parametrize(
+    ("arm_id", "adaptive_sources", "authoritative_validation"),
+    [
+        ("baseline", False, None),
+        ("adaptive_pressure_with_stabilization", True, True),
+    ],
+)
 def test_coordination_live_api_selects_provider_people_and_live_narration(
     tmp_path: Path,
+    arm_id: str,
+    adaptive_sources: bool,
+    authoritative_validation: bool | None,
 ) -> None:
     captured: list[dict[str, object]] = []
 
@@ -2050,10 +2203,34 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
                     for person_id in PERSON_IDS
                     if bindings[person_id].implementation.provider_bound
                 },
+                "adaptive_sources": all(
+                    bindings[source_id].implementation.provider_bound
+                    and bindings[source_id].implementation_id.startswith(
+                        "native_coordination_pressure_"
+                    )
+                    for source_id in PRESSURE_SOURCE_IDS
+                ),
+                "authoritative_validation": (
+                    fixture.scenario.initial_state.fact(
+                        "authoritative_validation_record.available"
+                    ).value
+                    if "authoritative_validation_record"
+                    in fixture.scenario.initial_state.entities
+                    else None
+                ),
                 "per_call_budget": kwargs["runtime_config"].per_call_budget,
                 "per_run_budget": kwargs["runtime_config"].per_run_budget,
             }
         )
+        if arm_id == "adaptive_pressure_with_stabilization":
+            reference = coordination_experiment_fixture(
+                cast(LiveCoordinationProbeCondition, arm_id)
+            )
+            return original_run_coordination(
+                reference.runtime,
+                coordination_experiment_bindings(reference),
+                run_id=kwargs["run_id"],
+            )
         return run_scripted_coordination(
             coordination_runtime_fixture(baseline_coordination_fixture()),
             run_id=kwargs["run_id"],
@@ -2071,12 +2248,12 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
     with (
         patch.dict(
             "os.environ",
-            {
-                "OPENROUTER_API_KEY": "test-key",
-                "CYBERNETIC_INFLUENCE_LIVE": "1",
-                "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary",
-                "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH": "test-coordination-canary",
-                "LLM_CLIENT_REVISION": CLIENT_REVISION,
+                {
+                    "OPENROUTER_API_KEY": "test-key",
+                    "CYBERNETIC_INFLUENCE_LIVE": "1",
+                    "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
+                    "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_TERRA": "test-coordination-codex-terra",
+                    "LLM_CLIENT_REVISION": CLIENT_REVISION,
             },
         ),
         patch(
@@ -2095,11 +2272,11 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
             "/api/runs",
             json={
                 "scenario": "coordination_decision",
-                "arm_id": "baseline",
+                "arm_id": arm_id,
                 "execution": "live",
                 "llm_options": {
-                    "model": "openrouter/deepseek/deepseek-v4-flash",
-                    "agent_reasoning_effort": "none",
+                    "model": "codex/gpt-5.6-terra",
+                    "agent_reasoning_effort": "medium",
                     "max_total_cost": 0.20,
                 },
             },
@@ -2107,7 +2284,7 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
         assert response.status_code == 202, response.text
         run_id = response.json()["run_id"]
         retained: dict[str, object] | None = None
-        for _ in range(200):
+        for _ in range(5_000):
             candidate = api.get(f"/api/runs/{run_id}").json()
             if candidate["status"] == "failed" or (
                 candidate["status"] == "completed"
@@ -2123,6 +2300,7 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
     assert retained is not None
     assert retained["status"] == "completed"
     assert retained["execution"] == "live"
+    assert retained["arm"] == arm_id
     measurement_readout = cast(
         dict[str, Any], retained["coordination_measurement_readout"]
     )
@@ -2138,6 +2316,8 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
     assert captured == [
         {
             "provider_people": set(PERSON_IDS),
+            "adaptive_sources": adaptive_sources,
+            "authoritative_validation": authoritative_validation,
             "per_call_budget": 0.05,
             "per_run_budget": 0.20,
         }

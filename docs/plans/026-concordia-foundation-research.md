@@ -3,7 +3,7 @@ doc_role: research_execution_plan
 authority: bounded_design
 status: complete
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-03
 supersedes: further Slice 25 expansion before a foundation decision
 ---
 
@@ -57,9 +57,10 @@ must test this hypothesis rather than assume it proves one framework superior.
 
 ## Product goal held constant
 
-The target is a generalized product competitive with agent-simulation
-frameworks and differentiated by inspectable cybernetic and multiscale
-analysis. An analyst should be able to:
+The target is a general executable laboratory for bounded socio-technical
+decision environments, differentiated by inspectable cybernetic and multiscale
+analysis. Framework selection is downstream of this product identity. An
+analyst should be able to:
 
 1. conversationally specify a bounded world with people, devices, records,
    information, places, mechanisms, timing, and analytical boundaries;
@@ -67,8 +68,23 @@ analysis. An analyst should be able to:
 3. run autonomous LLM and non-LLM processes on appropriate timescales;
 4. inspect spatial topology, configured pathways, realized causality,
    narratives, and exact evidence;
-5. analyze composite agency without inventing an organization mind; and
-6. later compare perturbations without presenting simulation as ground truth.
+5. analyze composite agency without inventing an organization mind;
+6. define matched conditions, repetitions, and stabilizing interventions;
+7. compare directional changes across time and subgroups with evidence
+   step-down; and
+8. later challenge candidate patterns with perturbations and evasion conditions
+   without presenting simulation as ground truth.
+
+The first representative post-MVP experiment holds one organizational decision
+problem constant while comparing ordinary decision-making, heterogeneous
+adaptive pressure, and the same pressure plus a reviewed stabilization
+intervention. Waltzman is the first theory module over this general workflow;
+wargaming is an exemplar rather than the product definition.
+
+An operational influence detector is out of scope. The selected foundation may
+not convert simulated directional patterns into claims of empirical validity,
+hostile attribution, or real-world causal effect. Those require representative
+data, validated measures, calibration, and prospective evaluation.
 
 ## Non-negotiable invariants
 
@@ -208,6 +224,10 @@ Use an evidence-linked comparison table, not a manufactured scalar score:
 - evidence, replay, and analytical step-down;
 - spatial and information modeling;
 - Waltzman–Levin analysis fit;
+- matched-condition experiment specification, repetition, comparison, and
+  intervention support;
+- separation of adaptive influence actors from target participants while
+  retaining local response and shared-objective behavior;
 - migration cost from the current product;
 - maintenance and upstream upgrade friction;
 - product differentiation versus reimplementation; and
@@ -275,7 +295,7 @@ implementation handoff.
 | R5 | The decision names authoritative state and control boundaries | ADR |
 | R6 | The strongest rejected alternative is represented fairly | ADR |
 | R7 | Existing work receives keep/adapt/migrate/retire disposition | Migration table |
-| R8 | One smaller-than-rewrite implementation slice follows | Roadmap and validated handoff |
+| R8 | One smaller-than-rewrite implementation slice follows and the selected foundation supports the accepted model-run-compare-diagnose-intervene workflow | Same-case walkthroughs, ADR, roadmap, and validated handoff |
 
 ## Stop conditions
 
@@ -292,6 +312,7 @@ product goals. The last case requires a product-owner decision.
 - completing the separate MVP stakeholder judgment;
 - running provider-backed simulations or model comparisons;
 - proving predictive validity; or
+- building or claiming an operational influence detector; or
 - choosing based on novelty, familiarity, or code volume.
 
 ## Resume context

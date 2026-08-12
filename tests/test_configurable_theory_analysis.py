@@ -184,8 +184,8 @@ def _proposal_payload() -> dict[str, object]:
                     "Active partners must support the selected scope.",
                 ],
             },
-            "meeting_days": [0, 3, 6, 9],
-            "deadline_day": 10,
+            "meeting_days": [0, 1, 2, 3],
+            "deadline_day": 4,
             "terminal_outcomes": [
                 "deploy_on_time",
                 "delayed",
@@ -284,7 +284,7 @@ def _compiled_reference():
     )
     run_spec = reference_run_spec(
         run_id=result.run_id,
-        horizon_minutes=10 * 24 * 60,
+        horizon_minutes=4 * 24 * 60,
     )
     bundle = build_run_evidence_bundle(
         compiled,

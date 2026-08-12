@@ -251,8 +251,10 @@ def test_contract_people_schedule_topology_and_safety_bounds_are_reviewed() -> N
     }
 
     assert people == set(PERSON_IDS)
+    assert MEETING_DAYS == (0, 1, 2, 3)
     assert tuple(slot.modeled_day for slot in fixture.schedule.slots) == MEETING_DAYS
     assert all(tuple(slot.due_person_ids) == PERSON_IDS for slot in fixture.schedule.slots)
+    assert DECISION_DEADLINE_DAY == 4
     assert fixture.schedule.deadline_day == DECISION_DEADLINE_DAY
     assert fixture.scenario.time_unit == "scenario_minute"
     assert fixture.scenario.timing_contract == "positive_duration"

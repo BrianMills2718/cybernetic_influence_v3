@@ -465,11 +465,11 @@ class CoordinationScenarioReview(_StrictModel):
     meeting_days: list[int] = Field(
         min_length=4,
         max_length=4,
-        description="The reviewed four-day meeting cadence [0, 3, 6, 9].",
+        description="The reviewed daily meeting cadence [0, 1, 2, 3].",
     )
     deadline_day: int = Field(
         ge=1,
-        description="The reviewed terminal decision deadline on day 10.",
+        description="The reviewed fallback decision deadline on day 4.",
     )
     analysis_ids: list[CoordinationAnalysisId] = Field(
         min_length=1,

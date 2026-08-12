@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 import threading
 
@@ -46,6 +47,7 @@ from cybernetic_influence.causal_core.models import (
     CausalCheckpoint,
     CausalScenario,
     CausalState,
+    CausalStep,
     scenario_execution_fingerprint,
     scenario_fingerprint,
 )
@@ -103,7 +105,10 @@ class ActiveRuntimeSession:
         config: ActiveRuntimeConfig,
         causal_limits: CausalLimits | None = None,
         progress_observer: RuntimeProgressObserver | None = None,
+        participant_concurrency: int = 1,
     ) -> None:
+        if participant_concurrency < 1 or participant_concurrency > 64:
+            raise ValueError("participant_concurrency must be between 1 and 64")
         self._scenario = CausalScenario.model_validate(
             scenario.model_dump(mode="json")
         )
@@ -119,6 +124,7 @@ class ActiveRuntimeSession:
         self._config = ActiveRuntimeConfig.model_validate(
             config.model_dump(mode="json")
         )
+        self._participant_concurrency = participant_concurrency
         self._validate_registry(self._scenario.initial_state)
         self._states = {
             active_system_id: ActiveSystemState(
@@ -447,8 +453,13 @@ class ActiveRuntimeSession:
                 activation_id=activation_id,
             )
 
-            collection_error: Exception | None = None
-            for active_system_id in supplied_ids:
+            def collect_participant(
+                active_system_id: str,
+            ) -> tuple[
+                ActiveStepResult | None,
+                tuple[ModelCallEvidence, ...],
+                Exception | None,
+            ]:
                 item = collected[active_system_id]
                 binding = self._active_bindings[active_system_id]
                 try:
@@ -456,21 +467,47 @@ class ActiveRuntimeSession:
                         item.active_input.model_copy(deep=True)
                     )
                     result = self._validate_step_result(raw)
-                    item.proposal = result.proposal.model_copy(deep=True)
-                    item.evidence = [
-                        evidence.model_copy(deep=True)
-                        for evidence in result.call_evidence
-                    ]
+                    return result, tuple(result.call_evidence), None
                 except ActiveSystemExecutionError as error:
-                    item.evidence = [
-                        evidence.model_copy(deep=True)
-                        for evidence in error.call_evidence
-                    ]
-                    collection_error = error
-                    break
+                    return None, tuple(error.call_evidence), error
                 except Exception as error:
-                    collection_error = error
+                    return None, (), error
+
+            if self._participant_concurrency == 1 or len(supplied_ids) == 1:
+                participant_results = {}
+                for active_system_id in supplied_ids:
+                    participant_results[active_system_id] = collect_participant(
+                        active_system_id
+                    )
+                    if participant_results[active_system_id][2] is not None:
+                        break
+            else:
+                with ThreadPoolExecutor(
+                    max_workers=min(self._participant_concurrency, len(supplied_ids)),
+                    thread_name_prefix="active-participant",
+                ) as executor:
+                    futures = {
+                        active_system_id: executor.submit(
+                            collect_participant, active_system_id
+                        )
+                        for active_system_id in supplied_ids
+                    }
+                    participant_results = {
+                        active_system_id: future.result()
+                        for active_system_id, future in futures.items()
+                    }
+
+            collection_error: Exception | None = None
+            for active_system_id in supplied_ids:
+                if active_system_id not in participant_results:
                     break
+                result, evidence, error = participant_results[active_system_id]
+                item = collected[active_system_id]
+                item.evidence = [call.model_copy(deep=True) for call in evidence]
+                if result is not None:
+                    item.proposal = result.proposal.model_copy(deep=True)
+                if error is not None and collection_error is None:
+                    collection_error = error
 
             if collection_error is None:
                 try:
@@ -587,6 +624,42 @@ class ActiveRuntimeSession:
                 next_attempt_index=self._next_attempt_index,
                 next_commit_index=self._next_commit_index,
             )
+
+    def apply_external_action(self, action: ActionAttempt) -> CausalStep:
+        """Apply one explicit exogenous action and retain it as exact work.
+
+        This deliberately thin seam lets a paused or forked exercise introduce a
+        wargame-control action without impersonating an active participant.
+        """
+        with self._lock:
+            self._require_active()
+            before = self._core.checkpoint()
+            step = self._core.advance(action, drain_through=action.logical_time)
+            after = self._core.checkpoint()
+            event_ids = [event.event_id for event in step.events]
+            record = ExactWorkRecord.model_validate(
+                with_record_digest(
+                    {
+                        "work_index": len(self._exact_work),
+                        "work_id": f"exact_work_{len(self._exact_work):06d}",
+                        "prior_attempt_count": self._next_attempt_index,
+                        "logical_time": action.logical_time,
+                        "pre_core_state_digest": before.state_digest,
+                        "pre_core_event_tail_digest": before.event_tail_digest,
+                        "post_core_state_digest": after.state_digest,
+                        "post_core_event_tail_digest": after.event_tail_digest,
+                        "core_event_ids": event_ids,
+                    }
+                )
+            )
+            self._exact_work.append(record)
+            self._emit_progress(
+                kind="exact_work_committed",
+                logical_time=record.logical_time,
+                exact_work_id=record.work_id,
+                event_ids=record.core_event_ids,
+            )
+            return step.model_copy(deep=True)
 
     def _emit_progress(
         self,

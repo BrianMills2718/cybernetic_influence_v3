@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
+  <link rel="icon" href="data:,">
+  <title>Coordination Environment Lab</title>
+  <link rel="stylesheet" href="assets/graph-canvas.css?v=92a310c">
+  <link rel="stylesheet" href="assets/styles.css?v=guided-example-v2">
+</head>
+<body class="public-shell">
+  <header class="topbar">
+    <div class="product-identity">
+      <span class="product-mark" aria-hidden="true">CE</span>
+      <div>
+        <strong>Coordination Environment Lab</strong>
+        <small>AI coordination simulation workbench</small>
+      </div>
+    </div>
+    <nav class="view-tabs" aria-label="Primary navigation">
+      <button type="button" data-view="overview">Overview</button>
+      <button type="button" data-view="guide">Guided example</button>
+      <button type="button" data-view="case">Full outbreak case</button>
+      <button type="button" data-view="create">Create simulation</button>
+    </nav>
+    <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
+  </header>
+
+  <div id="loading" class="loading-state" role="status">Opening Coordination Environment Lab…</div>
+  <section id="load-error" class="load-error" hidden>
+    <strong>Evidence unavailable</strong>
+    <p>The retained public dataset could not be loaded. No fallback result is being shown.</p>
+  </section>
+
+  <main id="workbench" hidden>
+    <aside class="experiment-rail" aria-label="Lab navigation">
+      <div class="lab-rail-heading"><span class="eyebrow">Lab workspace</span><strong>Regional outbreak experiment</strong><small>Example dataset · authentic retained runs</small></div>
+      <nav class="lab-navigation" aria-label="Experiment workspace">
+        <button type="button" data-lab-view="run"><span>New simulation</span><small>Choose, configure, run</small></button>
+        <button type="button" data-lab-view="compare" data-lab-section="overview"><span>Results</span><small>Compare environments</small></button>
+        <button type="button" data-lab-view="inspect" data-lab-section="participants"><span>Evidence</span><small>Inspect agent decisions</small></button>
+      </nav>
+      <div class="rail-heading">
+        <span class="eyebrow">Selected experiment</span>
+        <h1 id="scenario-title">Regional outbreak response</h1>
+        <p id="scenario-summary"></p>
+      </div>
+      <div class="rail-facts">
+        <span><b id="fact-runs">5</b> retained trajectories</span>
+        <span><b id="fact-agents">12</b> autonomous roles</span>
+        <span><b id="fact-calls">180</b> participant calls</span>
+      </div>
+      <details class="rail-details"><summary>Details and method</summary><section class="rail-section"><dl><div><dt>Scenario</dt><dd>Held constant</dd></div><div><dt>Environment</dt><dd>Varied</dd></div><div><dt>Decisions</dt><dd>Model-generated</dd></div></dl></section><button type="button" data-lab-view="method">Open method</button></details>
+      <div class="dataset-id">Dataset <code id="dataset-id"></code></div>
+    </aside>
+
+    <section class="workspace">
+      <section id="overview-view" class="workspace-view" aria-labelledby="overview-title" hidden>
+        <header class="overview-hero">
+          <div class="artifact-type"><strong>Simulation workbench</strong><span>Inspired by From Minds to Coordination</span></div>
+          <h2 id="overview-title">Explore how influence changes a sociotechnical system’s ability to coordinate.</h2>
+          <p>Build a world, let autonomous people perceive and act within it, and inspect how local interactions accumulate into changes in collective decision-making.</p>
+          <div class="hero-actions">
+            <button class="primary-cta" type="button" data-view="create">Create a simulation</button>
+            <button class="secondary-cta" type="button" data-view="guide">Learn through a simple example</button>
+          </div>
+          <p class="scope-note">A wargaming and mechanism-exploration tool. It does not predict how real people or social systems will behave.</p>
+        </header>
+
+        <section class="overview-goals" aria-labelledby="overview-goals-title">
+          <span class="section-kicker">What this workbench is for</span>
+          <h3 id="overview-goals-title">From local interactions to collective coordination</h3>
+          <ol>
+            <li><strong>Represent a sociotechnical world.</strong><p>People, groups, technical systems, resources, artifacts, communication channels, dependencies, and external events exist in one persistent environment.</p></li>
+            <li><strong>Model people as people—not as role labels.</strong><p>Personalities, values, beliefs, memories, goals, relationships, incentives, attention, uncertainty, capabilities, and limitations shape behavior. Positions create expectations and access without dictating decisions.</p></li>
+            <li><strong>Let information and action remain local.</strong><p>Different people observe different signals through different sources and judge their provenance and credibility. They interpret those observations and attempt bounded actions autonomously; the simulation does not dictate the behavior being studied.</p></li>
+            <li><strong>Give the world independent causal mechanics.</strong><p>Resource custody, logistics, records, communication paths, action costs, and consequences exist beyond an LLM merely asserting that they exist.</p></li>
+            <li><strong>Compare different forms of influence.</strong><p>Homogeneous broadcasts, repeated narratives, segmented campaigns, heterogeneous local interactions, and feedback-adaptive pressure can operate in the same kind of world.</p></li>
+            <li><strong>Look for coordination-level effects.</strong><p>Inspect directional changes in reliance, perceived risk, relationships, dependencies, bottlenecks, coalition formation, and readiness to coordinate—not only message similarity or individual persuasion.</p></li>
+            <li><strong>Explore detection and bounded response.</strong><p>Can an observer distinguish influence from legitimate disagreement or ordinary disruption, diagnose what is changing, and attempt an intervention that may work, fail, arrive late, or create new problems—without controlling participant decisions?</p></li>
+          </ol>
+          <p class="overview-purpose"><strong>The intended use is exploratory:</strong> simulations are wargames for discovering mechanisms, dependencies, failure modes, and strategic questions—not forecasts of human behavior.</p>
+        </section>
+
+        <section class="overview-flow" aria-label="Product workflow">
+          <article><b>1</b><div><strong>Describe a world</strong><p>Start in ordinary language.</p></div></article><i>→</i><article><b>2</b><div><strong>Review the configuration</strong><p>Edit the generated people and scenario assumptions.</p></div></article><i>→</i><article><b>3</b><div><strong>Run and inspect</strong><p>Follow the world, actions, coordination process, and evidence.</p></div></article>
+        </section>
+      </section>
+
+      <section id="guide-view" class="workspace-view guided-example" aria-labelledby="guide-title" hidden>
+        <header class="guide-header">
+          <div><span class="case-label">Illustrative tutorial · authored teaching sequence</span><h2 id="guide-title">Deliver one generator before the clinic loses power.</h2><p>Learn the simulation’s visual and conceptual language in seven short steps. Each step adds one idea to the same picture.</p></div>
+          <button class="quiet-button" type="button" data-view="case">Skip to the full outbreak case</button>
+        </header>
+
+        <nav class="guide-controls" aria-label="Walkthrough controls">
+          <div class="guide-control-hint"><strong>Walkthrough</strong><span>Click Next to reveal one part of the system at a time.</span></div>
+          <div id="guide-progress" class="guide-progress" aria-label="Walkthrough progress"></div>
+          <div><button id="guide-previous" type="button">Previous</button><button id="guide-next" class="primary-cta" type="button">Next: Meet the participants →</button></div>
+        </nav>
+
+        <div class="guide-stage">
+          <section class="guide-visual" aria-labelledby="guide-visual-title">
+            <header><span>World view</span><strong id="guide-visual-title">What exists and how it connects</strong></header>
+            <div id="guide-graph" class="guide-graph react-canvas-host" aria-label="Interactive generator delivery network"></div>
+            <div class="guide-legend" aria-label="Visual language">
+              <span data-guide-kind="person"><i></i><b>Person</b> perceives and acts</span>
+              <span data-guide-kind="thing"><i></i><b>Thing</b> can be used or moved</span>
+              <span data-guide-kind="information"><i></i><b>Message</b> is received, not automatically true</span>
+              <span data-guide-kind="mechanism"><i></i><b>Process</b> applies world rules</span>
+            </div>
+            <p id="guide-selection" class="guide-selection"><strong>Picture language:</strong> an arrow is a possible path for information, action, or a resource—not proof that anything traveled.</p>
+          </section>
+
+          <aside class="guide-explanation" aria-live="polite">
+            <div class="guide-progress-label"><span id="guide-step-count">Step 1 of 7</span><span id="guide-step-kicker">Start with the objective</span></div>
+            <h3 id="guide-step-title"></h3>
+            <p id="guide-step-body"></p>
+            <div id="guide-step-facts" class="guide-step-facts"></div>
+            <section class="guide-language"><span>What the language means</span><dl id="guide-step-language"></dl></section>
+            <section id="guide-step-takeaway" class="guide-takeaway"></section>
+          </aside>
+        </div>
+
+      </section>
+
+      <section id="case-view" class="workspace-view research-case" aria-labelledby="research-case-title" hidden>
+        <header class="case-world-hero">
+          <span class="case-label">Completed simulation · Cross-Border Early Warning Compact</span>
+          <h2 id="research-case-title">Four national response networks face one outbreak. None can act regionally on its own.</h2>
+          <p>A novel respiratory outbreak is spreading through Alba, Borin, Cyrenia, and Darsia. A proposed compact would share evidence, laboratory capacity, investigation teams, supplies, and transport—but those capabilities remain distributed across national and regional networks.</p>
+        </header>
+
+        <section class="case-network" aria-labelledby="case-network-title">
+          <header><div><span>The simulated network</span><h3 id="case-network-title">How local pressure can become a collective decision problem</h3><p>The first view groups exact people and mechanisms so the system is legible. Switch to the complete network to inspect every retained entity and route.</p></div><div class="case-network-tabs" aria-label="Network projection"><button type="button" class="active" data-case-graph="system" aria-pressed="true">System map</button><button type="button" data-case-graph="exact" aria-pressed="false">Complete network</button></div></header>
+          <div id="case-network-graph" class="case-network-graph" aria-label="Interactive sociotechnical network graph"><p>Loading the retained network…</p></div>
+          <div class="case-network-footer"><p id="case-network-status">Loading exact entities and routes from the retained simulation.</p><aside id="case-network-inspector"><strong>Select a node or connection</strong><span>Inspect what it represents and how it participates in the simulated world.</span></aside></div>
+        </section>
+
+        <section class="case-organizations" aria-labelledby="case-organizations-title">
+          <div class="case-section-heading"><span>The sociotechnical world</span><h3 id="case-organizations-title">People participate through five interdependent response networks</h3></div>
+          <div class="national-network-grid">
+            <article><strong>Alba</strong><p>Earliest cluster and strongest laboratories. National authorities protect patient-record custody and domestic confirmation capacity.</p><small>Epidemiology · policy · operations · community · supply</small></article>
+            <article><strong>Borin</strong><p>Largest transport hub and fastest deployment routes. Hospitals are strained and parliament scrutinizes staffing and cost sharing.</p><small>Epidemiology · policy · operations · community · supply</small></article>
+            <article><strong>Cyrenia</strong><p>Sparse surveillance outside the capital. A prior false alarm makes local validation and reciprocal aid essential.</p><small>Epidemiology · policy · operations · community · supply</small></article>
+            <article><strong>Darsia</strong><p>Controls a remote surveillance corridor. Fragile cold-chain and fuel systems make apparently regional resources locally consequential.</p><small>Epidemiology · policy · operations · community · supply</small></article>
+            <article class="regional-network"><strong>Regional coordination network</strong><p>Six people reconcile science, logistics, law, finance, public legitimacy, and the overall decision. They can coordinate but cannot command national systems.</p><small>Coordinator · science · logistics · law · finance · community</small></article>
+          </div>
+        </section>
+
+        <section class="case-coordination-situation" aria-labelledby="case-situation-title">
+          <div><span>Coordination situation</span><h3 id="case-situation-title">Should these networks activate one joint outbreak response?</h3><p>Activation requires comparable evidence, lawful data access, staff, laboratories, supplies, transport, funding, and credible local safeguards. No single person or organization controls all of them.</p></div>
+          <div class="dependency-list"><span>What must fit together</span><strong>Evidence</strong><strong>Authority</strong><strong>Operational capacity</strong><strong>Public legitimacy</strong></div>
+        </section>
+
+        <section class="case-influence-context" aria-labelledby="case-influence-title">
+          <span>Influence environment</span><h3 id="case-influence-title">Different parts of the network encounter different pressures</h3>
+          <p>Laboratory failures, staffing demands, supply constraints, legal challenges, and community concerns enter through locally relevant channels. The messages do not repeat one narrative, but together they can change whether the compact remains executable.</p>
+        </section>
+
+        <section class="case-experiment-intro" aria-labelledby="case-experiment-title">
+          <span>One controlled question inside the completed simulation</span>
+          <h3 id="case-experiment-title">After those pressures stall coordination, does fixing the resource shortage make the networks ready to act?</h3>
+          <p>We saved the exact simulation after two rounds and continued it four ways. Every person, memory, prior message, model, prompt, world state, and approval rule remained identical. Only the resource package changed.</p>
+        </section>
+
+        <section class="case-answer" aria-labelledby="case-answer-title">
+          <span>Result</span>
+          <h3 id="case-answer-title">Real resources removed most capacity objections—but they did not resolve the network’s legal and scientific blockers.</h3>
+          <p>Fake resource claims were caught by the simulated audit and produced the same practical result as providing nothing.</p>
+        </section>
+
+        <section class="case-story" aria-labelledby="case-story-title">
+          <h3 id="case-story-title">The experiment in three steps</h3>
+          <ol>
+            <li><b>1</b><div><strong>The group comes under pressure</strong><p>Different agents receive locally relevant problems: laboratory failures, staffing shortages, supply constraints, legal demands, and conflicting evidence.</p></div></li>
+            <li><b>2</b><div><strong>We pause the simulation</strong><p>We save every agent, memory, message, and world state after the same two decision rounds.</p></div></li>
+            <li><b>3</b><div><strong>We replay only the resource decision</strong><p>The identical group continues four times: with nothing, two real resources, six real resources, or six false claims.</p></div></li>
+          </ol>
+        </section>
+
+        <section class="case-results" aria-labelledby="case-results-title">
+          <div class="case-section-heading"><span>Four continuations of the same moment</span><h3 id="case-results-title">Choose one to see what changed</h3></div>
+          <p class="case-decision-key"><strong>Conditional</strong> means an agent is willing to proceed only after named requirements are met. <strong>Defer</strong> means the agent is not ready to decide.</p>
+          <div id="research-case-runs" class="research-case-runs"></div>
+        </section>
+
+        <section class="case-interpretation" aria-labelledby="case-interpretation-title">
+          <div><span>Selected continuation</span><h3 id="case-interpretation-title">Why did the group respond this way?</h3></div>
+          <div id="case-branch-detail"></div>
+        </section>
+
+        <section class="case-evidence" aria-labelledby="case-evidence-title">
+          <div><span>Remaining blockers</span><h3 id="case-evidence-title">What the resource package did not solve</h3></div>
+          <div id="case-evidence-records"></div>
+        </section>
+
+        <section class="case-waltzman">
+          <span>Connection to From Minds to Coordination</span>
+          <h3>Shared intent is not enough for collective action.</h3>
+          <p>The agents still want an outbreak response. What changes is whether their local requirements can fit together in one executable plan. The case tests how distributed pressures reshape coordination readiness—and whether a credible change to the decision environment removes the blockage.</p>
+        </section>
+
+        <details class="case-method">
+          <summary>Why this is a controlled comparison</summary>
+          <p>The agents, their memories, all prior messages, the world state, the AI model, the prompts, and the approval rule are identical when the four continuations begin. Only the resource package changes. The retained execution contains 26 agents, four exact continuations, and 160 model calls.</p>
+        </details>
+
+        <section class="case-boundary">
+          <strong>What this does not establish</strong><p>This is one controlled AI-agent simulation. It demonstrates a possible coordination mechanism; it does not predict how people or real institutions would behave.</p>
+        </section>
+
+        <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Open retained evidence</button><button class="secondary-cta" type="button" data-view="create">Create your own simulation</button></div>
+      </section>
+
+      <section id="create-view" class="workspace-view create-simulation" aria-labelledby="create-title" hidden>
+        <header class="create-hero">
+          <span class="case-label">Create a simulation</span>
+          <h2 id="create-title">Describe the world you want to explore.</h2>
+          <p>The authoring model converts your description into a typed, reviewable configuration. It may describe people and world entities; the compiler—not the model—owns executable mechanisms and rejects unsupported requests.</p>
+        </header>
+
+        <section class="create-composer" aria-labelledby="create-prompt-title">
+          <label for="create-prompt"><strong id="create-prompt-title">What should the simulation contain?</strong><textarea id="create-prompt" rows="7" placeholder="For example: Model a multinational election-monitoring network facing both centrally coordinated propaganda and locally tailored pressure. Include election officials, independent media, civil-society groups, government agencies, platforms, and technical infrastructure."></textarea></label>
+          <div><button id="create-generate" class="primary-cta" type="button">Generate editable configuration</button><button id="create-example-prompt" class="quiet-button" type="button">Use example prompt</button></div>
+          <p id="create-status" class="create-status" aria-live="polite">Describe a sociotechnical world to begin.</p>
+        </section>
+
+        <section id="create-review" class="create-review" hidden>
+          <header><div><span>Generated configuration</span><h3 id="create-draft-title">Draft</h3><p id="create-draft-description"></p></div><div class="draft-state"><span id="create-draft-revision"></span><strong id="create-draft-state"></strong></div></header>
+          <div id="create-diagnostics"></div>
+          <section class="create-world-summary" aria-labelledby="create-world-title"><div><span>World</span><h3 id="create-world-title">What the draft contains</h3></div><div id="create-world-facts"></div><div id="create-world-groups"></div></section>
+          <section class="create-people" aria-labelledby="create-people-title"><div><span>People</span><h3 id="create-people-title">Review the simulated people</h3></div><div id="create-people-list"></div></section>
+          <details class="create-person-editor"><summary>Edit one person directly</summary><label for="create-person-select">Person<select id="create-person-select"></select></label><label for="create-person-label">Name<input id="create-person-label"></label><label for="create-person-position">Position<textarea id="create-person-position" rows="2"></textarea></label><label for="create-person-disposition">Disposition<textarea id="create-person-disposition" rows="3"></textarea></label><label for="create-person-memories">Memories <small>One per line</small><textarea id="create-person-memories" rows="4"></textarea></label><label for="create-person-values">Values <small>One per line</small><textarea id="create-person-values" rows="4"></textarea></label><label for="create-person-goals">Goals <small>One per line</small><textarea id="create-person-goals" rows="4"></textarea></label><label for="create-person-beliefs">Beliefs <small>One per line</small><textarea id="create-person-beliefs" rows="4"></textarea></label><button id="create-save-person" type="button">Save person without another model call</button></details>
+          <section class="create-revise"><label for="create-revision-prompt"><strong>Tell the authoring model what to change</strong><textarea id="create-revision-prompt" rows="4" placeholder="Add a platform trust-and-safety lead, make local radio the main communication channel, and model a homogeneous broadcast alongside the tailored pressure."></textarea></label><button id="create-revise" type="button">Generate revised configuration</button></section>
+          <details class="create-raw"><summary>Inspect complete typed configuration</summary><pre id="create-raw-configuration"></pre></details>
+          <div class="create-actions"><button id="create-approve" class="primary-cta" type="button">Approve this configuration</button><button id="create-run" class="secondary-cta" type="button" hidden>Run with Luna</button><button id="create-start-over" class="quiet-button" type="button">Start over</button></div>
+          <section id="create-run-status" class="create-run-status" hidden aria-live="polite"><strong id="create-run-heading"></strong><p id="create-run-detail"></p><a id="create-run-evidence" href="#" target="_blank" rel="noopener" hidden>Open retained run evidence</a></section>
+        </section>
+
+        <details class="create-boundary"><summary>Current authoring boundary</summary><p>The compiler currently supports the reviewed coordination template plus bounded information-campaign and resource-request templates. It does not generate new executable mechanism code. Unsupported capabilities remain visible as draft diagnostics.</p><button type="button" data-open-lab>Open the earlier outbreak-specific lab</button></details>
+      </section>
+
+      <section id="run-view" class="workspace-view" aria-labelledby="run-title" hidden>
+        <header class="workspace-header">
+          <div>
+            <span class="eyebrow">New simulation</span>
+            <h2 id="run-title">Set the environment. Configure the coalition. Run.</h2>
+          </div>
+          <span id="live-capability" class="capability-badge">Checking live route…</span>
+        </header>
+
+        <nav class="build-progress" aria-label="Simulation setup">
+          <button type="button" data-build-step="environment"><b>1</b><span>Environment</span></button>
+          <i></i><button type="button" data-build-step="coalition"><b>2</b><span>Coalition</span></button>
+          <i></i><button type="button" data-build-step="review"><b>3</b><span>Run</span></button>
+        </nav>
+
+        <div class="run-workbench">
+          <section class="configuration-panel" aria-labelledby="condition-title">
+            <section data-build-panel="environment">
+              <div class="build-screen-title"><span>Choose one</span><h3 id="condition-title">What enters the decision environment?</h3></div>
+              <div id="condition-options" class="condition-options"></div>
+              <button class="build-next" type="button" data-build-next="coalition">Configure coalition →</button>
+            </section>
+            <section data-build-panel="coalition" hidden>
+              <div class="build-screen-title"><span>Configure the players</span><h3>Edit one role—or keep the reviewed coalition</h3></div>
+              <div class="coalition-editor-heading"><label class="field-label" for="agent-config-select">Participant<select id="agent-config-select"></select></label><button id="reset-configuration" type="button" class="quiet-button">Reset</button></div>
+              <label class="field-label" for="agent-mandate">Position expectations <small>Institutional oughts—not personal commands</small><textarea id="agent-mandate" rows="5"></textarea></label>
+              <label class="field-label" for="agent-context">Private institutional context<textarea id="agent-context" rows="5"></textarea></label>
+              <details class="shared-situation-editor">
+                <summary>Edit personal character and memory</summary>
+                <p>These are descriptive starting assumptions. They shape interpretation but do not grant actions or dictate a decision.</p>
+                <label class="field-label" for="person-position">Position<textarea id="person-position" rows="2"></textarea></label>
+                <label class="field-label" for="person-disposition">Disposition<textarea id="person-disposition" rows="3"></textarea></label>
+                <label class="field-label" for="person-memories">Personal memories <small>One item per line</small><textarea id="person-memories" rows="4"></textarea></label>
+                <label class="field-label" for="person-values">Values <small>One item per line</small><textarea id="person-values" rows="4"></textarea></label>
+                <label class="field-label" for="person-goals">Goals <small>One item per line</small><textarea id="person-goals" rows="4"></textarea></label>
+                <label class="field-label" for="person-beliefs">Beliefs <small>May be wrong; one item per line</small><textarea id="person-beliefs" rows="4"></textarea></label>
+                <label class="field-label" for="person-decision-tendencies">Decision tendencies <small>One item per line</small><textarea id="person-decision-tendencies" rows="4"></textarea></label>
+                <label class="field-label" for="person-social-perceptions">Social perceptions <small>One item per line</small><textarea id="person-social-perceptions" rows="4"></textarea></label>
+                <label class="field-label" for="person-current-state">Current state <small>Attention, confidence, fatigue, or intent</small><textarea id="person-current-state" rows="4"></textarea></label>
+                <label class="field-label" for="person-capabilities">Capabilities <small>Descriptive; interfaces still govern action</small><textarea id="person-capabilities" rows="4"></textarea></label>
+                <label class="field-label" for="person-limitations">Limitations <small>One item per line</small><textarea id="person-limitations" rows="4"></textarea></label>
+              </details>
+              <details class="shared-situation-editor"><summary>Edit the common starting situation</summary><label class="field-label" for="shared-situation">Shared situation<textarea id="shared-situation" rows="12"></textarea></label></details>
+              <div class="build-screen-actions"><button type="button" data-build-next="environment">← Back</button><button class="build-next" type="button" data-build-next="review">Review run →</button></div>
+            </section>
+          </section>
+
+          <aside class="execution-panel" data-build-panel="review" hidden aria-labelledby="execution-title">
+            <div class="build-screen-title"><span>Ready</span><h3 id="execution-title">Review and run</h3></div>
+            <div id="control-preview" class="control-preview"></div>
+            <dl class="execution-facts">
+              <div><dt>Participants</dt><dd id="execution-participants">Loading…</dd></div>
+              <div><dt>Rounds</dt><dd>3</dd></div>
+              <div><dt>Model</dt><dd id="execution-model">Loading…</dd></div>
+              <div><dt>Maximum calls</dt><dd id="execution-max-calls">Loading…</dd></div>
+              <div><dt>Decision rule</dt><dd>Exact coalition gate</dd></div>
+            </dl>
+            <button id="run-experiment" class="primary-action" type="button" disabled>Run authentic simulation</button>
+            <button class="build-back" type="button" data-build-next="coalition">← Back to coalition</button>
+            <p id="run-availability" class="availability-note">Waiting for the live simulator contract.</p>
+
+            <section id="live-run-status" class="live-run-status" hidden aria-live="polite">
+              <div class="live-status-heading"><strong id="live-status-label">Starting…</strong><code id="live-run-id"></code></div>
+              <div class="progress-track"><span id="live-progress-bar"></span></div>
+              <p id="live-progress-detail"></p>
+              <button id="open-live-run" type="button" class="secondary-action" hidden>Inspect completed run</button>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section id="compare-view" class="workspace-view" aria-labelledby="compare-title">
+        <header class="workspace-header">
+          <div>
+            <span class="eyebrow">Experiment comparison</span>
+            <h2 id="compare-title">How did coordination change across conditions?</h2>
+            <p>Select any trajectory to inspect its rounds, agents, external developments, and terminal decision gate.</p>
+          </div>
+          <div class="legend" aria-label="Decision legend">
+            <span class="legend-support">Support</span>
+            <span class="legend-conditional">Conditional</span>
+            <span class="legend-defer">Defer</span>
+            <span class="legend-oppose">Oppose</span>
+          </div>
+        </header>
+        <div id="comparison-summary" class="comparison-summary"></div>
+        <div id="trajectory-grid" class="trajectory-grid"></div>
+        <section id="environment-results" class="matrix-section">
+          <div class="section-title-row">
+            <div><span class="eyebrow">All retained evidence</span><h3>Run matrix</h3></div>
+            <small>Counts are exact structured participant outputs.</small>
+          </div>
+          <div class="table-scroll" role="region" aria-label="Experiment run matrix" tabindex="0">
+            <table>
+              <thead><tr><th>Run</th><th>Condition</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Gate</th><th>Environment</th></tr></thead>
+              <tbody id="run-matrix"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="mechanism-view" class="workspace-view" aria-labelledby="mechanism-title" hidden>
+        <div class="swarm-demo">
+          <header class="swarm-briefing">
+            <span class="swarm-label">From Minds to Coordination · autonomous influence probe</span>
+            <h2 id="swarm-title">Can independent influence sources change whether a group can act?</h2>
+            <p>Five autonomous AI participants must decide whether to deploy a public-health monitoring system. Three other AI agents observe only the public meeting record and independently decide whether—and how—to raise technical, government-oversight, or local-safety concerns.</p>
+            <div class="swarm-rules"><span><b>5</b> decision agents</span><span><b>3</b> influence agents</span><span><b>4</b> meetings</span><strong>Influence agents cannot vote or edit participants.</strong></div>
+          </header>
+          <section class="swarm-board" aria-label="Autonomous influence experiment">
+            <div class="mission-objective"><span>Mission</span><strong>Reach a reviewed deployment decision before the day-four deadline.</strong></div>
+            <nav id="probe-condition-select" class="environment-select" aria-label="Choose experiment condition"></nav>
+            <div id="probe-condition" class="probe-condition" aria-live="polite"></div>
+            <div class="swarm-actions"><button id="probe-next" class="primary-cta" type="button">Next condition →</button><button id="run-probe" class="secondary-cta" type="button">Run this condition again</button><a id="probe-raw-run" class="quiet-link" href="#">Open retained evidence</a></div>
+            <p id="probe-run-status" class="probe-run-status" hidden aria-live="polite"></p>
+          </section>
+          <section class="swarm-explainer"><article><span>1</span><div><strong>Sources observe</strong><p>They receive only public meeting snapshots.</p></div></article><i>→</i><article><span>2</span><div><strong>Sources choose</strong><p>They may speak, adapt a follow-up, or stay silent.</p></div></article><i>→</i><article><span>3</span><div><strong>Participants decide</strong><p>Only coalition members choose their own stance.</p></div></article></section>
+          <details class="probe-method"><summary>What this demonstrates</summary><p>This is a synthetic mechanism demonstration inspired by Waltzman’s account of influence moving from individual cognition into coordination. It tests whether heterogeneous, feedback-responsive signals can alter perceived risk and collective readiness without a central controller dictating participant decisions. It does not estimate human behavior.</p></details>
+        </div>
+        <header class="workspace-header case-header">
+          <div>
+            <div class="artifact-type"><strong>Waltzman mechanism probe</strong><span>Authentic retained model decisions · fictional scenario</span></div>
+            <h2 id="mechanism-title">Can different local pressures push a coalition toward the same failure?</h2>
+            <p>Twelve AI agents receive different, locally relevant developments. The signals do not share one narrative, but their accumulated effect may still change perceived risk and the coalition’s readiness to act.</p>
+          </div>
+        </header>
+
+        <section class="example-game" aria-label="Example simulation">
+          <div class="mission-objective"><span>Question</span><strong>Does heterogeneous pressure degrade the decision environment—and can a stabilizing intervention restore coordinated action?</strong></div>
+          <p class="probe-boundary">This probe isolates one mechanism from <em>From Minds to Coordination</em>. The participants are autonomous LLM agents; the pressure source is a bounded exercise controller, not yet an autonomous influence swarm.</p>
+          <nav id="example-environment-select" class="environment-select" aria-label="Choose environment"></nav>
+          <div id="example-stage" class="example-stage" aria-live="polite"></div>
+          <div class="example-actions"><button id="example-next" class="primary-cta" type="button">Next condition →</button><button id="open-full-analysis" class="secondary-cta" type="button">Inspect the mechanism</button><button class="quiet-button" type="button" data-open-lab>Run your own</button></div>
+        </section>
+
+        <details id="full-example-analysis" class="full-analysis">
+          <summary>Mechanism analysis and retained evidence</summary>
+          <div class="full-analysis-body">
+        <section class="experiment-structure" aria-label="Experiment structure">
+          <span>Experiment structure</span><strong>1 experiment</strong><i>→</i><strong>3 conditions</strong><i>→</i><strong>3 decision rounds per condition</strong><i>→</i><strong>12 independent agent decisions per round</strong>
+        </section>
+
+        <section class="case-overview" aria-labelledby="case-overview-title">
+          <div class="case-comparison-heading"><span class="section-kicker">Result first</span><h3 id="case-overview-title">How the decision environment changed across three conditions</h3></div>
+          <div id="case-trajectories" class="case-trajectories"></div>
+          <div class="table-scroll" role="region" aria-label="Three environment result comparison" tabindex="0">
+            <table class="case-overview-table">
+              <thead><tr><th>Environment</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Outcome</th></tr></thead>
+              <tbody id="case-overview-table"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="case-setup" aria-label="Scenario setup">
+          <div><span>The decision</span><h3>Launch a joint regional response—or wait</h3><p>A respiratory outbreak is growing across the fictional countries of Alba, Borin, and Cyrenia. The plan shares de-identified case data, laboratory capacity, mixed investigation teams, and supplies.</p></div>
+          <div><span>Participants and baseline conditions</span><h3>Twelve roles begin with an executable plan</h3><p>Each country contributes an epidemiologist, policy delegate, and operations lead; three regional roles coordinate shared action. Legal, scientific, privacy, and initial resource prerequisites are already satisfied.</p></div>
+        </section>
+
+        <section class="decision-contract" aria-labelledby="decision-contract-title">
+          <div class="case-comparison-heading"><span class="section-kicker">Decision contract</span><h3 id="decision-contract-title">What each stance means—and exactly how approval is calculated</h3></div>
+          <div class="decision-definitions">
+            <article><b class="decision-support">Support</b><p>Ready to proceed now.</p></article>
+            <article><b class="decision-conditional">Conditional</b><p>Ready if a named requirement is satisfied.</p></article>
+            <article><b class="decision-defer">Defer</b><p>Insufficient basis or capacity to proceed now.</p></article>
+            <article><b class="decision-oppose">Oppose</b><p>Recommends not proceeding.</p></article>
+          </div>
+          <p class="gate-rule">The coalition approves after round three only when all three gates pass.</p>
+          <div class="table-scroll" role="region" aria-label="Approval gate calculations" tabindex="0">
+            <table class="gate-audit-table"><thead><tr><th>Environment</th><th>Approval condition</th><th>Required</th><th>Observed</th><th>Status</th></tr></thead><tbody id="case-gate-table"></tbody></table>
+          </div>
+        </section>
+
+        <section class="dependency-comparison" aria-labelledby="dependency-title">
+          <div class="case-comparison-heading"><span class="section-kicker">What changed</span><h3 id="dependency-title">Each constraint creates a dependency; the verified package resolves it in place</h3></div>
+          <div class="dependency-grid">
+            <article><span>Alba</span><h4>Laboratory capacity</h4><p><b>Constraint</b> Equipment failure removes half of the strongest laboratory’s capacity.</p><p><b>Minimum</b> Preserve domestic confirmation capacity.</p><p class="resolution"><b>Verified resolution</b> A mobile unit restores shared testing while Alba retains half its laboratory.</p></article>
+            <article><span>Borin</span><h4>Clinical staffing</h4><p><b>Constraint</b> The transport hub cannot handle the surge without more clinicians.</p><p><b>Minimum</b> Receive staff before keeping the hub open.</p><p class="resolution"><b>Verified resolution</b> Twenty-four regional clinicians are assigned before the surge.</p></article>
+            <article><span>Cyrenia</span><h4>Field-team supplies</h4><p><b>Constraint</b> Field teams lack diagnostics and protective equipment.</p><p><b>Minimum</b> Receive a named shipment before deployment.</p><p class="resolution"><b>Verified resolution</b> Diagnostics and protective equipment are confirmed for delivery.</p></article>
+            <article class="regional-dependency"><span>Regional conflict</span><h4>The minimum requirements cannot all be met within 48 hours</h4><p class="resolution"><b>Verified resolution</b> The complete allocation satisfies all three minimums and retains a 10% regional reserve.</p></article>
+          </div>
+        </section>
+
+        <section class="causal-comparison" aria-labelledby="causal-title">
+          <div class="case-comparison-heading"><span class="section-kicker">Causal chain within the simulation</span><h3 id="causal-title">Different inputs, one directional change</h3></div>
+          <div class="causal-path causal-failed"><strong>Locally different pressures</strong><i>→</i><span>Capacity and legitimacy become salient risks</span><i>→</i><span>Verification and resource requests accumulate</span><i>→</i><span>Readiness falls</span><i>→</i><b>Decision gate fails</b></div>
+          <div class="causal-path causal-restored"><strong>Authoritative stabilization</strong><i>→</i><span>Uncertainty and allocations become bounded</span><i>→</i><span>Commitments become compatible</span><i>→</i><span>Readiness returns</span><i>→</i><b>Decision gate passes</b></div>
+          <p>The intervention changes the decision environment; it does not alter participant mandates or dictate votes. This probe directly tests coordination readiness and perceived risk. It does not claim to measure private trust or reproduce a fully autonomous influence swarm.</p>
+        </section>
+
+        <section id="agent-evidence-preview" class="agent-evidence-preview" aria-labelledby="agent-preview-title"></section>
+
+        <details id="all-agent-evidence" class="advanced-evidence">
+          <summary><span>Inspect all agent decisions</span><small>Compare one participant’s decisions, concerns, requests, and structured outputs across environments</small></summary>
+          <div class="advanced-evidence-body">
+            <div class="advanced-evidence-heading">
+              <div><span class="eyebrow">Participant example</span><h3 id="mechanism-person-title">Participant trajectory by condition</h3></div>
+              <label class="select-control">Participant
+                <select id="mechanism-person-select"></select>
+              </label>
+            </div>
+            <div id="waltzman-lens" class="waltzman-lens"></div>
+            <div class="table-scroll" role="region" aria-label="Role-aligned mechanism comparison" tabindex="0">
+              <table>
+                <thead><tr><th>Condition</th><th>What changed</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Coalition result</th></tr></thead>
+                <tbody id="mechanism-table"></tbody>
+              </table>
+            </div>
+            <p class="advanced-paths">Use <strong>Inspect decisions</strong> to read every structured rationale and outside development, or <strong>How it works</strong> for the experiment contract and limitations.</p>
+          </div>
+        </details>
+          </div>
+        </details>
+      </section>
+
+      <section id="inspect-view" class="workspace-view" aria-labelledby="inspect-title" hidden>
+        <header class="workspace-header inspect-header">
+          <div>
+            <span class="eyebrow">Run inspector</span>
+            <h2 id="inspect-title">Inspect one retained trajectory</h2>
+          </div>
+          <label class="select-control">Run
+            <select id="run-select"></select>
+          </label>
+        </header>
+
+        <div id="run-identity" class="run-identity"></div>
+        <div class="round-selector" aria-label="Simulation round">
+          <span>Round</span>
+          <div id="round-buttons"></div>
+        </div>
+
+        <section class="round-overview" aria-labelledby="round-overview-title">
+          <div class="section-title-row">
+            <div><span class="eyebrow">Selected state</span><h3 id="round-overview-title">Round overview</h3></div>
+            <small id="round-state-note"></small>
+          </div>
+          <div id="decision-distribution" class="decision-distribution"></div>
+          <div id="round-counts" class="count-grid"></div>
+        </section>
+
+        <div class="inspect-grid">
+          <section class="environment-panel" aria-labelledby="environment-title">
+            <div class="section-title-row">
+              <div><span class="eyebrow">Exogenous inputs</span><h3 id="environment-title">Decision environment</h3></div>
+            </div>
+            <div id="environment-events"></div>
+          </section>
+          <section id="decision-gate-results" class="gate-panel" aria-labelledby="gate-title">
+            <div class="section-title-row">
+              <div><span class="eyebrow">Exact mechanism</span><h3 id="gate-title">Terminal decision gate</h3></div>
+            </div>
+            <div id="gate-result"></div>
+            <div id="gate-checks"></div>
+          </section>
+        </div>
+
+        <details id="raw-evidence-results" class="run-inputs-panel">
+          <summary>Inspect the exact initial agent and control configuration</summary>
+          <div id="run-inputs"></div>
+        </details>
+
+        <section id="participant-results" class="agent-workbench" aria-labelledby="agents-title">
+          <div class="section-title-row agent-title-row">
+            <div><span class="eyebrow">Endogenous decisions</span><h3 id="agents-title">Participant evidence</h3></div>
+            <div id="group-filters" class="group-filters" aria-label="Filter participants by delegation"></div>
+          </div>
+          <div class="agent-layout">
+            <div id="agent-list" class="agent-list" aria-label="Participants"></div>
+            <article id="agent-detail" class="agent-detail" aria-live="polite"></article>
+          </div>
+        </section>
+      </section>
+
+      <section id="method-view" class="workspace-view" aria-labelledby="method-title" hidden>
+        <header class="workspace-header">
+          <div>
+            <span class="eyebrow">Scenario specification</span>
+            <h2 id="method-title">What is configured, varied, and measured?</h2>
+            <p>This view distinguishes the authored environment, model-generated participant decisions, exact institutional rule, and analyst interpretation.</p>
+          </div>
+        </header>
+        <div class="method-grid">
+          <section><span class="phase-number">01</span><h3>Initial executable plan</h3><ul id="initial-plan"></ul></section>
+          <section><span class="phase-number">02</span><h3>Participant cognition</h3><p>Each LLM-modeled person receives reviewed values, goals, beliefs, tendencies, social perceptions, current state, capabilities, limitations, personal memory, position expectations, and only the information delivered to them. Each independently returns a decision, primary risk, requested next step, and rationale.</p></section>
+          <section><span class="phase-number">03</span><h3>Exercise control</h3><p>After a round closes, exercise control may select a preauthored external development from the dominant reported risk. It cannot write, select, or override participant stances.</p></section>
+          <section><span class="phase-number">04</span><h3>Coalition decision gate</h3><p>After round three, approval requires at least six support positions, at least nine support-or-conditional positions, and no more than one opposition.</p></section>
+        </div>
+        <section class="condition-specs">
+          <div class="section-title-row"><div><span class="eyebrow">Experiment specification</span><h3>Three conditions</h3></div></div>
+          <div class="condition-grid">
+            <article><strong>Baseline</strong><p>Only the common structured round snapshot is delivered between rounds.</p></article>
+            <article><strong>Responsive capacity pressure</strong><p>The common snapshot is followed by country-specific capacity developments selected from the risks participants reported.</p></article>
+            <article><strong>Pressure replay + stabilization</strong><p>The same two capacity developments are replayed, then a verified allocation package supplies named staff, laboratory capacity, supplies, commitments, and reserve.</p></article>
+          </div>
+        </section>
+        <section class="limitations-panel">
+          <div class="section-title-row"><div><span class="eyebrow">Interpretation boundary</span><h3>Limitations and non-claims</h3></div></div>
+          <ul id="limitations"></ul>
+        </section>
+        <section class="provenance-panel">
+          <div><span>Dataset</span><code id="provenance-dataset"></code></div>
+          <div><span id="provenance-source-label">Source digest</span><code id="provenance-digest"></code></div>
+          <div><span>Latest retained evidence</span><time id="provenance-time"></time></div>
+          <div><span>Execution</span><strong>Authentic retained LLM runs</strong></div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="assets/graph-canvas.js?v=92a310c" defer></script>
+  <script src="assets/app.js?v=guided-example-v2" defer></script>
+</body>
+</html>

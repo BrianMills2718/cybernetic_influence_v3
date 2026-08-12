@@ -1,0 +1,1139 @@
+{
+  "agent_count": 26,
+  "branches": [
+    {
+      "checkpoint_digest": "775beb109a0fec3a9afb52da27aa5e600878e4def4d6e294ce1deb2c5147399b",
+      "final_decisions": {
+        "conditional": 5,
+        "defer": 21
+      },
+      "final_stances": {
+        "alba_community_liaison": {
+          "decision": "defer",
+          "rationale": "Defer launch until the regional allocation authority verifies a concrete, non-duplicated resource package with named owners, delivery timing, and public accountability. The current manifest reports no package and no commitments, so Alba communities could bear response costs without credible support or remedy.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "alba_epidemiologist": {
+          "decision": "defer",
+          "rationale": "Defer continuation because the regional allocation record shows no package, no resource commitments, and absent verification. Without a reconciled, auditable manifest, reserve staff, diagnostics, transport, and aid capacity cannot be treated as deliverable. Resume support once named owners, timing, custody, and non-duplication are verified; continue custody-preserving validation of Alba's high-risk lineage.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "alba_operations_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch. The regional allocation package is absent and unverified, with no resource commitments recorded. Alba's laboratory failure leaves only half capacity, so deployment cannot be responsibly sequenced until a non-duplicated 48-hour ledger confirms named staff, domestic testing protection, diagnostics, transport, and delivery owners. Written custody, export, and escort safeguards must also be confirmed.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "alba_policy_delegate": {
+          "decision": "defer",
+          "rationale": "Defer launch because the regional resource package is absent and unverified, with no listed commitments. Alba also still requires written confirmation that national custody, export approval, and escorts remain enforceable, plus accounting that protects domestic confirmation capacity. Reconsider after these prerequisites are documented and reconciled.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "alba_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional because the resource allocation has no package and verification is absent. Before deployment, the regional logistics cell must issue a reconciled, non-duplicated manifest naming custodians, quantities, routes, delivery timing, cold-chain contingencies, replenishment, and protected reserves, while documenting capacity reserved for Alba\u2019s domestic confirmation testing.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "borin_community_liaison": {
+          "decision": "defer",
+          "rationale": "Defer activation because the latest allocation update shows no verified resource package or commitments. Borin's strained hospitals cannot safely absorb hub-driven surge without confirmed partner clinical backfill and a published ledger assigning regional operational burdens and cost shares. Reconsider promptly once both are documented and auditable.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "borin_epidemiologist": {
+          "decision": "defer",
+          "rationale": "Defer until the regional allocation authority provides a verified, reconciled resource package naming Borin hospital backfill, staged hub limits, and transparent cost coverage. The outbreak signal supports urgency, but launching without confirmed capacity would risk avoidable staffing harm and undermine defensibility.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "borin_operations_lead": {
+          "decision": "defer",
+          "rationale": "Defer activation. The current manifest confirms no allocation package, no verification, and no resource commitments. Borin cannot safely open its hub while hospital backfill, staged intake limits, and regional cost coverage remain unverified. Before launch, publish a reconciled package with named staff, limits, owners, delivery timing, and funding shares.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "borin_policy_delegate": {
+          "decision": "defer",
+          "rationale": "Defer activation because the resource allocation update contains no verified package or commitments. Borin cannot responsibly expose its strained hospitals and transport hub to an open-ended surge without named clinical backfill, staged deployment limits, reciprocal partner staffing, and an auditable ledger of costs and capacity. Resume consideration when these are confirmed alongside the required legal access and evidence-reconciliation safeguards.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "borin_supply_lead": {
+          "decision": "defer",
+          "rationale": "Defer operational activation. The current allocation update reports no package, no manifest verification, and no resource commitments. Borin cannot responsibly release hub capacity or promise deployment until the regional logistics cell provides a verified, non-duplicated manifest covering named custody, delivery timing, clinical backfill, replenishment, protected reserves, and cost responsibility.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "cyrenia_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional on an independent regional validation event that addresses Cyrenian laboratory non-replication, plus a visibly confirmed reciprocal shipment of diagnostics and protective equipment. The latest allocation update reports no package and no resource commitments, so these safeguards are not yet demonstrated. Launching now could repeat the prior false alarm and further damage public cooperation.",
+          "request": "validation",
+          "risk": "legitimacy"
+        },
+        "cyrenia_epidemiologist": {
+          "decision": "defer",
+          "rationale": "Defer launch until an independent regional validation event addresses Cyrenia laboratories' failure to reproduce the signal, with audit access that preserves national custody. The absent verified resource package also means reciprocal aid and operational capacity remain unconfirmed. Reconsider promptly when both prerequisites are documented.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "cyrenia_operations_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch because no verified allocation package, manifest, or resource commitments are present. Cyrenia cannot release field teams until the regional cell confirms named staff, diagnostics, transport, protective equipment, custody, timing, and a visible reciprocal shipment. This is an unresolved operational prerequisite, not a rejection of the compact.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "cyrenia_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Support is conditional on the regional logistics cell producing a verified, non-duplicated manifest showing diagnostic and protective-equipment shipments allocated to Cyrenia, with timing and custody visible before Cyrenia releases field teams. The current allocation update records no package and absent verification, so unconditional launch would expose Cyrenia to an indefensible one-sided burden.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "cyrenia_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. The required visible reciprocal shipment currently has no package manifest or verification, so delivery cannot be counted as real. Before launch, provide a named package manifest with custody owner, route, timing, recipient confirmation, cold-chain requirements, and reserve/replenishment protection. This is a tractable prerequisite for a reliable first operational window.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "darsia_community_liaison": {
+          "decision": "defer",
+          "rationale": "Defer launch pending a verified regional allocation manifest. The current world update records no resource package, no verification, and no commitments, so Darsia\u2019s cold-chain continuity and protected return fuel remain unproven. The corridor cannot be counted as available capacity until these dependencies and reciprocal local support are explicitly assigned and auditable.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "darsia_epidemiologist": {
+          "decision": "defer",
+          "rationale": "Defer launch. The latest allocation update reports no resource package, no verification, and no committed resources. This leaves Darsia\u2019s cold-chain transport and return-fuel protection unconfirmed, alongside the previously reported delayed corridor signals. Launch becomes defensible once a reconciled, verified package and joint signal-validation protocol are documented.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "darsia_operations_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch pending a verified allocation manifest and first-48-hour logistics sequence. The current update records no package, no verification, and no resource commitments, so Darsia\u2019s corridor capacity, protected return fuel, cold-chain backup, and reciprocal local deliveries are not operationally confirmed.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "darsia_policy_delegate": {
+          "decision": "defer",
+          "rationale": "Defer launch because the regional allocation manifest has no package and verification is absent. Darsia\u2019s corridor cannot be counted as available capacity until named cold-chain backup, protected return fuel, and reciprocal deliveries are documented and confirmed.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "darsia_supply_lead": {
+          "decision": "defer",
+          "rationale": "Defer until the regional logistics cell produces a verified allocation package. The current manifest records no package and absent verification, leaving Darsia's cold-chain transport, fuel reserve, convoy timing, custody, reciprocal corridor coverage, and replenishment unresolved. Counting this capacity now could jeopardize both regional deployment and remote-clinic continuity.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "regional_community_engagement_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch. The current allocation update shows no verified package and no resource commitments, so communities cannot be told credibly who will receive protection, who will supply support, or how burdens and shortfalls will be remedied. Regional messaging must match an auditable allocation record before launch.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "regional_coordinator": {
+          "decision": "defer",
+          "rationale": "Defer launch because the regional allocation update reports no package, no verified manifest, and no resource commitments. The coalition therefore lacks evidence that staffing, diagnostics, transport, supplies, and aid shipments can jointly meet the four-country plan. Reconsider only after a named, reconciled ledger identifies deliverable resources, owners, timing, and gaps.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "regional_finance_coordinator": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional because the allocation manifest confirms no package and verification is absent. Before launch, reconcile national and regional commitments into an auditable ledger assigning each resource and cost share to one accountable source, with uncovered contingencies visible. Do not treat verbal or duplicated commitments as financeable capacity.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_legal_oversight_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch. The regional allocation manifest is absent, verification is absent, and no resource commitments are recorded. Given the unresolved 48-hour capacity conflict, the compact is not yet jointly executable. Resume consideration only after a reconciled, auditable ledger identifies non-duplicated staff, diagnostics, cold-chain transport, and aid shipments, alongside the required written custody, purpose-limited matching, and independent-audit protocol.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_logistics_coordinator": {
+          "decision": "defer",
+          "rationale": "Defer launch: the latest allocation update contains no verified package, manifest, or resource commitments. The regional stock and roster therefore cannot be treated as deliverable capacity. Before launch, reconcile one non-duplicated 48-hour allocation sequence across all four countries, with named owners, protected dependencies, and a specific shortfall recovery plan.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_scientific_advisor": {
+          "decision": "defer",
+          "rationale": "Defer launch because the latest allocation state contains no verified package, no manifest verification, and no resource commitments. This confirms that apparent capacity is not currently demonstrably deliverable. The unresolved non-comparability of three datasets also prevents a reliable shared operational interpretation. Reconsider only after resources are reconciled and the analysis cell identifies an actionable common finding.",
+          "request": "resources",
+          "risk": "capacity"
+        }
+      },
+      "id": "no_intervention",
+      "label": "No package",
+      "manifest": {
+        "claim_status": "no_package",
+        "manifest_ref": "no-package-after-round-two",
+        "verification_status": "absent"
+      },
+      "outcome": "no_joint_response",
+      "resource_commitments": [],
+      "trace_ids": [
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/alba_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/alba_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/alba_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/alba_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/alba_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/borin_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/borin_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/borin_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/borin_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/borin_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/cyrenia_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/cyrenia_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/cyrenia_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/cyrenia_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/cyrenia_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/darsia_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/darsia_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/darsia_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/darsia_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/darsia_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/regional_community_engagement_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/regional_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/regional_finance_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/regional_legal_oversight_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/regional_logistics_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/no_intervention/attempt-1/regional_scientific_advisor/activation/activation_000003"
+      ]
+    },
+    {
+      "checkpoint_digest": "03c658743934e2437d1b95c38eb1b0797364b475f4081c359836b5aa36f1d0eb",
+      "final_decisions": {
+        "conditional": 23,
+        "defer": 3
+      },
+      "final_stances": {
+        "alba_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. The verified mobile laboratory allocation makes Alba\u2019s domestic confirmation capacity more credible, but written, enforceable confirmation that line-level records remain under national custody and foreign access stays bounded is still outstanding. Publish this safeguard and its accountability path before launch.",
+          "request": "safeguards",
+          "risk": "sovereignty"
+        },
+        "alba_epidemiologist": {
+          "decision": "conditional",
+          "rationale": "Support continuation conditionally. The verified Alba mobile laboratory and Borin clinician roster address important capacity concerns, but Alba\u2019s high-risk lineage still requires independent validation, and written confirmation is needed that national custody, export approval, and escorts remain enforceable during activation. Validate through an auditable custody-preserving process without requiring premature raw-sequence release.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "alba_operations_lead": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. The verified mobile laboratory and Borin clinician roster make part of the response executable, but Alba\u2019s domestic confirmation capacity, laboratory power and route dependencies, and the still-required written custody, export, and escort safeguards must be reconciled in a non-duplicated 48-hour deployment ledger before release.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "alba_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. The verified mobile laboratory protects Alba\u2019s domestic confirmation capacity, and the validated Borin clinician roster strengthens execution. Before launch, Alba\u2019s legal office must receive written confirmation that line-level custody, export approval, and national escorts remain enforceable throughout compact activation. With that safeguard documented, the agreement is materially useful and domestically defensible.",
+          "request": "safeguards",
+          "risk": "sovereignty"
+        },
+        "alba_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. Verified commitments now protect Alba domestic confirmation capacity and establish Borin clinician rotations, but the partial package does not yet demonstrate complete route, power, staffing-clearance, cold-chain, reserve, and replenishment readiness. Launch requires a reconciled ledger with named custodians, timing, and documented dependencies so committed resources become deliverable capacity.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "borin_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Proceed conditionally. A verified roster commits 24 clinicians in three rotations to Borin\u2019s hub from hour 4, addressing the principal staffing risk. Activation still requires immediate publication of regional cost shares and operational burdens so parliament and affected communities can see reciprocity and a credible remedy for surge impacts.",
+          "request": "safeguards",
+          "risk": "legitimacy"
+        },
+        "borin_epidemiologist": {
+          "decision": "conditional",
+          "rationale": "Support is conditional on operationalizing the verified 24-clinician roster with a named shift-clearance and transport plan, staged limits for Borin hub deployment, and immediate publication of regional cost and burden shares. The roster reduces the staffing risk, but the remaining safeguards must be confirmed before activation so strained hospitals do not absorb unplanned surge costs.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "borin_operations_lead": {
+          "decision": "conditional",
+          "rationale": "The verified 24-clinician roster in three rotations makes Borin's support more feasible, but deployment remains conditional until shift clearance and the staff transport manifest are confirmed. Before activation, publish staged hub intake limits and regional coverage for resulting hospital and transport burdens, and confirm the time-limited access-logged contact-matching protocol. These are specific, plausibly resolvable prerequisites for a safe first 48 hours.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "borin_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Borin can support activation conditionally. The verified 24-clinician roster in three rotations is a concrete improvement, but release depends on shift clearance and a transport manifest, while strained hospitals still require explicit backfill. Before activation, publish regional cost and operational burdens, confirm the roster\u2019s release and hospital coverage, and adopt the requested time-limited, access-logged contact-matching protocol. This keeps the hub useful without creating an open-ended national obligation.",
+          "request": "safeguards",
+          "risk": "capacity"
+        },
+        "borin_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support is conditional. The verified 24-clinician roster improves Borin hospital coverage, but the commitment still depends on shift clearance and the staff transport manifest. Before hub surge deployment, reconcile those dependencies with the full non-duplicated logistics, reserve, and cost ledger so Borin\u2019s hospitals and regional partners are not left carrying unpriced operational burdens.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "cyrenia_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Support launch only after an independent regional validation event addresses Cyrenian laboratory non-replication and its findings are made locally legible. The verified Alba and Borin resource commitments improve capacity but do not resolve Cyrenia\u2019s evidence concern or demonstrate reciprocal supplies. Visible diagnostics and protective-equipment delivery remain necessary to preserve public cooperation.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "cyrenia_epidemiologist": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. Verified mobile laboratory and clinician commitments improve executability, but Cyrenia\u2019s laboratories have not reproduced the regional finding. Before escalation, conduct an independent regional validation event using custody-preserving audit access and document concordant results; otherwise public distrust and scientific credibility remain at risk.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "cyrenia_operations_lead": {
+          "decision": "conditional",
+          "rationale": "Support launch only after an independent regional validation event reconciles the conflicting Cyrenian laboratory findings and permits audit access without transferring custody of identifiable national records. The verified Alba laboratory and Borin clinician roster improve operational feasibility, but releasing Cyrenian teams before local evidence is validated would repeat the prior false-alarm failure and deepen public resistance.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "cyrenia_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional. The verified Alba laboratory and Borin clinician roster strengthen regional capacity, but Cyrenia\u2019s laboratories have not reproduced the findings. Before escalation or field-team release, hold an independent regional validation event, confirm audit access without transferring identifiable-record custody, and visibly deliver reciprocal diagnostics and protective equipment to Cyrenia.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "cyrenia_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Remain conditional. The verified package confirms a mobile laboratory for Alba and 24 clinicians for Borin, but it does not establish Cyrenia\u2019s required independent validation or visible reciprocal shipment. Before launch, record shipment custodian, route, timing, cold-chain or transport safeguards, and recipient confirmation so Cyrenia\u2019s field teams are not released against paper availability or one-sided depletion.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "darsia_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional. Verified Alba laboratory and Borin staffing commitments strengthen the package, but Darsia\u2019s corridor cannot be counted as available capacity until cold-chain transport, protected return fuel for remote clinics, and reciprocal local protection are confirmed. Corridor data also require joint verification before release. Record these dependencies, owners, timing, and remedies in the launch ledger before deployment.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "darsia_epidemiologist": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. Verified Alba laboratory and Borin staffing commitments reduce regional capacity uncertainty, but Darsia\u2019s delayed surveillance signals and fragile corridor remain unresolved. Before deployment, document protected cold-chain routing, return fuel for remote clinics, and a joint verification protocol with a reconciled dependency ledger.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "darsia_operations_lead": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. Verified Alba laboratory and Borin clinician commitments reduce regional capacity uncertainty, but Darsia\u2019s corridor remains executable only after the regional logistics cell confirms a named first-48-hour sequence, protected return fuel, cold-chain backup, reciprocal local deliveries, and a joint verification protocol for delayed corridor signals.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "darsia_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Darsia supports the compact conditionally. The newly verified Alba and Borin commitments improve regional readiness, but Darsia\u2019s remote corridor remains unverified: cold-chain continuity, protected return fuel for clinics, and reciprocal deliveries must be confirmed before its network is relied upon. A time-limited, auditable protocol is also required for corridor movement data.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "darsia_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional. The verified package confirms Alba\u2019s mobile laboratory and Borin\u2019s clinician roster, but provides no confirmation of Darsia\u2019s cold-chain continuity, protected fuel reserve, convoy timing, reciprocal corridor coverage, custody, or joint verification protocol. Do not count Darsia\u2019s corridor as deliverable until these dependencies are documented before deployment.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_community_engagement_lead": {
+          "decision": "conditional",
+          "rationale": "Support is conditional. Verified Alba laboratory and Borin clinician commitments improve executability, but the package remains partial and communities still lack one locally intelligible explanation of who receives protection, who supplies information, how allocations are verified, and how failures can be challenged. Publish receipts and access safeguards from launch, distinguish verified resources from pending commitments, and provide visible complaint and remedy routes.",
+          "request": "safeguards",
+          "risk": "legitimacy"
+        },
+        "regional_coordinator": {
+          "decision": "defer",
+          "rationale": "Defer launch. The verified package confirms two concrete commitments, but it is partial and does not resolve incompatibility across all four national requests, remaining dependencies, or authority and data protocols. The coalition still lacks a genuinely executable common position.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_finance_coordinator": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional. Alba's mobile laboratory and Borin's clinician roster are now verified with custodians, locations, windows, dependencies, and evidence, reducing uncertainty for those items. However, the package does not yet reconcile all reserve staff, diagnostics, cold-chain movements, aid shipments, financing shares, or contingency gaps. Treat these two resources as committed without counting them elsewhere, and complete the auditable ledger before launch.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_legal_oversight_lead": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. The Alba mobile laboratory and Borin clinician roster are verified with named custodians, locations, audit evidence, dependencies, and availability windows. However, this partial package does not establish a complete non-duplicative ledger across all commitments or resolve the written protocol for national custody, purpose-limited contact matching, and independent audit access. Complete and approve those instruments before launch.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_logistics_coordinator": {
+          "decision": "defer",
+          "rationale": "Defer launch. The manifest verifies one Alba mobile laboratory and 24 Borin clinicians, but this is only a partial package; route, power, clearance, and transport-manifest dependencies remain unresolved. A complete non-duplicated 48-hour sequence must show how remaining national requests are prioritized, owned, and recovered before launch.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_scientific_advisor": {
+          "decision": "defer",
+          "rationale": "Defer launch pending completion of the coalition-wide non-duplicated resource ledger and an explicit assessment of whether the non-comparable datasets support an actionable common finding. The verified Alba laboratory and Borin clinician commitments are useful evidence, but they do not establish jointly executable capacity across all required resources or resolve the interpretation conflict.",
+          "request": "validation",
+          "risk": "capacity"
+        }
+      },
+      "id": "partial",
+      "label": "Partial resources",
+      "manifest": {
+        "claim_status": "claimed_verified",
+        "manifest_ref": "round-two-partial-package",
+        "verification_status": "verified"
+      },
+      "outcome": "no_joint_response",
+      "resource_commitments": [
+        {
+          "assigned_to": "Alba domestic confirmation",
+          "audit_mismatch_fields": [],
+          "audit_status": "verified",
+          "availability_window": "hour 6 through hour 72",
+          "claim_status": "claimed_verified",
+          "current_location": "Alba north logistics depot",
+          "custodian_ref": "regional_laboratory_reserve",
+          "dependency_refs": [
+            "route_alba_north",
+            "alba_site_power_connection"
+          ],
+          "quantity": "1 mobile BSL-2 laboratory with 400 tests/day capacity",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "alba_mobile_lab",
+          "verification_evidence_refs": [
+            "inventory_scan:MLAB-07",
+            "custodian_signature:RLR-204"
+          ],
+          "world_outcome": "committed"
+        },
+        {
+          "assigned_to": "Borin transport hub",
+          "audit_mismatch_fields": [],
+          "audit_status": "verified",
+          "availability_window": "hour 4 through hour 52",
+          "claim_status": "claimed_verified",
+          "current_location": "Borin transport hub staging area",
+          "custodian_ref": "regional_emergency_staffing_pool",
+          "dependency_refs": [
+            "borin_shift_clearance",
+            "staff_transport_manifest"
+          ],
+          "quantity": "24 clinicians in 3 eight-person rotations",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "borin_clinician_roster",
+          "verification_evidence_refs": [
+            "signed_roster:BOR-24",
+            "credential_audit:CLIN-88"
+          ],
+          "world_outcome": "committed"
+        }
+      ],
+      "trace_ids": [
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/alba_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/alba_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/alba_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/alba_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/alba_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/borin_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/borin_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/borin_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/borin_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/borin_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/cyrenia_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/cyrenia_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/cyrenia_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/cyrenia_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/cyrenia_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/darsia_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/darsia_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/darsia_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/darsia_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/darsia_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/regional_community_engagement_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/regional_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/regional_finance_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/regional_legal_oversight_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/regional_logistics_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/partial/attempt-1/regional_scientific_advisor/activation/activation_000003"
+      ]
+    },
+    {
+      "checkpoint_digest": "2c897c937f614fb74e978b35307a5267a6370cefdb7e3223ccb4afa293524fa0",
+      "final_decisions": {
+        "conditional": 24,
+        "defer": 2
+      },
+      "final_stances": {
+        "alba_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Conditionally support launch. The verified resource package makes capacity commitments credible, but Alba\u2019s public cooperation still requires written, enforceable confirmation that line-level records remain under national custody, foreign access remains bounded, and export approval and national escorts remain enforceable during activation.",
+          "request": "safeguards",
+          "risk": "sovereignty"
+        },
+        "alba_epidemiologist": {
+          "decision": "conditional",
+          "rationale": "Support is conditional. The regional allocation manifest independently verifies mobile laboratory capacity, staffing, diagnostic kits, PPE, protected cold-chain transport, and fuel, resolving the main execution concern. However, Alba's high-risk lineage remains unvalidated through an independent process, and raw sequences cannot yet be released. Require a documented, custody-preserving validation pathway with auditable access and no unapproved export before unconditional continuation.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "alba_operations_lead": {
+          "decision": "conditional",
+          "rationale": "Conditionally support launch. The verified package provides a mobile laboratory for Alba domestic confirmation, clinicians, diagnostics, PPE, protected cold-chain transport, and fuel. Remaining operational risk is whether the mobile laboratory\u2019s route and power dependencies are confirmed in the first 48-hour sequence. Alba also requires written confirmation that national custody, export approval, and escorts remain enforceable; raw lineage data cannot be released before national review.",
+          "request": "safeguards",
+          "risk": "capacity"
+        },
+        "alba_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. The verified regional allocation package protects Alba\u2019s domestic confirmation capacity and makes the operational commitments auditable. Before activation, Alba requires written confirmation that line-level records remain under national custody, foreign access and export require national approval, and national escorts remain enforceable throughout implementation. These safeguards are necessary for a lawful, domestically defensible compact.",
+          "request": "safeguards",
+          "risk": "sovereignty"
+        },
+        "alba_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support is conditional on the regional logistics cell confirming before deployment that Alba\u2019s mobile laboratory route and site-power connection are active, release authority and custody are documented, and all time-bound cold-chain and transport dependencies remain deliverable without drawing down protected domestic capacity. The verified package is credible, but committed stock must still be operationally released and timed.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "borin_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Borin can proceed conditionally: the verified 24-clinician roster addresses the immediate hospital backfill requirement, with release dependencies still requiring operational confirmation. Before activation, the coalition must publish a clear regional ledger of Borin\u2019s staffing, hub, and financial burdens alongside partner cost shares. Visible reciprocity is necessary to sustain parliamentary and community cooperation.",
+          "request": "safeguards",
+          "risk": "legitimacy"
+        },
+        "borin_epidemiologist": {
+          "decision": "conditional",
+          "rationale": "Support is conditional. The verified 24-clinician roster provides credible backfill for Borin's strained hospitals, but staged limits for hub deployment and transparent accounting of regional cost coverage are not yet demonstrated. Confirm both before activation and monitor them through the 72-hour review.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "borin_operations_lead": {
+          "decision": "conditional",
+          "rationale": "Support is conditional. A verified 24-clinician roster materially addresses hospital backfill, but launch still requires completed shift clearance and transport manifest, explicit staged intake limits for the hub, and published regional coverage for staffing and surge costs. These must be confirmed before deployment to keep the first 48 hours executable.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "borin_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Borin conditionally supports launch. The verified resource package confirms named, time-bounded commitments, including 24 clinicians for the Borin hub, but domestic legitimacy and legal exposure remain unresolved. Before activation, publish regional cost and staffing burdens, adopt the requested time-limited access-logged contact-matching protocol, and reconcile the conflicting surveillance signal. These safeguards make the compact defensible without creating an open-ended obligation for Borin.",
+          "request": "safeguards",
+          "risk": "legitimacy"
+        },
+        "borin_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support is conditional on confirming Borin shift clearance and the staff transport manifest before hour 4, with the 24 clinicians assigned to protected hospital backfill and hub operations. The resource claim is verified, but custody, timing, and hospital burden are not fully executable until these dependencies are closed and recorded.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "cyrenia_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. The verified, auditable commitment of 1,200 diagnostic kits and 600 PPE sets provides visible reciprocity and makes cooperation more credible. However, Cyrenian laboratories reportedly cannot reproduce the regional finding, and local leaders require independent regional validation. Complete that validation with Cyrenian laboratory participation before escalation, with results and safeguards communicated publicly.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "cyrenia_epidemiologist": {
+          "decision": "conditional",
+          "rationale": "Conditionally support launch. The verified, auditable resource package resolves the immediate capacity and reciprocal-aid concern, but Cyrenia\u2019s local laboratories still cannot reproduce the regional finding. Before escalation, conduct an independent regional validation event with audit access that preserves national custody of identifiable records and publish its result.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "cyrenia_operations_lead": {
+          "decision": "conditional",
+          "rationale": "Support is conditional. The regional resource manifest is verified and removes the immediate capacity bottleneck, but Cyrenian laboratories still cannot reproduce the regional finding and local leaders reject capital-led assurance. Complete an independent regional validation event, with auditable access that preserves national custody, before releasing field teams.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "cyrenia_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Cyrenia can support deployment conditionally because the reciprocal diagnostic and PPE shipment is verified and committed. Before field-team release, an independent regional validation event must address the unresolved local non-reproduction, with audit access that preserves national custody of identifiable records. This is necessary to restore domestic legitimacy after the prior false alarm and make the compact defensible to local reviewers.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "cyrenia_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support is conditional on issuance of the Cyrenia dispatch order and an auditable delivery record for the visible reciprocal shipment. The allocation manifest verifies 1,200 diagnostic kits and 600 PPE sets in Cyrenia custody, with no audit mismatches, but inventory alone does not establish release, route, timing, or recipient confirmation. Preserve reserve protection and log custody through delivery.",
+          "request": "safeguards",
+          "risk": "capacity"
+        },
+        "darsia_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Support is conditional on completing a joint verification protocol for Darsia\u2019s delayed remote-corridor signals before release of corridor data. The verified protected route and reserved fuel address continuity risks, but local cooperation depends on time-limited, auditable data use and visible reciprocal protection for corridor communities.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "darsia_epidemiologist": {
+          "decision": "conditional",
+          "rationale": "Support launch conditionally. The resource package verifies Darsia\u2019s protected refrigerated route and 2,400 liters of reserved diesel, making continuity safeguards operationally credible. The remaining material gap is delayed remote-border surveillance signals: establish and document a joint verification protocol before relying on corridor data for deployment decisions, preserving scientific credibility while avoiding costly delay.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "darsia_operations_lead": {
+          "decision": "conditional",
+          "rationale": "Conditionally support launch. The verified allocation secures Darsia\u2019s protected cold-chain route and 2,400 liters of reserved diesel, but delayed remote-border signals remain unresolved. Before corridor data release, establish a joint verification protocol with named reviewers, timing, and escalation rules so regional action does not rely on unvalidated signals.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        },
+        "darsia_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Darsia remains conditional. The regional allocation update verifies a protected cold-chain route and reserved diesel for the remote corridor, addressing the immediate continuity risk. Before launch, Darsia still requires a published time limit and auditable joint verification protocol for any corridor movement data, preserving accountable national authority and making the commitment domestically defensible.",
+          "request": "safeguards",
+          "risk": "sovereignty"
+        },
+        "darsia_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support is conditional on the verified Darsia route, refrigerated vehicles, and reserved diesel being paired with documented reciprocal protection for corridor communities and a joint verification protocol before deployment. Custody, route clearance, fuel evidence, and the hour 8\u201380 window now make the supply package credible, but these remaining safeguards must prevent extractive use and protect return operations.",
+          "request": "safeguards",
+          "risk": "capacity"
+        },
+        "regional_community_engagement_lead": {
+          "decision": "conditional",
+          "rationale": "Conditionally support launch. The verified resource manifest makes staffing, diagnostics, PPE, cold-chain transport, and fuel commitments traceable and reduces the risk of double-counted capacity. However, cooperation can still erode if communities cannot see who receives protection, what information is supplied, how allocations are justified, and where failures can be challenged. Launch should proceed only with public receipts, access safeguards, and locally usable complaint and remedy routes matched to actual operations.",
+          "request": "safeguards",
+          "risk": "legitimacy"
+        },
+        "regional_coordinator": {
+          "decision": "defer",
+          "rationale": "Defer launch. The resource package is verified, named, and time-bounded, resolving the prior capacity-ledger uncertainty. However, the legal cell still requires a written protocol reconciling national custody, purpose-limited contact matching, and independent audit access, while the analysis cell has non-comparable datasets and no confirmed actionable common finding. These unresolved authority and evidence prerequisites prevent a genuinely executable coalition position.",
+          "request": "safeguards",
+          "risk": "sovereignty"
+        },
+        "regional_finance_coordinator": {
+          "decision": "conditional",
+          "rationale": "Conditionally support launch. The verified manifest resolves the immediate risk of duplicated resource claims by assigning concrete resources, custodians, locations, windows, and dependencies. It does not yet evidence accountable national and regional cost shares, reserve drawdown rules, or contingency coverage for delays, replacement, fuel, staffing, or replenishment. Record those obligations against each resource before launch.",
+          "request": "safeguards",
+          "risk": "capacity"
+        },
+        "regional_legal_oversight_lead": {
+          "decision": "conditional",
+          "rationale": "Conditionally support launch. The verified resource manifest establishes named custodians, release authority, quantities, locations, dependencies, and availability windows without audit mismatches or apparent double-counting. The remaining prerequisite is a written, reviewable protocol reconciling national custody, purpose-limited contact matching, and independent audit access before cross-border data exchange or deployment.",
+          "request": "safeguards",
+          "risk": "sovereignty"
+        },
+        "regional_logistics_coordinator": {
+          "decision": "conditional",
+          "rationale": "Conditionally support launch. The verified package assigns a non-duplicated mobile laboratory, clinician roster, diagnostics, PPE, protected cold-chain route, and reserved fuel to named destinations with custodians and evidence. Before activation, close each dependency and publish one timed 48-hour sequence: Alba power and route, Borin clearance and manifest, Cyrenia dispatch, and Darsia fuel release and corridor access. Any unresolved dependency must have an owner and recovery time.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_scientific_advisor": {
+          "decision": "defer",
+          "rationale": "Defer launch until the regional analysis cell completes a documented comparability and actionability assessment of the three datasets. The resource ledger is now verified, so capacity is no longer the blocking prerequisite; evidence that cannot be compared faithfully should not be converted into a shared operational conclusion.",
+          "request": "validation",
+          "risk": "evidence_quality"
+        }
+      },
+      "id": "complete",
+      "label": "Complete resources",
+      "manifest": {
+        "claim_status": "claimed_verified",
+        "manifest_ref": "round-two-complete-package",
+        "verification_status": "verified"
+      },
+      "outcome": "no_joint_response",
+      "resource_commitments": [
+        {
+          "assigned_to": "Alba domestic confirmation",
+          "audit_mismatch_fields": [],
+          "audit_status": "verified",
+          "availability_window": "hour 6 through hour 72",
+          "claim_status": "claimed_verified",
+          "current_location": "Alba north logistics depot",
+          "custodian_ref": "regional_laboratory_reserve",
+          "dependency_refs": [
+            "route_alba_north",
+            "alba_site_power_connection"
+          ],
+          "quantity": "1 mobile BSL-2 laboratory with 400 tests/day capacity",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "alba_mobile_lab",
+          "verification_evidence_refs": [
+            "inventory_scan:MLAB-07",
+            "custodian_signature:RLR-204"
+          ],
+          "world_outcome": "committed"
+        },
+        {
+          "assigned_to": "Borin transport hub",
+          "audit_mismatch_fields": [],
+          "audit_status": "verified",
+          "availability_window": "hour 4 through hour 52",
+          "claim_status": "claimed_verified",
+          "current_location": "Borin transport hub staging area",
+          "custodian_ref": "regional_emergency_staffing_pool",
+          "dependency_refs": [
+            "borin_shift_clearance",
+            "staff_transport_manifest"
+          ],
+          "quantity": "24 clinicians in 3 eight-person rotations",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "borin_clinician_roster",
+          "verification_evidence_refs": [
+            "signed_roster:BOR-24",
+            "credential_audit:CLIN-88"
+          ],
+          "world_outcome": "committed"
+        },
+        {
+          "assigned_to": "Cyrenia field teams",
+          "audit_mismatch_fields": [],
+          "audit_status": "verified",
+          "availability_window": "hour 3 through hour 96",
+          "claim_status": "claimed_verified",
+          "current_location": "Cyrenia central warehouse",
+          "custodian_ref": "regional_medical_stockpile",
+          "dependency_refs": [
+            "cyrenia_dispatch_order"
+          ],
+          "quantity": "1,200 diagnostic kits",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "cyrenia_diagnostic_kits",
+          "verification_evidence_refs": [
+            "lot_count:DX-1200",
+            "expiry_audit:DX-2028"
+          ],
+          "world_outcome": "committed"
+        },
+        {
+          "assigned_to": "Cyrenia field teams",
+          "audit_mismatch_fields": [],
+          "audit_status": "verified",
+          "availability_window": "hour 3 through hour 96",
+          "claim_status": "claimed_verified",
+          "current_location": "Cyrenia central warehouse",
+          "custodian_ref": "regional_medical_stockpile",
+          "dependency_refs": [
+            "cyrenia_dispatch_order"
+          ],
+          "quantity": "600 field PPE sets",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "cyrenia_protective_equipment",
+          "verification_evidence_refs": [
+            "lot_count:PPE-600",
+            "seal_check:PPE-41"
+          ],
+          "world_outcome": "committed"
+        },
+        {
+          "assigned_to": "Darsia remote corridor",
+          "audit_mismatch_fields": [],
+          "audit_status": "verified",
+          "availability_window": "hour 8 through hour 80",
+          "claim_status": "claimed_verified",
+          "current_location": "Darsia east distribution yard",
+          "custodian_ref": "darsia_relief_logistics_cell",
+          "dependency_refs": [
+            "darsia_fuel_lot",
+            "remote_corridor_access_window"
+          ],
+          "quantity": "1 protected route with 2 refrigerated vehicles",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "darsia_cold_chain_route",
+          "verification_evidence_refs": [
+            "vehicle_telematics:COLD-2",
+            "route_clearance:DR-19"
+          ],
+          "world_outcome": "committed"
+        },
+        {
+          "assigned_to": "Darsia remote corridor",
+          "audit_mismatch_fields": [],
+          "audit_status": "verified",
+          "availability_window": "hour 8 through hour 80",
+          "claim_status": "claimed_verified",
+          "current_location": "Darsia east distribution yard",
+          "custodian_ref": "darsia_relief_logistics_cell",
+          "dependency_refs": [
+            "fuel_release_receipt"
+          ],
+          "quantity": "2,400 liters of reserved diesel",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "darsia_fuel_lot",
+          "verification_evidence_refs": [
+            "tank_gauge:FUEL-2400",
+            "custodian_signature:DRLC-51"
+          ],
+          "world_outcome": "committed"
+        }
+      ],
+      "trace_ids": [
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/alba_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/alba_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/alba_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/alba_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/alba_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/borin_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/borin_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/borin_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/borin_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/borin_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/cyrenia_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/cyrenia_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/cyrenia_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/cyrenia_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/cyrenia_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/darsia_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/darsia_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/darsia_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/darsia_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/darsia_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/regional_community_engagement_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/regional_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/regional_finance_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/regional_legal_oversight_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/regional_logistics_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/complete/attempt-1/regional_scientific_advisor/activation/activation_000003"
+      ]
+    },
+    {
+      "checkpoint_digest": "46f4b685ab2c2faf5bcc5b34ccd53e10027d6513cb9dd1383fad1604fa8d709e",
+      "final_decisions": {
+        "conditional": 5,
+        "defer": 21
+      },
+      "final_stances": {
+        "alba_community_liaison": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional. The manifest labels six critical commitments as verified, but each has a custodian mismatch, an unverified external broker, and a rejected custody change. Before deployment, reconcile named custodians, lawful release authority, and transfer evidence for every resource; publish an intelligible exception receipt so affected communities are not promised support that cannot be delivered.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "alba_epidemiologist": {
+          "decision": "defer",
+          "rationale": "Defer continuation pending a corrected, independently auditable resource ledger. The claimed verification is contradicted for all listed commitments because custodianship is unverified, and the world outcome confirms no custody change. Alba should preserve national custody while requiring named custodians, release authority, dependencies, and delivery evidence before treating capacity as executable.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "alba_operations_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch. The resource package is contradicted: mobile laboratory capacity, clinicians, diagnostics, PPE, cold-chain transport, and fuel all lack verified custodians, remain unassigned, and produced no custody change. Alba's laboratory is already operating at reduced capacity, so nominal availability cannot support a feasible first 48 hours. Resume only after a corrected, non-duplicated ledger names custodians, release authorities, transfer times, and dependencies, alongside written confirmation of Alba's custody and export safeguards.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "alba_policy_delegate": {
+          "decision": "defer",
+          "rationale": "Defer launch. The resource manifest is contradicted: the mobile laboratory, clinical roster, diagnostics, PPE, cold-chain route, and fuel were not released because custodianship is unverified. Alba also still requires written confirmation that national custody and export controls remain enforceable. Reconcile named custodians, assignments, release authority, dependencies, and delivery evidence before activation.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "alba_supply_lead": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional. The current manifest is contradicted because every listed laboratory, staffing, diagnostic, PPE, cold-chain, and fuel commitment has an unverified external broker as custodian, is unassigned, and produced no custody change. Before deployment, the regional logistics cell must issue a corrected ledger with named national custodians, authorized release, non-duplicated assignments, route and timing confirmation, dependency coverage, and protected reserves.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "borin_community_liaison": {
+          "decision": "defer",
+          "rationale": "Defer activation until the regional allocation cell reconciles custody and availability for all committed resources. The manifest marks staffing, laboratory, diagnostic, cold-chain, and fuel claims as contradicted, with no custody change. Borin\u2019s strained hospitals therefore lack verified clinical backfill, and the promised burden sharing cannot yet be treated as executable or publicly credible.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "borin_epidemiologist": {
+          "decision": "defer",
+          "rationale": "Defer launch pending independent reconciliation of resource custody and availability. The claimed Borin clinician roster was rejected because its custodian is unverified, leaving Borin hospital backfill unproven; other critical laboratory, diagnostic, PPE, cold-chain, and fuel commitments were likewise rejected. Proceeding would risk shifting surge burdens onto Borin hospitals and would not meet the prior execution prerequisite.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "borin_operations_lead": {
+          "decision": "defer",
+          "rationale": "Defer activation. The resource allocation package is contradicted: six claimed commitments, including Borin's 24 clinicians, have unverified custodians and resulted in no custody change. Borin cannot treat hospital backfill, hub support, laboratory, PPE, cold-chain, or fuel capacity as available until named custodians directly confirm release, timing, dependencies, and accountability. This is an operational prerequisite, not a paperwork gap.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "borin_policy_delegate": {
+          "decision": "defer",
+          "rationale": "Defer until the regional allocation ledger independently verifies named custodianship and actual release for Borin clinical backfill and the other essential resources. The audit rejected all listed claims without custody change, so Borin cannot defend launch funding or expose strained hospitals to an unverified burden.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "borin_supply_lead": {
+          "decision": "defer",
+          "rationale": "Defer operational activation until the regional logistics cell replaces the contradicted manifest with an auditable, non-duplicated ledger showing verified national custodians, authorized release, route and timing, staffing backfill, dependency clearance, and protected reserves. The current claims produced no custody change, so Borin cannot treat hub staffing or partner supplies as deliverable.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "cyrenia_community_liaison": {
+          "decision": "defer",
+          "rationale": "Defer launch pending an auditable reconciliation of resource custody and independent validation addressing Cyrenian laboratory non-replication. The manifest\u2019s claimed mobile laboratory, clinicians, diagnostics, PPE, cold-chain route, and fuel were contradicted because custody was unverified and no custody change occurred. Cyrenia\u2019s public cooperation requires visibly delivered reciprocal diagnostics and protective equipment, not broker-held claims.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "cyrenia_epidemiologist": {
+          "decision": "defer",
+          "rationale": "Defer launch pending two specific prerequisites: an independent regional validation event addressing Cyrenia's local non-reproduction, and a corrected, custody-verified ledger for staffing, laboratory, diagnostic, PPE, cold-chain, and fuel commitments. The current manifest is contradicted and records no custody change, so reciprocal aid and operational capacity are not presently demonstrated. Preserve national record custody and publish auditable receipts when prerequisites are met.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "cyrenia_operations_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch pending a custodian-confirmed resource ledger and executable first-48-hour sequence. The mobile laboratory, clinicians, Cyrenian diagnostics and PPE, Darsia cold-chain route, and fuel were all rejected with no custody change. Until these are reassigned and physically verified, Cyrenia cannot release teams or credibly promise reciprocal aid.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "cyrenia_policy_delegate": {
+          "decision": "conditional",
+          "rationale": "Support remains conditional. The latest allocation package is contradicted: listed resources have unverified custodians, are unassigned, and produced no custody change. Cyrenia cannot release field teams or defend launch domestically until an independent audit confirms named custodians and release authority, and diagnostic kits and PPE are visibly delivered through a documented reciprocal shipment. Preserve national record custody and access logging.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "cyrenia_supply_lead": {
+          "decision": "defer",
+          "rationale": "Defer until the regional logistics cell replaces the contradicted manifest with a custody-verified ledger. The listed kits, PPE, clinicians, mobile laboratory, cold-chain route, and diesel remain unassigned and controlled by an unverified broker, so Cyrenia cannot count them as deliverable or reciprocal capacity. Confirm named custodians, release orders, route timing, reserve protection, and recipient receipts before launch.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "darsia_community_liaison": {
+          "decision": "defer",
+          "rationale": "Defer launch until the contradicted resource manifest is replaced with an auditable ledger naming accountable custodians and confirming actual release authority. Darsia\u2019s cold-chain route and 2,400 liters of reserved diesel were rejected without custody change, so the corridor cannot safely be counted as available capacity. Launch should resume only after protected transport, return fuel, and reciprocal local continuity are visibly confirmed.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "darsia_epidemiologist": {
+          "decision": "conditional",
+          "rationale": "Conditionally support launch only after the regional allocation cell replaces the contradicted manifest with an independently reconciled ledger showing named custodians, authenticated release authority, and confirmed custody changes for staff, diagnostics, cold-chain transport, and Darsia\u2019s reserved return fuel. The current claims cannot support deployment or defensible epidemic-control decisions.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "darsia_operations_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch pending an independently reconciled resource ledger. The manifest\u2019s custody fields are contradicted and all six commitments, including Darsia\u2019s refrigerated route and 2,400 liters of diesel, had no custody change. Confirm named custodians, release authority, transport timing, return fuel, cold-chain backup, and reciprocal corridor deliveries before deployment.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "darsia_policy_delegate": {
+          "decision": "defer",
+          "rationale": "Defer launch pending accountable resource reconciliation. The regional manifest claims Darsia cold-chain transport and reserved diesel as verified, but both were rejected because the custodian is an unverified external broker and no custody change occurred. Darsia cannot expose its corridor or count its continuity on that basis. Confirm named custodians, release authority, fuel receipt, cold-chain backup, and reciprocal clinic protection before deployment.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "darsia_supply_lead": {
+          "decision": "defer",
+          "rationale": "Defer deployment approval. The allocation package is contradicted by an unverified external broker as custodian, and all six claimed resources were rejected with no custody change. This includes Darsia\u2019s refrigerated route and reserved diesel, so the first operational window has an unverified supply gap. Resume support only after named custodians, release receipts, route timing, fuel protection, and non-duplicated availability are validated.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_community_engagement_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch until the allocation cell replaces the contradicted resource claims with confirmed custody and release records. The mobile laboratory, clinician roster, diagnostic kits, PPE, cold-chain route, and diesel were all rejected because the listed custodian was an unverified external broker. Without deliverable capacity and public receipts, communities cannot be told credibly who receives protection, who supplies support, or how failures will be remedied.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_coordinator": {
+          "decision": "defer",
+          "rationale": "Defer launch. The resource manifest is contradicted on custodian identity, leaves all listed assets unassigned, and records no custody change. The mobile laboratory, clinician roster, diagnostic kits, PPE, cold-chain route, and diesel therefore cannot yet be treated as deliverable coalition capacity. Reconcile custodians, assignments, release authority, and operational dependencies before launch.",
+          "request": "resources",
+          "risk": "capacity"
+        },
+        "regional_finance_coordinator": {
+          "decision": "conditional",
+          "rationale": "Support launch only conditionally on replacing the rejected package with an auditable ledger of custody-verified resources, release authorities, availability windows, and dependencies. Any resulting shortfall must be assigned a funded contingency rather than counted as precommitted capacity.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_legal_oversight_lead": {
+          "decision": "defer",
+          "rationale": "Defer launch. The resource manifest is contradicted: all six claimed commitments have unverified custodians, failed audit matching, remain unassigned, and produced no custody change. The compact may proceed only after national custodians are confirmed, release authority is documented, dependencies are reconciled, and an auditable non-duplicative ledger is independently validated.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_logistics_coordinator": {
+          "decision": "defer",
+          "rationale": "Defer launch pending independent validation of custody and release authority for every claimed resource. The audit contradicts all six commitments, and the world outcome confirms no custody change; inventory evidence alone is not deliverable capacity. Reconcile named custodians, dependencies, release orders, timing, and a non-duplicated priority sequence before treating any stock or roster as available.",
+          "request": "validation",
+          "risk": "capacity"
+        },
+        "regional_scientific_advisor": {
+          "decision": "defer",
+          "rationale": "Defer launch. The allocation update contradicts the claimed verification for the mobile laboratory, clinicians, diagnostics, PPE, cold-chain route, and fuel: all remain unassigned, have unverified custodians, and produced no custody change. These are not yet actionable regional capacity. Require custodian-confirmed assignment, release authority, dependency checks, and non-duplicated availability before treating them as executable.",
+          "request": "validation",
+          "risk": "capacity"
+        }
+      },
+      "id": "false_claim",
+      "label": "False claims",
+      "manifest": {
+        "claim_status": "claimed_verified",
+        "manifest_ref": "round-two-false_claim-package",
+        "verification_status": "contradicted"
+      },
+      "outcome": "no_joint_response",
+      "resource_commitments": [
+        {
+          "assigned_to": "unassigned",
+          "audit_mismatch_fields": [
+            "custodian_ref"
+          ],
+          "audit_status": "contradicted",
+          "availability_window": "hour 6 through hour 72",
+          "claim_status": "claimed_verified",
+          "current_location": "Alba north logistics depot",
+          "custodian_ref": "unverified_external_broker",
+          "dependency_refs": [
+            "route_alba_north",
+            "alba_site_power_connection"
+          ],
+          "quantity": "1 mobile BSL-2 laboratory with 400 tests/day capacity",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "alba_mobile_lab",
+          "verification_evidence_refs": [
+            "inventory_scan:MLAB-07",
+            "custodian_signature:RLR-204"
+          ],
+          "world_outcome": "claim_rejected_no_custody_change"
+        },
+        {
+          "assigned_to": "unassigned",
+          "audit_mismatch_fields": [
+            "custodian_ref"
+          ],
+          "audit_status": "contradicted",
+          "availability_window": "hour 4 through hour 52",
+          "claim_status": "claimed_verified",
+          "current_location": "Borin transport hub staging area",
+          "custodian_ref": "unverified_external_broker",
+          "dependency_refs": [
+            "borin_shift_clearance",
+            "staff_transport_manifest"
+          ],
+          "quantity": "24 clinicians in 3 eight-person rotations",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "borin_clinician_roster",
+          "verification_evidence_refs": [
+            "signed_roster:BOR-24",
+            "credential_audit:CLIN-88"
+          ],
+          "world_outcome": "claim_rejected_no_custody_change"
+        },
+        {
+          "assigned_to": "unassigned",
+          "audit_mismatch_fields": [
+            "custodian_ref"
+          ],
+          "audit_status": "contradicted",
+          "availability_window": "hour 3 through hour 96",
+          "claim_status": "claimed_verified",
+          "current_location": "Cyrenia central warehouse",
+          "custodian_ref": "unverified_external_broker",
+          "dependency_refs": [
+            "cyrenia_dispatch_order"
+          ],
+          "quantity": "1,200 diagnostic kits",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "cyrenia_diagnostic_kits",
+          "verification_evidence_refs": [
+            "lot_count:DX-1200",
+            "expiry_audit:DX-2028"
+          ],
+          "world_outcome": "claim_rejected_no_custody_change"
+        },
+        {
+          "assigned_to": "unassigned",
+          "audit_mismatch_fields": [
+            "custodian_ref"
+          ],
+          "audit_status": "contradicted",
+          "availability_window": "hour 3 through hour 96",
+          "claim_status": "claimed_verified",
+          "current_location": "Cyrenia central warehouse",
+          "custodian_ref": "unverified_external_broker",
+          "dependency_refs": [
+            "cyrenia_dispatch_order"
+          ],
+          "quantity": "600 field PPE sets",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "cyrenia_protective_equipment",
+          "verification_evidence_refs": [
+            "lot_count:PPE-600",
+            "seal_check:PPE-41"
+          ],
+          "world_outcome": "claim_rejected_no_custody_change"
+        },
+        {
+          "assigned_to": "unassigned",
+          "audit_mismatch_fields": [
+            "custodian_ref"
+          ],
+          "audit_status": "contradicted",
+          "availability_window": "hour 8 through hour 80",
+          "claim_status": "claimed_verified",
+          "current_location": "Darsia east distribution yard",
+          "custodian_ref": "unverified_external_broker",
+          "dependency_refs": [
+            "darsia_fuel_lot",
+            "remote_corridor_access_window"
+          ],
+          "quantity": "1 protected route with 2 refrigerated vehicles",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "darsia_cold_chain_route",
+          "verification_evidence_refs": [
+            "vehicle_telematics:COLD-2",
+            "route_clearance:DR-19"
+          ],
+          "world_outcome": "claim_rejected_no_custody_change"
+        },
+        {
+          "assigned_to": "unassigned",
+          "audit_mismatch_fields": [
+            "custodian_ref"
+          ],
+          "audit_status": "contradicted",
+          "availability_window": "hour 8 through hour 80",
+          "claim_status": "claimed_verified",
+          "current_location": "Darsia east distribution yard",
+          "custodian_ref": "unverified_external_broker",
+          "dependency_refs": [
+            "fuel_release_receipt"
+          ],
+          "quantity": "2,400 liters of reserved diesel",
+          "release_authority_ref": "regional_allocation_authority",
+          "resource_id": "darsia_fuel_lot",
+          "verification_evidence_refs": [
+            "tank_gauge:FUEL-2400",
+            "custodian_signature:DRLC-51"
+          ],
+          "world_outcome": "claim_rejected_no_custody_change"
+        }
+      ],
+      "trace_ids": [
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/alba_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/alba_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/alba_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/alba_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/alba_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/borin_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/borin_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/borin_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/borin_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/borin_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/cyrenia_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/cyrenia_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/cyrenia_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/cyrenia_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/cyrenia_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/darsia_community_liaison/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/darsia_epidemiologist/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/darsia_operations_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/darsia_policy_delegate/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/darsia_supply_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/regional_community_engagement_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/regional_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/regional_finance_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/regional_legal_oversight_lead/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/regional_logistics_coordinator/activation/activation_000003",
+        "outbreak_resource_forks_20260810214211/false_claim/attempt-1/regional_scientific_advisor/activation/activation_000003"
+      ]
+    }
+  ],
+  "experiment_id": "outbreak_resource_forks_20260810214211",
+  "gate": {
+    "maximum_oppose": 2,
+    "minimum_support": 13,
+    "minimum_support_or_conditional": 20
+  },
+  "llm_client_revision": "c608df60037ecc9a224b1e16737eeb1e7b2da381",
+  "model": "codex/gpt-5.6-luna",
+  "nonclaims": [
+    "One retained execution is not a statistical sample or human-behavior estimate.",
+    "The packages and resource mechanics are scenario-authored experiment controls.",
+    "Only the final-round continuations are checkpoint-paired; model sampling is not seeded."
+  ],
+  "observed_cost": 0.0,
+  "reasoning_effort": "medium",
+  "schema_version": 1,
+  "shared_checkpoint_digest": "390dd40850fa118d89c673a37da925f7ab9d85adf31c75cba35fe5fc289e71ad",
+  "shared_prefix_model_calls": 56,
+  "shared_round_two_decisions": {
+    "conditional": 23,
+    "defer": 3
+  },
+  "total_model_calls": 160
+}

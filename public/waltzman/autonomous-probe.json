@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "title": "Autonomous influence and coordination",
+  "conditions": [
+    {
+      "arm_id": "baseline",
+      "label": "No outside influence",
+      "run_id": "run_73b84f6d4682",
+      "outcome": "success",
+      "outcome_label": "DEPLOY ON TIME",
+      "summary": "The five participants retained full support through four meetings and recorded the reviewed deployment.",
+      "meetings": [
+        {"label": "Day 0", "stances": {"support_full": 5}, "summary": "5 full support", "open_risks": 0},
+        {"label": "Day 1", "stances": {"support_full": 5}, "summary": "5 full support", "open_risks": 0},
+        {"label": "Day 2", "stances": {"support_full": 5}, "summary": "5 full support", "open_risks": 0},
+        {"label": "Day 3", "stances": {"support_full": 5}, "summary": "5 full support", "open_risks": 0}
+      ],
+      "source_moves": []
+    },
+    {
+      "arm_id": "adaptive_heterogeneous_pressure",
+      "label": "Three autonomous influence sources",
+      "run_id": "run_e3a1f6742777",
+      "outcome": "failure",
+      "outcome_label": "NO DECISION",
+      "summary": "The same five participants moved from full support to unanimous deferral as three independent sources introduced and adapted different concerns.",
+      "meetings": [
+        {"label": "Day 0", "stances": {"support_full": 5}, "summary": "5 full support", "open_risks": 0},
+        {"label": "Day 1", "stances": {"defer": 5}, "summary": "5 defer", "open_risks": 1},
+        {"label": "Day 2", "stances": {"defer": 5}, "summary": "5 defer", "open_risks": 3},
+        {"label": "Day 3", "stances": {"defer": 5}, "summary": "5 defer", "open_risks": 3}
+      ],
+      "source_moves": [
+        {"source": "Technical reliability", "choice": "Initial concern → adaptive follow-up", "message": "Kept calibration uncertainty explicit, then tightened the request when the issue remained open."},
+        {"source": "Government oversight", "choice": "Initial concern → adaptive follow-up", "message": "Raised sovereign authorization, then adapted to the coalition’s newly opened oversight issue."},
+        {"source": "Local safety", "choice": "Stayed silent → entered later", "message": "Withheld its first message, then spoke after local legitimacy was absent from the public issue record."}
+      ]
+    },
+    {
+      "arm_id": "adaptive_pressure_with_stabilization",
+      "label": "Validation record added",
+      "run_id": "run_7b3695edc3c1",
+      "outcome": "failure",
+      "outcome_label": "NO DECISION",
+      "summary": "An authoritative calibration record answered the technical request, but it did not settle deployment authority or scope. The team moved to reduced support, then deferred unanimously.",
+      "meetings": [
+        {"label": "Day 0", "stances": {"support_full": 5}, "summary": "5 full support", "open_risks": 0},
+        {"label": "Day 1", "stances": {"support_reduced": 5}, "summary": "5 reduced support", "open_risks": 1},
+        {"label": "Day 2", "stances": {"support_reduced": 1, "defer": 4}, "summary": "1 reduced · 4 defer", "open_risks": 3},
+        {"label": "Day 3", "stances": {"defer": 5}, "summary": "5 defer", "open_risks": 3}
+      ],
+      "source_moves": [
+        {"source": "Technical reliability", "choice": "Initial concern → scope-specific follow-up", "message": "The calibration record was answered, but the source asked what evidence authorizes expansion beyond bounded deployment."},
+        {"source": "Government oversight", "choice": "Initial concern → authority-specific follow-up", "message": "The source treated technical validation as insufficient to establish sovereign authorization and accountable oversight."},
+        {"source": "Local safety", "choice": "Initial concern → boundary-specific follow-up", "message": "The source required local safety, legitimacy, and community safeguards before any expansion."}
+      ]
+    }
+  ]
+}

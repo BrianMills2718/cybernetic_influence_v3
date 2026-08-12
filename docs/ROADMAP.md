@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-07-31
+updated: 2026-08-11
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -25,14 +25,30 @@ advanced generalizable socio-technical simulator, not a predictive oracle or
 production platform. Wargaming, economic modeling, and organizational analysis
 are exemplar applications rather than separate product definitions.
 
+The mature analyst workflow is:
+
+```text
+model a decision environment
+  -> run controlled conditions
+  -> compare directional changes
+  -> diagnose candidate mechanisms
+  -> test interventions and alternatives
+```
+
+Waltzman- and Levin-informed analyses are replaceable theory modules over that
+general simulation and evidence system. Waltzman supplies the first substantial
+experimental question; it does not define the simulator or make it an
+operational influence detector.
+
 The active contract is the [Generalizable Simulation System Goal](GOAL.md).
 [Slice 26](plans/026-concordia-foundation-research.md) source research is
 complete, and the product owner adopted **Candidate A — Concordia foundation**
-in [ADR-013](adr/013-generalized-simulator-foundation.md). The research's
-Candidate C recommendation remains evidence under its original frozen
-invariants; it is not the adopted direction. The current Cybernetic Influence
-product and retained runs are the parity baseline. [Slice 27](handoffs/027-foundation-implementation.md)
-is the first Concordia-owned execution proof and awaits explicit implementation
+in [ADR-013](adr/013-generalized-simulator-foundation.md). A current-source
+revisit and disposable authentic Luna bridge/port probe reaffirmed that choice
+on 2026-08-11 while making its remaining uncertainties explicit. The current
+Cybernetic Influence product and retained runs are the parity baseline.
+[Slice 27](handoffs/027-foundation-implementation.md) is the first production
+Concordia world-transition vertical and awaits explicit implementation
 authorization.
 
 ## Retained Baseline Outcome Probe
@@ -50,7 +66,7 @@ User operation:
 2. inspect and edit the compiled people, information, mechanisms, places,
    candidate boundary, collective goal, run termination, and assumptions;
 3. approve the configuration;
-4. play one reference or live simulation; and
+4. play one live coordination simulation; and
 5. inspect the story, maps, participant/boundary accounts, and two theoretical
    readouts.
 
@@ -130,7 +146,22 @@ The modules share evidence but do not share conclusions or mutate execution.
 ### Experiment specification
 
 Owns post-MVP conditions, perturbations, repetitions, matching rules, and
-cross-run comparisons. It is explicitly outside the current MVP.
+cross-run comparisons. It is explicitly outside the current MVP but is the
+first missing product boundary after the architecture decision. Its first
+representative vertical is:
+
+- a matched ordinary-decision baseline;
+- the existing fixed heterogeneous-pressure behavior as a control;
+- heterogeneous influence sources that can adapt to local reactions while
+  retaining a shared objective;
+- the same pressure with one reviewed stabilization intervention;
+- two deterministic lifecycle replicates per condition for the first mechanism
+  proof, without treating them as an uncertainty estimate; and
+- time-, subgroup-, and evidence-resolved comparison of trust structure,
+  perceived risk, and coordination readiness.
+
+The output is a candidate directional pattern under declared simulated
+conditions, not evidence of hostile attribution or an operational detector.
 
 ## Current Truth
 
@@ -161,6 +192,9 @@ cross-run comparisons. It is explicitly outside the current MVP.
 - The fixed coordination scenario supports five LLM people, recurring meetings,
   exact decision mechanisms, typed boundary activity, and Waltzman-inspired
   measurement.
+- Coordination product launch is live-agent only. Scripted person policies are
+  retained solely as explicitly enabled internal verification fixtures;
+  historical scripted runs remain readable.
 - Accepted live Terra/medium baseline, pressure, and stabilization trajectories
   remain retained evidence; see [Mac operations](operations/mac-mini.md).
 - Comparison schema version 2 and its zero-cost six-run fixture remain working
@@ -175,6 +209,40 @@ cross-run comparisons. It is explicitly outside the current MVP.
   calculated from retained configuration, terminal state, and completion
   evidence; the preview has 51 causal and 3 analytical-only nodes with no
   unexplained isolation.
+- Approved draft `draft_760f90419937` and live run `run_2250cbb74f44` provide
+  Packet 24E stakeholder-demo evidence. All five people were live LLM agents;
+  the run retained 51 participant calls, 46 narrator calls, daily meetings on
+  modeled days 0 through 3, `no_decision_by_horizon`, and both theory readouts
+  bound to one evidence bundle.
+- The Packet 24E audit narrowed the Waltzman claim: the corrected surface is a
+  single-run measurement instrument. It exposes the exact outcome and event
+  chronology and explicitly does not claim adaptive influence, a directional
+  invariant, causal influence, attribution, or proportionality.
+- Slice 27 now supplies the first provider-free `ExperimentSpec` vertical: four
+  ordered conditions, two retained runs per condition, concrete feedback into
+  adaptive source processes, one authoritative-validation intervention, three
+  cross-condition contrasts, strict complete-matrix reopening, and UI
+  step-down to either exact run. The observed scripted batch produced full
+  deployment in baseline, no decision under both pressure variants, and reduced
+  scope with validation. Adaptation changed retained source messages but did
+  not change the selected exact metrics in this batch; that null contrast is
+  retained rather than promoted to an invariant.
+- The Waltzman-facing twelve-agent outbreak probe now retains two authentic
+  baseline/pressure pairs and one matched stabilization replay. Both baselines
+  ended 12-support with approval. The pressure runs ended 5-conditional/7-defer
+  and 12-defer with no approval and twelve resource requests. Replaying the same
+  two capacity developments with a verified allocation package ended
+  11-support/1-conditional and restored approval. All five trajectories used
+  `codex/gpt-5.6-luna` at medium reasoning with 36 completed calls each and no
+  observed cost. These are candidate-mechanism demonstrations, not effect
+  estimates or invariants.
+- A 2026-08-05 audit found that participant system prompts in those outbreak
+  runs disclosed the condition identifier before round one. They remain useful
+  product artifacts but no longer support matched-condition inference. The
+  corrected deployment and clean condition-blind replacement are now complete:
+  `run_8924342b56ce`, `run_946a10a820fc`, and `run_05acbaea1137` produced
+  baseline approval, pressure non-approval, and restored approval respectively.
+  The exact run-scoped public comparison excludes incompatible historical rows.
 
 ### Process progress
 
@@ -194,29 +262,32 @@ cross-run comparisons. It is explicitly outside the current MVP.
 | `MVP-C4` | Waltzman per-run module over the evidence bundle | hard | satisfied | Existing exact/coded measures consume the common bundle and render with method/provenance |
 | `MVP-C5` | Levin per-run module over the evidence bundle | hard | satisfied | Candidate goal/boundary, glue, activity, correction, persistence, adaptation, and limits render without an aggregate executor or scalar |
 | `MVP-C6` | One integrated private review flow | evidence | technical execution passed; stakeholder judgment pending | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
-| `POST-C1` | `ExperimentSpec` and repeated comparison | optional | deferred | Explicit post-MVP selection |
+| `POST-C1` | `ExperimentSpec` and matched decision-environment experiment | hard after foundation decision | provider-free mechanism proof technically satisfied; stakeholder readout pending | Baseline, fixed pressure, adaptive pressure, and authoritative validation have two retained runs each, cross-condition contrasts, time/subgroup measures, and exact evidence step-down |
 | `POST-C2` | Perturbation, robustness, and persuadability assays | optional | Packets 22A0–22A2 technically satisfied; stakeholder readout pending | Five matched provider-free rows distinguish concrete pathways and step down through one comparison UI to exact retained evidence |
-| `GEN-C0` | Concordia owns one migrated physical-access execution end to end | hard | proposed; implementation not authorized | Same three current outcomes and inspectable evidence, with a negative control proving the old runtime did not execute |
+| `GEN-C0` | Concordia owns one general world-transition vertical end to end | hard | research probe passed; production implementation not authorized | Bridge/port world compiles from domain-neutral contracts, executes deterministic and Luna transitions, restores strictly, and proves the old runtime did not execute |
 | `GEN-C1` | Current Cybernetic Influence capability parity on Concordia | hard | blocked by `GEN-C0` | Authoring, execution, retention, replay, maps, narration, and analyses are inspectably equivalent at their public boundaries |
 | `GEN-C2` | Cross-domain generalization | evidence | blocked by `GEN-C1` | One materially different exemplar reuses the same seams without generated code or a scenario-specific runtime |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
+Packet 24E supplies the candidate surface for that judgment; it does not mark
+the judgment passed on the operator's behalf.
 
 ## Shortest Critical Path
 
 There are four explicit tracks rather than one blended implementation queue:
 
-1. **Concordia foundation parity proof — next engineering boundary.** After
+1. **Concordia general vertical — next engineering boundary.** After
    explicit implementation authorization, execute the bounded
-   [Slice 27 handoff](handoffs/027-foundation-implementation.md). Reproduce the
-   current physical-access capability with Concordia owning entity state,
-   simulation control, exact-component state, and checkpointing. Fail if the
-   old causal/active runtime executes behind the new surface.
-2. **Current-capability parity — conditional.** Only after the foundation proof
-   passes, migrate the current authoring, scenarios, retention/replay, maps,
-   narration, analyses, and comparison surfaces. Preserve public behavior where
-   it remains useful; do not preserve internal architecture for its own sake.
-3. **Cross-domain generalization — conditional.** After parity, select one
+   [Slice 27 handoff](handoffs/027-foundation-implementation.md). Implement the
+   bridge/port world-context-intent-patch path with stock Concordia, a strict
+   checkpoint, and authentic Luna actor/adjudicator calls. Fail if the old
+   causal/active runtime executes behind the new surface.
+2. **Product adoption — conditional.** Route one intended product consumer
+   through the adopted contracts so later scenarios cannot silently bypass the
+   richer machinery. Give each existing capability an explicit reuse, adapt,
+   replace, retire, or bounded-exception disposition rather than migrating it
+   automatically.
+3. **Cross-domain generalization — conditional.** After adoption, select one
    materially different exemplar and require it to reuse the same reviewed
    component and execution seams. Wargaming is one candidate exemplar, not the
    roadmap goal.
@@ -237,6 +308,11 @@ and present one matched comparison with exact run and boundary step-down. This
 does not authorize live repetitions, scalar agency scores, or causal/predictive
 claims.
 
+The operator also authorized
+[Slice 27](plans/027-coordination-dynamics-experiment.md) as a reversible
+post-MVP mechanism proof. It does not authorize live repetitions, empirical
+calibration, causal attribution, or operational detection.
+
 ## Artifact Dispositions
 
 | Artifact | Disposition | Reason |
@@ -250,7 +326,8 @@ claims.
 | [Slice 25](plans/025-typed-component-composition.md) | 25A–25C retained; 25D paused | Useful local composition evidence, but not authority for choosing the generalized product foundation |
 | [Slice 26](plans/026-concordia-foundation-research.md) | research complete; owner disposition recorded | Source audit remains valid; owner revised the invariant premise and selected Candidate A |
 | [ADR 013](adr/013-generalized-simulator-foundation.md) | accepted | Concordia owns the simulation foundation; selected CI capabilities migrate as components/projections |
-| [Slice 27](handoffs/027-foundation-implementation.md) | designed; awaiting implementation authorization | Direct foundation proof reproduces one current capability without the old runtime as hidden executor |
+| [Foundation Slice 27](handoffs/027-foundation-implementation.md) | designed; awaiting implementation authorization | General bridge/port vertical exercises the adopted world-transition seam without the old runtime as hidden executor |
+| [Experiment Slice 27](plans/027-coordination-dynamics-experiment.md) | provider-free mechanism proof technically complete; stakeholder readout pending | Four conditions and eight ordinary retained runs isolate pressure presence, adaptation, and authoritative validation with evidence step-down |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |
 | [Waltzman source note](research/001-from-minds-to-coordination.md) | amend | Separates scenario inputs, per-run measurements, and experiments |
@@ -293,6 +370,11 @@ not silently recreate the old runtime as a universal invariant set.
   satisfied. Stakeholder comprehension is unobserved; live repetitions,
   robustness claims, evasion, attribution, calibration, and prediction remain
   deferred.
+- Slice 27's eight-run provider-free experiment and strict retained readout are
+  technically observed. The adaptation contrast is flat on the selected exact
+  metrics in the reference batch even though adaptive follow-up events are
+  retained; broader adaptive semantics and stochastic/live repetitions remain
+  separate future decisions.
 - Slice 25 Packets 25A–25C prove a bounded local registry, composition receipt,
   mixed scenario, and authoring path. They do not prove that the current
   runtime is the optimal generalized foundation.
@@ -300,9 +382,10 @@ not silently recreate the old runtime as a universal invariant set.
   preserving every existing CI invariant. The owner clarified the broader,
   exploratory general-simulation goal and adopted Candidate A. The source audit
   remains evidence; the product tradeoff changed.
-- `GEN-C0` is fully specifiable now but implementation is not authorized by the
-  architecture approval alone. `GEN-C1` and `GEN-C2` remain conditional on the
-  observed preceding result.
+- `GEN-C0` has a successful disposable architecture probe and a production
+  handoff, but production implementation is not authorized by the architecture
+  approval alone. `GEN-C1` and `GEN-C2` remain conditional on an adopted
+  production consumer, not merely isolated contract code.
 
 ## Continue, Reset, Scale, Stop
 
@@ -312,9 +395,10 @@ not silently recreate the old runtime as a universal invariant set.
 - **Continue:** begin Slice 27 only after explicit implementation
   authorization. The independent M7 readout remains open and does not block the
   architecture migration.
-- **Reset:** after two substantive increments or four hours without a new
-  user-visible part of the canonical flow, or if configuration requires
-  arbitrary generated mechanism code/a second runtime.
+- **Reset:** at the earliest of roughly 45 minutes, two consecutive non-outcome
+  increments, or user concern about pace, compare the current path with the most
+  valuable reversible next move. Reset immediately if configuration requires
+  arbitrary generated mechanism code or a second runtime.
 - **Scale:** do not proceed beyond the retained scripted Packet-22A2 comparison
   into live repetitions without the required human readout and separate
   selection of Packet 22B.
@@ -323,13 +407,15 @@ not silently recreate the old runtime as a universal invariant set.
 
 ## Deferred options
 
-After the canonical flow is observed, select rather than automatically execute:
+After the provider-free mechanism proof, decide whether its flat adaptation
+contrast justifies richer recipient response semantics before any live or
+stochastic repetition. Later options remain conditional rather than automatic:
 
-- repeated baseline/pressure/stabilization comparisons;
 - Waltzman's candidate directional invariants and evasion dimensions;
 - Levin-style perturbation, member replacement, recovery, robustness, and
   persuadability assays;
 - additional component and scenario families beyond the required
   generalization exemplar;
-- empirical calibration, attribution, and predictive evaluation; and
+- empirical calibration, attribution, operational detection, and predictive
+  evaluation only when representative real-world evidence exists; and
 - production or public deployment.

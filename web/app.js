@@ -34,6 +34,7 @@ let selectedBoundaryActivities = null
 let selectedBoundaryScope = 'full'
 let boundaryActivityRequestSerial = 0
 const compositeAssayCache = new Map()
+const coordinationExperimentCache = new Map()
 
 const buttonTooltips = {
   'simulation-tab': 'Choose and run a configured simulation.',
@@ -45,7 +46,7 @@ const buttonTooltips = {
   'authoring-load-composition': 'Create a saved, already typed mixed-component example without making a model call.',
   'authoring-copy-link': 'Copy a link that reopens this automatically saved draft.',
   'authoring-approve': 'Freeze this exact reviewed draft so it can be run.',
-  'authoring-run': 'Run the approved draft with fixed zero-cost reference actions. This checks the compiled routes and exact mechanisms, not the reviewed personalities.',
+  'authoring-run': 'Run a non-coordination draft with fixed zero-cost reference actions. Coordination scenarios require live people.',
   'authoring-live-run': 'Run the approved draft with each concrete person driven by an LLM from their reviewed profile, private memory, delivered observations, and exposed interfaces.',
   'authoring-save-configuration': 'Validate these semantic fields and save a new draft revision without calling an LLM. Compiler-owned routes, mechanisms, and IDs remain unchanged.',
   'authoring-spatial-layout': 'Show the proposed places, occupants, and physical links. This does not grant access or permission.',
@@ -64,6 +65,7 @@ const buttonTooltips = {
   'narrative-concise': 'Read the one-sentence account for each causal step.',
   'narrative-detailed': 'Read how each participant action changed the world, with exact evidence available on demand.',
   'run-composite-assay': 'Run the reviewed five-condition scripted comparison. It makes no model calls and retains five independently inspectable runs.',
+  'run-coordination-experiment': 'Run the reviewed four-condition scripted experiment. It makes no model calls and retains two exact runs per condition.',
 }
 
 function explainButton(button) {
@@ -78,6 +80,8 @@ function explainButton(button) {
   if (!explanation && button.classList.contains('open-assay-run')) explanation = 'Open the full retained run, including its maps, story, people, measures, and exact evidence.'
   if (!explanation && button.classList.contains('trash-run')) explanation = 'Move this retained run to recoverable server trash.'
   if (!explanation && button.classList.contains('trash-assay')) explanation = 'Move all five retained rows in this comparison to recoverable server trash.'
+  if (!explanation && button.classList.contains('trash-coordination-experiment')) explanation = 'Move all eight retained runs in this experiment to recoverable server trash.'
+  if (!explanation && button.classList.contains('open-coordination-run')) explanation = 'Open this exact retained replicate for evidence inspection.'
   if (!explanation && button.classList.contains('measurement-evidence-button')) explanation = 'Select the cited exact event on the simulation map and in Advanced evidence.'
   if (!explanation && button.classList.contains('turn-narrative')) explanation = 'Select this causal step and inspect its grounded evidence.'
   if (!explanation && button.classList.contains('timeline-marker')) explanation = 'Select this causal step.'
@@ -729,7 +733,8 @@ function renderAuthoring() {
   renderAuthoringPeople(draft)
   const approvable = !!draft.proposal && diagnostics.length === 0 && draft.status === 'ready_for_review'
   $('#authoring-approve').hidden = !approvable
-  $('#authoring-run').hidden = draft.status !== 'approved'
+  const coordination = draft.proposal?.workflow?.template_id === 'coordination_decision_v1'
+  $('#authoring-run').hidden = draft.status !== 'approved' || coordination
   const authoredLiveAvailable = runtimeConfig.live_authorized &&
     ((runtimeConfig.live_options?.models || []).length > 0) &&
     (
@@ -737,7 +742,14 @@ function renderAuthoring() {
       (runtimeConfig.scenarios?.coordination_decision?.live_model_ids || []).length > 0
     )
   configureAuthoringLiveModels()
-  $('#authoring-live-run').hidden = draft.status !== 'approved' || !authoredLiveAvailable
+  $('#authoring-live-run').hidden = draft.status !== 'approved' || (!coordination && !authoredLiveAvailable)
+  $('#authoring-live-run').disabled = coordination && !authoredLiveAvailable
+  $('#authoring-live-run').textContent = coordination && !authoredLiveAvailable
+    ? 'Live execution unavailable'
+    : 'Play with live people'
+  $('#authoring-live-run').title = coordination && !authoredLiveAvailable
+    ? 'Coordination scenarios require live agents, but this server has no authorized certified route.'
+    : ''
   $('#authoring-live-settings').hidden = draft.status !== 'approved' || !authoredLiveAvailable
   renderAuthoringProjectionControls()
   if (authoringPreview?.nodes && window.CyberneticGraph) {
@@ -960,7 +972,6 @@ async function loadConfig() {
   $('#map-help').textContent = help.map_projection || ''
   $('#moment-help').textContent = help.causal_moment || ''
   $('#narrative-help').textContent = help.narrative || ''
-  configureScenario(config.scenario)
   $('#live').disabled = !config.live_authorized || choices.length === 0
   $('#live').checked = config.live_authorized
   $('#run').textContent = config.live_authorized ? 'Play live simulation' : 'Play reference simulation'
@@ -972,7 +983,17 @@ async function loadConfig() {
   } else {
     $('#live-help').textContent = help.live_execution || 'People reason from their own memory, position, and delivered observations.'
   }
+  configureScenario(config.scenario)
   configureLiveControls()
+}
+
+function scenarioRequiresLive(scenarioId = $('#scenario').value) {
+  const modes = scenarioCatalog[scenarioId]?.execution_modes || []
+  return modes.length === 1 && modes[0] === 'live'
+}
+
+function selectedExecution() {
+  return scenarioRequiresLive() ? 'live' : ($('#live').checked ? 'live' : 'scripted')
 }
 
 function configureScenario(scenarioId) {
@@ -1016,12 +1037,28 @@ function configureScenario(scenarioId) {
     && liveChoices.length
   )
   const scenarioSupportsLive = selected.supports_live !== false
-  $('#live').disabled = !liveAvailable || !scenarioSupportsLive
-  if (!scenarioSupportsLive) {
+  const requiresLive = scenarioRequiresLive(scenarioId)
+  if (requiresLive) {
+    $('#live').checked = true
+    $('#live').disabled = true
+    $('#run').disabled = !liveAvailable
+    $('#live-help').textContent = liveAvailable
+      ? 'This scenario uses live LLM-modeled people. Exact mechanisms govern world changes; Waltzman measurements are derived after the run.'
+      : 'This scenario requires live LLM-modeled people, but this server has no authorized certified route.'
+  } else if (!scenarioSupportsLive) {
+    $('#live').disabled = true
     $('#live').checked = false
+    $('#run').disabled = false
     $('#live-help').textContent = 'This scenario currently has a zero-cost scripted implementation only.'
+  } else {
+    $('#live').disabled = !liveAvailable
+    $('#live').checked = liveAvailable
+    $('#run').disabled = false
+    $('#live-help').textContent = liveAvailable
+      ? runtimeConfig.live_options?.help?.live_execution || 'People reason from their own memory, position, and delivered observations.'
+      : 'Live execution is unavailable on this server. Reference execution remains available for this scenario.'
   }
-  $('#run').textContent = $('#live').checked ? 'Play live simulation' : 'Play reference simulation'
+  $('#run').textContent = selectedExecution() === 'live' ? 'Play live simulation' : 'Play reference simulation'
   configureLiveControls()
   updateAuthorizationPreview()
   describeCondition()
@@ -1072,7 +1109,9 @@ function fillList(selector, values = []) {
 }
 
 function configureLiveControls() {
-  const enabled = $('#live').checked && !$('#live').disabled
+  const enabled = $('#live').checked && (
+    scenarioRequiresLive() || !$('#live').disabled
+  ) && !$('#run').disabled
   for (const selector of ['#model', '#reasoning', '#max-cost']) {
     $(selector).disabled = !enabled
   }
@@ -1392,8 +1431,170 @@ function renderCompositeAssay(assay) {
   </section>`
 }
 
+const coordinationConditionPresentation = {
+  baseline: {
+    label:'Baseline',
+    change:'No heterogeneous pressure source is enabled.',
+  },
+  fixed_heterogeneous_pressure: {
+    label:'Fixed pressure',
+    change:'Three retained sources emit the same scheduled messages without reading feedback.',
+  },
+  adaptive_heterogeneous_pressure: {
+    label:'Adaptive pressure',
+    change:'The sources observe public meeting snapshots and may change their second message.',
+  },
+  adaptive_pressure_with_stabilization: {
+    label:'Adaptive pressure + validation',
+    change:'The adaptive sources remain active while one retained authoritative validation record can answer verification.',
+  },
+}
+
+function coordinationMetricLabel(metricId) {
+  return {
+    verification_requests:'Verification requests',
+    risk_register_expansion:'Distinct risks',
+    unresolved_risk_load:'Open risks at end',
+    modeled_time_to_terminal:'Modeled minutes to outcome',
+    issue_reopening:'Issue reopenings',
+    informal_alignment:'Informal alignment messages',
+    disengagement:'Disengagement events',
+  }[metricId] || String(metricId).replaceAll('_',' ')
+}
+
+function renderCoordinationExperiment(experiment) {
+  if (experiment.error) return `<section class="composite-assay assay-unavailable"><span class="eyebrow">Retained coordination experiment unavailable</span><h3>${html(experiment.error)}</h3><p>The experiment must retain all eight mutually consistent runs before it can be compared.</p></section>`
+  const runById = new Map((experiment.runs || []).map((run) => [run.run_id, run]))
+  return `<section class="composite-assay coordination-experiment" data-coordination-experiment-id="${html(experiment.experiment_id)}">
+    <header><div><span class="eyebrow">Retained four-condition experiment</span><h3>How do pressure, adaptation, and authoritative validation change this synthetic coordination trajectory?</h3></div><div class="assay-header-actions"><small>${html(new Date(experiment.created_at).toLocaleString())} · ${experiment.runs.length} exact runs · 0 model calls</small><button class="trash-coordination-experiment" data-experiment-id="${html(experiment.experiment_id)}">Move experiment to trash</button></div></header>
+    <p class="assay-question">Each condition has two deterministic lifecycle replicates. Means and directions describe only this batch; open either replicate to inspect the exact events, participant traces, and theory evidence.</p>
+    <small class="table-scroll-hint">Scroll the comparison table horizontally to inspect all measures and exact-run controls.</small>
+    <div class="assay-table-wrap"><table class="assay-table coordination-experiment-table"><thead><tr><th>Condition</th><th>Terminal outcomes</th><th>Verification</th><th>Distinct risks</th><th>Open risks</th><th>Time</th><th>Exact evidence</th></tr></thead><tbody>
+      ${(experiment.conditions || []).map((condition) => {
+        const presentation = coordinationConditionPresentation[condition.condition] || {label:condition.condition.replaceAll('_',' '), change:'Reviewed condition.'}
+        const exactRows = condition.run_ids.map((runId) => runById.get(runId)).filter(Boolean)
+        const adaptiveCount = exactRows.reduce((total, row) => total + (row.adaptive_followup_event_ids || []).length, 0)
+        const validationCount = exactRows.reduce((total, row) => total + (row.authoritative_validation_event_ids || []).length, 0)
+        return `<tr><td><strong>${html(presentation.label)}</strong><small>${html(presentation.change)}</small></td>
+          <td>${condition.terminal_outcomes.map(compositeOutcomeLabel).map(html).join(' · ')}</td>
+          <td>${Number(condition.metric_means.verification_requests).toLocaleString()}</td>
+          <td>${Number(condition.metric_means.risk_register_expansion).toLocaleString()}</td>
+          <td>${Number(condition.metric_means.unresolved_risk_load).toLocaleString()}</td>
+          <td>${Number(condition.metric_means.modeled_time_to_terminal).toLocaleString()} min</td>
+          <td>${condition.run_ids.map((runId, index) => `<button class="open-coordination-run" data-run-id="${html(runId)}">Replicate ${index + 1}</button>`).join(' ')}<small>${adaptiveCount} adaptive follow-up event${adaptiveCount === 1 ? '' : 's'} · ${validationCount} authoritative validation event${validationCount === 1 ? '' : 's'}</small></td></tr>`
+      }).join('')}
+    </tbody></table></div>
+    <section class="coordination-contrasts"><span class="eyebrow">Directional contrasts within this batch</span>
+      ${(experiment.contrasts || []).map((contrast) => `<article><strong>${html(contrast.contrast_id.replaceAll('_',' '))}</strong><p>${contrast.metrics.map((metric) => `${html(coordinationMetricLabel(metric.metric_id))}: <b>${html(metric.direction.replaceAll('_',' '))}</b> (${metric.difference > 0 ? '+' : ''}${Number(metric.difference).toLocaleString()})`).join(' · ')}</p></article>`).join('')}
+    </section>
+    <details class="assay-evidence-details"><summary>Experiment limits</summary><ul>${(experiment.limitations || []).map((item) => `<li>${html(item)}</li>`).join('')}</ul></details>
+  </section>`
+}
+
+const liveProbeOrder = [
+  'fixed_heterogeneous_pressure',
+  'adaptive_heterogeneous_pressure',
+  'adaptive_pressure_with_stabilization',
+]
+
+function latestLiveCoordinationProbeGroup(runs) {
+  const groups = new Map()
+  runs.forEach((run) => {
+    const probe = run.live_coordination_probe
+    if (!probe) return
+    const key = `${probe.model || 'unknown'}|${probe.reasoning_effort || 'default'}`
+    if (!groups.has(key)) groups.set(key, new Map())
+    const conditions = groups.get(key)
+    if (!conditions.has(probe.condition)) conditions.set(probe.condition, run)
+  })
+  return [...groups.values()]
+    .filter((conditions) => conditions.size >= 2)
+    .sort((left, right) => right.size - left.size)[0] || null
+}
+
+function liveProbeDifference(reference, treatment, metricId) {
+  const before = reference?.live_coordination_probe?.metrics?.[metricId]
+  const after = treatment?.live_coordination_probe?.metrics?.[metricId]
+  if (!Number.isFinite(before) || !Number.isFinite(after)) return null
+  return after - before
+}
+
+function renderLiveCoordinationComparison(runs) {
+  const group = latestLiveCoordinationProbeGroup(runs)
+  if (!group) return ''
+  const rows = liveProbeOrder.map((condition) => group.get(condition)).filter(Boolean)
+  const fixed = group.get('fixed_heterogeneous_pressure')
+  const adaptive = group.get('adaptive_heterogeneous_pressure')
+  const validation = group.get('adaptive_pressure_with_stabilization')
+  const contrasts = [
+    ['Adaptation', fixed, adaptive],
+    ['Authoritative validation', adaptive, validation],
+  ].filter(([, reference, treatment]) => reference && treatment)
+  const model = rows[0].live_coordination_probe.model || 'retained model'
+  const effort = rows[0].live_coordination_probe.reasoning_effort || 'default reasoning'
+  return `<section class="composite-assay live-coordination-comparison">
+    <header><div><span class="eyebrow">Authentic LLM comparison</span><h3>How did model-driven participants coordinate under different decision environments?</h3></div><small>${html(model)} · ${html(effort)} · ${rows.reduce((total, row) => total + row.live_coordination_probe.model_calls, 0)} traced calls</small></header>
+    <p class="assay-question">These are separate authentic trajectories with the same model configuration, grouped from retained evidence. They are not a controlled batch and may span mechanism revisions; use the differences to choose the next experiment, not as effect estimates.</p>
+    <div class="assay-table-wrap"><table class="assay-table coordination-experiment-table"><thead><tr><th>Condition</th><th>Outcome</th><th>Verification</th><th>Distinct risks</th><th>Open risks</th><th>Time</th><th>Evidence</th></tr></thead><tbody>
+      ${rows.map((row) => {
+        const probe = row.live_coordination_probe
+        const presentation = coordinationConditionPresentation[probe.condition] || {label:probe.condition.replaceAll('_',' ')}
+        return `<tr><td><strong>${html(presentation.label)}</strong><small>${html(new Date(row.created_at).toLocaleString())}</small></td><td>${html(compositeOutcomeLabel(probe.terminal_outcome))}</td><td>${html(probe.metrics.verification_requests ?? '—')}</td><td>${html(probe.metrics.risk_register_expansion ?? '—')}</td><td>${html(probe.metrics.unresolved_risk_load ?? '—')}</td><td>${html(probe.metrics.modeled_time_to_terminal == null ? '—' : `${Number(probe.metrics.modeled_time_to_terminal).toLocaleString()} min`)}</td><td><button class="open-live-coordination-run" data-run-id="${html(row.run_id)}">Open ${html(row.run_id)}</button><small>${probe.model_calls} traced calls</small></td></tr>`
+      }).join('')}
+    </tbody></table></div>
+    <section class="coordination-contrasts"><span class="eyebrow">Exploratory differences between retained runs</span>
+      ${contrasts.map(([label, reference, treatment]) => `<article><strong>${html(label)}</strong><p>${['verification_requests','risk_register_expansion','unresolved_risk_load'].map((metricId) => { const difference = liveProbeDifference(reference, treatment, metricId); return `${html(coordinationMetricLabel(metricId))}: <b>${difference == null ? 'unavailable' : difference === 0 ? 'no change' : `${difference > 0 ? '+' : ''}${difference}`}</b>` }).join(' · ')}</p></article>`).join('')}
+    </section>
+  </section>`
+}
+
+function renderRegionalOutbreakComparison(rows) {
+  if (!rows?.length) return ''
+  const armOrder = ['baseline', 'responsive_exercise_injects', 'capacity_inject_replay_with_stabilization']
+  const ordered = rows
+    .filter((row) => armOrder.includes(row.arm))
+    .sort((left, right) => {
+      const armDifference = armOrder.indexOf(left.arm) - armOrder.indexOf(right.arm)
+      if (armDifference) return armDifference
+      return new Date(left.created_at) - new Date(right.created_at)
+    })
+  const armTotals = ordered.reduce((totals, row) => {
+    totals.set(row.arm, (totals.get(row.arm) || 0) + 1)
+    return totals
+  }, new Map())
+  const armSeen = new Map()
+  const calls = ordered.reduce((total, row) => total + Number(row.outcome?.model_calls || 0), 0)
+  return `<section class="composite-assay live-coordination-comparison">
+    <header><div><span class="eyebrow">Waltzman coordination probe</span><h3>Can responsive disruption prevent joint action without overturning the outbreak assessment?</h3></div><small>12 autonomous agents · 3 rounds · ${html(ordered.length)} retained trajectories · ${html(calls)} traced calls</small></header>
+    <p class="assay-question">Every retained completed trajectory is shown. The baseline receives common round feedback. The responsive condition adds predeclared external exercise developments selected from reported risks. The stabilization condition replays the treatment's two capacity developments and adds one verified allocation package; these trajectories are demonstrations, not effect estimates.</p>
+    <div class="assay-table-wrap"><table class="assay-table"><thead><tr><th>Condition</th><th>Outcome</th><th>Final support</th><th>Conditional</th><th>Defer</th><th>Leading risks</th><th>Pressure injects</th><th>Stabilization</th><th>Evidence</th></tr></thead><tbody>
+      ${ordered.map((row) => {
+        const outcome = row.outcome || {}
+        const decisions = outcome.final_decisions || {}
+        const risks = Object.entries(outcome.final_risks || {}).sort((a,b) => b[1]-a[1]).slice(0,2).map(([risk,count]) => `${risk.replaceAll('_',' ')} (${count})`).join(', ') || '—'
+        const condition = row.arm === 'baseline' ? 'Baseline' : row.arm === 'responsive_exercise_injects' ? 'Responsive exercise injects' : 'Capacity-inject replay + allocation stabilization'
+        const replicate = (armSeen.get(row.arm) || 0) + 1
+        armSeen.set(row.arm, replicate)
+        const label = armTotals.get(row.arm) > 1 ? `${condition} ${replicate}` : condition
+        return `<tr><td><strong>${html(label)}</strong><small>${html(new Date(row.created_at).toLocaleString())}</small></td><td>${html(String(outcome.outcome || 'unknown').replaceAll('_',' '))}</td><td>${html(decisions.support || 0)}</td><td>${html(decisions.conditional || 0)}</td><td>${html(decisions.defer || 0)}</td><td>${html(risks)}</td><td>${html(outcome.exercise_injects?.length || 0)}</td><td>${html(outcome.stabilization_events?.length || 0)}</td><td><button class="open-outbreak-run" data-run-id="${html(row.run_id)}">Open ${html(row.run_id)}</button></td></tr>`
+      }).join('')}
+    </tbody></table></div>
+  </section>`
+}
+
 async function loadHistory() {
-  const result = await request('/api/runs')
+  const [result, outbreak] = await Promise.all([
+    request('/api/runs'),
+    request('/api/regional-outbreak-comparison').catch(() => ({rows:[]})),
+  ])
+  $('#live-coordination-comparisons').innerHTML = renderLiveCoordinationComparison(result.runs)
+  $('#regional-outbreak-comparisons').innerHTML = renderRegionalOutbreakComparison(outbreak.rows)
+  document.querySelectorAll('.open-live-coordination-run').forEach((button) => {
+    button.onclick = () => openRetained(button.dataset.runId)
+  })
+  document.querySelectorAll('.open-outbreak-run').forEach((button) => {
+    button.onclick = () => openRetained(button.dataset.runId)
+  })
   const assayIds = [...new Set(result.runs.map((run) => run.composite_assay?.assay_id).filter(Boolean))]
   const assays = await Promise.all(assayIds.map(async (assayId) => {
     try {
@@ -1424,8 +1625,35 @@ async function loadHistory() {
       }
     }
   })
-  const ordinaryRuns = result.runs.filter((run) => !run.composite_assay)
-  $('#history-empty').hidden = ordinaryRuns.length > 0 || assays.length > 0
+  const experimentIds = [...new Set(result.runs.map((run) => run.coordination_experiment?.experiment_id).filter(Boolean))]
+  const coordinationExperiments = await Promise.all(experimentIds.map(async (experimentId) => {
+    try {
+      if (!coordinationExperimentCache.has(experimentId)) {
+        coordinationExperimentCache.set(experimentId, await request(`/api/coordination-experiments/${experimentId}`))
+      }
+      return coordinationExperimentCache.get(experimentId)
+    } catch (error) {
+      return {experiment_id:experimentId, error:error.message}
+    }
+  }))
+  $('#coordination-experiments').innerHTML = coordinationExperiments.map(renderCoordinationExperiment).join('')
+  document.querySelectorAll('.open-coordination-run').forEach((button) => {
+    button.onclick = () => openRetained(button.dataset.runId)
+  })
+  document.querySelectorAll('.trash-coordination-experiment').forEach((button) => {
+    button.onclick = async () => {
+      if (!confirm('Move all eight retained runs in this experiment to recoverable server trash?')) return
+      try {
+        await request(`/api/coordination-experiments/${button.dataset.experimentId}`, {method:'DELETE'})
+        coordinationExperimentCache.delete(button.dataset.experimentId)
+        await loadHistory()
+      } catch (error) {
+        $('#coordination-experiment-status').textContent = error.message
+      }
+    }
+  })
+  const ordinaryRuns = result.runs.filter((run) => !run.composite_assay && !run.coordination_experiment)
+  $('#history-empty').hidden = ordinaryRuns.length > 0 || assays.length > 0 || coordinationExperiments.length > 0
   $('#storage-warning').hidden = result.corrupt_files.length === 0
   $('#storage-warning').textContent = result.corrupt_files.length
     ? `${result.corrupt_files.length} unreadable retained run file(s) require operator attention.`
@@ -2575,7 +2803,9 @@ function renderTurnNarratives() {
     })
     return
   }
-  const reason = narration.reason || 'No causal-moment narration was retained for this run.'
+  const reason = current.scenario === 'regional_outbreak' && narration.status === 'not_requested'
+    ? 'No separate narrator call was requested. Inspect each participant’s retained round-by-round stance and rationale below.'
+    : narration.reason || 'No causal-moment narration was retained for this run.'
   $('#narrative-count').textContent = ''
   container.innerHTML = `<p class="muted">${html(reason)}</p>`
   detailed.innerHTML = ''
@@ -2821,6 +3051,160 @@ function theoryFindingCard(finding, compact = false) {
   </article>`
 }
 
+function findingById(findings, findingId) {
+  return findings.find((item) => item.finding_id === findingId)
+}
+
+function findingObjectValue(findings, findingId) {
+  const value = findingById(findings, findingId)?.value
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+}
+
+function readableTheoryToken(value, fallback = 'not recorded') {
+  if (value === null || value === undefined || value === '') return fallback
+  return String(value).replaceAll('_', ' ')
+}
+
+function waltzmanEvidenceStep(number, label, finding, text) {
+  return `<article class="waltzman-trajectory-step">
+    <span class="trajectory-step-number">${number}</span>
+    <div><small>${html(label)}</small><strong>${html(text)}</strong>${theoryEvidenceButtons(finding?.evidence_refs)}</div>
+  </article>`
+}
+
+function waltzmanEventItems(finding) {
+  const eventIds = new Set(
+    (finding?.evidence_refs || [])
+      .filter((ref) => String(ref).startsWith('event:'))
+      .map((ref) => String(ref).slice('event:'.length))
+  )
+  return (current?.timeline || []).filter((event) => eventIds.has(event.event_id))
+}
+
+function firstLogicalTime(items) {
+  const values = items.map((item) => Number(item.logical_time)).filter(Number.isFinite)
+  return values.length ? Math.min(...values) : null
+}
+
+function modeledDay(logicalTime) {
+  return Number.isFinite(logicalTime) ? Math.floor(logicalTime / (24 * 60)) : null
+}
+
+function countNoun(count, singular, plural = `${singular}s`) {
+  const value = Number(count || 0)
+  return `${value} ${value === 1 ? singular : plural}`
+}
+
+function waltzmanOutcome(status, scope, retainedCount) {
+  const partners = `${retainedCount} partner${retainedCount === 1 ? '' : 's'} retained`
+  if (status === 'deploy_on_time') {
+    return {
+      headline:'The exact gate approved deployment on time',
+      result:`${scope} deployment approved with ${partners}`,
+      sentence:`The exact gate recorded an on-time ${scope} deployment.`,
+    }
+  }
+  if (status === 'scope_reduced') {
+    return {
+      headline:'The exact gate approved a smaller deployment',
+      result:`${scope} deployment approved with ${partners}`,
+      sentence:`The exact gate recorded an approved ${scope} deployment.`,
+    }
+  }
+  if (status === 'delayed') {
+    return {
+      headline:'The exact gate delayed deployment',
+      result:`Deployment delayed with ${partners}`,
+      sentence:'The exact gate recorded a delayed deployment decision.',
+    }
+  }
+  if (status === 'partner_disengaged') {
+    return {
+      headline:'A partner disengaged before approval',
+      result:`Partner disengagement recorded; ${partners}`,
+      sentence:'The exact gate recorded partner disengagement rather than an approved deployment.',
+    }
+  }
+  if (status === 'no_decision_by_horizon') {
+    return {
+      headline:'The group reached the deadline without a decision',
+      result:`No deployment approved; ${partners}`,
+      sentence:'No proposal cleared the final gate before the modeled deadline.',
+    }
+  }
+  return {
+    headline:'The run retained an outcome for inspection',
+    result:`${readableTheoryToken(status)}; ${partners}`,
+    sentence:`The exact gate recorded ${readableTheoryToken(status)}.`,
+  }
+}
+
+function renderWaltzmanDemonstration(findings) {
+  const finalStatus = findingById(findings, 'waltzman_final_deployment_status')
+  const finalScope = findingById(findings, 'waltzman_final_approved_scope')
+  const partners = findingObjectValue(findings, 'waltzman_partners_retained')
+  const verification = findingObjectValue(findings, 'waltzman_verification_requests')
+  const reliance = findingObjectValue(findings, 'waltzman_source_reliance_topology')
+  const bypass = findingObjectValue(findings, 'waltzman_intermediary_bypass')
+  const risk = findingObjectValue(findings, 'waltzman_risk_register_expansion')
+  const thresholdFinding = findingById(findings, 'waltzman_action_threshold_change')
+  const threshold = findingObjectValue(findings, 'waltzman_action_threshold_change')
+  const unresolved = findingObjectValue(findings, 'waltzman_unresolved_risk_load')
+  const deliberation = findingObjectValue(findings, 'waltzman_deliberation_load')
+  const latency = findingObjectValue(findings, 'waltzman_decision_latency')
+  const retainedCount = Number(partners.count || 0)
+  const status = String(finalStatus?.value || 'not_recorded')
+  const scope = readableTheoryToken(finalScope?.value || finalStatus?.value)
+  const outcome = waltzmanOutcome(status, scope, retainedCount)
+  const firstVerificationTime = firstLogicalTime(waltzmanEventItems(findingById(findings, 'waltzman_verification_requests')))
+  const firstOutsideSourceTime = firstLogicalTime(
+    (current?.timeline || []).filter((event) =>
+      event.kind === 'action_attempted'
+      && String(event.person || '').endsWith('_pressure_source')
+    )
+  )
+  const verificationDay = modeledDay(firstVerificationTime)
+  const outsideSourceDay = modeledDay(firstOutsideSourceTime)
+  const chronology = verificationDay !== null && outsideSourceDay !== null
+    ? verificationDay < outsideSourceDay
+      ? `The first verification request occurred on day ${verificationDay}; the scheduled outside concern sources first acted on day ${outsideSourceDay}. This run does not attribute the earlier response to those sources.`
+      : `The first verification request and scheduled outside concern activity are retained in their exact modeled order.`
+    : 'The exact evidence retains event order, but this summary does not infer a causal direction.'
+  const latencySentence = status === 'no_decision_by_horizon'
+    ? `${outcome.sentence} ${latency.scenario_minutes || 0} modeled minutes elapsed from the first proposal attempt to the terminal record.`
+    : `${outcome.sentence} The first proposal attempt preceded the terminal record by ${latency.scenario_minutes || 0} modeled minutes.`
+
+  return `<section class="waltzman-demonstration" aria-label="Waltzman-informed single-run instrument">
+    <div class="waltzman-takeaway">
+      <span class="eyebrow">Single-run instrument</span>
+      <h4>${html(outcome.headline)}</h4>
+      <p>This trajectory recorded ${countNoun(risk.distinct_risks, 'distinct issue')}, ${countNoun(verification.total, 'verification request')}, and ${countNoun(threshold.count, 'action-threshold change')}. ${html(outcome.sentence)} These records are candidate indicators, not proof that influence caused them.</p>
+    </div>
+    <div class="waltzman-constructs" aria-label="Waltzman constructs in this run">
+      <article><span>Trust-structure observations</span><strong>${countNoun(verification.total, 'verification request')} · ${countNoun(reliance.edge_count, 'explicit source-reliance link')}</strong><p>${countNoun(bypass.count, 'intermediary bypass', 'intermediary bypasses')} recorded. Counts alone do not establish that trust declined.</p></article>
+      <article><span>Perceived-risk observations</span><strong>${countNoun(risk.distinct_risks, 'distinct issue')} · threshold changed ${countNoun(threshold.count, 'time')}</strong><p>The final rule required ${readableTheoryToken(threshold.final_threshold)}; ${countNoun(unresolved.final_open_count, 'issue')} remained open. Relevance and proportionality were not coded.</p></article>
+      <article><span>Coordination-readiness observations</span><strong>${countNoun(deliberation.meeting_cycles, 'review cycle')} · ${countNoun(deliberation.external_action_attempts, 'recorded action attempt')}</strong><p>${html(latencySentence)}</p></article>
+    </div>
+    <div class="waltzman-trajectory waltzman-observations" aria-label="Retained observations, not a causal chain">
+      ${waltzmanEvidenceStep(1, 'Recorded indicators', findingById(findings, 'waltzman_risk_register_expansion'), `${countNoun(risk.distinct_risks, 'distinct issue')} and ${countNoun(verification.total, 'verification request')} were retained`)}
+      ${waltzmanEvidenceStep(2, 'Observed chronology', findingById(findings, 'waltzman_verification_requests'), chronology)}
+      ${waltzmanEvidenceStep(3, 'Decision procedure', thresholdFinding, `The retained action threshold became ${readableTheoryToken(threshold.final_threshold)}`)}
+      ${waltzmanEvidenceStep(4, 'Exact outcome', finalStatus, outcome.result)}
+    </div>
+    <p class="waltzman-nonclaim"><strong>What this does not establish:</strong> The outside concern sources were fixed scheduled scenario processes, not adaptive AI influence agents. One trajectory with no matched baseline cannot demonstrate a directional invariant, causal influence, attribution, or whether caution was proportionate. This instrument does not predict how an actual institution would behave.</p>
+  </section>`
+}
+
+function inspectTheoryEvent(eventId) {
+  const index = current.timeline.findIndex((event) => event.event_id === eventId)
+  if (index < 0) return
+  selectEvent(index)
+  const advanced = document.querySelector('details.advanced')
+  const inspector = document.querySelector('details.moment-inspector')
+  if (advanced) advanced.open = true
+  if (inspector) inspector.open = true
+}
+
 function renderTheoryModule(moduleId, selector, headlineIds) {
   const module = current.theory_analysis?.modules?.[moduleId]
   const container = $(selector)
@@ -2835,6 +3219,7 @@ function renderTheoryModule(moduleId, selector, headlineIds) {
   const findings = module.readout?.findings || []
   const headline = headlineIds.map((id) => findings.find((item) => item.finding_id === id)).filter(Boolean)
   container.innerHTML = `
+    ${moduleId === 'decision_environment' ? renderWaltzmanDemonstration(findings) : ''}
     <div class="theory-snapshot">${headline.map((item) => theoryFindingCard(item, true)).join('')}</div>
     <details class="theory-all-findings">
       <summary>Review all ${html(findings.length)} findings and their evidence</summary>
@@ -2845,10 +3230,7 @@ function renderTheoryModule(moduleId, selector, headlineIds) {
       <ul>${(module.readout?.limitations || []).map((item) => `<li>${html(item)}</li>`).join('')}</ul>
     </details>`
   container.querySelectorAll('.measurement-evidence-button').forEach((button) => {
-    button.onclick = () => {
-      const index = current.timeline.findIndex((event) => event.event_id === button.dataset.measureEventId)
-      if (index >= 0) selectEvent(index)
-    }
+    button.onclick = () => inspectTheoryEvent(button.dataset.measureEventId)
   })
   applyButtonTooltips(container)
 }
@@ -2857,6 +3239,10 @@ function renderTheoryAnalysis(run) {
   const section = $('#theory-analysis-section')
   section.hidden = !run.theory_analysis
   if (section.hidden) return
+  const measurementSection = $('#coordination-measurement-section')
+  if (measurementSection && section.nextElementSibling !== measurementSection) {
+    section.parentNode.insertBefore(section, measurementSection)
+  }
   renderTheoryModule(
     'decision_environment',
     '#decision-environment-content',
@@ -2962,6 +3348,15 @@ function render(run) {
     $('#scenario-description').textContent = 'Five people must reach a valid deployment decision while concrete changes test member continuity, rerouting, feedback, and response to relevant outside information.'
     $('#arm').innerHTML = `<option value="${html(current.arm)}">${html(compositeRowPresentation[current.arm]?.label || String(current.arm).replaceAll('_', ' '))}</option>`
     $('#arm-help').textContent = compositeRowPresentation[current.arm]?.change || 'This is one retained row in the reviewed five-condition comparison.'
+  } else if (current.coordination_experiment) {
+    const presentation = coordinationConditionPresentation[current.arm] || {
+      label:String(current.arm).replaceAll('_', ' '),
+      change:'This is one retained condition in the coordination experiment.',
+    }
+    $('#scenario-title').textContent = 'Coordination dynamics experiment'
+    $('#scenario-description').textContent = 'A retained four-condition comparison separates heterogeneous pressure, feedback-driven adaptation, and authoritative validation.'
+    $('#arm').innerHTML = `<option value="${html(current.arm)}">${html(presentation.label)}</option>`
+    $('#arm-help').textContent = presentation.change
   }
   $('#result').hidden = false
   $('#result-summary-status').textContent = current.status === 'completed'
@@ -2997,7 +3392,12 @@ function render(run) {
     $('#run-config-readout').innerHTML += `<span><strong>Ended:</strong> ${html(current.completion.public_summary)}</span>`
   }
   $('#story-headline').textContent = current.story.headline
-  $('#story-summary').textContent = current.story.summary
+  if (current.scenario === 'regional_outbreak' && current.outcome?.final_decisions) {
+    const decisions = current.outcome.final_decisions
+    $('#story-summary').textContent = `Final positions: ${Number(decisions.support || 0)} support, ${Number(decisions.conditional || 0)} conditional, ${Number(decisions.defer || 0)} defer, and ${Number(decisions.oppose || 0)} oppose. The ${String(current.arm || '').replaceAll('_', ' ')} condition ended in ${String(current.outcome.outcome || 'an unknown outcome').replaceAll('_', ' ')}.`
+  } else {
+    $('#story-summary').textContent = current.story.summary
+  }
   renderScaleControls()
   renderInitialSituation(current)
   renderTurnNarratives()
@@ -3083,6 +3483,21 @@ $('#run-composite-assay').onclick = async () => {
     button.disabled = false
   }
 }
+$('#run-coordination-experiment').onclick = async () => {
+  const button = $('#run-coordination-experiment')
+  button.disabled = true
+  $('#coordination-experiment-status').textContent = 'Running eight fixed-policy reference simulations and retaining their exact evidence…'
+  try {
+    const experiment = await request('/api/coordination-experiments', {method:'POST'})
+    coordinationExperimentCache.set(experiment.experiment_id, experiment)
+    await loadHistory()
+    $('#coordination-experiment-status').textContent = 'Experiment complete. Compare the four conditions or open either exact replicate.'
+  } catch (error) {
+    $('#coordination-experiment-status').textContent = error.message
+  } finally {
+    button.disabled = false
+  }
+}
 $('#authoring-spatial-layout').onclick = () => {
   if (!authoringPreview?.world) return
   selectedAuthoringGraphView = 'world'
@@ -3152,7 +3567,7 @@ $('#analytical-scale-toggle').onclick = () => {
   renderGraph()
 }
 $('#live').onchange = () => {
-  $('#run').textContent = $('#live').checked ? 'Play live simulation' : 'Play reference simulation'
+  $('#run').textContent = selectedExecution() === 'live' ? 'Play live simulation' : 'Play reference simulation'
   configureLiveControls()
 }
 $('#model').onchange = () => {
@@ -3176,6 +3591,7 @@ document.querySelectorAll('.help-button').forEach((button) => {
 })
 
 $('#run').onclick = async () => {
+  const execution = selectedExecution()
   $('#run').disabled = true
   $('#run-status').textContent = 'Running…'
   activeRunId = `run_${crypto.getRandomValues(new Uint32Array(3)).join('').slice(0, 12)}`
@@ -3196,12 +3612,12 @@ $('#run').onclick = async () => {
         scenario:$('#scenario').value,
         cognition_profile:'position_context',
         arm_id:$('#arm').value,
-        execution:$('#live').checked ? 'live' : 'scripted',
+        execution,
         run_id:activeRunId,
         ...($('#scenario').value === 'service_desk' ? {
           run_control:{modeled_time_horizon:Number($('#modeled-horizon').value)},
         } : {}),
-        ...($('#live').checked ? {
+        ...(execution === 'live' ? {
           llm_options:{
             model:$('#model').value,
             agent_reasoning_effort:$('#reasoning').value,
@@ -3210,7 +3626,7 @@ $('#run').onclick = async () => {
         } : {}),
       }),
     })
-    if (body.status === 'running' && $('#live').checked) {
+    if (body.status === 'running' && execution === 'live') {
       $('#result').hidden = false
       $('#narrative-section').hidden = true
       $('#result-status').textContent = `running · ${String(body.scenario || '').replaceAll('_',' ')}`
@@ -3230,7 +3646,7 @@ $('#run').onclick = async () => {
     await loadHistory()
   } finally {
     $('#run').disabled = false
-    if (!$('#live').checked) {
+    if (execution !== 'live') {
       $('#pause').hidden = true
       $('#stop').hidden = true
     }
@@ -3470,12 +3886,14 @@ Promise.all([loadConfig(), loadHistory()])
     const retainedId = search.get('run')
     const draftId = search.get('draft')
     const assayId = search.get('assay')
+    const requestedView = search.get('view')
     if (retainedId) await openRetained(retainedId)
     else if (draftId) await openAuthoringDraft(draftId)
     else if (assayId && compositeAssayCache.has(assayId)) {
       setWorkspaceView('history')
       renderCompositeAssaySelection(assayId, compositeAssayCache.get(assayId).rows[0].row_id)
     }
+    else if (requestedView === 'history') setWorkspaceView('history')
     else await loadScenarioPreview()
   })
   .catch((error) => { $('#run-status').textContent = error.message })

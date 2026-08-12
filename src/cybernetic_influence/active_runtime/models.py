@@ -926,8 +926,28 @@ def _validate_attempt_ledger(
         for participant in attempt.participants
         for action_id in participant.assigned_action_ids
     ]
-    if list(core.accepted_action_ids) != expected_actions:
+    exact_event_ids = {
+        event_id for record in exact_work for event_id in record.core_event_ids
+    }
+    traced_actions = [
+        event.action_id
+        for event in core.events
+        if event.event_kind == "action_attempted" and event.action_id is not None
+    ]
+    exact_actions = [
+        event.action_id
+        for event in core.events
+        if event.event_id in exact_event_ids
+        and event.event_kind == "action_attempted"
+        and event.action_id is not None
+    ]
+    participant_actions = [
+        action_id for action_id in traced_actions if action_id not in set(exact_actions)
+    ]
+    if list(core.accepted_action_ids) != traced_actions:
         raise ValueError("causal-core actions disagree with committed activations")
+    if participant_actions != expected_actions:
+        raise ValueError("participant actions disagree with committed activations")
 
     spec_by_id = {spec.active_system_id: spec for spec in specs}
     expected_private = {
