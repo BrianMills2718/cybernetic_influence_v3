@@ -108,14 +108,21 @@ trajectory, then reloads completed public runs after refresh. The public store
 currently adds a matched three-run custom triad. Its role-aligned comparison is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist>.
 
-Current natural-language authoring and guided-replay deployment 2026-08-12: the
-public service now runs exact revision
-`cae8dbc6338e0dc924410773b8b1a3f010aa993b`. The direct authoring entry is
+Current natural-language authoring, canonical walkthrough, and methodology
+deployment 2026-08-12: the public service now runs exact revision
+`0612c5184c2f4503fbe10b9b5963982ab01918e8`. The direct authoring entry is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=create>. A deployed
 Luna execution proved the bounded `influence_network_v1` path from analyst prose
 through typed generation, direct edit, approval, six autonomous person calls,
 an exact collective gate, retained evidence, and public result rendering. The
-retained example is
+same retained execution now drives the dedicated seven-step canonical guide at
+<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=guide&guide_step=1>.
+That guide distinguishes configured canonical structure from realized causal
+events and fails visibly if its exact retained run is absent. The Methodology
+page at <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=method>
+documents the current world, agency, information, transition, and evidence
+machinery while labeling the Concordia outer lifecycle as adopted but not yet
+implemented. The retained example is also available through
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=simulations&simulation=run_ffe88e1c15d5>.
 The `Simulations` page lists every retained completed run; it currently exposes
 29. Each opens through the same automatically generated staged replay rather
@@ -134,14 +141,16 @@ runs so a hidden canvas cannot emit invalid geometry.
 The focused certification record is
 `docs/experiments/2026-08-12-public-influence-network-v2-certification.md`; the
 automatic presentation deployment is separately recorded in
-`docs/experiments/2026-08-12-automatic-simulation-replay-certification.md`.
+`docs/experiments/2026-08-12-automatic-simulation-replay-certification.md`; and
+the canonical guide and Methodology deployment is recorded in
+`docs/experiments/2026-08-12-canonical-guide-methodology-deployment-certification.md`.
 The deployment evidence establishes automatic presentation for retained
 completed runs with canonical graph/event evidence; it does not establish that
 arbitrary analyst prose can compile into arbitrary executable worlds or that a
 stakeholder will find the interface useful. The immediately prior target
 revision and LaunchAgent are retained respectively at
-`refs/deployments/waltzman-public-pre-cae8dbc` and
-`~/Library/LaunchAgents/com.cybernetic-influence.waltzman-public.plist.pre-cae8dbc`.
+`refs/deployments/waltzman-public-pre-0612c51` and
+`~/Library/LaunchAgents/com.cybernetic-influence.waltzman-public.plist.pre-0612c51`.
 
 Report-only deployment certification refreshed at `2026-08-05T04:19:15Z`:
 
