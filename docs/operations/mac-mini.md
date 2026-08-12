@@ -110,7 +110,7 @@ currently adds a matched three-run custom triad. Its role-aligned comparison is
 
 Current natural-language authoring, canonical walkthrough, and methodology
 deployment 2026-08-12: the public service now runs exact revision
-`0612c5184c2f4503fbe10b9b5963982ab01918e8`. The direct authoring entry is
+`11861ccfba8d9297b1dd2233cfc2c95040bd655b`. The direct authoring entry is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=create>. A deployed
 Luna execution proved the bounded `influence_network_v1` path from analyst prose
 through typed generation, direct edit, approval, six autonomous person calls,
@@ -119,10 +119,13 @@ same retained execution now drives the dedicated seven-step canonical guide at
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=guide&guide_step=1>.
 That guide distinguishes configured canonical structure from realized causal
 events and fails visibly if its exact retained run is absent. The Methodology
-page at <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=method>
-documents the current world, agency, information, transition, and evidence
-machinery while labeling the Concordia outer lifecycle as adopted but not yet
-implemented. The retained example is also available through
+page at <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=method> is a
+14-part technical paper covering the ontology, relation semantics, agency,
+information lineage, capability and affordance distinctions, transition
+authority, evidence, sociotechnical resolution, authoring limits, and Waltzman
+analysis. It explicitly separates the deployed project-owned runtime from the
+adopted but not yet implemented Concordia outer lifecycle. The retained example
+is also available through
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=simulations&simulation=run_ffe88e1c15d5>.
 The `Simulations` page lists every retained completed run; it currently exposes
 29. Each opens through the same automatically generated staged replay rather
@@ -149,8 +152,9 @@ completed runs with canonical graph/event evidence; it does not establish that
 arbitrary analyst prose can compile into arbitrary executable worlds or that a
 stakeholder will find the interface useful. The immediately prior target
 revision and LaunchAgent are retained respectively at
-`refs/deployments/waltzman-public-pre-0612c51` and
-`~/Library/LaunchAgents/com.cybernetic-influence.waltzman-public.plist.pre-0612c51`.
+`refs/deployments/waltzman-public-pre-11861cc` and
+`~/Library/LaunchAgents/com.cybernetic-influence.waltzman-public.plist.pre-11861cc`;
+both preserve revision `0612c5184c2f4503fbe10b9b5963982ab01918e8`.
 
 Report-only deployment certification refreshed at `2026-08-05T04:19:15Z`:
 
