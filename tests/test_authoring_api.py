@@ -14,6 +14,7 @@ from llm_client import LLMCapabilityError, LLMQuotaExhaustedError
 from pytest import MonkeyPatch
 from test_authoring_compiler import _proposal
 from test_authoring_information_campaign import information_campaign_proposal
+from test_authoring_influence_network import influence_network_proposal
 
 import cybernetic_influence.api as api_module
 from cybernetic_influence.active_runtime import (
@@ -64,6 +65,66 @@ def _client(tmp_path: Path) -> TestClient:
             allow_internal_scripted_coordination=True,
         )
     )
+
+
+def test_influence_network_can_be_edited_approved_and_run(tmp_path: Path) -> None:
+    proposal = influence_network_proposal()
+
+    def proposer(*_args: object, **_kwargs: object) -> tuple[object, object]:
+        return proposal, _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=proposer,
+            allow_internal_scripted_coordination=True,
+        )
+    )
+    draft = api.post("/api/authoring/drafts").json()
+    drafted = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "network_prompt",
+            "message": "Model common and targeted election information.",
+        },
+    ).json()
+    edited_proposal = deepcopy(drafted["proposal"])
+    edited_proposal["workflow"]["collective_question"] = (
+        "Should the city certify after reviewing the available information?"
+    )
+    edited = api.put(
+        f"/api/authoring/drafts/{draft['draft_id']}/proposal",
+        json={
+            "expected_revision": 1,
+            "edit_id": "network_edit",
+            "proposal": edited_proposal,
+        },
+    )
+    assert edited.status_code == 200
+    assert edited.json()["revision"] == 2
+    assert edited.json()["attempts"] == drafted["attempts"]
+    assert edited.json()["messages"][-1]["source"] == "direct_proposal_edit"
+
+    approved = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/approve",
+        json={"expected_revision": 2},
+    )
+    assert approved.status_code == 200
+    run = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/runs",
+        json={"execution": "scripted"},
+    )
+    assert run.status_code == 200
+    document = run.json()
+    assert document["authoring"]["template_id"] == "influence_network_v1"
+    assert document["outcome"]["final_status"] == "approved"
+    summary = api.get(f"/api/runs/{document['run_id']}/summary")
+    assert summary.status_code == 200
+    assert summary.json()["template_id"] == "influence_network_v1"
+    assert {person["last_explicit_commitment"] for person in summary.json()["participants"]} == {"support"}
 
 
 def test_draft_is_idempotent_revisioned_previewable_approved_and_runnable(tmp_path: Path) -> None:
@@ -648,7 +709,7 @@ def test_authoring_and_theory_call_contracts_are_exact_and_provider_free(
     config = _client(tmp_path).get("/api/config").json()
     authoring = config["authoring"]["structured_contract"]
     assert authoring["task"] == "cybernetic_influence_v3_scenario_draft"
-    assert authoring["prompt_version"] == "scenario_draft.v5"
+    assert authoring["prompt_version"] == "scenario_draft.v7"
     assert len(authoring["prompt_digest"]) == 64
     assert len(authoring["schema_digest"]) == 64
     assert authoring["maximum_attempts_per_message"] == 3

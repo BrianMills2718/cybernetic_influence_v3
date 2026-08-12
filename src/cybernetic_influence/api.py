@@ -22,8 +22,11 @@ from cybernetic_influence.authoring.models import (
     ComponentCompositionConfigurationReview,
     CoordinationDecisionWorkflowDraft,
     CoordinationScenarioReview,
+    InfluenceNetworkWorkflowDraft,
     PersonDraft,
+    ScenarioDraftProposal,
 )
+from cybernetic_influence.authoring.influence_network import influence_network_outcome
 from cybernetic_influence.authoring.service import (
     AUTHORING_MAX_ATTEMPTS,
     AUTHORING_MAX_BUDGET,
@@ -239,6 +242,15 @@ class DraftPersonEditRequest(BaseModel):
     expected_revision: int
     edit_id: str
     person: PersonDraft
+
+
+class DraftProposalEditRequest(BaseModel):
+    """One idempotent complete typed-proposal edit."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    expected_revision: int
+    edit_id: str
+    proposal: ScenarioDraftProposal
 
 
 class DraftCoordinationEditRequest(BaseModel):
@@ -718,9 +730,12 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
             payload = action.get("payload")
             if (
                 isinstance(payload, dict)
-                and isinstance(payload.get("commitment"), str)
+                and isinstance(
+                    payload.get("commitment", payload.get("stance")),
+                    str,
+                )
             ):
-                commitment = payload["commitment"]
+                commitment = payload.get("commitment", payload.get("stance"))
         previous = participants.get(person_id, {})
         participants[person_id] = {
             "person_id": person_id,
@@ -766,7 +781,10 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
     headline = story.get("headline")
     summary = story.get("summary")
     projected_completion = deepcopy(completion)
-    if authoring.get("template_id") == "coordination_decision_v1":
+    if (
+        authoring.get("template_id") == "coordination_decision_v1"
+        and (not isinstance(headline, str) or not isinstance(summary, str))
+    ):
         final_status = outcome.get("final_status")
         if final_status == "deploy_on_time":
             headline = "The full proposal was approved"
@@ -796,6 +814,8 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                 "The decision deadline was recorded without an approved collective "
                 "decision."
             )
+    raw_events = document.get("events", [])
+    raw_moments = document.get("moments", [])
     return {
         "run_id": document.get("run_id"),
         "status": document.get("status"),
@@ -815,11 +835,11 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "participants": list(participants.values()),
         "decision_steps": decision_steps,
         "evidence_counts": {
-            "events": len(document.get("events", []))
-            if isinstance(document.get("events"), list)
+            "events": len(raw_events)
+            if isinstance(raw_events, list)
             else 0,
-            "causal_moments": len(document.get("moments", []))
-            if isinstance(document.get("moments"), list)
+            "causal_moments": len(raw_moments)
+            if isinstance(raw_moments, list)
             else 0,
             "decision_steps": len(decision_steps),
         },
@@ -1536,6 +1556,7 @@ def create_app(
                     "resource_request_v1",
                     "information_campaign_v1",
                     "coordination_decision_v1",
+                    "influence_network_v1",
                 ],
                 "reviewed_coordination_example": True,
                 "structured_contract": authoring_contract(),
@@ -1795,6 +1816,30 @@ def create_app(
             except (ValueError, AuthoringCompilationError) as error:
                 raise HTTPException(status_code=422, detail=str(error)) from error
 
+    @app.put("/api/authoring/drafts/{draft_id}/proposal")
+    def edit_draft_proposal(
+        draft_id: str,
+        body: DraftProposalEditRequest,
+        request: Request,
+    ) -> dict[str, object]:
+        _require_access(request)
+        with authoring_lock:
+            try:
+                return authoring.edit_proposal(
+                    draft_id,
+                    expected_revision=body.expected_revision,
+                    edit_id=body.edit_id,
+                    proposal=body.proposal,
+                )
+            except DraftConflictError as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
+            except DraftNotFoundError as error:
+                raise HTTPException(
+                    status_code=404, detail="authoring draft not found"
+                ) from error
+            except (ValueError, AuthoringCompilationError) as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+
     @app.put("/api/authoring/drafts/{draft_id}/coordination-configuration")
     def edit_draft_coordination_configuration(
         draft_id: str,
@@ -1896,15 +1941,22 @@ def create_app(
         if (
             isinstance(
                 compiled.proposal.workflow,
-                CoordinationDecisionWorkflowDraft,
+                (CoordinationDecisionWorkflowDraft, InfluenceNetworkWorkflowDraft),
             )
             and not live
             and not allow_internal_scripted_coordination
         ):
+            scenario_label = (
+                "coordination scenarios"
+                if isinstance(
+                    compiled.proposal.workflow, CoordinationDecisionWorkflowDraft
+                )
+                else "influence-network scenarios"
+            )
             raise HTTPException(
                 status_code=422,
                 detail=(
-                    "coordination scenarios require live agent execution; "
+                    f"{scenario_label} require live agent execution; "
                     "scripted people are internal verification fixtures"
                 ),
             )
@@ -1977,7 +2029,10 @@ def create_app(
             runs.save(initial)
             if live and isinstance(
                 compiled.proposal.workflow,
-                CoordinationDecisionWorkflowDraft,
+                (
+                    CoordinationDecisionWorkflowDraft,
+                    InfluenceNetworkWorkflowDraft,
+                ),
             ):
                 with pause_lock:
                     stop_requests[run_id] = Event()
@@ -2019,13 +2074,16 @@ def create_app(
             authored_stop: Event | None = None
             if live and isinstance(
                 compiled.proposal.workflow,
-                CoordinationDecisionWorkflowDraft,
+                (
+                    CoordinationDecisionWorkflowDraft,
+                    InfluenceNetworkWorkflowDraft,
+                ),
             ):
                 with pause_lock:
                     authored_stop = stop_requests.get(run_id)
                 if authored_stop is None:
                     raise RuntimeError(
-                        "authored coordination worker lacks its stop control"
+                        "authored multi-person worker lacks its stop control"
                     )
             result = (
                 compiled.run_live(
@@ -2043,10 +2101,13 @@ def create_app(
                         else None
                     ),
                     participant_concurrency=(
-                        5
+                        min(8, len(compiled.proposal.people))
                         if isinstance(
                             compiled.proposal.workflow,
-                            CoordinationDecisionWorkflowDraft,
+                            (
+                                CoordinationDecisionWorkflowDraft,
+                                InfluenceNetworkWorkflowDraft,
+                            ),
                         )
                         else 1
                     ),
@@ -2060,6 +2121,46 @@ def create_app(
                 )
             )
             workflow = compiled.proposal.workflow
+            if isinstance(workflow, InfluenceNetworkWorkflowDraft):
+                network_outcome, headline, summary = influence_network_outcome(
+                    result
+                )
+                network_outcome.update(
+                    {
+                        "draft_id": draft_id,
+                        "template_id": workflow.template_id,
+                    }
+                )
+                document = build_analyst_document(
+                    initial_state=compiled.scenario.initial_state,
+                    analytical_boundaries=compiled.scenario.analytical_boundaries,
+                    result=result,
+                    scenario=compiled.scenario.scenario_id,
+                    profile="authored_typed_scenario",
+                    arm_id="approved_draft",
+                    execution=body.execution,
+                    created_at=created_at,
+                    outcome=network_outcome,
+                    headline=headline,
+                    summary=summary,
+                    include_boundary_activity=True,
+                )
+                document["completion"] = (
+                    result.completion.model_dump(mode="json")
+                    if result.completion is not None
+                    else None
+                )
+                document["authoring"] = initial["authoring"]
+                narrated = _attach_narration(
+                    document,
+                    live=live and body.narration == "llm",
+                    run_id=run_id,
+                    effective_llm=effective_llm,
+                )
+                narrated = retain_progress_history(narrated, run_id)
+                narrated["llm_configuration"] = initial["llm_configuration"]
+                narrated["model_call_summaries"] = _result_call_summaries(result)
+                return runs.save(narrated)
             if isinstance(workflow, CoordinationDecisionWorkflowDraft):
                 if not isinstance(compiled.fixture, CoordinationRuntimeFixture):
                     raise RuntimeError(
@@ -2521,6 +2622,10 @@ def create_app(
             raise HTTPException(status_code=404, detail="run not found") from error
         with pause_lock:
             stop = stop_requests.get(run_id)
+        authoring = document.get("authoring")
+        authored_template = (
+            authoring.get("template_id") if isinstance(authoring, dict) else None
+        )
         if (
             document.get("scenario")
             not in {
@@ -2528,8 +2633,8 @@ def create_app(
                 "coordination_decision",
                 "coordination_decision_v1",
             }
-            or stop is None
-        ):
+            and authored_template != "influence_network_v1"
+        ) or stop is None:
             raise HTTPException(status_code=409, detail="this run cannot be stopped")
         if document.get("status") == "stop_requested":
             return {"run_id": run_id, "status": "stop_requested"}

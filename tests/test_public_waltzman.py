@@ -122,14 +122,15 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Mechanism analysis and retained evidence" in page
     assert "Generate editable configuration" in page
     assert "Edit one person directly" in page
+    assert "Edit the influence network directly" in page
     assert "Tell the authoring model what to change" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=92a310c",
-        "assets/styles.css?v=authored-editor-v2",
+        "assets/styles.css?v=influence-network-v2",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=92a310c",
-        "assets/app.js?v=authored-editor-v2",
+        "assets/app.js?v=influence-network-v2",
     ]
     assert {
         "overview-view",
@@ -170,6 +171,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-scenario-editor",
         "create-save-scenario",
         "create-scenario-concerns",
+        "create-network-editor",
+        "create-network-deliveries",
+        "create-save-network",
         "run-view",
         "condition-options",
         "agent-config-select",

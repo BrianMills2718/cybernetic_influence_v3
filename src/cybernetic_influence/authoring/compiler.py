@@ -22,6 +22,7 @@ from cybernetic_influence.active_runtime import (
 from cybernetic_influence.authoring.models import (
     ComponentCompositionWorkflowDraft,
     CoordinationDecisionWorkflowDraft,
+    InfluenceNetworkWorkflowDraft,
     InformationCampaignWorkflowDraft,
     ResourceRequestWorkflowDraft,
     ScenarioDraftProposal,
@@ -43,6 +44,13 @@ from cybernetic_influence.authoring.information_campaign import (
     information_campaign_native_fixture_and_bindings,
     information_campaign_scripted_bindings,
     run_information_campaign,
+)
+from cybernetic_influence.authoring.influence_network import (
+    InfluenceNetworkFixture,
+    influence_network_fixture,
+    influence_network_native_fixture_and_bindings,
+    influence_network_scripted_bindings,
+    run_influence_network,
 )
 from cybernetic_influence.authoring.resource_request import (
     ResourceRequestFixture,
@@ -118,6 +126,7 @@ class CompiledScenario:
         ResourceRequestFixture
         | InformationCampaignFixture
         | CoordinationRuntimeFixture
+        | InfluenceNetworkFixture
     )
 
     @property
@@ -151,6 +160,20 @@ class CompiledScenario:
                 self.fixture,
                 information_campaign_scripted_bindings(self.fixture),
                 run_id=run_id,
+                progress_observer=progress_observer,
+            )
+        if isinstance(self.fixture, InfluenceNetworkFixture):
+            return run_influence_network(
+                self.fixture,
+                influence_network_scripted_bindings(self.fixture),
+                run_id=run_id,
+                runtime_config=ActiveRuntimeConfig(
+                    per_call_budget=0.01,
+                    per_run_budget=0.01,
+                    max_actions_per_system=1,
+                    max_observations_per_system=20,
+                    max_private_state_bytes=16_384,
+                ),
                 progress_observer=progress_observer,
             )
         return run_resource_request(
@@ -223,6 +246,25 @@ class CompiledScenario:
                 runtime_config=runtime_config,
                 progress_observer=progress_observer,
             )
+        if isinstance(self.fixture, InfluenceNetworkFixture):
+            influence_fixture, influence_bindings = (
+                influence_network_native_fixture_and_bindings(
+                    self.fixture,
+                    trace_id_prefix=run_id,
+                    model=model,
+                    reasoning_effort=reasoning_effort,
+                    structured_call=structured_call,
+                )
+            )
+            return run_influence_network(
+                influence_fixture,
+                influence_bindings,
+                run_id=run_id,
+                runtime_config=runtime_config,
+                progress_observer=progress_observer,
+                stop_requested=stop_requested,
+                participant_concurrency=participant_concurrency,
+            )
         request_fixture, request_bindings = (
             resource_request_native_fixture_and_bindings(
                 self.fixture,
@@ -283,6 +325,21 @@ def compile_scenario(proposal: ScenarioDraftProposal) -> CompiledScenario:
         )
     if proposal.workflow.template_id == "coordination_decision_v1":
         return compile_coordination_decision(proposal)
+    if proposal.workflow.template_id == "influence_network_v1":
+        selected = ScenarioDraftProposal.model_validate(proposal.model_dump(mode="json"))
+        if not isinstance(selected.workflow, InfluenceNetworkWorkflowDraft):
+            raise AuthoringCompilationError(
+                "proposal is not an influence_network_v1 workflow"
+            )
+        try:
+            influence_fixture = influence_network_fixture(selected)
+        except ValueError as error:
+            raise AuthoringCompilationError(str(error)) from error
+        return CompiledScenario(
+            proposal=selected,
+            proposal_digest=_proposal_digest(selected),
+            fixture=influence_fixture,
+        )
     raise AuthoringCompilationError("unknown authored scenario template")
 
 

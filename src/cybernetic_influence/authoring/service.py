@@ -59,7 +59,7 @@ AUTHORING_MODEL: AuthoringModel = OPENROUTER_TERRA_MODEL
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
 AUTHORING_MAX_TOKENS = 8000
-AUTHORING_PROMPT_VERSION = "scenario_draft.v5"
+AUTHORING_PROMPT_VERSION = "scenario_draft.v7"
 
 
 class AuthoringModelOption(TypedDict):
@@ -240,6 +240,31 @@ class _ComponentCompositionWorkflowConsumer(BaseModel):
     recording_minutes: int
 
 
+class _InfluenceDeliveryConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    delivery_id: str
+    source_id: str
+    information_id: str
+    recipient_ids: list[str]
+    delivery_minutes: int
+
+
+class _InfluenceDecisionRuleConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    minimum_support: int
+    minimum_support_or_conditional: int
+    maximum_oppose: int
+
+
+class _InfluenceNetworkWorkflowConsumer(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    template_id: Literal["influence_network_v1"]
+    collective_question: str
+    round_minutes: list[int]
+    deliveries: list[_InfluenceDeliveryConsumer]
+    decision_rule: _InfluenceDecisionRuleConsumer
+
+
 class _BoundaryConsumer(BaseModel):
     model_config = ConfigDict(extra="ignore")
     boundary_id: str
@@ -267,7 +292,8 @@ class _LegacyProposalConsumer(BaseModel):
     workflow: Annotated[
         _WorkflowConsumer
         | _InformationCampaignWorkflowConsumer
-        | _ComponentCompositionWorkflowConsumer,
+        | _ComponentCompositionWorkflowConsumer
+        | _InfluenceNetworkWorkflowConsumer,
         Field(discriminator="template_id"),
     ]
     analytical_boundaries: list[_BoundaryConsumer]
@@ -667,6 +693,73 @@ class DraftAuthoringService:
                     "message_id": edit_id,
                     "content": f"Edited {person.label}'s person model directly.",
                     "source": "direct_person_edit",
+                    "edit_digest": edit_digest,
+                    "assistant_summary": summary,
+                    "result_status": status,
+                    "trace_ids": [],
+                },
+            ],
+            "authoring_summary": summary,
+            "proposal": proposal.model_dump(mode="json"),
+            "diagnostics": diagnostics,
+            "approval": None,
+            "updated_at": now_iso(),
+        }
+        return self.store.replace(
+            draft_id,
+            expected_revision=expected_revision,
+            document=updated,
+        )
+
+    def edit_proposal(
+        self,
+        draft_id: str,
+        *,
+        expected_revision: int,
+        edit_id: str,
+        proposal: ScenarioDraftProposal,
+    ) -> dict[str, object]:
+        """Persist one complete typed proposal edit without a model call."""
+
+        current = self.store.get(draft_id)
+        messages = current["messages"]
+        assert isinstance(messages, list)
+        edit_digest = sha256(
+            proposal.model_dump_json(exclude_none=False).encode("utf-8")
+        ).hexdigest()
+        existing = next(
+            (item for item in messages if item.get("message_id") == edit_id),
+            None,
+        )
+        if existing is not None:
+            if (
+                existing.get("source") != "direct_proposal_edit"
+                or existing.get("edit_digest") != edit_digest
+            ):
+                raise DraftConflictError(
+                    "edit ID was already used with different proposal content"
+                )
+            return current
+        if current["revision"] != expected_revision:
+            raise DraftConflictError("draft revision has changed; reload before editing")
+        diagnostics = _diagnostics(proposal)
+        if any(item["severity"] == "error" for item in diagnostics):
+            raise AuthoringCompilationError(_diagnostic_feedback(diagnostics))
+        status = "needs_input" if diagnostics else "ready_for_review"
+        summary = (
+            f"Saved direct edits to {proposal.title}. "
+            "No authoring model call was made."
+        )
+        updated = {
+            **current,
+            "revision": expected_revision + 1,
+            "status": status,
+            "messages": [
+                *messages,
+                {
+                    "message_id": edit_id,
+                    "content": "Edited the typed scenario configuration directly.",
+                    "source": "direct_proposal_edit",
                     "edit_digest": edit_digest,
                     "assistant_summary": summary,
                     "result_status": status,

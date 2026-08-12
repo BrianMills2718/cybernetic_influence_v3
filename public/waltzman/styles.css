@@ -1152,6 +1152,15 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-scenario-concerns { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
 .create-scenario-concerns article { border-top: 1px solid var(--line); display: grid; gap: 10px; padding-top: 12px; }
 .create-scenario-concerns article > strong { text-transform: capitalize; }
+.create-network-deliveries { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.create-network-deliveries article { border: 1px solid var(--line); border-radius: 9px; display: grid; gap: 12px; padding: 14px; }
+.create-network-deliveries article header { align-items: baseline; display: flex; justify-content: space-between; }
+.create-network-deliveries article header small { color: var(--accent); }
+.create-network-deliveries fieldset { border: 0; margin: 0; padding: 0; }
+.create-network-deliveries legend { color: var(--muted); font-size: 0.78rem; margin-bottom: 8px; }
+.create-network-deliveries fieldset > div { display: grid; gap: 7px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.create-network-recipient { align-items: center; color: var(--text) !important; display: flex !important; font-size: 0.75rem !important; gap: 7px !important; }
+.create-network-recipient input { width: auto !important; }
 .create-revise button { margin-top: 12px; }
 .create-raw pre { color: #b9c8d2; font-size: 0.72rem; line-height: 1.55; max-height: 480px; overflow: auto; white-space: pre-wrap; }
 .create-actions { display: flex; gap: 10px; margin-top: 24px; }
@@ -1278,7 +1287,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .national-network-grid .regional-network { grid-column: auto; }
   .create-composer > div, .create-actions { align-items: stretch; flex-direction: column; }
   .create-result-facts { grid-template-columns: 1fr 1fr; }
-  .create-scenario-grid, .create-scenario-concerns { grid-template-columns: 1fr; }
+  .create-scenario-grid, .create-scenario-concerns, .create-network-deliveries { grid-template-columns: 1fr; }
   .case-network { width: calc(100vw - 24px); }
   .case-network-graph { height: 560px; }
   .case-network-graph .cy-graph-shell { min-height: 560px; }

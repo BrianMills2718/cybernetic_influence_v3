@@ -294,6 +294,62 @@ class CoordinationDecisionWorkflowDraft(_StrictModel):
         return self
 
 
+InfluenceStance = Literal["support", "conditional", "defer", "oppose"]
+
+
+class InfluenceDeliveryDraft(_StrictModel):
+    """One authored information representation delivered to explicit recipients."""
+
+    delivery_id: str = Field(pattern=_ID_PATTERN)
+    source_id: str = Field(pattern=_ID_PATTERN)
+    information_id: str = Field(pattern=_ID_PATTERN)
+    recipient_ids: list[str] = Field(min_length=1, max_length=12)
+    delivery_minutes: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def unique_recipients(self) -> "InfluenceDeliveryDraft":
+        if len(self.recipient_ids) != len(set(self.recipient_ids)):
+            raise ValueError("influence delivery recipients must be unique")
+        return self
+
+
+class InfluenceDecisionRuleDraft(_StrictModel):
+    """Exact final gate for one authored influence-network decision."""
+
+    minimum_support: int = Field(ge=0)
+    minimum_support_or_conditional: int = Field(ge=1)
+    maximum_oppose: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def ordered_support_thresholds(self) -> "InfluenceDecisionRuleDraft":
+        if self.minimum_support > self.minimum_support_or_conditional:
+            raise ValueError(
+                "minimum_support cannot exceed minimum_support_or_conditional"
+            )
+        return self
+
+
+class InfluenceNetworkWorkflowDraft(_StrictModel):
+    """Reusable people/message topology with repeated decisions and an exact gate."""
+
+    template_id: Literal["influence_network_v1"]
+    collective_question: str = Field(min_length=1)
+    round_minutes: list[int] = Field(min_length=2, max_length=5)
+    deliveries: list[InfluenceDeliveryDraft] = Field(min_length=1, max_length=12)
+    decision_rule: InfluenceDecisionRuleDraft
+
+    @model_validator(mode="after")
+    def ordered_unique_schedule(self) -> "InfluenceNetworkWorkflowDraft":
+        if self.round_minutes != sorted(self.round_minutes):
+            raise ValueError("influence-network round minutes must be increasing")
+        if len(self.round_minutes) != len(set(self.round_minutes)):
+            raise ValueError("influence-network round minutes must be unique")
+        delivery_ids = [item.delivery_id for item in self.deliveries]
+        if len(delivery_ids) != len(set(delivery_ids)):
+            raise ValueError("influence-network delivery IDs must be unique")
+        return self
+
+
 class CoordinationPersonReview(_StrictModel):
     """Human-facing person description without a compiler-owned entity ID."""
 
@@ -547,7 +603,8 @@ class ScenarioDraftProposal(_StrictModel):
         ResourceRequestWorkflowDraft
         | InformationCampaignWorkflowDraft
         | ComponentCompositionWorkflowDraft
-        | CoordinationDecisionWorkflowDraft,
+        | CoordinationDecisionWorkflowDraft
+        | InfluenceNetworkWorkflowDraft,
         Field(discriminator="template_id"),
     ]
     analytical_boundaries: list[AnalyticalBoundaryDraft] = Field(min_length=1)

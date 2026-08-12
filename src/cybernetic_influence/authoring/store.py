@@ -49,6 +49,7 @@ class _DraftMessage(BaseModel):
         "direct_person_edit",
         "direct_coordination_edit",
         "direct_component_composition_edit",
+        "direct_proposal_edit",
     ] = "conversation"
     edit_digest: str | None = None
     model: str | None = None
