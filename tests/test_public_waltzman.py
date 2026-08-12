@@ -121,16 +121,20 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Edit personal character and memory" in page
     assert "Mechanism analysis and retained evidence" in page
     assert "Generate editable configuration" in page
+    assert "Runnable now:" in page
+    assert "1 · Describe" in page
+    assert "Guided replay" in page
+    assert "Show the complete system" in page
     assert "Edit one person directly" in page
     assert "Edit the influence network directly" in page
     assert "Tell the authoring model what to change" in page
     assert shape.stylesheets == [
-        "assets/graph-canvas.css?v=92a310c",
-        "assets/styles.css?v=influence-network-v3",
+        "assets/graph-canvas.css?v=replay1",
+        "assets/styles.css?v=replay1",
     ]
     assert shape.scripts == [
-        "assets/graph-canvas.js?v=92a310c",
-        "assets/app.js?v=influence-network-v3",
+        "assets/graph-canvas.js?v=replay1",
+        "assets/app.js?v=replay1",
     ]
     assert {
         "overview-view",
@@ -170,6 +174,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-result-round-tabs",
         "create-result-round",
         "create-result-network-graph",
+        "create-replay-progress",
+        "create-replay-previous",
+        "create-replay-next",
+        "create-replay-whole",
         "create-result-analysis",
         "create-coverage",
         "create-scenario-editor",
@@ -402,10 +410,10 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "saveAuthoringPerson",
         "approveAuthoringDraft",
         "runAuthoredSimulation",
-        "stopAuthoredSimulation",
-        "renderAuthoredResult",
-        "result.completion?.public_summary",
-        "result.outcome?.final_status",
+            "stopAuthoredSimulation",
+            "renderAuthoredResult",
+            "renderAuthoredReplay",
+            "result.simulation_replay?.question",
         "include_projection=false",
         "/summary",
         "narration:'deterministic'",

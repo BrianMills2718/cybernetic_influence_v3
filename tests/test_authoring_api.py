@@ -144,6 +144,31 @@ def test_influence_network_can_be_edited_approved_and_run(tmp_path: Path) -> Non
         "mechanism",
     }
     assert len(network["edges"]) == 10
+    assert {edge["kind"] for edge in network["edges"]} == {
+        "issued_information",
+        "delivered_to",
+        "contributed_to_decision",
+    }
+    assert all(edge["directed"] is True for edge in network["edges"])
+    replay = compact["simulation_replay"]
+    assert replay["contract"] == "simulation-replay.v1"
+    assert replay["question"] == (
+        "Should the city certify after reviewing the available information?"
+    )
+    assert [scene["kind"] for scene in replay["scenes"]] == [
+        "question",
+        "setup",
+        "information",
+        "decisions",
+        "information",
+        "decisions",
+        "outcome",
+    ]
+    assert "targeted" not in replay["scenes"][1]["summary"].lower()
+    first_information, second_information = replay["scenes"][2], replay["scenes"][4]
+    assert "message_targeted_message" not in first_information["visible_node_ids"]
+    assert "message_targeted_message" in second_information["visible_node_ids"]
+    assert first_information["focus_edge_ids"]
 
 
 def test_public_authoring_advertises_and_dispatches_only_certified_models(
@@ -327,6 +352,13 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
         person["label"] for person in draft["proposal"]["people"]
     }
     assert compact["decision_steps"]
+    assert compact["simulation_replay"]["contract"] == "simulation-replay.v1"
+    assert compact["simulation_replay"]["scenes"][0]["kind"] == "question"
+    assert compact["simulation_replay"]["scenes"][-1]["kind"] == "outcome"
+    assert any(
+        scene["kind"] == "event"
+        for scene in compact["simulation_replay"]["scenes"]
+    )
     assert "events" not in compact
     assert "traces" not in compact
 

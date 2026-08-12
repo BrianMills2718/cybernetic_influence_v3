@@ -6,8 +6,8 @@
   <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/graph-canvas.css?v=92a310c">
-  <link rel="stylesheet" href="assets/styles.css?v=influence-network-v3">
+  <link rel="stylesheet" href="assets/graph-canvas.css?v=replay1">
+  <link rel="stylesheet" href="assets/styles.css?v=replay1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -217,9 +217,12 @@
       <section id="create-view" class="workspace-view create-simulation" aria-labelledby="create-title" hidden>
         <header class="create-hero">
           <span class="case-label">Create a simulation</span>
-          <h2 id="create-title">Describe the coordination problem you want to explore.</h2>
-          <p>Describe the people, information sources, who receives which messages, and the collective decision. The authoring model turns that description into an editable influence network; Luna then drives each person independently from their own character, memory, and received information.</p>
+          <h2 id="create-title">Build an influence-and-coordination simulation from a description.</h2>
+          <p>Describe the people, information sources, who receives which messages, and the collective decision. The authoring model generates an editable configuration; Luna then drives each person from their own character, memory, and received information.</p>
+          <p class="create-capability-note"><strong>Runnable now:</strong> influence networks with 3–12 people, targeted or broadcast messages, repeated decision rounds, and an exact collective decision rule.</p>
         </header>
+
+        <nav class="create-flow" aria-label="Simulation workflow"><span class="active">1 · Describe</span><span>2 · Review</span><span>3 · Run</span><span>4 · Replay</span></nav>
 
         <section class="create-composer" aria-labelledby="create-prompt-title">
           <label for="create-prompt"><strong id="create-prompt-title">What collective decision and information environment should it model?</strong><textarea id="create-prompt" rows="7" placeholder="For example: Seven people must decide whether to issue a joint election warning. Everyone receives the same public audit bulletin; selected people also receive different technical, legal, and community claims before three decision rounds."></textarea></label>
@@ -228,7 +231,7 @@
         </section>
 
         <section id="create-review" class="create-review" hidden>
-          <header><div><span>Generated configuration</span><h3 id="create-draft-title">Draft</h3><p id="create-draft-description"></p></div><div class="draft-state"><span id="create-draft-revision"></span><strong id="create-draft-state"></strong></div></header>
+          <header><div><span>Generated simulation plan</span><h3 id="create-draft-title">Draft</h3><p id="create-draft-description"></p></div><div class="draft-state"><span id="create-draft-revision"></span><strong id="create-draft-state"></strong></div></header>
           <div id="create-diagnostics"></div>
           <details id="create-coverage" class="create-coverage"><summary id="create-coverage-summary">What will actually run</summary><div id="create-coverage-detail"></div></details>
           <section class="create-world-summary" aria-labelledby="create-world-title"><div><span>World</span><h3 id="create-world-title">What the draft contains</h3></div><div id="create-world-facts"></div><div id="create-world-groups"></div></section>
@@ -238,7 +241,7 @@
           <details id="create-network-editor" class="create-scenario-editor" hidden><summary>Edit the influence network directly</summary><div class="create-scenario-grid"><label>Simulation title<input id="create-network-title"></label><label>Situation<textarea id="create-network-description" rows="3"></textarea></label><label>Collective decision<textarea id="create-network-question" rows="3"></textarea></label><label>Decision-round times <small>Comma separated</small><input id="create-network-rounds"></label><label>What people see from earlier rounds<select id="create-network-feedback"><option value="none">Only the shared question</option><option value="stances">Public stances</option><option value="stances_and_reasons">Stances and stated reasons</option></select></label><label>Minimum full support<input id="create-network-min-support" type="number" min="0" step="1"></label><label>Minimum support or conditional<input id="create-network-min-combined" type="number" min="1" step="1"></label><label>Maximum opposition<input id="create-network-max-oppose" type="number" min="0" step="1"></label></div><div><h4>Messages and explicit recipients</h4><div id="create-network-deliveries" class="create-network-deliveries"></div></div><button id="create-save-network" type="button">Save network without another model call</button><p id="create-network-status" class="create-status" aria-live="polite"></p></details>
           <section class="create-revise"><label for="create-revision-prompt"><strong>Tell the authoring model what to change</strong><textarea id="create-revision-prompt" rows="4" placeholder="Make the technical reviewer more skeptical, clarify the legal constraint, and delay the local-health report until the third meeting."></textarea></label><button id="create-revise" type="button">Generate revised configuration</button></section>
           <details class="create-raw"><summary>Inspect complete typed configuration</summary><pre id="create-raw-configuration"></pre></details>
-          <div class="create-actions"><button id="create-approve" class="primary-cta" type="button">Approve this configuration</button><button id="create-run" class="secondary-cta" type="button" hidden>Run with Luna</button><button id="create-start-over" class="quiet-button" type="button">Start over</button></div>
+          <div class="create-actions"><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation</button><button id="create-start-over" class="quiet-button" type="button">Start over</button></div>
           <section id="create-run-status" class="create-run-status" hidden aria-live="polite">
             <strong id="create-run-heading"></strong>
             <p id="create-run-detail"></p>
@@ -247,19 +250,36 @@
               <h3 id="create-result-title"></h3>
               <p id="create-result-summary"></p>
               <div id="create-result-facts" class="create-result-facts"></div>
-              <section class="create-result-rounds" aria-labelledby="create-result-rounds-title">
-                <h4 id="create-result-rounds-title">What changed each round</h4>
-                <div id="create-result-round-tabs" class="create-result-round-tabs"></div>
-                <div id="create-result-round" class="create-result-round"></div>
+              <section class="create-replay" aria-labelledby="create-replay-title">
+                <header class="create-replay-controls">
+                  <div><span>Guided replay</span><strong id="create-replay-progress">Step 1</strong></div>
+                  <div><button id="create-replay-previous" type="button">Previous</button><button id="create-replay-next" class="primary-cta" type="button">Next →</button></div>
+                </header>
+                <div class="create-replay-stage">
+                  <aside class="create-replay-explanation" aria-live="polite">
+                    <span id="create-replay-kind">Start</span>
+                    <h4 id="create-replay-title">The collective question</h4>
+                    <p id="create-replay-summary"></p>
+                    <dl id="create-replay-facts"></dl>
+                    <button id="create-replay-whole" class="quiet-button" type="button">Show the complete system</button>
+                  </aside>
+                  <section class="create-result-network" aria-label="Replay visualization">
+                    <div id="create-result-network-graph" class="react-canvas-host"></div>
+                    <p id="create-result-network-status">Only evidence available by this step is shown.</p>
+                    <p id="create-result-network-inspector" class="create-result-network-inspector">Arrows show retained directions of issue, delivery, or contribution—not proof that a message was believed.</p>
+                  </section>
+                </div>
               </section>
-              <section class="create-result-network" aria-labelledby="create-result-network-title">
-                <div><h4 id="create-result-network-title">Who received what</h4><p id="create-result-network-status">Select any item to inspect it.</p></div>
-                <div id="create-result-network-graph" class="react-canvas-host"></div>
-                <p id="create-result-network-inspector" class="create-result-network-inspector">Arrows are retained delivery and decision paths—not proof that a message was believed.</p>
-              </section>
-              <details class="create-result-analysis"><summary>What this run does—and does not—show</summary><div id="create-result-analysis"></div></details>
-              <details><summary>All final person decisions</summary><div id="create-result-people" class="create-result-people"></div></details>
-              <details><summary>Complete round trace</summary><ol id="create-result-steps"></ol></details>
+              <details class="create-result-complete"><summary>Explore the complete result and retained evidence</summary>
+                <section class="create-result-rounds" aria-labelledby="create-result-rounds-title">
+                  <h4 id="create-result-rounds-title">What changed each round</h4>
+                  <div id="create-result-round-tabs" class="create-result-round-tabs"></div>
+                  <div id="create-result-round" class="create-result-round"></div>
+                </section>
+                <details class="create-result-analysis"><summary>What this run does—and does not—show</summary><div id="create-result-analysis"></div></details>
+                <details><summary>All final person decisions</summary><div id="create-result-people" class="create-result-people"></div></details>
+                <details><summary>Complete round trace</summary><ol id="create-result-steps"></ol></details>
+              </details>
             </section>
             <div class="create-result-actions"><a id="create-run-evidence" href="#" target="_blank" rel="noopener" hidden>Open complete retained evidence</a><button id="create-edit-configuration" class="quiet-button" type="button" hidden>View or edit this configuration</button></div>
           </section>
@@ -577,7 +597,7 @@
     </section>
   </main>
 
-  <script src="assets/graph-canvas.js?v=92a310c" defer></script>
-  <script src="assets/app.js?v=influence-network-v3" defer></script>
+  <script src="assets/graph-canvas.js?v=replay1" defer></script>
+  <script src="assets/app.js?v=replay1" defer></script>
 </body>
 </html>

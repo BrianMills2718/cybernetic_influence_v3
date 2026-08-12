@@ -8,6 +8,7 @@ import ReactFlow, {
   Controls,
   EdgeLabelRenderer,
   getBezierPath,
+  MarkerType,
   MiniMap,
   ReactFlowProvider,
   type Edge,
@@ -132,6 +133,11 @@ interface CanvasOptions {
   collapsedBoundaryId: string | null
   selectedNodeId: string | null
   selectedEdgeId: string | null
+  title?: string
+  subtitle?: string
+  showLegend?: boolean
+  legendNodes?: AnalystNode[]
+  legendEdges?: AnalystEdge[]
   activity?: {
     participantIds: string[]
     cue: CanvasAnimationCue | null
@@ -171,6 +177,9 @@ const roots = new WeakMap<Element, Root>()
 function relationLabel(kind: string): string {
   return {
     connection: 'route',
+    issued_information: 'issued',
+    delivered_to: 'delivered to',
+    contributed_to_decision: 'contributed',
     mechanism_binding: 'input',
     mechanism_read: 'reads',
     mechanism_write: 'updates',
@@ -185,6 +194,9 @@ function relationLabel(kind: string): string {
 function relationColor(kind: string): string {
   return {
     connection: '#5aa9e6',
+    issued_information: '#f2a65a',
+    delivered_to: '#ef79b7',
+    contributed_to_decision: '#79c7ff',
     mechanism_binding: '#e8a84d',
     mechanism_read: '#97a9bd',
     mechanism_write: '#d7b46a',
@@ -199,11 +211,50 @@ function relationColor(kind: string): string {
 function nodeColor(node: Node<CanvasNodeData>): string {
   return {
     person: '#58a6ff',
+    source: '#f2a65a',
+    thing: '#57b49d',
     information: '#ef79b7',
+    resource: '#81c784',
     mechanism: '#e8a84d',
     analytical_boundary: '#b891ff',
     place: '#83d6c0',
   }[node.data.raw.kind] ?? '#57b49d'
+}
+
+function nodeGlyph(kind: string): string {
+  return {
+    person: '●',
+    source: '◆',
+    thing: '◆',
+    information: '▤',
+    resource: '■',
+    place: '⌂',
+    mechanism: '⚙',
+    analytical_boundary: '⬚',
+  }[kind] ?? '◇'
+}
+
+function nodeTypeLabel(kind: string): string {
+  return {
+    person: 'person',
+    source: 'source',
+    thing: 'thing / object',
+    information: 'message / information',
+    resource: 'resource',
+    place: 'place',
+    mechanism: 'decision / world process',
+    analytical_boundary: 'group / boundary',
+  }[kind] ?? kind.replaceAll('_', ' ')
+}
+
+function edgeDash(kind: string): string | undefined {
+  return {
+    spatial_link: '10 5',
+    mechanism_binding: '6 4',
+    information_lineage: '3 4',
+    issued_information: '7 4',
+    contributed_to_decision: '2 4',
+  }[kind]
 }
 
 function toCanvasNode(
@@ -261,6 +312,7 @@ function toCanvasEdge(
   const liveCue = Boolean(activity?.cue?.edge_ids.includes(item.id))
   const cue = liveCue ? activity?.cue ?? null : null
   const active = focusedRoute || focusedSpatialLink || focusedEndpoints || liveCue
+  const color = active ? '#ffffff' : relationColor(item.kind)
   const supportingRelationship = [
     'mechanism_read',
     'mechanism_write',
@@ -289,14 +341,16 @@ function toCanvasEdge(
       selected ? 'cy-flow-edge--selected' : '',
     ].filter(Boolean).join(' '),
     style: {
-      stroke: active ? '#ffffff' : relationColor(item.kind),
+      stroke: color,
       strokeWidth: active || selected ? 3 : 1.6,
       opacity: item.enabled ? 0.9 : 0.3,
-      strokeDasharray: item.kind === 'spatial_link'
-        ? '10 5'
-        : item.kind === 'mechanism_binding'
-        ? '6 4'
-        : item.kind === 'information_lineage' ? '3 4' : undefined,
+      strokeDasharray: edgeDash(item.kind),
+    },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      color,
+      width: 16,
+      height: 16,
     },
     labelStyle: {
       fill: active ? '#ffffff' : '#9baabd',
@@ -801,6 +855,9 @@ function NodeLabel({ data }: { data: CanvasNodeData }) {
       data-kind={data.raw.kind}
     >
       <span>
+        <i className="cy-node-glyph" aria-hidden="true">
+          {nodeGlyph(data.raw.kind)}
+        </i>
         {data.aggregateMode === 'collapsed'
           ? 'analytical composite · executor=false'
           : data.connectivityClass === 'unused'
@@ -886,18 +943,25 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
   const unusedWarnings = options.viewMode === 'causal'
     ? options.graphDiagnostics?.warnings ?? []
     : []
+  const legendNodeKinds = [...new Set(
+    (options.legendNodes ?? options.nodes).map((node) => node.kind),
+  )]
+  const legendEdgeKinds = [...new Set(
+    (options.legendEdges ?? options.edges).map((edge) => edge.kind),
+  )]
   return (
     <section className="cy-graph-shell">
       <div className="cy-graph-bar">
         <span>
           <strong>
-            {worldMode
+            {options.title ?? (worldMode
               ? collapsed ? 'World topology · collapsed composite' : 'World topology'
               : trajectoryMode
                 ? 'Realized causal trajectory'
-              : collapsed ? 'Collapsed composite' : 'Expanded exact network'}
-          </strong>
-          {' · '}revision {options.event?.state_revision ?? options.initialRevision ?? 'unavailable'}
+              : collapsed ? 'Collapsed composite' : 'Expanded exact network')}
+          </strong>{options.subtitle
+            ? ` · ${options.subtitle}`
+            : ` · revision ${options.event?.state_revision ?? options.initialRevision ?? 'unavailable'}`}
           {worldMode && options.world?.unplacedEntityIds.length
             ? ` · ${options.world.unplacedEntityIds.length} logical entities are outside this spatial projection; inspect them in Configured interaction pathways`
             : ''}
@@ -915,6 +979,27 @@ function GraphFlow({ options }: { options: CanvasOptions }) {
           )
           : null}
       </div>
+      {options.showLegend === false ? null : (
+        <div className="cy-graph-legend" aria-label="Graph key">
+          <div>
+            <strong>Nodes</strong>
+            {legendNodeKinds.map((kind) => (
+              <span key={kind} className={`cy-legend-node cy-legend-node--${kind}`}>
+                <i aria-hidden="true">{nodeGlyph(kind)}</i>{nodeTypeLabel(kind)}
+              </span>
+            ))}
+          </div>
+          <div>
+            <strong>Arrows</strong>
+            {legendEdgeKinds.map((kind) => (
+              <span key={kind} className="cy-legend-edge">
+                <i style={{ borderColor: relationColor(kind) }} aria-hidden="true" />
+                {relationLabel(kind)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="cy-graph-canvas">
         <ReactFlow
           nodes={nodes.map((node) => ({

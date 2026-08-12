@@ -55,6 +55,7 @@ let authoredRunPollFailures = 0
 let authoringBusy = false
 let authoredResult = null
 let authoredResultRoundIndex = 0
+let authoredReplaySceneIndex = 0
 
 const state = {
   view:'overview',
@@ -935,6 +936,7 @@ function renderGuideGraph(step) {
     boundaries:[], world:null, trajectory:{nodes:[], edges:[]},
     graphDiagnostics:{nodeClassification:{}, edgeClassification:{}, warnings:[]},
     viewMode:'causal', event:{event_id:`guide_step_${state.guideStep + 1}`, state_revision:state.guideStep, focus_ids:step.focus, focus_edges:[], spatial_focus_ids:[], spatial_link_ids:[], boundary_ids:[]}, initialRevision:state.guideStep,
+    showLegend:false,
     selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
       const node = projection.nodes.find((candidate) => candidate.id === nodeId)
@@ -1424,10 +1426,23 @@ function renderAuthoringPersonEditor() {
   $('#create-person-beliefs').value = (person.behavioral_profile?.beliefs || []).join('\n')
 }
 
+function setCreateFlow(step) {
+  const steps = ['describe', 'review', 'run', 'replay']
+  all('.create-flow span').forEach((item, index) => {
+    item.classList.toggle('active', steps[index] === step)
+  })
+}
+
 function renderCreateSimulation() {
   const author = authoringModel()
   $('#create-generate').disabled = !author || authoringBusy
   if (!authoringDraft) {
+    if (authoredResult && document.body.classList.contains('authored-result')) {
+      setCreateFlow('replay')
+      $('#create-review').hidden = false
+      return
+    }
+    setCreateFlow('describe')
     $('#create-review').hidden = true
     $('#create-status').textContent = author
       ? 'Describe a sociotechnical world to begin. The authoring model will generate a retained typed draft.'
@@ -1443,6 +1458,7 @@ function renderCreateSimulation() {
     ? diagnostics.map((item) => `<p class="create-diagnostic ${escapeHtml(item.severity)}"><strong>${escapeHtml(sentence(item.severity))}</strong>${escapeHtml(item.message)}</p>`).join('')
     : '<p class="create-diagnostic ready"><strong>Compiler check passed</strong>The draft can be reviewed and approved.</p>'
   if (!proposal) {
+    setCreateFlow('review')
     $('#create-draft-title').textContent = 'Draft needs more information'
     $('#create-draft-description').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
     $('#create-world-facts').innerHTML = ''
@@ -1486,8 +1502,13 @@ function renderCreateSimulation() {
   const ready = authoringDraft.status === 'ready_for_review' && diagnostics.length === 0
   $('#create-approve').hidden = !ready
   $('#create-run').hidden = authoringDraft.status !== 'approved'
+  const showingResult = document.body.classList.contains('authored-result')
+    && !$('#create-result').hidden
+  setCreateFlow(showingResult ? 'replay' : authoringDraft.status === 'approved' ? 'run' : 'review')
   setAuthoringBusy(authoringBusy)
-  $('#create-status').textContent = 'Draft generated below. Edit a person, request a broader revision, or approve the exact configuration.'
+  $('#create-status').textContent = authoringDraft.status === 'approved'
+    ? 'This exact simulation is approved. Run it now, or edit it to create a new revision.'
+    : 'Review the people and incoming information. Request a change or approve the simulation.'
 }
 
 async function advanceAuthoringDraft(message) {
@@ -1748,20 +1769,43 @@ function renderAuthoredResultRound() {
   })
 }
 
-function renderAuthoredResultNetwork(result) {
+function renderAuthoredResultNetwork(result, scene = null) {
   const projection = result.influence_network || {nodes:[], edges:[]}
+  const visibleNodeIds = scene ? new Set(scene.visible_node_ids || []) : null
+  const visibleEdgeIds = scene ? new Set(scene.visible_edge_ids || []) : null
+  const visibleNodes = visibleNodeIds
+    ? projection.nodes.filter((item) => visibleNodeIds.has(item.id))
+    : projection.nodes
+  const visibleNodeSet = new Set(visibleNodes.map((item) => item.id))
+  const visibleEdges = (visibleEdgeIds
+    ? projection.edges.filter((item) => visibleEdgeIds.has(item.id))
+    : projection.edges
+  ).filter((item) => visibleNodeSet.has(item.source) && visibleNodeSet.has(item.target))
   const graph = $('#create-result-network-graph')
-  if (!projection.nodes.length || !window.CyberneticGraph) {
+  if (!visibleNodes.length || !window.CyberneticGraph) {
     graph.classList.remove('react-canvas-host')
-    graph.innerHTML = '<p>The retained information network is unavailable.</p>'
+    graph.innerHTML = '<p class="create-result-no-graph">This step is retained as text; it has no graph items to display.</p>'
     return
   }
+  graph.classList.add('react-canvas-host')
   window.CyberneticGraph.render(graph, {
-    nodes:projection.nodes,
-    edges:projection.edges,
+    nodes:visibleNodes,
+    edges:visibleEdges,
+    legendNodes:projection.nodes,
+    legendEdges:projection.edges,
     boundaries:[], world:null, trajectory:{nodes:[], edges:[]},
     graphDiagnostics:{nodeClassification:{}, edgeClassification:{}, warnings:[]},
-    viewMode:'causal', event:null, initialRevision:0,
+    viewMode:'causal',
+    event:scene ? {
+      event_id:scene.scene_id,
+      state_revision:scene.sequence,
+      focus_ids:scene.focus_node_ids || [],
+      focus_edges:scene.focus_edge_ids || [],
+    } : null,
+    initialRevision:0,
+    title:scene?.title || 'Complete retained network',
+    subtitle:scene ? `step ${scene.sequence}` : 'all retained evidence',
+    showLegend:true,
     selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
       const item = projection.nodes.find((candidate) => candidate.id === nodeId)
@@ -1771,43 +1815,81 @@ function renderAuthoredResultNetwork(result) {
       $('#create-result-network-inspector').innerHTML = `<strong>${escapeHtml(sentence(item.kind))}</strong><span>${escapeHtml(item.description)}</span>`
     },
   })
-  $('#create-result-network-status').textContent = `${projection.nodes.length} visible people, sources, messages, and decision items · ${projection.edges.length} retained paths`
+  $('#create-result-network-status').textContent = scene
+    ? `${visibleNodes.length} visible items · ${visibleEdges.length} visible arrows · future evidence remains hidden`
+    : `${projection.nodes.length} visible items · ${projection.edges.length} retained arrows`
+}
+
+function renderAuthoredReplay() {
+  const replay = authoredResult?.simulation_replay
+  const scenes = replay?.scenes || []
+  if (!scenes.length) {
+    $('#create-replay-title').textContent = 'No guided replay is available'
+    $('#create-replay-summary').textContent = 'Open the complete retained evidence below.'
+    $('#create-replay-facts').innerHTML = ''
+    $('#create-replay-previous').disabled = true
+    $('#create-replay-next').disabled = true
+    renderAuthoredResultNetwork(authoredResult)
+    return
+  }
+  authoredReplaySceneIndex = Math.max(0, Math.min(authoredReplaySceneIndex, scenes.length - 1))
+  const scene = scenes[authoredReplaySceneIndex]
+  $('#create-replay-progress').textContent = `Step ${scene.sequence} of ${scenes.length}`
+  $('#create-replay-kind').textContent = sentence(scene.kind)
+  $('#create-replay-title').textContent = scene.title
+  $('#create-replay-summary').textContent = scene.summary
+  $('#create-replay-facts').innerHTML = (scene.facts || []).map((fact) => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('')
+  const previous = $('#create-replay-previous')
+  const next = $('#create-replay-next')
+  previous.disabled = authoredReplaySceneIndex === 0
+  next.disabled = authoredReplaySceneIndex === scenes.length - 1
+  next.textContent = authoredReplaySceneIndex === scenes.length - 1
+    ? 'Replay complete'
+    : `Next: ${scenes[authoredReplaySceneIndex + 1].title} →`
+  previous.onclick = () => {
+    authoredReplaySceneIndex -= 1
+    renderAuthoredReplay()
+  }
+  next.onclick = () => {
+    authoredReplaySceneIndex += 1
+    renderAuthoredReplay()
+  }
+  $('#create-replay-whole').onclick = () => {
+    authoredReplaySceneIndex = scenes.length - 1
+    renderAuthoredReplay()
+  }
+  renderAuthoredResultNetwork(authoredResult, scene)
 }
 
 function renderAuthoredResult(result) {
   authoredResult = result
   authoredResultRoundIndex = 0
+  authoredReplaySceneIndex = 0
   document.body.classList.add('authored-result')
+  setCreateFlow('replay')
   const review = $('#create-review')
   const runStatus = $('#create-run-status')
+  review.hidden = false
   review.classList.add('result-mode')
   review.insertBefore(runStatus, review.firstElementChild)
   $('.create-composer').hidden = true
   $('.create-hero .case-label').textContent = 'Completed simulation'
   $('#create-title').textContent = result.title || 'Simulation result'
-  $('.create-hero > p').textContent = result.description || 'A retained Luna simulation.'
-  const outcome = result.outcome?.final_status || result.completion?.reason || 'completed'
-  const outcomeLabel = {
-    no_decision_by_horizon:'No decision before the deadline',
-    deploy_on_time:'Full proposal approved',
-    scope_reduced:'Narrower proposal approved',
-    delayed:'Decision delayed',
-    partner_disengaged:'Partner disengaged',
-  }[outcome] || sentence(outcome)
-  $('#create-run-heading').textContent = `Result: ${outcomeLabel}`
-  $('#create-run-detail').textContent = result.completion?.public_summary || result.summary || 'The simulation reached a terminal state.'
-  $('#create-result-title').textContent = result.headline || result.title || 'Simulation complete'
-  $('#create-result-summary').textContent = result.summary || result.description || ''
-  const stanceCounts = result.outcome?.counts
+  const replayQuestion = result.simulation_replay?.question
+  $('.create-hero > p').textContent = replayQuestion
+    ? `Collective question: ${replayQuestion} Advance through the retained run one step at a time.`
+    : 'Advance through this retained simulation one step at a time.'
+  $('#create-run-heading').textContent = 'Simulation complete'
+  $('#create-run-detail').textContent = 'Replay the retained information, decisions, and collective outcome below.'
+  $('#create-result-title').textContent = 'Follow what entered the system and how people responded.'
+  $('#create-result-summary').textContent = replayQuestion
+    ? `Collective question: ${replayQuestion}`
+    : 'Advance one retained step at a time.'
   const gateChecks = result.outcome?.gate_checks
-  const resultFacts = stanceCounts && gateChecks ? [
-    [outcomeLabel, 'Collective outcome'],
-    [`${Number(stanceCounts.support || 0)} support · ${Number(stanceCounts.conditional || 0)} conditional · ${Number(stanceCounts.defer || 0)} defer · ${Number(stanceCounts.oppose || 0)} oppose`, 'Final positions'],
-    [`${(result.rounds || []).length} rounds · ${(result.decision_steps || []).length} decisions`, result.execution === 'live' ? 'Retained Luna execution' : 'Retained reference execution'],
-  ] : [
-    [outcomeLabel, 'Collective outcome'],
-    [String((result.participants || []).length), 'People'],
-    [String(Number(result.participant_model_calls || 0)), 'Luna decisions'],
+  const resultFacts = [
+    [String((result.participants || []).length), 'Simulated people'],
+    [String((result.rounds || []).length || (result.simulation_replay?.scenes || []).filter((scene) => scene.kind === 'event').length), (result.rounds || []).length ? 'Decision rounds' : 'Retained events'],
+    [String(Number(result.participant_model_calls || 0)), result.execution === 'live' ? 'Retained Luna decisions' : 'Retained reference decisions'],
   ]
   $('#create-result-facts').innerHTML = resultFacts.map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
   $('#create-result-people').innerHTML = (result.participants || []).map((person) => {
@@ -1822,7 +1904,7 @@ function renderAuthoredResult(result) {
   }).join('')
   $('#create-result').hidden = false
   renderAuthoredResultRound()
-  renderAuthoredResultNetwork(result)
+  renderAuthoredReplay()
   const readout = result.coordination_measurement_readout
   const gateRows = gateChecks ? Object.entries(gateChecks).map(([name, check]) => `<li><strong>${escapeHtml(sentence(name))}</strong> ${check.passed ? 'passed' : 'failed'} (${escapeHtml(check.actual)} ${name === 'opposition' ? `of maximum ${check.maximum}` : `of ${check.required} required`})</li>`).join('') : ''
   const limitations = readout?.limitations || ['This is a synthetic model run and does not predict real people or institutions.']
@@ -1953,6 +2035,7 @@ function showAuthoredConfiguration() {
   $('#create-title').textContent = 'Describe the coordination problem you want to explore.'
   $('.create-hero > p').textContent = 'Describe the people, information sources, who receives which messages, and the collective decision. The authoring model turns that description into an editable influence network; Luna then drives each person independently from their own character, memory, and received information.'
   $('#create-edit-configuration').hidden = true
+  setCreateFlow(authoringDraft?.status === 'approved' ? 'run' : 'review')
   $('#create-draft-title').scrollIntoView({behavior:'smooth', block:'start'})
 }
 

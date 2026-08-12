@@ -1,6 +1,6 @@
 .cy-graph-shell {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   height: 100%;
   min-height: 680px;
   background: #0f1721;
@@ -34,6 +34,70 @@
   font-weight: 700;
 }
 
+.cy-graph-legend {
+  z-index: 2;
+  display: grid;
+  gap: 7px;
+  padding: 9px 12px;
+  border-bottom: 1px solid #2a394b;
+  background: #111923;
+  color: #9baabd;
+  font-size: 10px;
+}
+
+.cy-graph-legend > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 12px;
+}
+
+.cy-graph-legend > div > strong {
+  min-width: 44px;
+  color: #e8eef7;
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cy-graph-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.cy-legend-node i,
+.cy-node-glyph {
+  color: #f2a65a;
+  font-style: normal;
+}
+
+.cy-legend-node--person i { color: #58a6ff; }
+.cy-legend-node--information i { color: #ef79b7; }
+.cy-legend-node--mechanism i { color: #e8a84d; }
+.cy-legend-node--resource i { color: #81c784; }
+.cy-legend-node--place i { color: #83d6c0; }
+
+.cy-legend-edge i {
+  position: relative;
+  width: 28px;
+  height: 0;
+  border-top: 2px solid;
+}
+
+.cy-legend-edge i::after {
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  width: 5px;
+  height: 5px;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  content: '';
+  transform: rotate(45deg);
+}
+
 .cy-graph-canvas {
   min-width: 0;
   min-height: 630px;
@@ -61,6 +125,9 @@
 }
 
 .cy-flow-node span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-weight: 800;
   letter-spacing: .07em;
   text-transform: uppercase;
@@ -72,9 +139,26 @@
   line-height: 1.2;
 }
 
-.cy-flow-node--person { border-color: #58a6ff; }
-.cy-flow-node--information { border-color: #ef79b7; }
-.cy-flow-node--mechanism { border-color: #e8a84d; }
+.cy-flow-node--person { border-color: #58a6ff; border-radius: 28px; }
+.cy-flow-node--person .cy-node-glyph { color: #58a6ff; }
+.cy-flow-node--source {
+  border-color: #f2a65a;
+  border-radius: 2px;
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+}
+.cy-flow-node--source .cy-node-glyph { color: #f2a65a; }
+.cy-flow-node--thing { border-color: #57b49d; border-radius: 2px; }
+.cy-flow-node--thing .cy-node-glyph { color: #57b49d; }
+.cy-flow-node--information {
+  border-color: #ef79b7;
+  border-left-width: 5px;
+  border-radius: 2px;
+}
+.cy-flow-node--information .cy-node-glyph { color: #ef79b7; }
+.cy-flow-node--resource { border-color: #81c784; border-style: double; border-width: 3px; }
+.cy-flow-node--resource .cy-node-glyph { color: #81c784; }
+.cy-flow-node--mechanism { border-color: #e8a84d; border-radius: 999px; }
+.cy-flow-node--mechanism .cy-node-glyph { color: #e8a84d; }
 .cy-flow-node--analytical_boundary {
   border: 2px dashed #b891ff;
   background: #2a2040f2;
@@ -234,4 +318,5 @@
   .cy-graph-shell { min-height: 540px; }
   .cy-graph-canvas { min-height: 490px; }
   .cy-graph-bar { align-items: stretch; flex-direction: column; }
+  .cy-graph-legend > div > strong { min-width: 100%; }
 }
