@@ -56,6 +56,8 @@ let authoringBusy = false
 let authoredResult = null
 let authoredResultRoundIndex = 0
 let authoredReplaySceneIndex = 0
+let retainedRunHistory = []
+let simulationLoadingRunId = null
 
 const state = {
   view:'overview',
@@ -308,7 +310,7 @@ function renderCoordinationScenarioEditor(proposal) {
 function readStateFromUrl() {
   const params = new URLSearchParams(window.location.search)
   const requestedView = params.get('view')
-  if (['overview', 'guide', 'case', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
+  if (['overview', 'guide', 'case', 'simulations', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
   const requestedGuideStep = Number(params.get('guide_step'))
   if (Number.isInteger(requestedGuideStep) && requestedGuideStep >= 1 && requestedGuideStep <= 7) state.guideStep = requestedGuideStep - 1
   const requestedRun = params.get('run')
@@ -341,7 +343,7 @@ function applyRunScopeFromUrl() {
 function syncUrl() {
   const url = new URL(window.location.href)
   url.searchParams.set('view', state.view)
-  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section', 'draft', 'authored_run', 'guide_step']) url.searchParams.delete(key)
+  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section', 'draft', 'authored_run', 'simulation', 'guide_step']) url.searchParams.delete(key)
   if (state.view === 'guide') url.searchParams.set('guide_step', String(state.guideStep + 1))
   if (state.view === 'inspect') {
     url.searchParams.set('run', state.runId)
@@ -353,6 +355,7 @@ function syncUrl() {
   if (['compare', 'inspect'].includes(state.view)) url.searchParams.set('section', state.labSection)
   if (state.view === 'create' && authoringDraft?.draft_id) url.searchParams.set('draft', authoringDraft.draft_id)
   if (state.view === 'create' && authoredRunId) url.searchParams.set('authored_run', authoredRunId)
+  if (state.view === 'simulations' && authoredRunId) url.searchParams.set('simulation', authoredRunId)
   window.history.replaceState({}, '', url)
 }
 
@@ -1166,11 +1169,11 @@ function renderResearchCase() {
 }
 
 function renderView() {
-  const publicView = ['overview', 'guide', 'case', 'create', 'mechanism'].includes(state.view)
+  const publicView = ['overview', 'guide', 'case', 'simulations', 'create', 'mechanism'].includes(state.view)
   document.body.classList.toggle('guided-result', publicView)
   document.body.classList.toggle('public-shell', publicView)
   document.body.classList.toggle('lab-shell', !publicView)
-  for (const view of ['overview', 'guide', 'case', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
+  for (const view of ['overview', 'guide', 'case', 'simulations', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method']) $(`#${view}-view`).hidden = state.view !== view
   all('[data-view]').forEach((button) => {
     const active = button.dataset.view === state.view
     button.classList.toggle('active', active)
@@ -1189,6 +1192,7 @@ function renderView() {
     renderResearchCase()
     void ensureCaseNetwork()
   }
+  if (state.view === 'simulations') renderSimulationLibrary()
   if (state.view === 'create') renderCreateSimulation()
   if (state.view === 'compare') renderComparison()
   if (state.view === 'mechanism') renderMechanism()
@@ -1434,6 +1438,19 @@ function setCreateFlow(step) {
 }
 
 function renderCreateSimulation() {
+  const runStatus = $('#create-run-status')
+  const review = $('#create-review')
+  const leavingSimulationLibrary = runStatus.parentElement === $('#simulation-replay-host')
+  if (runStatus.parentElement !== review) review.appendChild(runStatus)
+  if (leavingSimulationLibrary) {
+    authoringDraft = null
+    authoredResult = null
+    authoredRunId = null
+    document.body.classList.remove('authored-result')
+    review.classList.remove('result-mode')
+    runStatus.hidden = true
+    $('#create-result').hidden = true
+  }
   const author = authoringModel()
   $('#create-generate').disabled = !author || authoringBusy
   if (!authoringDraft) {
@@ -1861,8 +1878,98 @@ function renderAuthoredReplay() {
   renderAuthoredResultNetwork(authoredResult, scene)
 }
 
+function completedSimulationHistory() {
+  return retainedRunHistory.filter((run) => run.status === 'completed')
+}
+
+function simulationHistoryTitle(run) {
+  return run.headline || sentence(run.scenario || 'Retained simulation')
+}
+
+function rememberCompletedSimulation(result) {
+  if (!result?.run_id || result.status !== 'completed') return
+  const retained = {
+    run_id:result.run_id,
+    created_at:result.created_at,
+    status:result.status,
+    scenario:result.scenario,
+    arm:result.arm,
+    execution:result.execution,
+    headline:result.headline,
+  }
+  const existingIndex = retainedRunHistory.findIndex((run) => run.run_id === result.run_id)
+  if (existingIndex === -1) retainedRunHistory.unshift(retained)
+  else retainedRunHistory[existingIndex] = {...retainedRunHistory[existingIndex], ...retained}
+}
+
+function renderSimulationList() {
+  const list = $('#simulation-list')
+  const completed = completedSimulationHistory()
+  if (!retainedRunHistory.length) {
+    list.innerHTML = '<p>Loading completed simulations…</p>'
+    return
+  }
+  if (!completed.length) {
+    list.innerHTML = '<p>No completed simulations are retained yet.</p>'
+    return
+  }
+  list.innerHTML = completed.map((run) => {
+    const created = run.created_at ? new Date(run.created_at).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : 'Retained run'
+    const context = [sentence(run.scenario), sentence(run.arm)].filter(Boolean).join(' · ')
+    return `<button type="button" data-simulation-run="${escapeHtml(run.run_id)}" class="${run.run_id === authoredRunId ? 'active' : ''}" aria-pressed="${run.run_id === authoredRunId}"><span>${escapeHtml(context || 'Completed simulation')}</span><strong>${escapeHtml(simulationHistoryTitle(run))}</strong><small>${escapeHtml(created)}</small></button>`
+  }).join('')
+  all('[data-simulation-run]').forEach((button) => {
+    button.onclick = () => { void openSimulationReplay(button.dataset.simulationRun) }
+  })
+}
+
+function renderSimulationLibrary() {
+  renderSimulationList()
+  const host = $('#simulation-replay-host')
+  const empty = $('#simulation-library-empty')
+  if (authoredRunId && authoredResult?.run_id === authoredRunId) {
+    host.appendChild($('#create-run-status'))
+    $('#create-run-status').hidden = false
+    empty.hidden = true
+    return
+  }
+  empty.hidden = false
+  const first = completedSimulationHistory()[0]
+  if (!authoredRunId && first) void openSimulationReplay(first.run_id)
+}
+
+async function openSimulationReplay(runId) {
+  if (!runId || simulationLoadingRunId === runId) return
+  simulationLoadingRunId = runId
+  authoredRunId = runId
+  authoredResult = null
+  authoredReplaySceneIndex = 0
+  const host = $('#simulation-replay-host')
+  const runStatus = $('#create-run-status')
+  host.appendChild(runStatus)
+  $('#simulation-library-empty').hidden = true
+  runStatus.hidden = false
+  $('#create-result').hidden = true
+  $('#create-run-heading').textContent = 'Opening retained simulation…'
+  $('#create-run-detail').textContent = 'Building its walkthrough from retained world and event evidence.'
+  renderSimulationList()
+  syncUrl()
+  try {
+    const result = await apiRequest(`api/runs/${encodeURIComponent(runId)}/summary`)
+    renderAuthoredResult(result)
+    $('#create-edit-configuration').hidden = true
+    renderSimulationList()
+  } catch (error) {
+    $('#create-run-heading').textContent = 'Retained simulation unavailable'
+    $('#create-run-detail').textContent = error.message
+  } finally {
+    simulationLoadingRunId = null
+  }
+}
+
 function renderAuthoredResult(result) {
   authoredResult = result
+  rememberCompletedSimulation(result)
   authoredResultRoundIndex = 0
   authoredReplaySceneIndex = 0
   document.body.classList.add('authored-result')
@@ -1871,7 +1978,12 @@ function renderAuthoredResult(result) {
   const runStatus = $('#create-run-status')
   review.hidden = false
   review.classList.add('result-mode')
-  review.insertBefore(runStatus, review.firstElementChild)
+  if (state.view === 'simulations') {
+    $('#simulation-replay-host').appendChild(runStatus)
+    $('#simulation-library-empty').hidden = true
+  } else {
+    review.insertBefore(runStatus, review.firstElementChild)
+  }
   $('.create-composer').hidden = true
   $('.create-hero .case-label').textContent = 'Completed simulation'
   $('#create-title').textContent = result.title || 'Simulation result'
@@ -1912,7 +2024,7 @@ function renderAuthoredResult(result) {
   $('#create-run-evidence').href = `api/runs/${encodeURIComponent(result.run_id)}`
   $('#create-run-evidence').textContent = 'Open raw retained run'
   $('#create-run-evidence').hidden = false
-  $('#create-edit-configuration').hidden = false
+  $('#create-edit-configuration').hidden = state.view === 'simulations'
   $('#create-stop').hidden = true
   $('#create-run').disabled = false
 }
@@ -2003,8 +2115,15 @@ async function loadAuthoringDraftFromUrl() {
 }
 
 async function loadAuthoredRunFromUrl() {
-  const runId = new URLSearchParams(window.location.search).get('authored_run')
-  if (!runId || state.view !== 'create') return
+  const params = new URLSearchParams(window.location.search)
+  const runId = state.view === 'simulations'
+    ? params.get('simulation')
+    : params.get('authored_run')
+  if (!runId || !['create', 'simulations'].includes(state.view)) return
+  if (state.view === 'simulations') {
+    await openSimulationReplay(runId)
+    return
+  }
   authoredRunId = runId
   $('#create-run-status').hidden = false
   $('#create-run-heading').textContent = 'Opening retained simulation…'
@@ -2112,6 +2231,8 @@ async function loadRetainedLiveRuns() {
     console.warn(`retained live runs unavailable: ${error.message}`)
     return
   }
+  retainedRunHistory = history.runs || []
+  if (state.view === 'simulations') renderSimulationLibrary()
   const summaries = (history.runs || []).filter((run) =>
     run.scenario === 'regional_outbreak' && run.execution === 'live' && run.status === 'completed'
   )

@@ -359,6 +359,21 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
         scene["kind"] == "event"
         for scene in compact["simulation_replay"]["scenes"]
     )
+    assert {node["kind"] for node in compact["influence_network"]["nodes"]} >= {
+        "person",
+        "mechanism",
+        "information",
+    }
+    assert compact["influence_network"]["edges"]
+    assert all(
+        edge["directed"] is True
+        for edge in compact["influence_network"]["edges"]
+    )
+    assert any(
+        scene["visible_edge_ids"]
+        for scene in compact["simulation_replay"]["scenes"]
+        if scene["kind"] == "event"
+    )
     assert "events" not in compact
     assert "traces" not in compact
 

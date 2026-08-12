@@ -6,8 +6,8 @@
   <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/graph-canvas.css?v=replay1">
-  <link rel="stylesheet" href="assets/styles.css?v=replay1">
+  <link rel="stylesheet" href="assets/graph-canvas.css?v=replay2">
+  <link rel="stylesheet" href="assets/styles.css?v=replay2">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -21,8 +21,8 @@
     <nav class="view-tabs" aria-label="Primary navigation">
       <button type="button" data-view="overview">Overview</button>
       <button type="button" data-view="guide">Guided example</button>
-      <button type="button" data-view="case">Full outbreak case</button>
-      <button type="button" data-view="create">Create simulation</button>
+      <button type="button" data-view="simulations">Simulations</button>
+      <button type="button" data-view="create">New simulation</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
   </header>
@@ -212,6 +212,29 @@
         </section>
 
         <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Open retained evidence</button><button class="secondary-cta" type="button" data-view="create">Create your own simulation</button></div>
+      </section>
+
+      <section id="simulations-view" class="workspace-view simulation-library" aria-labelledby="simulations-title" hidden>
+        <header class="simulation-library-hero">
+          <span class="case-label">Completed simulations</span>
+          <h2 id="simulations-title">Choose a run. Follow it one step at a time.</h2>
+          <p>Every completed simulation automatically becomes the same guided replay: setup, retained events or information, autonomous decisions, and outcome. The graph key is generated from the node and arrow types actually present in that run.</p>
+          <div>
+            <button class="primary-cta" type="button" data-view="create">Create a new simulation</button>
+            <button class="quiet-button" type="button" data-view="case">Open the curated outbreak case</button>
+          </div>
+        </header>
+        <div class="simulation-library-layout">
+          <nav id="simulation-list" class="simulation-list" aria-label="Completed simulations">
+            <p>Loading completed simulations…</p>
+          </nav>
+          <section id="simulation-replay-host" class="simulation-replay-host" aria-live="polite">
+            <div id="simulation-library-empty" class="simulation-library-empty">
+              <strong>Select a completed simulation</strong>
+              <p>Its automatically generated walkthrough will open here.</p>
+            </div>
+          </section>
+        </div>
       </section>
 
       <section id="create-view" class="workspace-view create-simulation" aria-labelledby="create-title" hidden>
@@ -597,7 +620,7 @@
     </section>
   </main>
 
-  <script src="assets/graph-canvas.js?v=replay1" defer></script>
-  <script src="assets/app.js?v=replay1" defer></script>
+  <script src="assets/graph-canvas.js?v=replay2" defer></script>
+  <script src="assets/app.js?v=replay2" defer></script>
 </body>
 </html>

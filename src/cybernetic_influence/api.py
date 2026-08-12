@@ -685,6 +685,85 @@ def _stance_summary(decisions: list[dict[str, object]]) -> str:
     ) or "No retained positions"
 
 
+def _replay_node_kind(raw_kind: object) -> str:
+    """Map canonical subsystem kinds to the small shared visual language."""
+
+    kind = str(raw_kind or "thing")
+    if kind in {"person", "autonomous_participant"}:
+        return "person"
+    if kind in {"source", "source_process", "exercise_control"}:
+        return "source"
+    if kind in {"information", "document"} or kind.endswith("_record"):
+        return "information"
+    if kind in {"physical_space", "place"}:
+        return "place"
+    if kind in {"equipment", "resource"}:
+        return "resource"
+    if kind in {
+        "mechanism",
+        "deterministic_process",
+        "state_machine",
+        "authentication_service",
+        "authorization_service",
+        "decision_register",
+        "allocation_authority",
+    }:
+        return "mechanism"
+    return "thing"
+
+
+def _canonical_replay_network(
+    nodes: list[object],
+    edges: list[object],
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """Adapt any retained canonical graph to the shared replay graph contract."""
+
+    projected_nodes: list[dict[str, object]] = [
+        {
+            "id": str(node["id"]),
+            "kind": _replay_node_kind(node.get("kind")),
+            "canonical_kind": str(node.get("kind") or "thing"),
+            "label": str(node.get("label") or node["id"]).replace("_", " "),
+            "description": str(node.get("description") or "Retained world entity."),
+        }
+        for node in nodes
+        if isinstance(node, dict) and isinstance(node.get("id"), str)
+    ]
+    node_ids = {str(node["id"]) for node in projected_nodes}
+    projected_edges: list[dict[str, object]] = []
+    for edge in edges:
+        if not isinstance(edge, dict):
+            continue
+        edge_id = edge.get("id")
+        source = edge.get("source")
+        target = edge.get("target")
+        if not all(isinstance(value, str) for value in (edge_id, source, target)):
+            continue
+        if source not in node_ids or target not in node_ids:
+            continue
+        exact_routes = edge.get("exact_route_ids")
+        route_ids = (
+            [str(item) for item in exact_routes if isinstance(item, str)]
+            if isinstance(exact_routes, list)
+            else [str(edge_id)]
+        )
+        projected_edges.append(
+            {
+                "id": str(edge_id),
+                "kind": str(edge.get("kind") or "connection"),
+                "source": str(source),
+                "target": str(target),
+                "enabled": edge.get("enabled") is not False,
+                "directed": True,
+                "description": str(
+                    edge.get("description") or "Retained directed connection."
+                ),
+                "routeIds": route_ids or [str(edge_id)],
+            }
+        )
+    return projected_nodes, projected_edges
+
+
 def _simulation_replay(
     *,
     title: object,
@@ -743,12 +822,34 @@ def _simulation_replay(
         for node in network_nodes
         if node.get("kind") == "person" and isinstance(node.get("id"), str)
     ]
+    node_kind_by_id = {
+        str(node["id"]): node.get("kind")
+        for node in network_nodes
+        if isinstance(node.get("id"), str)
+    }
     gate_ids = ["collective_decision"] if "collective_decision" in node_ids else []
+    if not gate_ids:
+        gate_ids = [
+            str(node["id"])
+            for node in network_nodes
+            if node.get("kind") == "mechanism"
+            and isinstance(node.get("id"), str)
+            and any(
+                marker in (
+                    f"{node.get('id', '')} {node.get('label', '')}"
+                ).lower()
+                for marker in ("decision", "outcome", "gate")
+            )
+        ][:1]
     setup_ids = source_ids + person_ids + gate_ids
     decision_edge_ids = [
         edge_id
         for edge_id, edge in edge_by_id.items()
         if edge.get("kind") == "contributed_to_decision"
+        or (
+            edge.get("source") in person_ids
+            and node_kind_by_id.get(str(edge.get("target"))) == "mechanism"
+        )
     ]
     scenes: list[SimulationReplayScene] = []
 
@@ -890,20 +991,49 @@ def _simulation_replay(
             )
 
     if not rounds and isinstance(raw_moments, list):
+        visible_event_nodes = list(setup_ids)
+        visible_event_edges: list[str] = []
         for index, moment in enumerate(raw_moments[:10], start=1):
             if not isinstance(moment, dict):
                 continue
             narrative = moment.get("concise_narrative", moment.get("narrative"))
             if not isinstance(narrative, str) or not narrative.strip():
                 continue
+            raw_participants = moment.get("participants")
+            participants = [
+                str(item)
+                for item in raw_participants
+                if isinstance(item, str) and item in node_ids
+            ] if isinstance(raw_participants, list) else []
+            connected_edge_ids = [
+                edge_id
+                for edge_id, edge in edge_by_id.items()
+                if edge.get("source") in participants or edge.get("target") in participants
+            ]
+            connected_node_ids = [
+                str(endpoint)
+                for edge_id in connected_edge_ids
+                for endpoint in (
+                    edge_by_id[edge_id].get("source"),
+                    edge_by_id[edge_id].get("target"),
+                )
+                if isinstance(endpoint, str) and endpoint in node_ids
+            ]
+            visible_event_nodes.extend(connected_node_ids or participants)
+            visible_event_edges.extend(connected_edge_ids)
             add_scene(
                 scene_id=f"event_{index}",
                 kind="event",
                 scene_title=f"What happened next · {index}",
                 scene_summary=narrative,
-                visible_nodes=setup_ids,
-                visible_edges=[],
-                facts=[("Retained event", str(index))],
+                visible_nodes=visible_event_nodes,
+                visible_edges=visible_event_edges,
+                focus_nodes=participants,
+                focus_edges=connected_edge_ids,
+                facts=[
+                    ("Retained event", str(index)),
+                    ("Active systems", str(len(participants))),
+                ],
             )
 
     final_status = outcome.get("final_status")
@@ -955,6 +1085,8 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
     }
     raw_nodes = document.get("nodes")
     nodes = raw_nodes if isinstance(raw_nodes, list) else []
+    raw_edges = document.get("edges")
+    edges = raw_edges if isinstance(raw_edges, list) else []
     labels = {
         str(node["id"]): str(node.get("label", node["id"]))
         for node in nodes
@@ -1168,7 +1300,13 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                 "decision."
             )
     raw_events = document.get("events", [])
-    raw_moments = document.get("moments", [])
+    narration = document.get("narration")
+    narrated_moments = narration.get("moments") if isinstance(narration, dict) else None
+    raw_moments = (
+        narrated_moments
+        if isinstance(narrated_moments, list)
+        else document.get("moments", [])
+    )
     rounds: dict[int, dict[str, object]] = {}
     for step in decision_steps:
         raw_round_index = step.get("round_index")
@@ -1185,6 +1323,59 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                 cast(list[dict[str, object]], round_item["new_information"]).append(
                     {**observation, "recipient_id": step["person_id"]}
                 )
+    if not rounds:
+        outcome_rounds = outcome.get("round_history")
+        if isinstance(outcome_rounds, list):
+            for raw_round in outcome_rounds:
+                if not isinstance(raw_round, dict):
+                    continue
+                round_index = raw_round.get("round")
+                raw_stances = raw_round.get("stances")
+                if (
+                    not isinstance(round_index, int)
+                    or isinstance(round_index, bool)
+                    or not isinstance(raw_stances, dict)
+                ):
+                    continue
+                decisions: list[dict[str, object]] = []
+                for person_id, raw_stance in raw_stances.items():
+                    if not isinstance(person_id, str) or not isinstance(raw_stance, dict):
+                        continue
+                    stance = raw_stance.get("decision", raw_stance.get("stance"))
+                    payload = {
+                        "stance": stance,
+                        "reason": raw_stance.get("rationale", raw_stance.get("reason")),
+                        "primary_risk": raw_stance.get("risk"),
+                        "blocking_dependency": raw_stance.get("request"),
+                    }
+                    decisions.append(
+                        {
+                            "activation": None,
+                            "causal_time": None,
+                            "logical_time": None,
+                            "person_id": person_id,
+                            "person_label": labels.get(
+                                person_id, person_id.replace("_", " ").title()
+                            ),
+                            "orientation": raw_stance.get("rationale"),
+                            "actions": [
+                                {
+                                    "summary": raw_stance.get("rationale"),
+                                    "port": None,
+                                    "payload": payload,
+                                }
+                            ],
+                            "round_index": round_index,
+                            "observations": [],
+                            "model_call_count": 1,
+                        }
+                    )
+                if decisions:
+                    rounds[round_index] = {
+                        "round_index": round_index,
+                        "decisions": decisions,
+                        "new_information": [],
+                    }
 
     network_nodes: list[dict[str, object]] = []
     network_edges: list[dict[str, object]] = []
@@ -1270,6 +1461,8 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                 "routeIds": [edge_id],
             }
         )
+    if not influence_messages and nodes:
+        network_nodes, network_edges = _canonical_replay_network(nodes, edges)
     ordered_rounds = [rounds[index] for index in sorted(rounds)]
     replay = _simulation_replay(
         title=authoring.get("title"),
@@ -1284,8 +1477,10 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
     readout = coordination_measurement_readout(document).model_dump(mode="json")
     return {
         "run_id": document.get("run_id"),
+        "created_at": document.get("created_at"),
         "status": document.get("status"),
         "scenario": document.get("scenario"),
+        "arm": document.get("arm"),
         "execution": document.get("execution"),
         "title": authoring.get("title"),
         "description": authoring.get("description"),

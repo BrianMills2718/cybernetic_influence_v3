@@ -70,9 +70,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
 
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
-    assert "Create a simulation" in page
+    assert "New simulation" in page
     assert "Guided example" in page
-    assert "Full outbreak case" in page
+    assert "Simulations" in page
+    assert "Every completed simulation automatically becomes the same guided replay" in page
+    assert "Open the curated outbreak case" in page
     assert "Lab workspace" in page
     assert "Choose, configure, run" in page
     assert "Overview" in page
@@ -129,12 +131,12 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Edit the influence network directly" in page
     assert "Tell the authoring model what to change" in page
     assert shape.stylesheets == [
-        "assets/graph-canvas.css?v=replay1",
-        "assets/styles.css?v=replay1",
+        "assets/graph-canvas.css?v=replay2",
+        "assets/styles.css?v=replay2",
     ]
     assert shape.scripts == [
-        "assets/graph-canvas.js?v=replay1",
-        "assets/app.js?v=replay1",
+        "assets/graph-canvas.js?v=replay2",
+        "assets/app.js?v=replay2",
     ]
     assert {
         "overview-view",
@@ -155,6 +157,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "case-network-graph",
         "case-network-status",
         "case-network-inspector",
+        "simulations-view",
+        "simulation-list",
+        "simulation-replay-host",
         "create-view",
         "create-prompt",
         "create-generate",
@@ -413,6 +418,10 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
             "stopAuthoredSimulation",
             "renderAuthoredResult",
             "renderAuthoredReplay",
+            "renderSimulationLibrary",
+            "openSimulationReplay",
+            "rememberCompletedSimulation",
+            "data-simulation-run",
             "result.simulation_replay?.question",
         "include_projection=false",
         "/summary",

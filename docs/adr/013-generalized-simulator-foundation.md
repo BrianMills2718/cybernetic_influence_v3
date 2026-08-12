@@ -134,6 +134,22 @@ No component may claim predictive validity merely because its internal state is
 exact. Exactness describes execution under assumptions, not correspondence to
 the real world.
 
+### Automatic presentation adoption
+
+Replay is a runtime projection contract, not scenario-specific UI work. Every
+completed run must automatically appear in the retained-simulation catalogue
+and receive the same progressively disclosed replay from its canonical graph,
+retained events or rounds, decisions, and outcome. Node and edge keys are
+derived from the types present in that projection. A specialized case-study
+page may add interpretation, but it may not be the only way to inspect a run.
+
+Adding a new scenario must not require a new results page or hand-authored
+walkthrough. Unknown canonical entity kinds remain visible through a generic
+object presentation until a reusable visual-family mapping is registered;
+they do not silently disappear. Adoption is proven by opening a newly retained
+run through the shared catalogue and replay renderer, not merely by unit-testing
+the projector in isolation.
+
 ## Strongest rejected alternative
 
 **C — Cybernetic Influence foundation with compatibility adapters** best
