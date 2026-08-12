@@ -1,36 +1,31 @@
 {
   "schema_version": "1.1",
   "record_type": "roadmap_goal_handoff",
-  "handoff_id": "roadmap-goal:cybernetic-influence-v3:concordia-physical-access-parity-027:slice-26-owner-adoption-2026-07-31",
+  "handoff_id": "roadmap-goal:cybernetic-influence-v3:concordia-general-world-transition-027:architecture-revisit-2026-08-11",
   "project_id": "cybernetic-influence-v3",
-  "goal_id": "concordia-physical-access-parity-027",
+  "goal_id": "concordia-general-world-transition-027",
   "project_roadmap_ref": {
     "path": "docs/ROADMAP.md",
-    "revision": "slice-26-owner-adoption-2026-07-31",
-    "concern": "Concordia-first parity, current-capability migration, and later cross-domain generalization"
+    "revision": "architecture-revisit-2026-08-11",
+    "concern": "Concordia general vertical, product adoption, and later cross-domain generalization"
   },
-  "objective": "Reproduce the current physical-access capability on pinned Concordia with Concordia owning entity/component state, simulation control, modeled time, and checkpoint continuation, while preserving analyst-visible outcomes and proving the old CI causal/active runtime did not execute.",
-  "objective_sha256": "2865eb35c3513ded99e653000cada11863d1de7313d9384c9da5f30fb74c798f",
+  "objective": "Implement the smallest domain-neutral world-composition and transition path on stock pinned Concordia: bounded actor context, open semantic intent, declared deterministic and Luna transition authorities, validated atomic world patches, strict checkpoint continuation, and retained evidence, without invoking the old CI causal or active runtime.",
+  "objective_sha256": "ed4cb73247e47452ad5995d16d077a0ddfe1e7e62927ad0629a720e85c9ff8a3",
   "audience_or_actor": "the next implementation agent after explicit Slice 27 authorization",
   "current_state_ref": {
-    "path": "docs/adr/013-generalized-simulator-foundation.md",
-    "revision": "accepted-2026-07-31",
-    "concern": "Concordia foundation authority and Cybernetic Influence migration boundary"
+    "path": "docs/research/027-concordia-architecture-revisit.md",
+    "revision": "complete-recommendation-2026-08-11",
+    "concern": "current Concordia source, bridge/port probe, authentic Luna traces, framework defects, and explicit uncertainties"
   },
-  "desired_outcome": "One existing analyst-visible capability runs end to end on Concordia without the old causal or active runtime as a hidden executor, retaining the current success, policy-denial, physical-failure, timing, checkpoint, and evidence distinctions.",
-  "success_or_readout": "P27-1 through P27-7 in docs/handoffs/027-foundation-implementation.md pass, and the product owner can directly inspect the baseline and Concordia results.",
+  "desired_outcome": "One bridge/port world is instantiated from general semantic contracts and runs end to end under Concordia's outer lifecycle. A deterministic transition rejects a destroyed route, dynamic topology survives strict restore, a Luna actor proposes an unenumerated semantic action, a Luna transition authority proposes a structured patch, and generic validation commits or visibly rejects it without leaking hidden world truth.",
+  "success_or_readout": "P27-1 through P27-11 in docs/handoffs/027-foundation-implementation.md pass, including authentic completed Luna actor and adjudicator traces and evidence that separates authored configuration, model selections, deterministic validation, and canonical outcome.",
   "evidence_target": {
-    "claim": "Concordia can own one current Cybernetic Influence capability end to end while selective exact components preserve the capability's material analyst-visible distinctions.",
+    "claim": "Stock Concordia can own the outer lifecycle of one production general world-transition vertical while project-owned components preserve bounded context, question-relative exact state, open semantic action, validated patches, strict continuation, and inspectable authority boundaries.",
     "evidence_class": "observed"
   },
   "owner_or_owner_decision": {
     "kind": "owner",
-    "owner_role": "product owner",
-    "decision_ref": {
-      "path": "docs/adr/013-generalized-simulator-foundation.md",
-      "revision": "accepted-2026-07-31",
-      "concern": "Candidate A foundation adoption; execution remains separately gated by the handoff"
-    }
+    "owner_role": "implementation agent operating under explicit product-owner authorization"
   },
   "recommended_design_profile": "standard",
   "recommended_overlays": [
@@ -39,29 +34,83 @@
     "repository_governance"
   ],
   "selection_purpose": "advance_design_only",
-  "selected_at": "2026-07-31T18:37:49-07:00",
+  "selected_at": "2026-08-11T19:00:00-07:00",
   "applicable_decision_refs": [
     {
       "path": "docs/adr/013-generalized-simulator-foundation.md",
-      "revision": "accepted-2026-07-31",
-      "concern": "Concordia owns the foundation; the old CI runtime cannot remain hidden authority"
+      "revision": "boundary-clarification-2026-08-11",
+      "concern": "Concordia owns the outer lifecycle; no hidden old runtime or direct unvalidated LLM mutation"
     },
     {
       "path": "docs/adr/008-separate-spatial-topology-from-routing-and-permission.md",
-      "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
-      "concern": "retained baseline distinction among adjacency, capability, and authorization"
+      "revision": "retained-question-relative-constraint",
+      "concern": "topology, traversability, capability, authorization, attempt, and realized outcome remain distinguishable when material"
+    },
+    {
+      "path": "docs/adr/011-declared-representation-depth.md",
+      "revision": "retained-question-relative-constraint",
+      "concern": "exact and coarse transition authorities declare fidelity, assumptions, provenance, and invalid questions"
     }
   ],
   "required_capability_refs": [
     {
       "path": "docs/GOAL.md",
-      "revision": "generalized-simulation-reset-2026-07-31",
-      "concern": "current-capability parity before cross-domain generalization"
+      "revision": "generalized-simulation-reconciliation-2026-08-11",
+      "concern": "general simulator outcome, conditional-not-predictive claim, and adopted Concordia foundation"
     },
     {
       "path": "docs/handoffs/027-foundation-implementation.md",
-      "revision": "handoff-2026-07-31-owner-adoption",
-      "concern": "bounded parity inputs, ownership, acceptance, failure behavior, and reset boundary"
+      "revision": "general-world-transition-2026-08-11",
+      "concern": "stable bridge/port example, general contracts, acceptance, unknowns, stop conditions, and adoption requirement"
+    },
+    {
+      "path": "docs/research/027-concordia-architecture-revisit.md",
+      "revision": "complete-recommendation-2026-08-11",
+      "concern": "current-source evidence and disposable probe boundary"
+    }
+  ],
+  "capability_adoptions": [
+    {
+      "capability_ref": {
+        "path": "docs/GOAL.md",
+        "revision": "generalized-simulation-reconciliation-2026-08-11",
+        "concern": "general simulator outcome, conditional-not-predictive claim, and adopted Concordia foundation"
+      },
+      "disposition": "reuse",
+      "canonical_seam": "docs/GOAL.md#current-acceptance",
+      "intended_consumer": "Slice 27 production world-transition implementation",
+      "adoption_proof": {
+        "claim": "The production vertical visibly satisfies the goal's Concordia ownership and question-relative exactness boundaries.",
+        "evidence_class": "observed"
+      }
+    },
+    {
+      "capability_ref": {
+        "path": "docs/handoffs/027-foundation-implementation.md",
+        "revision": "general-world-transition-2026-08-11",
+        "concern": "stable bridge/port example, general contracts, acceptance, unknowns, stop conditions, and adoption requirement"
+      },
+      "disposition": "reuse",
+      "canonical_seam": "docs/handoffs/027-foundation-implementation.md#required-general-contracts",
+      "intended_consumer": "Slice 27 implementation and focused verification",
+      "adoption_proof": {
+        "claim": "The bridge/port production run passes P27-1 through P27-11 through the named general contracts.",
+        "evidence_class": "observed"
+      }
+    },
+    {
+      "capability_ref": {
+        "path": "docs/research/027-concordia-architecture-revisit.md",
+        "revision": "complete-recommendation-2026-08-11",
+        "concern": "current-source evidence and disposable probe boundary"
+      },
+      "disposition": "reuse",
+      "canonical_seam": "docs/research/027-concordia-architecture-revisit.md#explicit-uncertainty-register",
+      "intended_consumer": "Slice 27 design choices, stop conditions, and execution evidence",
+      "adoption_proof": {
+        "claim": "Implementation evidence distinguishes established behavior from every deferred or unresolved foundation capability.",
+        "evidence_class": "doc"
+      }
     }
   ],
   "typed_dependencies": [
@@ -69,53 +118,112 @@
       "dependency_type": "informs",
       "target_ref": {
         "path": "https://github.com/google-deepmind/concordia",
-        "revision": "bdb449ab384adf203b09004049184b9176be808f",
-        "concern": "foundation entity, game-master, component state, engine, time, and checkpoint seams"
+        "revision": "131ed0d2ea14754539a3feb9dfd3717d11e859df",
+        "concern": "inspected public entity, component, simulation, engine, scheduling, checkpoint, and tool seams"
       },
-      "condition": "Implementation uses public pinned Concordia seams and reports any private or unstable dependency."
+      "condition": "Pin the tested revision, use public seams, and report any required private or unstable dependency before proceeding."
     },
     {
       "dependency_type": "informs",
       "target_ref": {
-        "path": "src/cybernetic_influence/scenarios/physical_access.py",
-        "revision": "e7faf25e21abb8950a18955600bbbf7a36b76104",
-        "concern": "current provider-free arms and readout parity baseline"
+        "path": "docs/research/027-concordia-architecture-revisit.md",
+        "revision": "complete-recommendation-2026-08-11",
+        "concern": "disposable bridge/port behavior and authentic Luna trace identifiers"
       },
-      "condition": "Baseline fixtures and outputs are frozen before implementation."
+      "condition": "The production implementation may reproduce the behavior but may not treat the disposable probe as adopted product code."
     },
     {
       "dependency_type": "blocked_by",
       "target_ref": {
         "path": "docs/handoffs/027-foundation-implementation.md",
-        "revision": "handoff-2026-07-31-owner-adoption",
-        "concern": "explicit implementation authorization"
+        "revision": "general-world-transition-2026-08-11",
+        "concern": "explicit production implementation authorization"
       },
-      "condition": "The user explicitly instructs the agent to execute Slice 27."
+      "condition": "The user explicitly instructs the agent to implement Slice 27."
     }
   ],
   "material_unknowns": [
     {
-      "unknown_id": "exact-resolution-seam",
-      "question": "Can a public Concordia game-master/component path own deterministic access adjudication and evidence without recreating the old CI engine?",
+      "unknown_id": "live-active-system-lifecycle",
+      "question": "Can autonomous Concordia entities be safely created, removed, suspended, replaced, or rebound while an engine loop is live and still restore without stale references?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "active-creation-boundary",
+      "question": "Should creation of an active system commit immediately or only at a defined safe boundary between engine moments?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "simultaneous-patch-conflicts",
+      "question": "What is the smallest generic conflict and isolation model for simultaneous incompatible world patches?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "mixed-authority-transaction",
+      "question": "Where is the transaction boundary when deterministic, stochastic, LLM, replay, or external authorities jointly affect one modeled moment?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "llm-authority-breadth",
+      "question": "How broad may an LLM adjudicator's read and write authority be before generic invariants become unsafe or too elaborate for rapid wargaming?",
       "treatment": "instrument"
     },
     {
-      "unknown_id": "checkpoint-completeness",
-      "question": "Can all material exact component and parity-evidence state round-trip through a fail-loud Concordia-owned checkpoint?",
+      "unknown_id": "context-query-contract",
+      "question": "Which world queries actors and adjudicators need, how are they authorized, and how is provenance retained without flooding prompts?",
       "treatment": "instrument"
+    },
+    {
+      "unknown_id": "general-information-noninterference",
+      "question": "Can hidden world truth be prevented from entering actor cognition across all supported transition authorities, rather than only the named bridge-failure negative control?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "kernel-invariant-boundary",
+      "question": "Which identity, topology, placement, representation, custody, conservation, and history constraints are universal kernel invariants versus declared subsystem rules?",
+      "treatment": "instrument"
+    },
+    {
+      "unknown_id": "resolution-consistency",
+      "question": "How should coarse surrogates and fine-grained subsystems declare causal responsibility so both cannot independently execute the same function?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "general-conversational-authoring",
+      "question": "Can arbitrary analyst prose compile to the general composition contract without generating executable Python, selecting unsupported implementations, or falling back to closed scenario families?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "cross-domain-reuse",
+      "question": "Will a materially different domain reuse the same world, context, intent, authority, patch, validation, checkpoint, and evidence contracts without a scenario-specific runtime?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "scale-and-behavior",
+      "question": "What latency, cost, stability, and behavioral fidelity emerge with many active systems, multirate processes, repeated seeds, and long runs?",
+      "treatment": "investigate"
+    },
+    {
+      "unknown_id": "upstream-stability",
+      "question": "Are the inspected Concordia public seams stable enough for a long-lived pin without a private fork?",
+      "treatment": "investigate"
     }
   ],
   "non_goals": [
-    "Port other scenarios, generalized authoring, theoretical analysis, comparisons, or all UI surfaces.",
-    "Call a provider-backed model or evaluate cognition quality.",
-    "Prove predictive fidelity or cross-domain generality.",
-    "Migrate or rewrite historical retained runs.",
-    "Delete the existing runtime before observed and accepted parity."
+    "Migrate the outbreak demo, existing retained runs, all public UI, or every current capability in this slice.",
+    "Implement arbitrary conversational authoring, live autonomous-entity creation, or concurrent transactions.",
+    "Create an exhaustive affordance, organization, trust, social, or physical ontology.",
+    "Prove predictive validity, cross-domain generality, scale, behavioral realism, or LLM adjudication reliability.",
+    "Add broad security, deployment, compatibility, or performance work.",
+    "Delete the existing runtime before one intended product consumer adopts the new path."
   ],
   "non_claims": [
-    "One physical-access path proves complete product parity.",
-    "Exact component execution establishes real-world accuracy.",
-    "Concordia is predictive for chaotic socio-technical systems.",
-    "The architecture approval authorizes implementation."
+    "The disposable bridge/port probe is production adoption.",
+    "One valid Luna patch establishes reliable semantic adjudication.",
+    "One hidden-literal check establishes general information noninterference.",
+    "Mutable records inside one component establish safe live autonomous-entity creation or removal.",
+    "The bridge/port case establishes cross-domain generality, scale, behavioral fidelity, or empirical realism.",
+    "The current evidence justifies a private Concordia fork.",
+    "The architecture approval authorizes production implementation."
   ]
 }
