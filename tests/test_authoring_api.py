@@ -184,6 +184,15 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
         moment["concise_narrative"]
         for moment in reopened_body["narration"]["moments"]
     )
+    summary = api.get(f"/api/runs/{retained['run_id']}/summary")
+    assert summary.status_code == 200
+    compact = summary.json()
+    assert compact["headline"] == retained["story"]["headline"]
+    assert compact["summary"] == retained["story"]["summary"]
+    assert len(compact["participants"]) == 5
+    assert compact["decision_steps"]
+    assert "events" not in compact
+    assert "traces" not in compact
 
     run_path = tmp_path / "runs" / f"{retained['run_id']}.json"
     raw = json.loads(run_path.read_text(encoding="utf-8"))
@@ -860,6 +869,87 @@ def test_failed_authored_live_run_is_retained_with_provider_evidence(
         },
     )
     assert retry.status_code == 202, retry.text
+
+
+def test_authored_coordination_run_exposes_parallelism_and_stop_control(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    effective = EffectiveRunLlmConfiguration(
+        model="codex/gpt-5.6-luna",
+        agent_reasoning_effort="medium",
+        narrator_reasoning_effort="low",
+        max_total_cost=0.74,
+        selection_basis="operator_selected",
+        llm_client_revision="package:0.7.0",
+        billing_mode="subscription_included",
+    )
+    monkeypatch.setattr(
+        api_module,
+        "resolve_live_configuration",
+        lambda _options: effective,
+    )
+    entered = Event()
+    stop_observed = Event()
+    release = Event()
+    captured: dict[str, object] = {}
+
+    def block_until_stopped(
+        _compiled: CompiledScenario,
+        **kwargs: object,
+    ) -> object:
+        captured.update(kwargs)
+        entered.set()
+        stop_requested = cast(Any, kwargs["stop_requested"])
+        for _ in range(200):
+            if stop_requested():
+                stop_observed.set()
+                break
+            time.sleep(0.01)
+        release.wait(2)
+        raise RuntimeError("forced completion after stop wiring proof")
+
+    monkeypatch.setattr(CompiledScenario, "run_live", block_until_stopped)
+    api = _client(tmp_path)
+    draft = api.post("/api/authoring/reviewed-coordination-drafts").json()
+    approved = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/approve",
+        json={"expected_revision": draft["revision"]},
+    )
+    assert approved.status_code == 200
+
+    started = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/runs",
+        json={
+            "execution": "live",
+            "llm_options": {
+                "model": effective.model,
+                "agent_reasoning_effort": "medium",
+                "max_total_cost": 0.74,
+            },
+        },
+    )
+    assert started.status_code == 202
+    run_id = started.json()["run_id"]
+    assert entered.wait(2)
+    assert captured["participant_concurrency"] == 5
+    assert callable(captured["stop_requested"])
+
+    first_stop = api.post(f"/api/runs/{run_id}/stop")
+    assert first_stop.status_code == 200
+    assert first_stop.json()["status"] == "stop_requested"
+    assert stop_observed.wait(2)
+    repeated_stop = api.post(f"/api/runs/{run_id}/stop")
+    assert repeated_stop.status_code == 200
+    release.set()
+
+    for _ in range(200):
+        retained = api.get(f"/api/runs/{run_id}").json()
+        if retained["status"] == "failed":
+            break
+        time.sleep(0.01)
+    assert retained["status"] == "failed"
 
 
 def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: Path) -> None:

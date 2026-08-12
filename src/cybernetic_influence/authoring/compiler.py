@@ -8,6 +8,7 @@ an executor.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from hashlib import sha256
 import json
@@ -169,6 +170,8 @@ class CompiledScenario:
         per_run_budget: float,
         structured_call: Any = None,
         progress_observer: RuntimeProgressObserver | None = None,
+        stop_requested: Callable[[], bool] | None = None,
+        participant_concurrency: int = 1,
     ) -> ActiveRuntimeResult:
         """Run reviewed people through native LLM policies and exact mechanisms."""
 
@@ -200,6 +203,8 @@ class CompiledScenario:
                     per_run_budget=per_run_budget,
                 ),
                 progress_observer=progress_observer,
+                stop_requested=stop_requested,
+                participant_concurrency=participant_concurrency,
             )
         if isinstance(self.fixture, InformationCampaignFixture):
             campaign_fixture, campaign_bindings = (

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from collections.abc import Awaitable, Callable, Sequence
@@ -262,6 +263,7 @@ class AuthoredRunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     execution: Literal["scripted", "live"] = "scripted"
     llm_options: RunLlmOptions | None = None
+    narration: Literal["deterministic", "llm"] = "deterministic"
 
 
 class CompositeAssayRowResponse(BaseModel):
@@ -602,6 +604,163 @@ def _coordination_reference_narration(
         "cost": 0.0,
         "moments": moments,
         "calls": [],
+    }
+
+
+def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
+    """Project one completed run into a small human-facing result contract."""
+
+    story = document.get("story")
+    if not isinstance(story, dict):
+        story = {}
+    raw_nodes = document.get("nodes")
+    nodes = raw_nodes if isinstance(raw_nodes, list) else []
+    labels = {
+        str(node["id"]): str(node.get("label", node["id"]))
+        for node in nodes
+        if isinstance(node, dict) and isinstance(node.get("id"), str)
+    }
+    raw_traces = document.get("traces")
+    traces = raw_traces if isinstance(raw_traces, list) else []
+    participants: dict[str, dict[str, object]] = {}
+    decision_steps: list[dict[str, object]] = []
+    for raw_trace in traces:
+        if (
+            not isinstance(raw_trace, dict)
+            or raw_trace.get("participant_kind") != "person"
+            or not isinstance(raw_trace.get("person"), str)
+        ):
+            continue
+        person_id = str(raw_trace["person"])
+        raw_observations = raw_trace.get("observations")
+        observations = (
+            raw_observations if isinstance(raw_observations, list) else []
+        )
+        observed_commitments: dict[str, str] = {}
+        for observation in observations:
+            if not isinstance(observation, dict):
+                continue
+            apparent_content = observation.get("apparent_content")
+            if not isinstance(apparent_content, str):
+                continue
+            try:
+                content = json.loads(apparent_content)
+            except json.JSONDecodeError:
+                continue
+            if (
+                not isinstance(content, dict)
+                or content.get("document_kind") != "meeting_snapshot"
+                or not isinstance(content.get("commitments"), list)
+            ):
+                continue
+            for raw_commitment in content["commitments"]:
+                if (
+                    isinstance(raw_commitment, dict)
+                    and isinstance(raw_commitment.get("person_id"), str)
+                    and isinstance(raw_commitment.get("commitment"), str)
+                ):
+                    observed_commitments[str(raw_commitment["person_id"])] = str(
+                        raw_commitment["commitment"]
+                    )
+        for observed_person_id, observed_commitment in observed_commitments.items():
+            observed_previous = participants.get(observed_person_id, {})
+            participants[observed_person_id] = {
+                "person_id": observed_person_id,
+                "label": labels.get(
+                    observed_person_id,
+                    observed_person_id.replace("_", " ").title(),
+                ),
+                "latest_orientation": observed_previous.get(
+                    "latest_orientation"
+                ),
+                "latest_actions": observed_previous.get("latest_actions", []),
+                "last_explicit_commitment": observed_commitment,
+            }
+        raw_actions = raw_trace.get("actions")
+        actions = raw_actions if isinstance(raw_actions, list) else []
+        projected_actions = [
+            {
+                "summary": action.get("public_summary"),
+                "port": action.get("output_port_id"),
+                "payload": action.get("payload"),
+            }
+            for action in actions
+            if isinstance(action, dict)
+        ]
+        orientation = raw_trace.get("orientation")
+        commitment: object = None
+        for action in projected_actions:
+            payload = action.get("payload")
+            if (
+                isinstance(payload, dict)
+                and isinstance(payload.get("commitment"), str)
+            ):
+                commitment = payload["commitment"]
+        previous = participants.get(person_id, {})
+        participants[person_id] = {
+            "person_id": person_id,
+            "label": labels.get(person_id, person_id.replace("_", " ").title()),
+            "latest_orientation": (
+                orientation
+                if isinstance(orientation, str)
+                else previous.get("latest_orientation")
+            ),
+            "latest_actions": projected_actions,
+            "last_explicit_commitment": (
+                commitment
+                if commitment is not None
+                else previous.get("last_explicit_commitment")
+            ),
+        }
+        if projected_actions or isinstance(orientation, str):
+            decision_steps.append(
+                {
+                    "activation": raw_trace.get("activation"),
+                    "causal_time": raw_trace.get("causal_time"),
+                    "logical_time": raw_trace.get("logical_time"),
+                    "person_id": person_id,
+                    "person_label": participants[person_id]["label"],
+                    "orientation": orientation,
+                    "actions": projected_actions,
+                    "model_call_count": raw_trace.get("model_call_count", 0),
+                }
+            )
+    authoring = document.get("authoring")
+    if not isinstance(authoring, dict):
+        authoring = {}
+    outcome = document.get("outcome")
+    if not isinstance(outcome, dict):
+        outcome = {}
+    completion = document.get("completion")
+    if not isinstance(completion, dict):
+        completion = {}
+    return {
+        "run_id": document.get("run_id"),
+        "status": document.get("status"),
+        "scenario": document.get("scenario"),
+        "execution": document.get("execution"),
+        "title": authoring.get("title"),
+        "description": authoring.get("description"),
+        "template_id": authoring.get("template_id"),
+        "headline": story.get("headline"),
+        "summary": story.get("summary"),
+        "outcome": outcome,
+        "completion": completion,
+        "participant_model_calls": document.get(
+            "agent_model_calls", document.get("model_calls", 0)
+        ),
+        "narration_model_calls": document.get("narration_model_calls", 0),
+        "participants": list(participants.values()),
+        "decision_steps": decision_steps,
+        "evidence_counts": {
+            "events": len(document.get("events", []))
+            if isinstance(document.get("events"), list)
+            else 0,
+            "causal_moments": len(document.get("moments", []))
+            if isinstance(document.get("moments"), list)
+            else 0,
+            "decision_steps": len(decision_steps),
+        },
     }
 
 
@@ -1647,6 +1806,11 @@ def create_app(
                 status_code=422,
                 detail="llm_options apply only to live execution",
             )
+        if not live and body.narration == "llm":
+            raise HTTPException(
+                status_code=422,
+                detail="llm narration applies only to live execution",
+            )
         if live and os.getenv("CYBERNETIC_INFLUENCE_LIVE") != "1":
             raise HTTPException(
                 status_code=403,
@@ -1737,6 +1901,12 @@ def create_app(
             "progress_sequence": 0,
             }
             runs.save(initial)
+            if live and isinstance(
+                compiled.proposal.workflow,
+                CoordinationDecisionWorkflowDraft,
+            ):
+                with pause_lock:
+                    stop_requests[run_id] = Event()
         if live and not worker_execution:
             def execute_authored_live_worker() -> None:
                 authored_live_worker_context.active = True
@@ -1759,6 +1929,8 @@ def create_app(
                         if live_lock.locked():
                             live_lock.release()
                 finally:
+                    with pause_lock:
+                        stop_requests.pop(run_id, None)
                     del authored_live_worker_context.run_id
                     del authored_live_worker_context.active
 
@@ -1770,6 +1942,17 @@ def create_app(
             return JSONResponse(status_code=202, content=initial)
         result: ActiveRuntimeResult | None = None
         try:
+            authored_stop: Event | None = None
+            if live and isinstance(
+                compiled.proposal.workflow,
+                CoordinationDecisionWorkflowDraft,
+            ):
+                with pause_lock:
+                    authored_stop = stop_requests.get(run_id)
+                if authored_stop is None:
+                    raise RuntimeError(
+                        "authored coordination worker lacks its stop control"
+                    )
             result = (
                 compiled.run_live(
                     run_id=run_id,
@@ -1779,6 +1962,19 @@ def create_app(
                     per_run_budget=effective_llm.max_total_cost,
                     progress_observer=lambda update, checkpoint: retain_progress(
                         run_id, update, checkpoint
+                    ),
+                    stop_requested=(
+                        authored_stop.is_set
+                        if authored_stop is not None
+                        else None
+                    ),
+                    participant_concurrency=(
+                        5
+                        if isinstance(
+                            compiled.proposal.workflow,
+                            CoordinationDecisionWorkflowDraft,
+                        )
+                        else 1
                     ),
                 )
                 if effective_llm is not None
@@ -1837,11 +2033,11 @@ def create_app(
                 document["authoring"] = initial["authoring"]
                 narrated = _attach_narration(
                     document,
-                    live=live,
+                    live=live and body.narration == "llm",
                     run_id=run_id,
                     effective_llm=effective_llm,
                 )
-                if not live:
+                if body.narration == "deterministic":
                     narrated["narration"] = _coordination_reference_narration(
                         narrated
                     )
@@ -1909,7 +2105,7 @@ def create_app(
             document["authoring"] = initial["authoring"]
             narrated = _attach_narration(
                 document,
-                live=live,
+                live=live and body.narration == "llm",
                 run_id=run_id,
                 effective_llm=effective_llm,
             )
@@ -2088,6 +2284,7 @@ def create_app(
         run_id: str,
         request: Request,
         after_sequence: int = 0,
+        include_projection: bool = True,
     ) -> dict[str, object]:
         """Return only analyst-safe live updates after one retained sequence."""
         _require_access(request)
@@ -2115,20 +2312,52 @@ def create_app(
             and int(item["sequence"]) > after_sequence
         ]
         latest = typed[-1] if typed else None
+        if not include_projection:
+            newer = [
+                {key: value for key, value in item.items() if key != "projection"}
+                for item in newer
+            ]
+        story = document.get("story")
+        if not isinstance(story, dict):
+            story = {}
         return {
             "run_id": run_id,
             "status": document.get("status"),
             "latest_sequence": document.get("progress_sequence", 0),
             "records": newer,
-            "projection": latest.get("projection") if latest is not None else None,
+            "projection": (
+                latest.get("projection")
+                if include_projection and latest is not None
+                else None
+            ),
             "model_calls": document.get("model_calls", 0),
             "cost": document.get("cost", 0.0),
             "completion": document.get("completion"),
             "coordination_measurement_status": document.get(
                 "coordination_measurement_status"
             ),
+            "outcome": document.get("outcome"),
+            "headline": story.get("headline"),
+            "summary": story.get("summary"),
             "error": document.get("error"),
         }
+
+    @app.get("/api/runs/{run_id}/summary")
+    def retained_run_summary(
+        run_id: str,
+        request: Request,
+    ) -> dict[str, object]:
+        """Return a compact readable result without the multi-megabyte evidence."""
+        _require_access(request)
+        try:
+            document = runs.get(run_id)
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except RunNotFoundError as error:
+            raise HTTPException(status_code=404, detail="run not found") from error
+        except RunCorruptError as error:
+            raise HTTPException(status_code=409, detail="retained run is corrupt") from error
+        return _compact_run_result(document)
 
     @app.delete("/api/runs/{run_id}")
     def delete_run(run_id: str, request: Request) -> dict[str, object]:
@@ -2187,10 +2416,16 @@ def create_app(
             stop = stop_requests.get(run_id)
         if (
             document.get("scenario")
-            not in {"service_desk", "coordination_decision"}
+            not in {
+                "service_desk",
+                "coordination_decision",
+                "coordination_decision_v1",
+            }
             or stop is None
         ):
             raise HTTPException(status_code=409, detail="this run cannot be stopped")
+        if document.get("status") == "stop_requested":
+            return {"run_id": run_id, "status": "stop_requested"}
         if document.get("status") not in {"running", "pause_requested"}:
             raise HTTPException(status_code=409, detail="run is not active")
         stop.set()

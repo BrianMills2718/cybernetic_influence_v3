@@ -125,11 +125,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Tell the authoring model what to change" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=92a310c",
-        "assets/styles.css?v=guided-example-v2",
+        "assets/styles.css?v=authored-results-v1",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=92a310c",
-        "assets/app.js?v=guided-example-v2",
+        "assets/app.js?v=authored-results-v1",
     ]
     assert {
         "overview-view",
@@ -162,6 +162,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-revision-prompt",
         "create-approve",
         "create-run",
+        "create-stop",
+        "create-result",
+        "create-result-people",
+        "create-result-steps",
         "run-view",
         "condition-options",
         "agent-config-select",
@@ -381,8 +385,13 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "saveAuthoringPerson",
         "approveAuthoringDraft",
         "runAuthoredSimulation",
-        "run.completion?.public_summary",
-        "run.outcome?.final_status",
+        "stopAuthoredSimulation",
+        "renderAuthoredResult",
+        "result.completion?.public_summary",
+        "result.outcome?.final_status",
+        "include_projection=false",
+        "/summary",
+        "narration:'deterministic'",
         "fetch('assets/data.json'",
         "fetch('assets/autonomous-probe.json'",
         "fetch('assets/resource-fork.json'",

@@ -929,6 +929,14 @@ def test_retained_progress_is_ordered_analyst_safe_and_replayable(
         params={"after_sequence": progress["latest_sequence"]},
     ).json()
     assert after["records"] == []
+    compact = api.get(
+        f"/api/runs/{run['run_id']}/progress",
+        params={"include_projection": False},
+    ).json()
+    assert compact["projection"] is None
+    assert compact["headline"] == run["story"]["headline"]
+    assert compact["summary"] == run["story"]["summary"]
+    assert all("projection" not in record for record in compact["records"])
 
 
 def test_physical_access_uses_the_same_retained_progress_schema(

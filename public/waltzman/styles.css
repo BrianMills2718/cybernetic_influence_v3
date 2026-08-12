@@ -1147,6 +1147,22 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-run-status { background: #102231; border-left: 3px solid var(--accent); margin-top: 20px; padding: 18px 20px; }
 .create-run-status p { color: var(--muted); margin: 6px 0; }
 .create-run-status a { color: var(--accent); }
+.create-result { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 18px; }
+.create-result h3 { font-size: 1.65rem; margin: 0 0 6px; }
+.create-result h4 { margin: 24px 0 8px; }
+.create-result-facts { display: grid; gap: 1px; grid-template-columns: repeat(4, 1fr); margin: 18px 0; }
+.create-result-facts div { background: var(--panel); padding: 12px; }
+.create-result-facts strong, .create-result-facts span { display: block; }
+.create-result-facts span { color: var(--muted); font-size: 0.76rem; margin-top: 3px; }
+.create-result-people article { border-top: 1px solid var(--line); padding: 12px 0; }
+.create-result-people article > div { align-items: baseline; display: flex; gap: 10px; justify-content: space-between; }
+.create-result-people article span { color: var(--accent); font-size: 0.78rem; }
+.create-result-people article p { margin-bottom: 0; }
+.create-result ol { padding-left: 22px; }
+.create-result li { border-bottom: 1px solid var(--line); padding: 10px 0 10px 4px; }
+.create-result li > strong, .create-result li > span { display: block; }
+.create-result li > span { color: var(--accent); margin-top: 3px; }
+.create-result li p { margin-bottom: 0; }
 .create-boundary { color: var(--muted); margin: 0; }
 .create-boundary p { line-height: 1.6; }
 .create-boundary button { background: transparent; border: 0; color: var(--accent); cursor: pointer; padding: 0; }
@@ -1247,6 +1263,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .overview-capabilities > div, .overview-influence > div, .national-network-grid, #create-world-facts, #create-world-groups { grid-template-columns: 1fr; }
   .national-network-grid .regional-network { grid-column: auto; }
   .create-composer > div, .create-actions { align-items: stretch; flex-direction: column; }
+  .create-result-facts { grid-template-columns: 1fr 1fr; }
   .case-network { width: calc(100vw - 24px); }
   .case-network-graph { height: 560px; }
   .case-network-graph .cy-graph-shell { min-height: 560px; }

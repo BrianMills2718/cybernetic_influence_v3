@@ -707,6 +707,7 @@ class ActiveRuntimeSession:
         checkpoint: ActiveRuntimeCheckpoint,
         *,
         progress_observer: RuntimeProgressObserver | None = None,
+        participant_concurrency: int = 1,
     ) -> "ActiveRuntimeSession":
         """Restore one strictly matching aggregate checkpoint and registries."""
         validated = ActiveRuntimeCheckpoint.model_validate(
@@ -737,6 +738,7 @@ class ActiveRuntimeSession:
                 ),
             ),
             progress_observer=progress_observer,
+            participant_concurrency=participant_concurrency,
         )
         session._core = CausalSession.restore(
             scenario,

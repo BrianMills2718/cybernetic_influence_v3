@@ -36,6 +36,9 @@ let pollHandle = null
 let authoringDraft = null
 let selectedAuthoringPerson = null
 let authoredRunPollHandle = null
+let authoredRunId = null
+let authoredRunProgressSequence = 0
+let authoredRunPollFailures = 0
 let authoringBusy = false
 
 const state = {
@@ -189,7 +192,7 @@ function applyRunScopeFromUrl() {
 function syncUrl() {
   const url = new URL(window.location.href)
   url.searchParams.set('view', state.view)
-  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section', 'draft', 'guide_step']) url.searchParams.delete(key)
+  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section', 'draft', 'authored_run', 'guide_step']) url.searchParams.delete(key)
   if (state.view === 'guide') url.searchParams.set('guide_step', String(state.guideStep + 1))
   if (state.view === 'inspect') {
     url.searchParams.set('run', state.runId)
@@ -200,6 +203,7 @@ function syncUrl() {
   if (state.view === 'mechanism') url.searchParams.set('mechanism_person', state.mechanismPersonId)
   if (['compare', 'inspect'].includes(state.view)) url.searchParams.set('section', state.labSection)
   if (state.view === 'create' && authoringDraft?.draft_id) url.searchParams.set('draft', authoringDraft.draft_id)
+  if (state.view === 'create' && authoredRunId) url.searchParams.set('authored_run', authoredRunId)
   window.history.replaceState({}, '', url)
 }
 
@@ -1093,10 +1097,16 @@ function configureControls() {
   $('#create-save-person').onclick = saveAuthoringPerson
   $('#create-approve').onclick = approveAuthoringDraft
   $('#create-run').onclick = runAuthoredSimulation
+  $('#create-stop').onclick = stopAuthoredSimulation
   $('#create-start-over').onclick = () => {
     authoringDraft = null
     selectedAuthoringPerson = null
+    authoredRunId = null
+    authoredRunProgressSequence = 0
+    authoredRunPollFailures = 0
+    if (authoredRunPollHandle) window.clearTimeout(authoredRunPollHandle)
     $('#create-run-status').hidden = true
+    $('#create-result').hidden = true
     renderCreateSimulation()
     syncUrl()
   }
@@ -1428,31 +1438,76 @@ function scheduleAuthoredRunPoll(runId, delay = 1800) {
   authoredRunPollHandle = window.setTimeout(() => pollAuthoredRun(runId), delay)
 }
 
+function renderAuthoredResult(result) {
+  const outcome = result.outcome?.final_status || result.completion?.reason || 'completed'
+  $('#create-run-heading').textContent = `Result: ${sentence(outcome)}`
+  $('#create-run-detail').textContent = result.completion?.public_summary || result.summary || 'The simulation reached a terminal state.'
+  $('#create-result-title').textContent = result.headline || result.title || 'Simulation complete'
+  $('#create-result-summary').textContent = result.summary || result.description || ''
+  const counts = result.evidence_counts || {}
+  $('#create-result-facts').innerHTML = [
+    [sentence(outcome), 'Collective outcome'],
+    [String((result.participants || []).length), 'People'],
+    [String(Number(result.participant_model_calls || 0)), 'Luna decisions'],
+    [String(Number(counts.causal_moments || 0)), 'Causal moments'],
+  ].map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
+  $('#create-result-people').innerHTML = (result.participants || []).map((person) => {
+    const commitment = person.last_explicit_commitment ? sentence(person.last_explicit_commitment) : 'No explicit position change'
+    const action = person.latest_actions?.map((item) => item.summary).filter(Boolean).join(' ') || ''
+    return `<article><div><strong>${escapeHtml(person.label)}</strong><span>${escapeHtml(commitment)}</span></div><p>${escapeHtml(action || person.latest_orientation || 'No additional public rationale was retained.')}</p></article>`
+  }).join('') || '<p>No person-level decision records were retained for this workflow.</p>'
+  const steps = (result.decision_steps || []).filter((step) => step.actions?.length || step.orientation)
+  $('#create-result-steps').innerHTML = steps.map((step) => {
+    const action = step.actions?.map((item) => item.summary).filter(Boolean).join(' ') || 'No outward action.'
+    return `<li><strong>${escapeHtml(step.person_label)}</strong><span>${escapeHtml(action)}</span><p>${escapeHtml(step.orientation || '')}</p></li>`
+  }).join('')
+  $('#create-result').hidden = false
+  $('#create-run-evidence').href = `api/runs/${encodeURIComponent(result.run_id)}`
+  $('#create-run-evidence').hidden = false
+  $('#create-stop').hidden = true
+  $('#create-run').disabled = false
+}
+
 async function pollAuthoredRun(runId) {
   try {
-    const run = await apiRequest(`api/runs/${encodeURIComponent(runId)}`)
+    const run = await apiRequest(`api/runs/${encodeURIComponent(runId)}/progress?after_sequence=${authoredRunProgressSequence}&include_projection=false`)
+    authoredRunPollFailures = 0
+    authoredRunProgressSequence = Math.max(authoredRunProgressSequence, Number(run.latest_sequence || 0))
     if (run.status === 'completed') {
-      const outcome = run.outcome?.final_status || run.completion?.reason || 'completed'
-      const publicSummary = run.completion?.public_summary || run.summary || 'The simulation reached a terminal state.'
-      const callSummary = [
-        Number(run.agent_model_calls || 0) ? `${Number(run.agent_model_calls)} participant calls` : '',
-        Number(run.narration_model_calls || 0) ? `${Number(run.narration_model_calls)} narration calls` : '',
-      ].filter(Boolean).join(' and ')
-      $('#create-run-heading').textContent = `Result: ${sentence(outcome)}`
-      $('#create-run-detail').textContent = `${publicSummary}${callSummary ? ` ${callSummary} retained.` : ''}`
-      $('#create-run-evidence').href = `api/runs/${encodeURIComponent(runId)}`
-      $('#create-run-evidence').hidden = false
-      $('#create-run').disabled = false
+      const result = await apiRequest(`api/runs/${encodeURIComponent(runId)}/summary`)
+      renderAuthoredResult(result)
+      syncUrl()
       return
     }
     $('#create-run-heading').textContent = `Simulation ${sentence(run.status)}`
-    $('#create-run-detail').textContent = `${Number(run.model_calls || 0)} retained model calls. The world is still advancing.`
+    $('#create-run-detail').textContent = `${Number(run.model_calls || 0)} Luna decisions retained. The world is still advancing.`
     if (['failed', 'interrupted', 'stopped'].includes(run.status)) throw new Error(run.error || `simulation ${run.status}`)
     scheduleAuthoredRunPoll(runId)
   } catch (error) {
+    authoredRunPollFailures += 1
+    if (authoredRunPollFailures <= 3) {
+      $('#create-run-heading').textContent = 'Reconnecting to the simulation…'
+      $('#create-run-detail').textContent = error.message
+      scheduleAuthoredRunPoll(runId, 2200)
+      return
+    }
     $('#create-run-heading').textContent = 'Simulation failed visibly'
     $('#create-run-detail').textContent = error.message
+    $('#create-stop').hidden = true
     $('#create-run').disabled = false
+  }
+}
+
+async function stopAuthoredSimulation() {
+  if (!authoredRunId) return
+  $('#create-stop').disabled = true
+  $('#create-run-heading').textContent = 'Stopping after the current causal step…'
+  try {
+    await apiRequest(`api/runs/${encodeURIComponent(authoredRunId)}/stop`, {method:'POST'})
+    scheduleAuthoredRunPoll(authoredRunId, 250)
+  } catch (error) {
+    $('#create-run-detail').textContent = error.message
+    $('#create-stop').disabled = false
   }
 }
 
@@ -1462,14 +1517,22 @@ async function runAuthoredSimulation() {
   $('#create-run-status').hidden = false
   $('#create-run-heading').textContent = 'Starting the authored simulation…'
   $('#create-run-detail').textContent = 'Validating the approved configuration and Luna route.'
+  $('#create-result').hidden = true
   $('#create-run-evidence').hidden = true
+  $('#create-stop').hidden = true
   try {
     const run = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/runs`, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({execution:'live', llm_options:{model:preferredModel, agent_reasoning_effort:'medium', max_total_cost:0.74}}),
+      body:JSON.stringify({execution:'live', narration:'deterministic', llm_options:{model:preferredModel, agent_reasoning_effort:'medium', max_total_cost:0.74}}),
     })
+    authoredRunId = run.run_id
+    authoredRunProgressSequence = 0
+    authoredRunPollFailures = 0
     $('#create-run-heading').textContent = 'Simulation running'
     $('#create-run-detail').textContent = `Retained run ${run.run_id} has started.`
+    $('#create-stop').disabled = false
+    $('#create-stop').hidden = false
+    syncUrl()
     scheduleAuthoredRunPoll(run.run_id, 300)
   } catch (error) {
     $('#create-run-heading').textContent = 'Simulation did not start'
@@ -1485,6 +1548,28 @@ async function loadAuthoringDraftFromUrl() {
     authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(draftId)}`)
   } catch (error) {
     $('#create-status').textContent = `Saved draft unavailable: ${error.message}`
+  }
+}
+
+async function loadAuthoredRunFromUrl() {
+  const runId = new URLSearchParams(window.location.search).get('authored_run')
+  if (!runId || state.view !== 'create') return
+  authoredRunId = runId
+  $('#create-run-status').hidden = false
+  $('#create-run-heading').textContent = 'Opening retained simulation…'
+  try {
+    const progress = await apiRequest(`api/runs/${encodeURIComponent(runId)}/progress?include_projection=false`)
+    authoredRunProgressSequence = Number(progress.latest_sequence || 0)
+    if (progress.status === 'completed') {
+      renderAuthoredResult(await apiRequest(`api/runs/${encodeURIComponent(runId)}/summary`))
+      return
+    }
+    $('#create-stop').hidden = progress.status === 'failed'
+    $('#create-run-detail').textContent = `${Number(progress.model_calls || 0)} Luna decisions retained. The simulation is ${sentence(progress.status)}.`
+    scheduleAuthoredRunPoll(runId, 300)
+  } catch (error) {
+    $('#create-run-heading').textContent = 'Retained simulation unavailable'
+    $('#create-run-detail').textContent = error.message
   }
 }
 
@@ -1612,6 +1697,7 @@ async function loadWorkbench() {
     renderRail()
     configureControls()
     renderView()
+    await loadAuthoredRunFromUrl()
     $('#loading').hidden = true
     $('#workbench').hidden = false
     void loadRetainedLiveRuns().then(() => {

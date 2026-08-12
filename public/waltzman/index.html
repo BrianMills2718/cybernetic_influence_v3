@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=92a310c">
-  <link rel="stylesheet" href="assets/styles.css?v=guided-example-v2">
+  <link rel="stylesheet" href="assets/styles.css?v=authored-results-v1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -236,7 +236,20 @@
           <section class="create-revise"><label for="create-revision-prompt"><strong>Tell the authoring model what to change</strong><textarea id="create-revision-prompt" rows="4" placeholder="Add a platform trust-and-safety lead, make local radio the main communication channel, and model a homogeneous broadcast alongside the tailored pressure."></textarea></label><button id="create-revise" type="button">Generate revised configuration</button></section>
           <details class="create-raw"><summary>Inspect complete typed configuration</summary><pre id="create-raw-configuration"></pre></details>
           <div class="create-actions"><button id="create-approve" class="primary-cta" type="button">Approve this configuration</button><button id="create-run" class="secondary-cta" type="button" hidden>Run with Luna</button><button id="create-start-over" class="quiet-button" type="button">Start over</button></div>
-          <section id="create-run-status" class="create-run-status" hidden aria-live="polite"><strong id="create-run-heading"></strong><p id="create-run-detail"></p><a id="create-run-evidence" href="#" target="_blank" rel="noopener" hidden>Open retained run evidence</a></section>
+          <section id="create-run-status" class="create-run-status" hidden aria-live="polite">
+            <strong id="create-run-heading"></strong>
+            <p id="create-run-detail"></p>
+            <button id="create-stop" class="quiet-button" type="button" hidden>Stop simulation</button>
+            <section id="create-result" class="create-result" hidden aria-labelledby="create-result-title">
+              <h3 id="create-result-title"></h3>
+              <p id="create-result-summary"></p>
+              <div id="create-result-facts" class="create-result-facts"></div>
+              <h4>Where each person ended</h4>
+              <div id="create-result-people" class="create-result-people"></div>
+              <details><summary>Walk through the retained decisions</summary><ol id="create-result-steps"></ol></details>
+            </section>
+            <a id="create-run-evidence" href="#" target="_blank" rel="noopener" hidden>Open complete retained evidence</a>
+          </section>
         </section>
 
         <details class="create-boundary"><summary>Current authoring boundary</summary><p>The compiler currently supports the reviewed coordination template plus bounded information-campaign and resource-request templates. It does not generate new executable mechanism code. Unsupported capabilities remain visible as draft diagnostics.</p><button type="button" data-open-lab>Open the earlier outbreak-specific lab</button></details>
@@ -552,6 +565,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=92a310c" defer></script>
-  <script src="assets/app.js?v=guided-example-v2" defer></script>
+  <script src="assets/app.js?v=authored-results-v1" defer></script>
 </body>
 </html>

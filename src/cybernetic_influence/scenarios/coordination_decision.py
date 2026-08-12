@@ -1888,6 +1888,7 @@ def run_coordination(
     pause_requested: Callable[[], bool] | None = None,
     stop_requested: Callable[[], bool] | None = None,
     progress_observer: RuntimeProgressObserver | None = None,
+    participant_concurrency: int = 1,
 ) -> ActiveRuntimeResult:
     """Run scripted or live people through the same exact coordination world."""
 
@@ -1898,6 +1899,7 @@ def run_coordination(
             bindings,
             checkpoint,
             progress_observer=progress_observer,
+            participant_concurrency=participant_concurrency,
         )
         if checkpoint is not None
         else ActiveRuntimeSession(
@@ -1908,6 +1910,7 @@ def run_coordination(
             run_id=run_id,
             config=runtime_config or coordination_runtime_config(),
             progress_observer=progress_observer,
+            participant_concurrency=participant_concurrency,
         )
     )
     run_control = coordination_run_control_plan(fixture)
