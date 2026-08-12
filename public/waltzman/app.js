@@ -1534,6 +1534,7 @@ function renderCreateSimulation() {
     : '<p class="create-diagnostic ready"><strong>Compiler check passed</strong>The draft can be reviewed and approved.</p>'
   if (!proposal) {
     setCreateFlow('review')
+    $('#create-status').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
     $('#create-draft-title').textContent = 'Draft needs more information'
     $('#create-draft-description').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
     $('#create-world-facts').innerHTML = ''
@@ -1600,10 +1601,10 @@ async function advanceAuthoringDraft(message) {
       model:preferredAuthoringModel,
       reasoning_effort:'medium',
     }),
-    // The server retries a stalled provider call up to three times at 45s
+    // The server retries a stalled provider call up to three times at 120s
     // each before giving up gracefully; give it room to finish that cycle
     // instead of timing out first and hiding its actual explanation.
-    timeoutMs:170000,
+    timeoutMs:400000,
   })
   renderCreateSimulation()
   syncUrl()

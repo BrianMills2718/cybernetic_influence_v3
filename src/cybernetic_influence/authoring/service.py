@@ -67,8 +67,11 @@ AUTHORING_PROMPT_VERSION = "scenario_draft.v8"
 # hung past two minutes in production with no error. This is a caller-owned
 # deadline so one stalled provider call can no longer block the draft
 # indefinitely; the retry loop already treats a raised error here as one
-# ordinary provider_error attempt.
-AUTHORING_CALL_TIMEOUT_S = 45
+# ordinary provider_error attempt. A real workspace_agent structured-draft
+# call against the production schema/prompt measured 65s end to end
+# (2026-08-12 diagnostic), so this must stay well above that or it kills
+# genuinely succeeding calls before they finish.
+AUTHORING_CALL_TIMEOUT_S = 120
 
 
 def _call_with_deadline(
