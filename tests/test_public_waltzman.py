@@ -131,12 +131,12 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Edit the influence network directly" in page
     assert "Tell the authoring model what to change" in page
     assert shape.stylesheets == [
-        "assets/graph-canvas.css?v=replay2",
-        "assets/styles.css?v=replay2",
+        "assets/graph-canvas.css?v=replay3",
+        "assets/styles.css?v=replay3",
     ]
     assert shape.scripts == [
-        "assets/graph-canvas.js?v=replay2",
-        "assets/app.js?v=replay2",
+        "assets/graph-canvas.js?v=replay3",
+        "assets/app.js?v=replay3",
     ]
     assert {
         "overview-view",
@@ -423,6 +423,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
             "rememberCompletedSimulation",
             "data-simulation-run",
             "result.simulation_replay?.question",
+            "CyberneticGraph?.clear",
         "include_projection=false",
         "/summary",
         "narration:'deterministic'",

@@ -1058,10 +1058,17 @@ function render(element: Element, options: CanvasOptions): void {
   )
 }
 
+function clear(element: Element): void {
+  const root = roots.get(element)
+  if (!root) return
+  root.unmount()
+  roots.delete(element)
+}
+
 declare global {
   interface Window {
-    CyberneticGraph?: { render: typeof render }
+    CyberneticGraph?: { render: typeof render; clear: typeof clear }
   }
 }
 
-window.CyberneticGraph = { render }
+window.CyberneticGraph = { render, clear }

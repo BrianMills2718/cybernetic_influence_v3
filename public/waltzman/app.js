@@ -1800,6 +1800,7 @@ function renderAuthoredResultNetwork(result, scene = null) {
   ).filter((item) => visibleNodeSet.has(item.source) && visibleNodeSet.has(item.target))
   const graph = $('#create-result-network-graph')
   if (!visibleNodes.length || !window.CyberneticGraph) {
+    window.CyberneticGraph?.clear?.(graph)
     graph.classList.remove('react-canvas-host')
     graph.innerHTML = '<p class="create-result-no-graph">This step is retained as text; it has no graph items to display.</p>'
     return
@@ -1941,6 +1942,7 @@ function renderSimulationLibrary() {
 async function openSimulationReplay(runId) {
   if (!runId || simulationLoadingRunId === runId) return
   simulationLoadingRunId = runId
+  window.CyberneticGraph?.clear?.($('#create-result-network-graph'))
   authoredRunId = runId
   authoredResult = null
   authoredReplaySceneIndex = 0
