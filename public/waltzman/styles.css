@@ -1101,12 +1101,14 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-hero h2 { font-size: clamp(2.5rem, 5vw, 4.5rem); letter-spacing: -0.05em; line-height: 1.03; margin: 14px 0 20px; max-width: 17ch; }
 .create-hero > p { color: var(--muted); font-size: 1.05rem; line-height: 1.7; max-width: 75ch; }
 .create-composer { background: var(--panel); border: 1px solid var(--line-strong); border-radius: 14px; padding: 26px; }
-.create-composer label, .create-revise label, .create-person-editor label { color: var(--muted); display: grid; font-size: 0.78rem; gap: 8px; }
+.create-composer label, .create-revise label, .create-person-editor label, .create-scenario-editor label { color: var(--muted); display: grid; font-size: 0.78rem; gap: 8px; }
 .create-composer label > strong, .create-revise label > strong { color: var(--text); font-size: 1.1rem; }
-.create-composer textarea, .create-revise textarea, .create-person-editor textarea, .create-person-editor input, .create-person-editor select { background: #07121b; border: 1px solid var(--line); border-radius: 8px; color: var(--text); font: inherit; line-height: 1.55; padding: 12px; width: 100%; }
+.create-composer textarea, .create-revise textarea, .create-person-editor textarea, .create-person-editor input, .create-person-editor select, .create-scenario-editor textarea, .create-scenario-editor input, .create-scenario-editor select { background: #07121b; border: 1px solid var(--line); border-radius: 8px; color: var(--text); font: inherit; line-height: 1.55; padding: 12px; width: 100%; }
 .create-composer > div { display: flex; gap: 10px; margin-top: 14px; }
 .create-status { color: var(--muted); margin: 14px 0 0; }
 .create-review { border-top: 1px solid var(--line); padding-top: 32px; }
+.create-review.result-mode { border-top: 0; padding-top: 0; }
+.create-review.result-mode > :not(.create-run-status) { display: none; }
 .create-review > header { align-items: start; display: flex; gap: 24px; justify-content: space-between; }
 .create-review > header span, .create-world-summary > div:first-child > span, .create-people > div:first-child > span { color: var(--accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .create-review > header h3 { font-size: 2rem; margin: 7px 0 8px; }
@@ -1117,6 +1119,10 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-diagnostic { border-left: 3px solid var(--conditional); color: var(--muted); margin: 20px 0 0; padding: 10px 14px; }
 .create-diagnostic strong { color: var(--text); display: block; margin-bottom: 4px; text-transform: capitalize; }
 .create-diagnostic.ready { border-color: var(--support); }
+.create-coverage { border-bottom: 1px solid var(--line); margin-top: 18px; padding: 0 0 18px; }
+.create-coverage > summary { color: var(--accent); cursor: pointer; font-weight: 750; }
+.create-coverage p { display: grid; gap: 4px; margin: 14px 0 0; }
+.create-coverage p span { color: var(--muted); }
 .create-world-summary, .create-people, .create-revise { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 26px; }
 .create-world-summary h3, .create-people h3 { font-size: 1.4rem; margin: 6px 0 18px; }
 #create-world-facts { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
@@ -1136,11 +1142,16 @@ tbody tr:last-child td { border-bottom: 0; }
 #create-people-list article { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 16px; }
 #create-people-list span { color: var(--accent); display: block; font-size: 0.74rem; margin-top: 6px; }
 #create-people-list p { color: var(--muted); font-size: 0.78rem; line-height: 1.55; margin: 10px 0 0; }
-.create-person-editor, .create-raw, .create-boundary { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-top: 24px; padding: 16px 18px; }
-.create-person-editor > summary, .create-raw > summary, .create-boundary > summary { cursor: pointer; font-weight: 750; }
+.create-person-editor, .create-scenario-editor, .create-raw, .create-boundary { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-top: 24px; padding: 16px 18px; }
+.create-person-editor > summary, .create-scenario-editor > summary, .create-raw > summary, .create-boundary > summary { cursor: pointer; font-weight: 750; }
 .create-person-editor[open] { display: grid; gap: 14px; }
 .create-person-editor[open] > summary { margin-bottom: 5px; }
-.create-person-editor button, .create-revise button { background: transparent; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); cursor: pointer; font-weight: 750; justify-self: start; padding: 10px 14px; }
+.create-person-editor button, .create-scenario-editor button, .create-revise button { background: transparent; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); cursor: pointer; font-weight: 750; justify-self: start; padding: 10px 14px; }
+.create-scenario-editor[open] { display: grid; gap: 18px; }
+.create-scenario-grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+.create-scenario-concerns { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
+.create-scenario-concerns article { border-top: 1px solid var(--line); display: grid; gap: 10px; padding-top: 12px; }
+.create-scenario-concerns article > strong { text-transform: capitalize; }
 .create-revise button { margin-top: 12px; }
 .create-raw pre { color: #b9c8d2; font-size: 0.72rem; line-height: 1.55; max-height: 480px; overflow: auto; white-space: pre-wrap; }
 .create-actions { display: flex; gap: 10px; margin-top: 24px; }
@@ -1156,8 +1167,11 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-result-facts span { color: var(--muted); font-size: 0.76rem; margin-top: 3px; }
 .create-result-people article { border-top: 1px solid var(--line); padding: 12px 0; }
 .create-result-people article > div { align-items: baseline; display: flex; gap: 10px; justify-content: space-between; }
+.create-result-people article > div > div { display: grid; gap: 2px; }
+.create-result-people article > div > div small { color: var(--muted); font-size: 0.78rem; }
 .create-result-people article span { color: var(--accent); font-size: 0.78rem; }
 .create-result-people article p { margin-bottom: 0; }
+.create-result-actions { align-items: center; display: flex; gap: 12px; margin-top: 14px; }
 .create-result ol { padding-left: 22px; }
 .create-result li { border-bottom: 1px solid var(--line); padding: 10px 0 10px 4px; }
 .create-result li > strong, .create-result li > span { display: block; }
@@ -1264,6 +1278,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .national-network-grid .regional-network { grid-column: auto; }
   .create-composer > div, .create-actions { align-items: stretch; flex-direction: column; }
   .create-result-facts { grid-template-columns: 1fr 1fr; }
+  .create-scenario-grid, .create-scenario-concerns { grid-template-columns: 1fr; }
   .case-network { width: calc(100vw - 24px); }
   .case-network-graph { height: 560px; }
   .case-network-graph .cy-graph-shell { min-height: 560px; }

@@ -2148,7 +2148,7 @@ def test_coordination_no_decision_story_does_not_invent_partner_withdrawal(
     assert retained["story"]["headline"] == "The group did not reach a decision"
     assert retained["story"]["summary"] == (
         "No proposal satisfied the final decision gate before the modeled "
-        "deadline, so no deployment was approved."
+        "deadline, so no collective decision was recorded."
     )
     assert "withdrew" not in retained["story"]["summary"]
 

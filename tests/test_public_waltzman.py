@@ -125,11 +125,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Tell the authoring model what to change" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=92a310c",
-        "assets/styles.css?v=authored-results-v1",
+        "assets/styles.css?v=authored-editor-v2",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=92a310c",
-        "assets/app.js?v=authored-results-v1",
+        "assets/app.js?v=authored-editor-v2",
     ]
     assert {
         "overview-view",
@@ -166,6 +166,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-result",
         "create-result-people",
         "create-result-steps",
+        "create-coverage",
+        "create-scenario-editor",
+        "create-save-scenario",
+        "create-scenario-concerns",
         "run-view",
         "condition-options",
         "agent-config-select",
@@ -380,6 +384,10 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "advanceGuide",
         "Next: ${guideSteps[state.guideStep + 1].kicker}",
         "renderCreateSimulation",
+        "renderAuthoringCoverage",
+        "renderCoordinationScenarioEditor",
+        "saveCoordinationScenario",
+        "coordination-configuration",
         "setAuthoringBusy",
         "advanceAuthoringDraft",
         "saveAuthoringPerson",

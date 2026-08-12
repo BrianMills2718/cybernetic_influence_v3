@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=92a310c">
-  <link rel="stylesheet" href="assets/styles.css?v=authored-results-v1">
+  <link rel="stylesheet" href="assets/styles.css?v=authored-editor-v2">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -217,23 +217,25 @@
       <section id="create-view" class="workspace-view create-simulation" aria-labelledby="create-title" hidden>
         <header class="create-hero">
           <span class="case-label">Create a simulation</span>
-          <h2 id="create-title">Describe the world you want to explore.</h2>
-          <p>The authoring model converts your description into a typed, reviewable configuration. It may describe people and world entities; the compiler—not the model—owns executable mechanisms and rejects unsupported requests.</p>
+          <h2 id="create-title">Describe the coordination problem you want to explore.</h2>
+          <p>Luna configures a five-person decision network, its incoming influences, and the people’s distinct character and memory. You can edit the result before running it. The page labels what will execute and what remains descriptive.</p>
         </header>
 
         <section class="create-composer" aria-labelledby="create-prompt-title">
-          <label for="create-prompt"><strong id="create-prompt-title">What should the simulation contain?</strong><textarea id="create-prompt" rows="7" placeholder="For example: Model a multinational election-monitoring network facing both centrally coordinated propaganda and locally tailored pressure. Include election officials, independent media, civil-society groups, government agencies, platforms, and technical infrastructure."></textarea></label>
+          <label for="create-prompt"><strong id="create-prompt-title">What collective decision and influences should it model?</strong><textarea id="create-prompt" rows="7" placeholder="For example: Model five people in a cross-border election-integrity network deciding whether to issue a joint warning. Give them different technical, legal, community, media, and coordination positions. Apply locally tailored evidence, authority, and legitimacy pressure without dictating their decisions."></textarea></label>
           <div><button id="create-generate" class="primary-cta" type="button">Generate editable configuration</button><button id="create-example-prompt" class="quiet-button" type="button">Use example prompt</button></div>
-          <p id="create-status" class="create-status" aria-live="polite">Describe a sociotechnical world to begin.</p>
+          <p id="create-status" class="create-status" aria-live="polite">Describe a collective decision and the influences entering it.</p>
         </section>
 
         <section id="create-review" class="create-review" hidden>
           <header><div><span>Generated configuration</span><h3 id="create-draft-title">Draft</h3><p id="create-draft-description"></p></div><div class="draft-state"><span id="create-draft-revision"></span><strong id="create-draft-state"></strong></div></header>
           <div id="create-diagnostics"></div>
+          <details id="create-coverage" class="create-coverage"><summary id="create-coverage-summary">What will actually run</summary><div id="create-coverage-detail"></div></details>
           <section class="create-world-summary" aria-labelledby="create-world-title"><div><span>World</span><h3 id="create-world-title">What the draft contains</h3></div><div id="create-world-facts"></div><div id="create-world-groups"></div></section>
           <section class="create-people" aria-labelledby="create-people-title"><div><span>People</span><h3 id="create-people-title">Review the simulated people</h3></div><div id="create-people-list"></div></section>
           <details class="create-person-editor"><summary>Edit one person directly</summary><label for="create-person-select">Person<select id="create-person-select"></select></label><label for="create-person-label">Name<input id="create-person-label"></label><label for="create-person-position">Position<textarea id="create-person-position" rows="2"></textarea></label><label for="create-person-disposition">Disposition<textarea id="create-person-disposition" rows="3"></textarea></label><label for="create-person-memories">Memories <small>One per line</small><textarea id="create-person-memories" rows="4"></textarea></label><label for="create-person-values">Values <small>One per line</small><textarea id="create-person-values" rows="4"></textarea></label><label for="create-person-goals">Goals <small>One per line</small><textarea id="create-person-goals" rows="4"></textarea></label><label for="create-person-beliefs">Beliefs <small>One per line</small><textarea id="create-person-beliefs" rows="4"></textarea></label><button id="create-save-person" type="button">Save person without another model call</button></details>
-          <section class="create-revise"><label for="create-revision-prompt"><strong>Tell the authoring model what to change</strong><textarea id="create-revision-prompt" rows="4" placeholder="Add a platform trust-and-safety lead, make local radio the main communication channel, and model a homogeneous broadcast alongside the tailored pressure."></textarea></label><button id="create-revise" type="button">Generate revised configuration</button></section>
+          <details id="create-scenario-editor" class="create-scenario-editor" hidden><summary>Edit the decision and incoming influences directly</summary><div class="create-scenario-grid"><label>Simulation title<input id="create-scenario-title"></label><label>Decision situation<textarea id="create-scenario-description" rows="3"></textarea></label><label>Environment<select id="create-scenario-condition"><option value="baseline">No outside pressure</option><option value="heterogeneous_pressure">Outside pressure</option><option value="stabilization">Outside pressure plus stabilizing processes</option></select></label><label>Collective objective<textarea id="create-scenario-goal" rows="3"></textarea></label><label>Requirements that must be respected <small>One per line</small><textarea id="create-scenario-constraints" rows="4"></textarea></label></div><div><h4>Information that enters the simulation</h4><div id="create-scenario-concerns" class="create-scenario-concerns"></div></div><button id="create-save-scenario" type="button">Save scenario without another model call</button><p id="create-scenario-status" class="create-status" aria-live="polite"></p></details>
+          <section class="create-revise"><label for="create-revision-prompt"><strong>Tell the authoring model what to change</strong><textarea id="create-revision-prompt" rows="4" placeholder="Make the technical reviewer more skeptical, clarify the legal constraint, and delay the local-health report until the third meeting."></textarea></label><button id="create-revise" type="button">Generate revised configuration</button></section>
           <details class="create-raw"><summary>Inspect complete typed configuration</summary><pre id="create-raw-configuration"></pre></details>
           <div class="create-actions"><button id="create-approve" class="primary-cta" type="button">Approve this configuration</button><button id="create-run" class="secondary-cta" type="button" hidden>Run with Luna</button><button id="create-start-over" class="quiet-button" type="button">Start over</button></div>
           <section id="create-run-status" class="create-run-status" hidden aria-live="polite">
@@ -248,7 +250,7 @@
               <div id="create-result-people" class="create-result-people"></div>
               <details><summary>Walk through the retained decisions</summary><ol id="create-result-steps"></ol></details>
             </section>
-            <a id="create-run-evidence" href="#" target="_blank" rel="noopener" hidden>Open complete retained evidence</a>
+            <div class="create-result-actions"><a id="create-run-evidence" href="#" target="_blank" rel="noopener" hidden>Open complete retained evidence</a><button id="create-edit-configuration" class="quiet-button" type="button" hidden>View or edit this configuration</button></div>
           </section>
         </section>
 
@@ -565,6 +567,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=92a310c" defer></script>
-  <script src="assets/app.js?v=authored-results-v1" defer></script>
+  <script src="assets/app.js?v=authored-editor-v2" defer></script>
 </body>
 </html>

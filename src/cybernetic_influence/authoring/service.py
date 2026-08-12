@@ -59,7 +59,7 @@ AUTHORING_MODEL: AuthoringModel = OPENROUTER_TERRA_MODEL
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
 AUTHORING_MAX_TOKENS = 8000
-AUTHORING_PROMPT_VERSION = "scenario_draft.v4"
+AUTHORING_PROMPT_VERSION = "scenario_draft.v5"
 
 
 class AuthoringModelOption(TypedDict):

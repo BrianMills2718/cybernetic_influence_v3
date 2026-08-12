@@ -1929,7 +1929,7 @@ def run_coordination(
             "decision_delayed": "The delayed deployment decision was accepted and recorded.",
             "decision_scope_reduced": "The reviewed reduced-scope decision was accepted and recorded.",
             "decision_partner_disengaged": "The partner-disengagement outcome was accepted and recorded.",
-            "decision_no_decision_by_horizon": "The decision deadline was recorded without an approved deployment.",
+            "decision_no_decision_by_horizon": "The decision deadline was recorded without an approved collective decision.",
         }
         summaries = {
             "terminal_condition_met": next(

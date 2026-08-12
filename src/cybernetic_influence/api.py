@@ -330,8 +330,8 @@ def _coordination_outcome(
     )
     scope = str(state.fact("external_decision_registry.received_scope").value)
     labels = {
-        "deploy_on_time": "The full deployment was approved",
-        "scope_reduced": "A smaller deployment was approved",
+        "deploy_on_time": "The full proposal was approved",
+        "scope_reduced": "A narrower proposal was approved",
         "no_decision_by_horizon": "The group did not reach a decision",
     }
     summaries = {
@@ -346,7 +346,7 @@ def _coordination_outcome(
         ),
         "no_decision_by_horizon": (
             "No proposal satisfied the final decision gate before the modeled "
-            "deadline, so no deployment was approved."
+            "deadline, so no collective decision was recorded."
         ),
     }
     outcome = {
@@ -449,14 +449,14 @@ def _coordination_reference_narration(
             ),
             "scope_threshold_recorded": "The proposal record accepted the selected scope.",
             "terminal_decision_accepted": (
-                "The deadline gate recorded that no deployment decision had "
+                "The deadline gate recorded that no collective decision had "
                 "been approved."
                 if final_status == "no_decision_by_horizon"
                 else "The final decision passed the exact support and review gate."
             ),
             "external_decision_received": (
                 "The external registry recorded that the deadline passed "
-                "without an approved deployment."
+                "without an approved collective decision."
                 if final_status == "no_decision_by_horizon"
                 else "The external decision registry received the final decision."
             ),
@@ -613,6 +613,21 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
     story = document.get("story")
     if not isinstance(story, dict):
         story = {}
+    authoring = document.get("authoring")
+    if not isinstance(authoring, dict):
+        authoring = {}
+    raw_authored_people = authoring.get("people")
+    authored_people = (
+        raw_authored_people if isinstance(raw_authored_people, list) else []
+    )
+    authored_person_metadata = {
+        str(person["entity_id"]): {
+            "label": person.get("label"),
+            "position": person.get("position"),
+        }
+        for person in authored_people
+        if isinstance(person, dict) and isinstance(person.get("entity_id"), str)
+    }
     raw_nodes = document.get("nodes")
     nodes = raw_nodes if isinstance(raw_nodes, list) else []
     labels = {
@@ -620,6 +635,13 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         for node in nodes
         if isinstance(node, dict) and isinstance(node.get("id"), str)
     }
+    labels.update(
+        {
+            person_id: str(metadata["label"])
+            for person_id, metadata in authored_person_metadata.items()
+            if isinstance(metadata.get("label"), str)
+        }
+    )
     raw_traces = document.get("traces")
     traces = raw_traces if isinstance(raw_traces, list) else []
     participants: dict[str, dict[str, object]] = {}
@@ -670,6 +692,9 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                     observed_person_id,
                     observed_person_id.replace("_", " ").title(),
                 ),
+                "position": authored_person_metadata.get(
+                    observed_person_id, {}
+                ).get("position"),
                 "latest_orientation": observed_previous.get(
                     "latest_orientation"
                 ),
@@ -700,12 +725,19 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         participants[person_id] = {
             "person_id": person_id,
             "label": labels.get(person_id, person_id.replace("_", " ").title()),
+            "position": authored_person_metadata.get(person_id, {}).get(
+                "position"
+            ),
             "latest_orientation": (
                 orientation
                 if isinstance(orientation, str)
                 else previous.get("latest_orientation")
             ),
-            "latest_actions": projected_actions,
+            "latest_actions": (
+                projected_actions
+                if projected_actions
+                else previous.get("latest_actions", [])
+            ),
             "last_explicit_commitment": (
                 commitment
                 if commitment is not None
@@ -725,15 +757,45 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                     "model_call_count": raw_trace.get("model_call_count", 0),
                 }
             )
-    authoring = document.get("authoring")
-    if not isinstance(authoring, dict):
-        authoring = {}
     outcome = document.get("outcome")
     if not isinstance(outcome, dict):
         outcome = {}
     completion = document.get("completion")
     if not isinstance(completion, dict):
         completion = {}
+    headline = story.get("headline")
+    summary = story.get("summary")
+    projected_completion = deepcopy(completion)
+    if authoring.get("template_id") == "coordination_decision_v1":
+        final_status = outcome.get("final_status")
+        if final_status == "deploy_on_time":
+            headline = "The full proposal was approved"
+            summary = (
+                "All five participants supported the full proposal, and the final "
+                "decision was recorded."
+            )
+            projected_completion["public_summary"] = (
+                "The reviewed full proposal was accepted and recorded."
+            )
+        elif final_status == "scope_reduced":
+            headline = "A narrower proposal was approved"
+            summary = (
+                "The participants approved a narrower proposal that satisfied the "
+                "final decision gate."
+            )
+            projected_completion["public_summary"] = (
+                "The reviewed narrower proposal was accepted and recorded."
+            )
+        elif final_status == "no_decision_by_horizon":
+            headline = "The group did not reach a decision"
+            summary = (
+                "No proposal satisfied the final decision gate before the modeled "
+                "deadline, so no collective decision was recorded."
+            )
+            projected_completion["public_summary"] = (
+                "The decision deadline was recorded without an approved collective "
+                "decision."
+            )
     return {
         "run_id": document.get("run_id"),
         "status": document.get("status"),
@@ -742,10 +804,10 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "title": authoring.get("title"),
         "description": authoring.get("description"),
         "template_id": authoring.get("template_id"),
-        "headline": story.get("headline"),
-        "summary": story.get("summary"),
+        "headline": headline,
+        "summary": summary,
         "outcome": outcome,
-        "completion": completion,
+        "completion": projected_completion,
         "participant_model_calls": document.get(
             "agent_model_calls", document.get("model_calls", 0)
         ),
@@ -1874,31 +1936,43 @@ def create_app(
         else:
             created_at = now_iso()
             initial = {
-            "run_id": run_id,
-            "created_at": created_at,
-            "status": "running",
-            "scenario": compiled.scenario.scenario_id,
-            "profile": "authored_typed_scenario",
-            "arm": "approved_draft",
-            "execution": body.execution,
-            "model_calls": 0,
-            "cost": 0.0,
-            "llm_configuration": (
-                effective_llm.model_dump(mode="json")
-                if effective_llm is not None
-                else None
-            ),
-            "authoring": {
-                "draft_id": draft_id,
-                "proposal_digest": compiled.proposal_digest,
-                "template_id": compiled.proposal.workflow.template_id,
-                "composition_receipt": compiled.composition_receipt.model_dump(mode="json"),
-                "composition_receipt_digest": compiled.composition_receipt.digest,
-                "title": compiled.proposal.title,
-                "description": compiled.proposal.description,
-            },
-            "live_progress": [],
-            "progress_sequence": 0,
+                "run_id": run_id,
+                "created_at": created_at,
+                "status": "running",
+                "scenario": compiled.scenario.scenario_id,
+                "profile": "authored_typed_scenario",
+                "arm": "approved_draft",
+                "execution": body.execution,
+                "model_calls": 0,
+                "cost": 0.0,
+                "llm_configuration": (
+                    effective_llm.model_dump(mode="json")
+                    if effective_llm is not None
+                    else None
+                ),
+                "authoring": {
+                    "draft_id": draft_id,
+                    "proposal_digest": compiled.proposal_digest,
+                    "template_id": compiled.proposal.workflow.template_id,
+                    "composition_receipt": compiled.composition_receipt.model_dump(
+                        mode="json"
+                    ),
+                    "composition_receipt_digest": (
+                        compiled.composition_receipt.digest
+                    ),
+                    "title": compiled.proposal.title,
+                    "description": compiled.proposal.description,
+                    "people": [
+                        {
+                            "entity_id": person.entity_id,
+                            "label": person.label,
+                            "position": person.position,
+                        }
+                        for person in compiled.proposal.people
+                    ],
+                },
+                "live_progress": [],
+                "progress_sequence": 0,
             }
             runs.save(initial)
             if live and isinstance(
@@ -2357,6 +2431,39 @@ def create_app(
             raise HTTPException(status_code=404, detail="run not found") from error
         except RunCorruptError as error:
             raise HTTPException(status_code=409, detail="retained run is corrupt") from error
+        authoring_metadata = document.get("authoring")
+        if isinstance(authoring_metadata, dict) and not isinstance(
+            authoring_metadata.get("people"), list
+        ):
+            draft_id = authoring_metadata.get("draft_id")
+            if isinstance(draft_id, str):
+                try:
+                    draft = drafts.get(draft_id)
+                except DraftNotFoundError:
+                    draft = None
+                except ValueError as error:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="retained authoring draft is corrupt",
+                    ) from error
+                if isinstance(draft, dict) and isinstance(
+                    draft.get("proposal"), dict
+                ):
+                    proposal = cast(dict[str, object], draft["proposal"])
+                    people = proposal.get("people")
+                    if isinstance(people, list):
+                        document = deepcopy(document)
+                        document_authoring = document.get("authoring")
+                        if isinstance(document_authoring, dict):
+                            document_authoring["people"] = [
+                                {
+                                    "entity_id": person.get("entity_id"),
+                                    "label": person.get("label"),
+                                    "position": person.get("position"),
+                                }
+                                for person in people
+                                if isinstance(person, dict)
+                            ]
         return _compact_run_result(document)
 
     @app.delete("/api/runs/{run_id}")

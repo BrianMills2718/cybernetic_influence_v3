@@ -536,7 +536,7 @@ def test_scripted_vertical_completes_four_meetings_with_distinct_zero_cost_outco
     if expected_status == "no_decision_by_horizon":
         assert result.completion is not None
         assert result.completion.public_summary == (
-            "The decision deadline was recorded without an approved deployment."
+            "The decision deadline was recorded without an approved collective decision."
         )
     meetings = [
         attempt

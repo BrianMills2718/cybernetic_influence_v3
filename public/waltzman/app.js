@@ -16,6 +16,18 @@ const personProfileFields = {
   capabilities:'person-capabilities',
   limitations:'person-limitations',
 }
+const coordinationPositionBindings = [
+  ['coordinator', 'mission_coordinator'],
+  ['technical_reviewer', 'technical_validation_lead'],
+  ['policy_reviewer', 'sovereignty_policy_representative'],
+  ['local_health_reviewer', 'local_public_health_liaison'],
+  ['partner_representative', 'partner_representative'],
+]
+const coordinationConcernBindings = [
+  ['technical', 'technical_pressure_source', 'technical_concern', 'technical_pressure_message'],
+  ['policy', 'policy_pressure_source', 'policy_concern', 'policy_pressure_message'],
+  ['local', 'local_pressure_source', 'local_concern', 'local_pressure_message'],
+]
 
 let dataset = null
 let runtimeConfig = null
@@ -154,6 +166,101 @@ function retainedPersonExists(personId) {
 
 function lineItems(value) {
   return String(value || '').split('\n').map((item) => item.trim()).filter(Boolean)
+}
+
+function coordinationConfigurationFromProposal(proposal) {
+  const workflow = proposal.workflow || {}
+  const people = new Map((proposal.people || []).map((item) => [item.entity_id, item]))
+  const objects = new Map((proposal.objects || []).map((item) => [item.entity_id, item]))
+  const information = new Map((proposal.information || []).map((item) => [item.information_id, item]))
+  const messages = new Map((workflow.messages || []).map((item) => [item.message_id, item]))
+  const places = new Map((proposal.places || []).map((item) => [item.place_id, item]))
+  const boundaries = new Map((proposal.analytical_boundaries || []).map((item) => [item.boundary_id, item]))
+  return {
+    template_id:'coordination_decision_v1',
+    title:proposal.title,
+    description:proposal.description,
+    condition:workflow.condition,
+    people:coordinationPositionBindings.map(([positionKind, entityId]) => {
+      const person = people.get(entityId)
+      return {
+        position_kind:positionKind,
+        label:person.label,
+        position:person.position,
+        disposition:person.disposition,
+        memories:person.memories,
+        behavioral_profile:person.behavioral_profile,
+      }
+    }),
+    concerns:coordinationConcernBindings.map(([concernKind, sourceId, informationId, messageId]) => ({
+      concern_kind:concernKind,
+      source_label:objects.get(sourceId).label,
+      source_description:objects.get(sourceId).description,
+      topic:information.get(informationId).label,
+      content:information.get(informationId).content,
+      delivery_minutes:messages.get(messageId).delivery_minutes,
+    })),
+    collective_goal:{
+      label:workflow.collective_goal.label,
+      description:workflow.collective_goal.description,
+      acceptable_outcomes:workflow.collective_goal.acceptable_outcomes,
+      constraints:workflow.collective_goal.constraints,
+    },
+    places:{
+      partnership_label:places.get('partnership_hub').label,
+      partnership_description:places.get('partnership_hub').description,
+      source_site_label:places.get('source_operations_site').label,
+      source_site_description:places.get('source_operations_site').description,
+      registry_label:places.get('external_registry_site').label,
+      registry_description:places.get('external_registry_site').description,
+    },
+    analytical_boundaries:{
+      partnership_label:boundaries.get('deployment_partnership').label,
+      partnership_description:boundaries.get('deployment_partnership').description,
+      source_group_label:boundaries.get('pressure_source_ensemble').label,
+      source_group_description:boundaries.get('pressure_source_ensemble').description,
+    },
+    meeting_days:workflow.meeting_days,
+    deadline_day:workflow.deadline_day,
+    analysis_ids:workflow.analysis.analysis_ids,
+    assumptions:workflow.assumptions,
+    known_omissions:workflow.known_omissions,
+    fidelity_questions:proposal.fidelity_questions,
+    unresolved_questions:proposal.unresolved_questions || [],
+  }
+}
+
+function renderAuthoringCoverage(proposal) {
+  const workflow = proposal.workflow || {}
+  if (workflow.template_id === 'coordination_decision_v1') {
+    $('#create-coverage-summary').textContent = `Execution coverage · ${proposal.people.length} people, ${workflow.messages.length} incoming influences, one reviewed decision process`
+    $('#create-coverage-detail').innerHTML = `
+      <p><strong>Runs as configured</strong><span>People use the edited character, memory, goals, beliefs, and delivered information to choose actions with Luna.</span></p>
+      <p><strong>Prebuilt world machinery</strong><span>Four decision meetings; technical input to the technical reviewer, policy input to the policy reviewer, and local-health input to the local reviewer; commitment and issue records; verification; and the terminal decision gate.</span></p>
+      <p><strong>Descriptive context</strong><span>Names, place descriptions, analytical group labels, assumptions, omissions, and fidelity questions help interpretation but do not create new causal powers.</span></p>
+      <p><strong>Fixed in this template</strong><span>Exactly five decision positions, three incoming-influence channels, the meeting cadence, and the available action interfaces. Natural-language authoring cannot invent new executable mechanisms here yet.</span></p>`
+    return
+  }
+  $('#create-coverage-summary').textContent = `Execution coverage · ${draftTemplateLabel(workflow.template_id)}`
+  $('#create-coverage-detail').innerHTML = `<p><strong>Bounded workflow</strong><span>This draft populates one reviewed executable template. Other described entities remain contextual unless the compiled workflow names them.</span></p><p><strong>Not open-ended</strong><span>The authoring model cannot generate mechanism code or silently make an unsupported behavior executable.</span></p>`
+}
+
+function renderCoordinationScenarioEditor(proposal) {
+  const editor = $('#create-scenario-editor')
+  if (proposal.workflow?.template_id !== 'coordination_decision_v1') {
+    editor.hidden = true
+    return
+  }
+  const configuration = coordinationConfigurationFromProposal(proposal)
+  editor.hidden = false
+  $('#create-scenario-title').value = configuration.title
+  $('#create-scenario-description').value = configuration.description
+  $('#create-scenario-condition').value = configuration.condition
+  $('#create-scenario-goal').value = configuration.collective_goal.description
+  $('#create-scenario-constraints').value = configuration.collective_goal.constraints.join('\n')
+  const recipients = {technical:'Technical reviewer', policy:'Policy reviewer', local:'Local-health reviewer'}
+  $('#create-scenario-concerns').innerHTML = configuration.concerns.map((concern) => `<article data-concern-kind="${escapeHtml(concern.concern_kind)}"><strong>${escapeHtml(sentence(concern.concern_kind))}</strong><small>Delivered to: ${escapeHtml(recipients[concern.concern_kind])}</small><label>Source<input data-concern-field="source_label" value="${escapeHtml(concern.source_label)}"></label><label>Information delivered<textarea data-concern-field="content" rows="3">${escapeHtml(concern.content)}</textarea></label><label>Arrival time<input data-concern-field="delivery_minutes" type="number" min="1" step="1" value="${Number(concern.delivery_minutes)}"></label></article>`).join('')
+  $('#create-scenario-status').textContent = 'Saving creates a new typed revision and makes no model call.'
 }
 
 function readStateFromUrl() {
@@ -1089,12 +1196,14 @@ function configureControls() {
   })
   $('#create-generate').onclick = generateAuthoringDraft
   $('#create-example-prompt').onclick = () => {
-    $('#create-prompt').value = 'Model a multinational election-monitoring network facing both centrally coordinated propaganda and locally tailored pressure. Include election officials, independent media, civil-society groups, government agencies, platforms, and technical infrastructure. Examine how the influence changes trust, perceived risk, dependencies, and readiness to coordinate without dictating any participant decision.'
+    $('#create-prompt').value = 'Model five people in a cross-border election-integrity network deciding whether to issue a joint public warning. Give them different coordination, forensic, legal, community, and independent-media positions, with distinct personalities and memories. Deliver locally tailored technical-evidence, legal-authority, and community-legitimacy pressure without dictating participant decisions. Let us inspect how perceived risk, source reliance, prerequisites, and readiness to coordinate change, and whether verification and explicit feedback stabilize the decision environment.'
     $('#create-prompt').focus()
   }
   $('#create-revise').onclick = reviseAuthoringDraft
   $('#create-person-select').onchange = (event) => { selectedAuthoringPerson = event.target.value; renderAuthoringPersonEditor() }
   $('#create-save-person').onclick = saveAuthoringPerson
+  $('#create-save-scenario').onclick = saveCoordinationScenario
+  $('#create-edit-configuration').onclick = showAuthoredConfiguration
   $('#create-approve').onclick = approveAuthoringDraft
   $('#create-run').onclick = runAuthoredSimulation
   $('#create-stop').onclick = stopAuthoredSimulation
@@ -1239,7 +1348,7 @@ function authoringLuna() {
 
 function setAuthoringBusy(busy) {
   authoringBusy = busy
-  for (const id of ['create-generate', 'create-revise', 'create-save-person', 'create-approve', 'create-start-over']) {
+  for (const id of ['create-generate', 'create-revise', 'create-save-person', 'create-save-scenario', 'create-approve', 'create-start-over']) {
     const control = $(`#${id}`)
     if (control) control.disabled = busy
   }
@@ -1295,12 +1404,15 @@ function renderCreateSimulation() {
     $('#create-world-groups').innerHTML = ''
     $('#create-people-list').innerHTML = ''
     $('#create-person-select').innerHTML = ''
+    $('#create-scenario-editor').hidden = true
     $('#create-raw-configuration').textContent = 'No valid typed configuration has been produced yet.'
     $('#create-approve').hidden = true
     $('#create-run').hidden = true
     return
   }
   const workflow = proposal.workflow || {}
+  renderAuthoringCoverage(proposal)
+  renderCoordinationScenarioEditor(proposal)
   $('#create-draft-title').textContent = proposal.title
   $('#create-draft-description').textContent = proposal.description
   const boundaries = proposal.analytical_boundaries || []
@@ -1416,6 +1528,50 @@ async function saveAuthoringPerson() {
   }
 }
 
+async function saveCoordinationScenario() {
+  if (authoringDraft?.proposal?.workflow?.template_id !== 'coordination_decision_v1') return
+  const configuration = coordinationConfigurationFromProposal(authoringDraft.proposal)
+  configuration.title = $('#create-scenario-title').value.trim()
+  configuration.description = $('#create-scenario-description').value.trim()
+  configuration.condition = $('#create-scenario-condition').value
+  configuration.collective_goal.description = $('#create-scenario-goal').value.trim()
+  configuration.collective_goal.constraints = lineItems($('#create-scenario-constraints').value)
+  const concernCards = [...document.querySelectorAll('#create-scenario-concerns [data-concern-kind]')]
+  configuration.concerns = concernCards.map((card) => {
+    const original = configuration.concerns.find((item) => item.concern_kind === card.dataset.concernKind)
+    return {
+      ...original,
+      source_label:card.querySelector('[data-concern-field="source_label"]').value.trim(),
+      content:card.querySelector('[data-concern-field="content"]').value.trim(),
+      delivery_minutes:Number(card.querySelector('[data-concern-field="delivery_minutes"]').value),
+    }
+  })
+  const invalidConcern = configuration.concerns.some((item) => !item.source_label || !item.content || !Number.isInteger(item.delivery_minutes) || item.delivery_minutes < 1)
+  if (!configuration.title || !configuration.description || !configuration.collective_goal.description || !configuration.collective_goal.constraints.length || invalidConcern) {
+    $('#create-scenario-status').textContent = 'Complete the decision, objective, requirements, and each incoming influence. Arrival times must be positive whole numbers.'
+    return
+  }
+  setAuthoringBusy(true)
+  $('#create-scenario-status').textContent = 'Saving the complete typed scenario revision…'
+  try {
+    authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/coordination-configuration`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        expected_revision:authoringDraft.revision,
+        edit_id:crypto.randomUUID(),
+        configuration,
+      }),
+    })
+    renderCreateSimulation()
+    syncUrl()
+  } catch (error) {
+    $('#create-scenario-status').textContent = error.message
+  } finally {
+    setAuthoringBusy(false)
+  }
+}
+
 async function approveAuthoringDraft() {
   if (!authoringDraft) return
   setAuthoringBusy(true)
@@ -1439,22 +1595,37 @@ function scheduleAuthoredRunPoll(runId, delay = 1800) {
 }
 
 function renderAuthoredResult(result) {
+  const review = $('#create-review')
+  const runStatus = $('#create-run-status')
+  review.classList.add('result-mode')
+  review.insertBefore(runStatus, review.firstElementChild)
+  $('.create-composer').hidden = true
+  $('.create-hero .case-label').textContent = 'Completed simulation'
+  $('#create-title').textContent = result.title || 'Simulation result'
+  $('.create-hero > p').textContent = result.description || 'A retained Luna simulation.'
   const outcome = result.outcome?.final_status || result.completion?.reason || 'completed'
-  $('#create-run-heading').textContent = `Result: ${sentence(outcome)}`
+  const outcomeLabel = {
+    no_decision_by_horizon:'No decision before the deadline',
+    deploy_on_time:'Full proposal approved',
+    scope_reduced:'Narrower proposal approved',
+    delayed:'Decision delayed',
+    partner_disengaged:'Partner disengaged',
+  }[outcome] || sentence(outcome)
+  $('#create-run-heading').textContent = `Result: ${outcomeLabel}`
   $('#create-run-detail').textContent = result.completion?.public_summary || result.summary || 'The simulation reached a terminal state.'
   $('#create-result-title').textContent = result.headline || result.title || 'Simulation complete'
   $('#create-result-summary').textContent = result.summary || result.description || ''
   const counts = result.evidence_counts || {}
   $('#create-result-facts').innerHTML = [
-    [sentence(outcome), 'Collective outcome'],
+    [outcomeLabel, 'Collective outcome'],
     [String((result.participants || []).length), 'People'],
     [String(Number(result.participant_model_calls || 0)), 'Luna decisions'],
-    [String(Number(counts.causal_moments || 0)), 'Causal moments'],
+    [String(Number(counts.causal_moments || 0)), 'Simulation steps'],
   ].map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
   $('#create-result-people').innerHTML = (result.participants || []).map((person) => {
     const commitment = person.last_explicit_commitment ? sentence(person.last_explicit_commitment) : 'No explicit position change'
     const action = person.latest_actions?.map((item) => item.summary).filter(Boolean).join(' ') || ''
-    return `<article><div><strong>${escapeHtml(person.label)}</strong><span>${escapeHtml(commitment)}</span></div><p>${escapeHtml(action || person.latest_orientation || 'No additional public rationale was retained.')}</p></article>`
+    return `<article><div><div><strong>${escapeHtml(person.label)}</strong>${person.position ? `<small>${escapeHtml(person.position)}</small>` : ''}</div><span>${escapeHtml(commitment)}</span></div><p>${escapeHtml(action || person.latest_orientation || 'No additional public rationale was retained.')}</p></article>`
   }).join('') || '<p>No person-level decision records were retained for this workflow.</p>'
   const steps = (result.decision_steps || []).filter((step) => step.actions?.length || step.orientation)
   $('#create-result-steps').innerHTML = steps.map((step) => {
@@ -1464,6 +1635,7 @@ function renderAuthoredResult(result) {
   $('#create-result').hidden = false
   $('#create-run-evidence').href = `api/runs/${encodeURIComponent(result.run_id)}`
   $('#create-run-evidence').hidden = false
+  $('#create-edit-configuration').hidden = false
   $('#create-stop').hidden = true
   $('#create-run').disabled = false
 }
@@ -1571,6 +1743,19 @@ async function loadAuthoredRunFromUrl() {
     $('#create-run-heading').textContent = 'Retained simulation unavailable'
     $('#create-run-detail').textContent = error.message
   }
+}
+
+function showAuthoredConfiguration() {
+  const review = $('#create-review')
+  const runStatus = $('#create-run-status')
+  review.classList.remove('result-mode')
+  review.appendChild(runStatus)
+  $('.create-composer').hidden = false
+  $('.create-hero .case-label').textContent = 'Create a simulation'
+  $('#create-title').textContent = 'Describe the coordination problem you want to explore.'
+  $('.create-hero > p').textContent = "Luna configures a five-person decision network, its incoming influences, and the people’s distinct character and memory. You can edit the result before running it. The page labels what will execute and what remains descriptive."
+  $('#create-edit-configuration').hidden = true
+  $('#create-draft-title').scrollIntoView({behavior:'smooth', block:'start'})
 }
 
 async function startLiveRun() {

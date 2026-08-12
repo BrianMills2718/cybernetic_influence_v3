@@ -190,6 +190,10 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
     assert compact["headline"] == retained["story"]["headline"]
     assert compact["summary"] == retained["story"]["summary"]
     assert len(compact["participants"]) == 5
+    assert all(person["position"] for person in compact["participants"])
+    assert {person["label"] for person in compact["participants"]} == {
+        person["label"] for person in draft["proposal"]["people"]
+    }
     assert compact["decision_steps"]
     assert "events" not in compact
     assert "traces" not in compact
@@ -644,7 +648,7 @@ def test_authoring_and_theory_call_contracts_are_exact_and_provider_free(
     config = _client(tmp_path).get("/api/config").json()
     authoring = config["authoring"]["structured_contract"]
     assert authoring["task"] == "cybernetic_influence_v3_scenario_draft"
-    assert authoring["prompt_version"] == "scenario_draft.v4"
+    assert authoring["prompt_version"] == "scenario_draft.v5"
     assert len(authoring["prompt_digest"]) == 64
     assert len(authoring["schema_digest"]) == 64
     assert authoring["maximum_attempts_per_message"] == 3
@@ -659,6 +663,14 @@ def test_authoring_and_theory_call_contracts_are_exact_and_provider_free(
         "openrouter/openai/gpt-5.6-terra",
         "openrouter/openai/gpt-5.6-sol",
     }
+    system_prompt, _ = _prompt(
+        message="Describe one coordination problem.",
+        prior={},
+        repair_feedback=None,
+        candidate=None,
+    )
+    assert "does not directly broadcast one source message" in system_prompt
+    assert "never describe a one-recipient source as a mass broadcast" in system_prompt
 
     analysis = config["theory_analysis"]
     assert analysis["maximum_model_calls_per_run"] == 0
