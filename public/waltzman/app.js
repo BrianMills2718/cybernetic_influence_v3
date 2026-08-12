@@ -1980,7 +1980,8 @@ function renderSimulationList() {
   list.innerHTML = completed.map((run) => {
     const created = run.created_at ? new Date(run.created_at).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : 'Retained run'
     const context = [sentence(run.scenario), sentence(run.arm)].filter(Boolean).join(' · ')
-    return `<button type="button" data-simulation-run="${escapeHtml(run.run_id)}" class="${run.run_id === authoredRunId ? 'active' : ''}" aria-pressed="${run.run_id === authoredRunId}"><span>${escapeHtml(context || 'Completed simulation')}</span><strong>${escapeHtml(simulationHistoryTitle(run))}</strong><small>${escapeHtml(created)}</small></button>`
+    const tag = run.scenario === 'regional_outbreak' ? 'Flagship example' : 'Build-test scenario'
+    return `<button type="button" data-simulation-run="${escapeHtml(run.run_id)}" class="${run.run_id === authoredRunId ? 'active' : ''}" aria-pressed="${run.run_id === authoredRunId}"><span><b>${escapeHtml(tag)}</b> · ${escapeHtml(context || 'Completed simulation')}</span><strong>${escapeHtml(simulationHistoryTitle(run))}</strong><small>${escapeHtml(created)}</small></button>`
   }).join('')
   all('[data-simulation-run]').forEach((button) => {
     button.onclick = () => { void openSimulationReplay(button.dataset.simulationRun) }

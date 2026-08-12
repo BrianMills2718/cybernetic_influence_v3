@@ -90,6 +90,9 @@ code { color: #b9c8d2; font-family: ui-monospace, SFMono-Regular, Menlo, monospa
   padding: 8px 14px;
 }
 .view-tabs button.active { background: #1d3d55; box-shadow: inset 0 -2px 0 var(--accent); color: #fff; }
+.view-tabs-divider { align-self: center; background: var(--line); height: 18px; margin: 0 2px; width: 1px; }
+.view-tab-secondary { color: var(--muted); font-size: 0.76rem; font-weight: 600; opacity: 0.75; }
+.view-tab-secondary.active { opacity: 1; }
 .runtime-status {
   background: var(--panel);
   border: 1px solid var(--line);

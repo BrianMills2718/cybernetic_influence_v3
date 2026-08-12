@@ -20,10 +20,12 @@
     </div>
     <nav class="view-tabs" aria-label="Primary navigation">
       <button type="button" data-view="overview">Overview</button>
+      <button type="button" data-view="case">Case study</button>
       <button type="button" data-view="guide">Guided example</button>
-      <button type="button" data-view="simulations">Simulations</button>
       <button type="button" data-view="create">New simulation</button>
-      <button type="button" data-view="method">Methodology</button>
+      <span class="view-tabs-divider" aria-hidden="true"></span>
+      <button type="button" data-view="simulations">All simulations</button>
+      <button type="button" class="view-tab-secondary" data-view="method">Methodology</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
   </header>
@@ -63,8 +65,8 @@
           <h2 id="overview-title">Explore how influence changes a sociotechnical system’s ability to coordinate.</h2>
           <p>Build a world, let autonomous people perceive and act within it, and inspect how local interactions accumulate into changes in collective decision-making.</p>
           <div class="hero-actions">
-            <button class="primary-cta" type="button" data-view="create">Create a simulation</button>
-            <button class="secondary-cta" type="button" data-view="guide">Learn through a simple example</button>
+            <button class="primary-cta" type="button" data-view="case">See the flagship case study</button>
+            <button class="secondary-cta" type="button" data-view="create">Create your own simulation</button>
           </div>
           <p class="scope-note">A wargaming and mechanism-exploration tool. It does not predict how real people or social systems will behave.</p>
         </header>
@@ -211,12 +213,12 @@
 
       <section id="simulations-view" class="workspace-view simulation-library" aria-labelledby="simulations-title" hidden>
         <header class="simulation-library-hero">
-          <span class="case-label">Completed simulations</span>
+          <span class="case-label">Complete retained run history</span>
           <h2 id="simulations-title">Choose a run. Follow it one step at a time.</h2>
-          <p>Every completed simulation automatically becomes the same guided replay: setup, retained events or information, autonomous decisions, and outcome. The graph key is generated from the node and arrow types actually present in that run.</p>
+          <p>This is every retained run, including exploratory scenarios created while building this tool—it is not a curated set. Every completed simulation automatically becomes the same guided replay: setup, retained events or information, autonomous decisions, and outcome.</p>
           <div>
-            <button class="primary-cta" type="button" data-view="create">Create a new simulation</button>
-            <button class="quiet-button" type="button" data-view="case">Open the curated outbreak case</button>
+            <button class="primary-cta" type="button" data-view="case">Open the flagship case study</button>
+            <button class="quiet-button" type="button" data-view="create">Create a new simulation</button>
           </div>
         </header>
         <div class="simulation-library-layout">
