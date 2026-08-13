@@ -137,13 +137,23 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Natural language proposes semantic configuration" in page
     assert "Configured structure, spatial topology, and causal history" in page
     assert "Authority boundary: now versus adopted" in page
+    assert "A causal simulation workbench with bounded execution coverage" in page
+    assert "Execution-parent links" in page
+    assert "counterfactual causation" in page
+    assert "LLM authority evidence contract" in page
+    assert "Auditability" in page
+    assert "Replayability" in page
+    assert "Reproducibility" in page
+    assert "Derived constructs are legitimate when operationalized" in page
+    assert "A simulator becomes an experimental instrument only through a declared comparison" in page
+    assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=cleanup1",
-        "assets/styles.css?v=walkthrough1",
+        "assets/styles.css?v=methodology2",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=cleanup1",
-        "assets/app.js?v=walkthrough1",
+        "assets/app.js?v=methodology2",
     ]
     assert {
         "overview-view",
@@ -172,6 +182,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "method-systems",
         "method-analysis",
         "method-authoring",
+        "method-inference",
         "method-architecture",
         "method-limits",
         "case-view",

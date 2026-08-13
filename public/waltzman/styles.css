@@ -706,6 +706,11 @@ tbody tr:last-child td { border-bottom: 0; }
 .guided-result #method-view { max-width: 1500px; }
 .methodology-hero { max-width: 1120px; }
 .methodology-hero h2 { max-width: 20ch; }
+.methodology-map { display: grid; gap: 1px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 22px; }
+.methodology-map article { background: #0b1721; border: 1px solid var(--line); display: grid; gap: 4px; padding: 14px; }
+.methodology-map b { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .65rem; }
+.methodology-map strong { font-size: .77rem; }
+.methodology-map span { color: var(--faint); font-size: .67rem; line-height: 1.4; }
 .methodology-layout { align-items: start; display: grid; gap: clamp(34px, 5vw, 76px); grid-template-columns: 220px minmax(0, 1fr); }
 .methodology-toc { border: 0; border-right: 1px solid var(--line); display: grid; gap: 2px; margin: 0; padding: 20px 24px 24px 0; position: sticky; top: 90px; }
 .methodology-toc > div { border-bottom: 1px solid var(--line); display: grid; gap: 3px; margin-bottom: 8px; padding: 0 8px 14px; }
@@ -751,6 +756,11 @@ tbody tr:last-child td { border-bottom: 0; }
 .method-commitment-grid article { background: #0b1721; border: 1px solid var(--line); padding: 15px 17px; }
 .method-commitment-grid strong { font-size: .8rem; }
 .method-commitment-grid p { font-size: .77rem; line-height: 1.55; margin-top: 5px; }
+.method-commitment-grid.evidence-properties { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.inference-grid { display: grid; gap: 1px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 24px 0; }
+.inference-grid article { background: #0b1721; border: 1px solid var(--line); padding: 16px 18px; }
+.inference-grid strong { font-size: .82rem; }
+.inference-grid p { font-size: .77rem; line-height: 1.55; margin-top: 5px; }
 
 .ontology-table-wrap { border: 1px solid var(--line); border-radius: 8px; margin: 24px 0; overflow-x: auto; }
 .ontology-table { border-collapse: collapse; min-width: 740px; width: 100%; }
@@ -1493,7 +1503,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .methodology-section-heading { align-items: flex-start; flex-direction: column; }
   .method-diagram { margin-left: -8px; margin-right: -8px; padding: 15px; }
   .ontology-layer { align-items: start; grid-template-columns: 1fr; }
-  .method-commitment-grid, .relation-grid, .coverage-key, .limitations-grid, .architecture-columns { grid-template-columns: 1fr; }
+  .methodology-map, .method-commitment-grid, .method-commitment-grid.evidence-properties, .relation-grid, .coverage-key, .limitations-grid, .architecture-columns, .inference-grid { grid-template-columns: 1fr; }
   .concept-sequence { grid-template-columns: 1fr; }
   .information-chain { display: grid; grid-template-columns: 1fr; }
   .information-chain > i { display: none; }

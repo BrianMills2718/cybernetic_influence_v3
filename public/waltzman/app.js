@@ -781,10 +781,10 @@ const guideSteps = [
   {
     kicker:'Follow one realized delivery',
     title:'Six retained events prove that the audit became Mara’s observation.',
-    body:'Now the visualization switches to causal trajectory. The source attempted an injection, emitted an effect, routed it through the named connection, invoked an exact delivery mechanism, committed revision 1, and delivered observation_000000 to Mara. Every arrow here is a retained causal-parent link.',
+    body:'Now the visualization switches to the retained execution trajectory. The source attempted an injection, emitted an effect, routed it through the named connection, invoked an exact delivery mechanism, committed revision 1, and delivered observation_000000 to Mara. Every arrow here is a retained execution-parent link—not proof of counterfactual causation.',
     mode:'trajectory', eventSequences:[1, 2, 3, 4, 5, 6],
     facts:[['Attempt','event_000001'], ['Route','event_000003'], ['Commit','revision 1'], ['Observation','observation_000000']],
-    language:[['Causal-parent arrow','The target event explicitly names the source event as a cause.'], ['State commit','The validated patch changed canonical state and produced a new revision.']],
+    language:[['Execution-parent arrow','The target event explicitly names the source event as execution ancestry.'], ['State commit','The validated patch changed canonical state and produced a new revision.']],
     takeaway:'Only the event chain—not the configured route by itself—establishes that information actually arrived.',
   },
   {
@@ -847,7 +847,7 @@ function renderGuideGraph(step) {
     viewMode:step.mode,
     event:step.mode === 'causal' ? {event_id:`guide_structure_${state.guideStep + 1}`, state_revision:0, focus_ids:step.focus || [], focus_edges:[], spatial_focus_ids:[], spatial_link_ids:[], boundary_ids:[]} : null,
     initialRevision:lastEvent?.state_revision ?? 0,
-    title:step.mode === 'trajectory' ? 'Realized causal events' : 'Configured canonical structure',
+    title:step.mode === 'trajectory' ? 'Realized retained events' : 'Configured canonical structure',
     subtitle:step.mode === 'trajectory' ? `${trajectory.nodes.length} retained events` : `${projection.nodes.length} records · ${projection.edges.length} typed relations`,
     showLegend:true,
     showMiniMap:false,
@@ -869,7 +869,7 @@ function renderGuide() {
   $('#guide-step-title').textContent = step.title
   $('#guide-step-body').textContent = step.body
   $('#guide-visual-mode').textContent = step.mode === 'trajectory' ? 'Realized trajectory' : 'Configured structure'
-  $('#guide-visual-title').textContent = step.mode === 'trajectory' ? 'Exact causal events and parent links' : 'Exact canonical records and typed relations'
+  $('#guide-visual-title').textContent = step.mode === 'trajectory' ? 'Exact retained events and execution-parent links' : 'Exact canonical records and typed relations'
   $('#guide-step-facts').innerHTML = step.facts.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')
   $('#guide-step-language').innerHTML = step.language.map(([term, definition]) => `<div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(definition)}</dd></div>`).join('')
   $('#guide-step-takeaway').innerHTML = `<span>Why this matters</span><strong>${escapeHtml(step.takeaway)}</strong>`
