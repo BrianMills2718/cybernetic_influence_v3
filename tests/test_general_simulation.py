@@ -46,6 +46,8 @@ def structured_stub(
                         "consequence:temporary-route-open",
                     ],
                     memory_additions=["A temporary route is reported operational."],
+                    memory_revisions=[],
+                    provenance_links=["consequence:temporary-route-open"],
                     interpretation="Use the material alternative rather than the bridge.",
                 ),
                 intent=SemanticActionIntent(
@@ -95,6 +97,7 @@ def structured_stub(
                     apparent_source="direct observation",
                 )
             ],
+            evidence_refs=[payload["intent"]["intent_id"]],
             stated_rationale="The operational alternative path supports movement.",
         ),
         SimpleNamespace(provider="test-stub"),
@@ -157,6 +160,7 @@ def test_world_supports_typed_nested_state_fields() -> None:
                 )
             ],
             consequences=[],
+            evidence_refs=["fixture"],
             stated_rationale="Exercise a semantic nested state field.",
         )
     )
@@ -241,6 +245,7 @@ def test_invalid_transaction_is_rejected_without_partial_mutation(
             operations=[operation],
             preconditions=[],
             consequences=[],
+            evidence_refs=["negative-control"],
             stated_rationale="Negative control.",
         )
     )
@@ -270,6 +275,7 @@ def test_duplicate_consequence_id_is_rejected_atomically() -> None:
                     apparent_source="adjudicator",
                 )
             ],
+            evidence_refs=["negative-control"],
             stated_rationale="Negative control.",
         )
     )
@@ -292,6 +298,9 @@ def test_stock_concordia_vertical_restores_and_commits_open_action() -> None:
     assert [item.role for item in result.model_calls] == ["actor", "adjudicator"]
     assert result.adoption.simulation_class == "concordia.prefabs.simulation.generic.Simulation"
     assert result.adoption.engine_class == "concordia.environment.engines.sequential.Sequential"
+    assert result.adoption.actor_selection_component.endswith(
+        "next_acting.NextActingInFixedOrder"
+    )
     assert "resolve" in result.adoption.lifecycle_events
     assert result.adoption.lifecycle_events.count("make_observation") == 2
     assert result.adoption.forbidden_runtime_imports == []
@@ -317,3 +326,4 @@ def test_concordia_adapter_does_not_import_legacy_project_runtimes() -> None:
     assert "CausalSession" not in source
     assert "ActiveRuntimeSession" not in source
     assert "active_runtime" not in source
+    assert 'return ",".join(actor_ids)' not in source

@@ -155,7 +155,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=cleanup1",
-        "assets/app.js?v=authoring3",
+        "assets/app.js?v=authoring4",
     ]
     assert {
         "overview-view",
@@ -200,6 +200,8 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-view",
         "create-prompt",
         "create-generate",
+        "create-example-prompt",
+        "create-service-example-prompt",
         "create-review",
         "create-brief-question",
         "create-brief-people",

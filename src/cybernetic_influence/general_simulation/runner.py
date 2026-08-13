@@ -11,6 +11,7 @@ from typing import Any, cast
 import numpy as np
 from concordia.agents import entity_agent
 from concordia.associative_memory import basic_associative_memory
+from concordia.components.game_master import next_acting as concordia_next_acting
 from concordia.environment.engines import simultaneous
 from concordia.language_model import language_model, no_language_model
 from concordia.prefabs.simulation import generic
@@ -51,6 +52,50 @@ ProgressObserver = Callable[[dict[str, Any], dict[str, Any]], None]
 def _checkpoint_hash(checkpoint: Mapping[str, Any]) -> str:
     encoded = json.dumps(checkpoint, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode()).hexdigest()
+
+
+def _strict_general_checkpoint(
+    checkpoint: Mapping[str, Any],
+    compiled: CompiledGeneralSimulationV1,
+) -> dict[str, Any]:
+    """Validate a persisted Concordia checkpoint before loading it.
+
+    Stock Concordia deliberately tolerates missing names while restoring.  A
+    resumable experiment cannot: silently omitting one actor, its memory, or
+    the canonical world would create a different execution prefix.
+    """
+    try:
+        retained = json.loads(json.dumps(dict(checkpoint)))
+        expected_actors = {person.entity_id for person in compiled.proposal.people}
+        entities = retained["entities"]
+        game_masters = retained["game_masters"]
+        if set(entities) != expected_actors:
+            raise ValueError("checkpoint actor set differs from the approved proposal")
+        if set(game_masters) != {"general_world_game_master"}:
+            raise ValueError("checkpoint game-master set is incomplete")
+        for actor_id in expected_actors:
+            context = entities[actor_id]["components"]["context_components"]
+            if set(context) != {ACTOR_CONTEXT_COMPONENT, "__memory__"}:
+                raise ValueError(f"checkpoint components are incomplete for {actor_id}")
+            entities[actor_id]["components"]["act_component"]["receipts"]
+        gm_components = game_masters["general_world_game_master"]["components"]
+        gm_components["act_component"]["moments"]
+        gm_context = gm_components["context_components"]
+        if set(gm_context) != {
+            WORLD_COMPONENT,
+            INBOX_COMPONENT,
+            concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY,
+        }:
+            raise ValueError("checkpoint game-master components are incomplete")
+        world_state = gm_context[WORLD_COMPONENT]
+        restored_world = CanonicalWorld(compiled.world_spec)
+        restored_world.set_state(world_state)
+        completed = len(gm_components["act_component"]["moments"])
+        if completed > len(compiled.proposal.schedule):
+            raise ValueError("checkpoint contains more moments than the approved schedule")
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("invalid or incomplete general-simulation checkpoint") from exc
+    return cast(dict[str, Any], retained)
 
 
 class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ignore[misc]
@@ -102,10 +147,48 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             raise ValueError("actor output changed actor identity")
         if decision.intent.base_revision != actor_context.base_revision:
             raise ValueError("actor intent did not use the frozen world revision")
+        available_observations = {
+            item.observation_id for item in actor_context.observations
+        }
+        available_provenance = available_observations | {
+            item.representation_id
+            for item in actor_context.observations
+            if item.representation_id is not None
+        } | {item.record_id for item in actor_context.accessible_records} | {
+            item.route_id for item in actor_context.accessible_routes
+        }
+        if set(decision.assimilation.attended_observation_ids) - available_observations:
+            raise ValueError("actor attended an observation it did not receive")
+        unknown_provenance = set(decision.assimilation.provenance_links) - available_provenance
+        available_memories = {
+            " ".join(item.lower().split())
+            for item in [*self._person.memories, *actor_context.private_memory]
+        }
+        unknown_provenance = {
+            item
+            for item in unknown_provenance
+            if not (
+                item.startswith("private_memory:")
+                and " ".join(item.partition(":")[2].lower().split())
+                in available_memories
+            )
+        }
+        if unknown_provenance:
+            raise ValueError("actor cited observation provenance it did not receive")
         context_component = self.get_entity().get_component(
             ACTOR_CONTEXT_COMPONENT, type_=ActorContextComponent
         )
         if context_component.context is not None:
+            for revision in decision.assimilation.memory_revisions:
+                try:
+                    index = context_component.context.private_memory.index(
+                        revision.prior_memory
+                    )
+                except ValueError as exc:
+                    raise ValueError(
+                        "actor attempted to revise memory it did not possess"
+                    ) from exc
+                context_component.context.private_memory[index] = revision.revised_memory
             context_component.context.private_memory.extend(
                 decision.assimilation.memory_additions
             )
@@ -168,7 +251,11 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
         if output_type == entity_lib.OutputType.TERMINATE:
             return "Yes" if len(self.moments) >= len(self._proposal.schedule) else "No"
         if output_type == entity_lib.OutputType.NEXT_ACTING:
-            return ",".join(actor_ids)
+            selector = self.get_entity().get_component(
+                concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY,
+                type_=concordia_next_acting.NextActingAllEntities,
+            )
+            return str(selector.pre_act(action_spec))
         if output_type == entity_lib.OutputType.NEXT_ACTION_SPEC:
             return "prompt: Propose one bounded action from your authorized context.;;type: free"
         if output_type == entity_lib.OutputType.MAKE_OBSERVATION:
@@ -236,21 +323,52 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 trace_id=f"{self._trace_prefix}/moment/{len(self.moments) + 1}/adjudicator",
                 timeout_s=180,
             )
-            transaction = WorldTransaction.model_validate(parsed)
+            proposed_transaction = WorldTransaction.model_validate(parsed)
             expected_intents = {item.intent_id for item in intents}
-            if transaction.authority_id != self._authority_id:
-                raise ValueError("adjudicator changed authority identity")
-            if transaction.base_revision != world.state.revision:
-                raise ValueError("adjudicator changed the frozen base revision")
-            if set(transaction.intent_ids) != expected_intents:
-                raise ValueError("adjudicator lost or invented intent provenance")
+            corrections: list[str] = []
+            if proposed_transaction.authority_id != self._authority_id:
+                corrections.append("authority_id restored from trusted runtime")
+            if proposed_transaction.base_revision != world.state.revision:
+                corrections.append("base_revision restored from trusted runtime")
+            if set(proposed_transaction.intent_ids) != expected_intents:
+                corrections.append("intent_ids restored from collected Concordia actions")
+            transaction = proposed_transaction.model_copy(
+                update={
+                    "authority_id": self._authority_id,
+                    "base_revision": world.state.revision,
+                    "intent_ids": [item.intent_id for item in intents],
+                }
+            )
+            allowed_evidence_refs = (
+                expected_intents
+                | set(world.state.records)
+                | set(world.state.places)
+                | set(world.state.routes)
+                | set(world.state.representations)
+                | set(world.state.resources)
+            )
+            allowed_evidence_refs |= {
+                f"{record_type}:{record_id}"
+                for record_type, record_ids in (
+                    ("record", world.state.records),
+                    ("place", world.state.places),
+                    ("route", world.state.routes),
+                    ("representation", world.state.representations),
+                    ("resource", world.state.resources),
+                )
+                for record_id in record_ids
+            }
+            if set(transaction.evidence_refs) - allowed_evidence_refs:
+                raise ValueError("adjudicator cited unknown canonical evidence")
             unknown_recipients = {
                 item.recipient_id for item in transaction.consequences
             } - set(actor_ids)
             if unknown_recipients:
                 raise ValueError("adjudicator consequence named an unknown actor")
             frozen_revision = world.state.revision
-            validation = world.validate_and_commit(transaction)
+            validation = world.validate_and_commit(
+                transaction, envelope_corrections=corrections
+            )
             self.receipts.append(receipt)
             self.moments.append(
                 GeneralMomentEvidence(
@@ -349,6 +467,11 @@ class GeneralWorldPrefab(prefab.Prefab):  # type: ignore[misc]
             context_components={
                 WORLD_COMPONENT: CanonicalWorld(self.compiled.world_spec),
                 INBOX_COMPONENT: InboxComponent(),
+                concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY: (
+                    concordia_next_acting.NextActingAllEntities(
+                        [person.entity_id for person in self.compiled.proposal.people]
+                    )
+                ),
             },
         )
 
@@ -405,10 +528,16 @@ def run_general_simulation(
     run_id: str,
     call: StructuredCall | None = None,
     progress_observer: ProgressObserver | None = None,
+    checkpoint: Mapping[str, Any] | None = None,
+    max_additional_moments: int | None = None,
 ) -> GeneralGroupSimulationResult:
     selected_call = call or _structured_call()
     trace_prefix = f"{run_id}/general"
     simulation = _build_simulation(compiled, selected_call, trace_prefix)
+    restored_checkpoint: dict[str, Any] | None = None
+    if checkpoint is not None:
+        restored_checkpoint = _strict_general_checkpoint(checkpoint, compiled)
+        simulation.load_from_checkpoint(restored_checkpoint)
     checkpoints: list[dict[str, Any]] = []
 
     def retain_checkpoint(checkpoint: dict[str, Any]) -> None:
@@ -424,13 +553,17 @@ def run_general_simulation(
                 retained,
             )
 
-    simulation.play(
-        max_steps=len(compiled.proposal.schedule),
-        get_state_callback=retain_checkpoint,
-    )
     game_master = simulation.get_game_masters()[0]
     assert isinstance(game_master, entity_agent.EntityAgent)
     gm_act = cast(GeneralGameMasterActingComponent, game_master.get_act_component())
+    completed_before = len(gm_act.moments)
+    remaining = len(compiled.proposal.schedule) - completed_before
+    if max_additional_moments is not None:
+        if max_additional_moments < 0:
+            raise ValueError("max_additional_moments must be non-negative")
+        remaining = min(remaining, max_additional_moments)
+    if remaining:
+        simulation.play(max_steps=remaining, get_state_callback=retain_checkpoint)
     world = cast(
         CanonicalWorld,
         game_master.get_component(WORLD_COMPONENT, type_=CanonicalWorld),
@@ -440,9 +573,14 @@ def run_general_simulation(
         assert isinstance(actor, entity_agent.EntityAgent)
         actor_act = cast(GeneralActorActingComponent, actor.get_act_component())
         actor_receipts.extend(actor_act.receipts)
-    for index, moment in enumerate(gm_act.moments):
-        if index < len(checkpoints):
-            moment.checkpoint_hash = _checkpoint_hash(checkpoints[index])
+    if restored_checkpoint is not None and completed_before:
+        gm_act.moments[completed_before - 1].checkpoint_hash = _checkpoint_hash(
+            restored_checkpoint
+        )
+    for offset, retained_checkpoint in enumerate(checkpoints):
+        gm_act.moments[completed_before + offset].checkpoint_hash = _checkpoint_hash(
+            retained_checkpoint
+        )
     return GeneralGroupSimulationResult(
         simulation_id=compiled.proposal.simulation_id,
         title=compiled.proposal.title,
@@ -457,6 +595,9 @@ def run_general_simulation(
         adoption=AdoptionReceipt(
             simulation_class=f"{type(simulation).__module__}.{type(simulation).__name__}",
             engine_class=f"{type(simulation._engine).__module__}.{type(simulation._engine).__name__}",
+            actor_selection_component=(
+                "concordia.components.game_master.next_acting.NextActingAllEntities"
+            ),
             concordia_revision=CONCORDIA_REVISION,
             actor_names=[item.name for item in simulation.get_entities()],
             game_master_names=[item.name for item in simulation.get_game_masters()],

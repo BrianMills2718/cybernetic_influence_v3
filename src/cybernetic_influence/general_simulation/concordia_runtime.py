@@ -12,6 +12,7 @@ from typing import Any, cast
 import numpy as np
 from concordia.agents import entity_agent
 from concordia.associative_memory import basic_associative_memory
+from concordia.components.game_master import next_acting as concordia_next_acting
 from concordia.environment.engines import sequential
 from concordia.language_model import language_model
 from concordia.language_model import no_language_model
@@ -195,13 +196,51 @@ class ActorActingComponent(entity_component.ActingComponent):  # type: ignore[mi
             raise ValueError("actor output changed actor identity")
         if decision.intent.base_revision != actor_context.base_revision:
             raise ValueError("actor intent did not use supplied world revision")
+        available_observations = {
+            item.observation_id for item in actor_context.observations
+        }
+        available_provenance = available_observations | {
+            item.representation_id
+            for item in actor_context.observations
+            if item.representation_id is not None
+        } | {item.record_id for item in actor_context.accessible_records} | {
+            item.route_id for item in actor_context.accessible_routes
+        }
+        if set(decision.assimilation.attended_observation_ids) - available_observations:
+            raise ValueError("actor attended an observation it did not receive")
+        unknown_provenance = set(decision.assimilation.provenance_links) - available_provenance
+        available_memories = {
+            " ".join(item.lower().split()) for item in actor_context.private_memory
+        }
+        unknown_provenance = {
+            item
+            for item in unknown_provenance
+            if not (
+                item.startswith("private_memory:")
+                and " ".join(item.partition(":")[2].lower().split())
+                in available_memories
+            )
+        }
+        if unknown_provenance:
+            raise ValueError("actor cited observation provenance it did not receive")
         context_component = self.get_entity().get_component(
             ACTOR_CONTEXT_COMPONENT, type_=ActorContextComponent
         )
-        worldless_memories = decision.assimilation.memory_additions
         # The actor retains its own strings; these are not canonical world truth.
         if context_component.context is not None:
-            context_component.context.private_memory.extend(worldless_memories)
+            for revision in decision.assimilation.memory_revisions:
+                try:
+                    index = context_component.context.private_memory.index(
+                        revision.prior_memory
+                    )
+                except ValueError as exc:
+                    raise ValueError(
+                        "actor attempted to revise memory it did not possess"
+                    ) from exc
+                context_component.context.private_memory[index] = revision.revised_memory
+            context_component.context.private_memory.extend(
+                decision.assimilation.memory_additions
+            )
         self.receipts.append(receipt)
         return decision.intent.model_dump_json()
 
@@ -265,7 +304,11 @@ class GameMasterActingComponent(entity_component.ActingComponent):  # type: igno
                 self.final_observation_delivered = True
             return self._world().actor_context(actor_id).model_dump_json()
         if output_type == entity_lib.OutputType.NEXT_ACTING:
-            return "worker"
+            selector = self.get_entity().get_component(
+                concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY,
+                type_=concordia_next_acting.NextActingInFixedOrder,
+            )
+            return str(selector.pre_act(action_spec))
         if output_type == entity_lib.OutputType.NEXT_ACTION_SPEC:
             if self.resolved:
                 return "type: __SKIP_THIS_STEP__"
@@ -304,16 +347,47 @@ class GameMasterActingComponent(entity_component.ActingComponent):  # type: igno
                 user=json.dumps(authority_context, sort_keys=True),
                 trace_id=self._trace_id,
             )
-            transaction = WorldTransaction.model_validate(parsed)
-            if transaction.authority_id != "port_semantic_adjudicator":
-                raise ValueError("adjudicator used an unauthorized authority id")
-            if transaction.base_revision != world.state.revision:
-                raise ValueError("adjudicator did not use supplied world revision")
-            if transaction.intent_ids != [intent.intent_id]:
-                raise ValueError("adjudicator transaction lost intent provenance")
+            proposed_transaction = WorldTransaction.model_validate(parsed)
+            corrections: list[str] = []
+            if proposed_transaction.authority_id != "port_semantic_adjudicator":
+                corrections.append("authority_id restored from trusted runtime")
+            if proposed_transaction.base_revision != world.state.revision:
+                corrections.append("base_revision restored from trusted runtime")
+            if proposed_transaction.intent_ids != [intent.intent_id]:
+                corrections.append("intent_ids restored from collected Concordia action")
+            transaction = proposed_transaction.model_copy(
+                update={
+                    "authority_id": "port_semantic_adjudicator",
+                    "base_revision": world.state.revision,
+                    "intent_ids": [intent.intent_id],
+                }
+            )
+            allowed_evidence_refs = {
+                intent.intent_id,
+                *world.state.records,
+                *world.state.places,
+                *world.state.routes,
+                *world.state.representations,
+                *world.state.resources,
+            }
+            allowed_evidence_refs |= {
+                f"{record_type}:{record_id}"
+                for record_type, record_ids in (
+                    ("record", world.state.records),
+                    ("place", world.state.places),
+                    ("route", world.state.routes),
+                    ("representation", world.state.representations),
+                    ("resource", world.state.resources),
+                )
+                for record_id in record_ids
+            }
+            if set(transaction.evidence_refs) - allowed_evidence_refs:
+                raise ValueError("adjudicator cited unknown canonical evidence")
             if not any(item.recipient_id == "worker" for item in transaction.consequences):
                 raise ValueError("adjudicator omitted the required actor-visible consequence")
-            validation = world.validate_and_commit(transaction)
+            validation = world.validate_and_commit(
+                transaction, envelope_corrections=corrections
+            )
             if not validation.accepted:
                 raise ValueError(f"adjudicator transaction rejected: {validation.errors}")
             self.receipts.append(receipt)
@@ -382,6 +456,9 @@ class WorldGameMasterPrefab(prefab.Prefab):  # type: ignore[misc]
             context_components={
                 WORLD_COMPONENT: CanonicalWorld(self.spec),
                 INBOX_COMPONENT: InboxComponent(),
+                concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY: (
+                    concordia_next_acting.NextActingInFixedOrder(sequence=["worker"])
+                ),
             },
         )
 
@@ -521,11 +598,25 @@ def _strict_checkpoint(
 ) -> tuple[dict[str, Any], str]:
     payload = copy.deepcopy(dict(checkpoint))
     try:
+        if set(payload["entities"]) != {"worker"}:
+            raise ValueError("checkpoint actor set differs from the vertical")
+        if set(payload["game_masters"]) != {"world_game_master"}:
+            raise ValueError("checkpoint game-master set differs from the vertical")
         entity_data = payload["entities"]["worker"]
         gm_data = payload["game_masters"]["world_game_master"]
+        gm_context = gm_data["components"]["context_components"]
+        if set(gm_context) != {
+            WORLD_COMPONENT,
+            INBOX_COMPONENT,
+            concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY,
+        }:
+            raise ValueError("checkpoint game-master components are incomplete")
         ActorContextComponent().set_state(entity_data["components"]["context_components"][ACTOR_CONTEXT_COMPONENT])
-        CanonicalWorld(spec).set_state(gm_data["components"]["context_components"][WORLD_COMPONENT])
-        InboxComponent().set_state(gm_data["components"]["context_components"][INBOX_COMPONENT])
+        CanonicalWorld(spec).set_state(gm_context[WORLD_COMPONENT])
+        InboxComponent().set_state(gm_context[INBOX_COMPONENT])
+        concordia_next_acting.NextActingInFixedOrder(sequence=["worker"]).set_state(
+            gm_context[concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY]
+        )
         ActorActingComponent(lambda *args, **kwargs: (None, None), "validation").set_state(
             entity_data["components"]["act_component"]
         )
@@ -558,6 +649,7 @@ def _prepare_world(world: CanonicalWorld) -> None:
             )
         ],
         consequences=[],
+        evidence_refs=["scripted-blocked-attempt"],
         stated_rationale="Attempt to use the direct bridge route.",
     )
     rejected = world.validate_and_commit(blocked)
@@ -608,6 +700,7 @@ def _prepare_world(world: CanonicalWorld) -> None:
                 apparent_source="port operations",
             )
         ],
+        evidence_refs=["port-contingency-plan"],
         stated_rationale="Create a material alternative to the destroyed bridge.",
     )
     accepted = world.validate_and_commit(topology)
@@ -670,6 +763,9 @@ def run_bridge_port_vertical(call: StructuredCall | None = None) -> GeneralSimul
         adoption=AdoptionReceipt(
             simulation_class=f"{type(after).__module__}.{type(after).__name__}",
             engine_class=f"{type(after._engine).__module__}.{type(after._engine).__name__}",
+            actor_selection_component=(
+                "concordia.components.game_master.next_acting.NextActingInFixedOrder"
+            ),
             concordia_revision=CONCORDIA_REVISION,
             actor_names=[item.name for item in after.get_entities()],
             game_master_names=[item.name for item in after.get_game_masters()],

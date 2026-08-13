@@ -44,6 +44,10 @@ class _GeneralRuntimeFake:
                         item["observation_id"] for item in context["observations"]
                     ],
                     memory_additions=[f"memory {self.actor_counter}"],
+                    memory_revisions=[],
+                    provenance_links=[
+                        item["observation_id"] for item in context["observations"]
+                    ],
                     interpretation="Bounded fixture interpretation.",
                 ),
                 intent=SemanticActionIntent(
@@ -65,6 +69,7 @@ class _GeneralRuntimeFake:
             operations=[],
             preconditions=[],
             consequences=[],
+            evidence_refs=user["requirements"]["intent_ids"],
             stated_rationale="Retain the world while recording joint review.",
         ), SimpleNamespace(provider="fixture")
 

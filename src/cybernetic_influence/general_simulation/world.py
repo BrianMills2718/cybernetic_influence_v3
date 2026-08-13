@@ -136,7 +136,13 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             self._state.delivered_consequence_ids.append(consequence.consequence_id)
         return observations
 
-    def validate_and_commit(self, transaction: WorldTransaction) -> ValidationResult:
+    def validate_and_commit(
+        self,
+        transaction: WorldTransaction,
+        *,
+        envelope_corrections: list[str] | None = None,
+    ) -> ValidationResult:
+        retained_corrections = list(envelope_corrections or [])
         errors: list[str] = []
         if transaction.base_revision != self._state.revision:
             errors.append(
@@ -234,6 +240,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             self._evidence.append(
                 TransitionEvidence(
                     transaction=transaction,
+                    envelope_corrections=retained_corrections,
                     validation=result,
                     resulting_state_hash=state_hash(self._state),
                 )
@@ -249,6 +256,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
         self._evidence.append(
             TransitionEvidence(
                 transaction=transaction,
+                envelope_corrections=retained_corrections,
                 validation=result,
                 resulting_state_hash=state_hash(candidate),
             )

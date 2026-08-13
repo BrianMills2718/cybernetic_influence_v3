@@ -16,7 +16,10 @@ depends_on:
 ## Completion record
 
 Slices 28A through 28F were implemented on
-`feature/slice-28-general-demo`. Focused evidence, authentic Luna traces,
+`feature/slice-28-general-demo`. A subsequent requirement-by-requirement audit
+corrected checkpoint continuation, assimilation provenance, trusted
+transaction-envelope ownership, stock actor selection, and the missing second
+example prompt. Focused evidence, authentic Luna traces,
 known limitations, and the stakeholder script are recorded in
 `docs/handoffs/028-natural-language-general-simulation-demo.md`. Public
 deployment and exact deployed-build verification remain separate operator

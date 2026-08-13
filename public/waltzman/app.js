@@ -1207,6 +1207,10 @@ function configureControls() {
     $('#create-prompt').value = 'Model a storm-damaged relief port containing a dock, an inland depot, one truck, finite fuel, relief cargo, a damaged bridge, communications, and four people responsible for port operations, transport, bridge inspection, and aid allocation. A hidden bridge defect should be known initially only to the inspector. At the same scheduled moment, the port operator and transport coordinator should independently propose what to do with the truck. Let an LLM game master adjudicate open-ended actions while exact mechanisms enforce placement, conserved fuel, information access, and valid topology. Explore whether the group can move the cargo before sunset without using unsafe infrastructure.'
     $('#create-prompt').focus()
   }
+  $('#create-service-example-prompt').onclick = () => {
+    $('#create-prompt').value = 'Model an online service outage involving an incident commander, database engineer, security analyst, and customer liaison. Credentials, service dependencies, status messages, access permissions, and recovery attempts change over time. Different people receive different claims about the cause. The group must restore service without erasing forensic evidence.'
+    $('#create-prompt').focus()
+  }
   $('#create-revise').onclick = reviseAuthoringDraft
   $('#create-person-select').onchange = (event) => { selectedAuthoringPerson = event.target.value; renderAuthoringPersonEditor() }
   $('#create-save-person').onclick = saveAuthoringPerson

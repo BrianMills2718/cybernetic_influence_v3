@@ -5,6 +5,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from cybernetic_influence.general_simulation.authoring_models import (
     GeneralSimulationProposalV1,
 )
@@ -46,6 +48,10 @@ def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> Non
                         item["observation_id"] for item in context["observations"]
                     ],
                     memory_additions=[f"memory {actor_counter}"],
+                    memory_revisions=[],
+                    provenance_links=[
+                        item["observation_id"] for item in context["observations"]
+                    ],
                     interpretation="A bounded synthetic interpretation.",
                 ),
                 intent=SemanticActionIntent(
@@ -68,6 +74,7 @@ def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> Non
             operations=[],
             preconditions=[],
             consequences=[],
+            evidence_refs=user["requirements"]["intent_ids"],
             stated_rationale="Retain the current world while recording joint review.",
         ), SimpleNamespace(provider="fixture")
 
@@ -82,6 +89,9 @@ def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> Non
     assert [item.frozen_revision for item in result.moments] == [0, 1, 2]
     assert all(len(item.intent_ids) == 4 for item in result.moments)
     assert result.adoption.engine_class.endswith("simultaneous.Simultaneous")
+    assert result.adoption.actor_selection_component.endswith(
+        "next_acting.NextActingAllEntities"
+    )
     assert result.adoption.actor_names == [
         "port_coordinator",
         "customs_officer",
@@ -142,6 +152,10 @@ def test_second_domain_uses_the_same_compiler_runner_and_receipt() -> None:
                         item["observation_id"] for item in context["observations"]
                     ],
                     memory_additions=["Retain the observed incident evidence."],
+                    memory_revisions=[],
+                    provenance_links=[
+                        item["observation_id"] for item in context["observations"]
+                    ],
                     interpretation="The cause remains uncertain.",
                 ),
                 intent=SemanticActionIntent(
@@ -163,6 +177,7 @@ def test_second_domain_uses_the_same_compiler_runner_and_receipt() -> None:
             operations=[],
             preconditions=[],
             consequences=[],
+            evidence_refs=user["requirements"]["intent_ids"],
             stated_rationale="Retain the world pending a reversible recovery action.",
         ), SimpleNamespace(provider="fixture")
 
@@ -176,3 +191,143 @@ def test_second_domain_uses_the_same_compiler_runner_and_receipt() -> None:
     assert len(result.model_calls) == 6
     assert result.adoption.engine_class.endswith("simultaneous.Simultaneous")
     assert result.adoption.game_master_names == ["general_world_game_master"]
+    actor_inputs = [
+        item.input_context for item in result.model_calls if item.role == "actor"
+    ]
+    adjudicator_inputs = [
+        item.input_context for item in result.model_calls if item.role == "adjudicator"
+    ]
+    assert all("expired_replication_credential" not in item for item in actor_inputs)
+    assert any("expired_replication_credential" in item for item in adjudicator_inputs)
+
+
+def test_general_run_restores_checkpoint_into_fresh_simulation() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    call = _CheckpointRuntimeFake()
+
+    prefix = run_general_simulation(
+        compiled,
+        run_id="run_general_checkpoint",
+        call=call,
+        max_additional_moments=1,
+    )
+    assert len(prefix.moments) == 1
+    assert len(prefix.checkpoints) == 1
+
+    resumed = run_general_simulation(
+        compiled,
+        run_id="run_general_checkpoint",
+        call=call,
+        checkpoint=prefix.checkpoints[-1],
+    )
+
+    assert len(resumed.moments) == 3
+    assert [item.frozen_revision for item in resumed.moments] == [0, 1, 2]
+    assert len(resumed.model_calls) == 15
+    assert resumed.moments[0].checkpoint_hash != "pending"
+    assert resumed.final_state.revision == 3
+
+
+def test_general_run_rejects_lossy_checkpoint() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        SERVICE_FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    prefix = run_general_simulation(
+        compiled,
+        run_id="run_service_checkpoint",
+        call=_CheckpointRuntimeFake(),
+        max_additional_moments=1,
+    )
+    corrupt = json.loads(json.dumps(prefix.checkpoints[-1]))
+    del corrupt["entities"][proposal.people[0].entity_id]
+
+    with pytest.raises(ValueError, match="invalid or incomplete"):
+        run_general_simulation(
+            compiled,
+            run_id="run_service_checkpoint",
+            call=_CheckpointRuntimeFake(),
+            checkpoint=corrupt,
+        )
+
+
+def test_trusted_runtime_owns_transaction_envelope_identity() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        SERVICE_FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    result = run_general_simulation(
+        compiled,
+        run_id="run_service_envelope",
+        call=_CheckpointRuntimeFake(mutate_envelope=True),
+        max_additional_moments=1,
+    )
+
+    evidence = result.transition_evidence[0]
+    assert evidence.transaction.authority_id == "general_semantic_adjudicator"
+    assert evidence.transaction.base_revision == 0
+    assert set(evidence.transaction.intent_ids) == set(result.moments[0].intent_ids)
+    assert evidence.envelope_corrections == [
+        "authority_id restored from trusted runtime",
+        "base_revision restored from trusted runtime",
+        "intent_ids restored from collected Concordia actions",
+    ]
+
+
+class _CheckpointRuntimeFake:
+    def __init__(self, *, mutate_envelope: bool = False) -> None:
+        self.actor_counter = 0
+        self.mutate_envelope = mutate_envelope
+
+    def __call__(self, *args: Any, **kwargs: Any) -> tuple[object, object]:
+        user = json.loads(args[1][1]["content"])
+        if kwargs["response_model"] is ActorDecision:
+            self.actor_counter += 1
+            context = user["actor_context"]
+            return ActorDecision(
+                assimilation=Assimilation(
+                    attended_observation_ids=[
+                        item["observation_id"] for item in context["observations"]
+                    ],
+                    memory_additions=[f"checkpoint memory {self.actor_counter}"],
+                    memory_revisions=[],
+                    provenance_links=[
+                        item["observation_id"] for item in context["observations"]
+                    ],
+                    interpretation="Retain the bounded checkpoint evidence.",
+                ),
+                intent=SemanticActionIntent(
+                    intent_id=f"checkpoint_intent_{self.actor_counter}",
+                    actor_id=context["actor_id"],
+                    base_revision=context["base_revision"],
+                    action="Propose a joint checkpoint-safe review.",
+                    target_refs=[],
+                    purpose="Continue from the exact retained prefix.",
+                    expected_effect="A reviewable no-op transaction.",
+                    stated_rationale="The same frozen revision remains authoritative.",
+                ),
+            ), SimpleNamespace(provider="fixture")
+        return WorldTransaction(
+            transaction_id=f"checkpoint_transaction_{user['moment']['moment_id']}",
+            base_revision=(
+                999 if self.mutate_envelope else user["requirements"]["base_revision"]
+            ),
+            authority_id=(
+                "invented_authority"
+                if self.mutate_envelope
+                else user["requirements"]["authority_id"]
+            ),
+            intent_ids=(
+                ["invented_intent"]
+                if self.mutate_envelope
+                else user["requirements"]["intent_ids"]
+            ),
+            operations=[],
+            preconditions=[],
+            consequences=[],
+            evidence_refs=user["requirements"]["intent_ids"],
+            stated_rationale="Commit the checkpoint-safe no-op transaction.",
+        ), SimpleNamespace(provider="fixture")

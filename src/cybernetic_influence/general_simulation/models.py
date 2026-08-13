@@ -163,9 +163,21 @@ class ActorContext(StrictModel):
     private_memory: list[str]
 
 
+class MemoryRevision(StrictModel):
+    prior_memory: str
+    revised_memory: str
+
+
 class Assimilation(StrictModel):
     attended_observation_ids: list[str]
     memory_additions: list[str]
+    memory_revisions: list[MemoryRevision]
+    provenance_links: list[str] = Field(
+        description=(
+            "Only supplied observation IDs, representation IDs, accessible record/route "
+            "IDs, or private_memory:<exact supplied memory>."
+        )
+    )
     interpretation: str
 
 
@@ -212,6 +224,12 @@ class WorldTransaction(StrictModel):
     operations: list[PatchOperation]
     preconditions: list[Precondition]
     consequences: list[Consequence]
+    evidence_refs: list[str] = Field(
+        description=(
+            "Canonical record, place, route, representation, resource, or collected intent "
+            "identities supporting the proposed transition."
+        )
+    )
     stated_rationale: str
 
 
@@ -224,6 +242,7 @@ class ValidationResult(StrictModel):
 
 class TransitionEvidence(StrictModel):
     transaction: WorldTransaction
+    envelope_corrections: list[str]
     validation: ValidationResult
     resulting_state_hash: str
 
@@ -242,6 +261,7 @@ class ModelCallReceipt(StrictModel):
 class AdoptionReceipt(StrictModel):
     simulation_class: str
     engine_class: str
+    actor_selection_component: str
     concordia_revision: str
     actor_names: list[str]
     game_master_names: list[str]
