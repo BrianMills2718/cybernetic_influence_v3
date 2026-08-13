@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-08-11
+updated: 2026-08-13
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -50,6 +50,13 @@ Cybernetic Influence product and retained runs are the parity baseline.
 [Slice 27](handoffs/027-foundation-implementation.md) is the first production
 Concordia world-transition vertical and awaits explicit implementation
 authorization.
+
+[Slice 28](plans/028-natural-language-general-simulation-demo.md) turns that
+foundation into the next stakeholder-facing capability: an immediately visible
+natural-language authoring surface, an editable general world proposal, a
+compiler-generated execution coverage report, Concordia-owned live execution,
+and automatic replay in two materially different domains. Its detailed plan is
+ready for implementation; no Slice 28 production code has begun.
 
 ## Retained Baseline Outcome Probe
 
@@ -327,6 +334,7 @@ calibration, causal attribution, or operational detection.
 | [Slice 26](plans/026-concordia-foundation-research.md) | research complete; owner disposition recorded | Source audit remains valid; owner revised the invariant premise and selected Candidate A |
 | [ADR 013](adr/013-generalized-simulator-foundation.md) | accepted | Concordia owns the simulation foundation; selected CI capabilities migrate as components/projections |
 | [Foundation Slice 27](handoffs/027-foundation-implementation.md) | designed; awaiting implementation authorization | General bridge/port vertical exercises the adopted world-transition seam without the old runtime as hidden executor |
+| [Slice 28](plans/028-natural-language-general-simulation-demo.md) | implementation-ready | Stakeholder pilot joins discoverable natural-language authoring to the Concordia general-world seam and automatic cross-domain replay |
 | [Experiment Slice 27](plans/027-coordination-dynamics-experiment.md) | provider-free mechanism proof technically complete; stakeholder readout pending | Four conditions and eight ordinary retained runs isolate pressure presence, adaptation, and authoritative validation with evidence step-down |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |

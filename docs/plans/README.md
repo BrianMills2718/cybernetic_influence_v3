@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-07-31
+updated: 2026-08-13
 ---
 
 # Implementation Plans
@@ -11,6 +11,14 @@ updated: 2026-07-31
 [the goal](../GOAL.md) defines the accepted MVP outcome.
 
 ## Active execution
+
+[Slice 28: Natural-language general simulation demo](028-natural-language-general-simulation-demo.md)
+is the implementation-ready stakeholder pilot plan. It first repairs the
+hidden authoring input, then productionizes the adopted Concordia world seam,
+adds compiler-generated execution coverage, and proves the same authoring,
+execution, and replay path in two domains. It depends on the accepted Slice 27
+foundation handoff and does not authorize a shortcut that generalizes the old
+runtime.
 
 [Slice 24: Configurable theory-informed simulation MVP](024-configurable-theory-analysis-mvp.md)
 remains the MVP authority. Packets 24A0–24D are technically complete. Its only
