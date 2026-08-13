@@ -99,7 +99,18 @@ def default_registry() -> tuple[RegisteredComponentV1, ...]:
             assumptions=["Luna role behavior is synthetic and not a calibrated human model"],
             invalid_questions=["prediction of a named real person"],
             causal_responsibility_tags=["interpretation", "choice", "intent"],
-            semantic_triggers=["decide", "reason", "propose", "open-ended action", "bounded action"],
+            semantic_triggers=[
+                "assess",
+                "choose",
+                "decide",
+                "interpret",
+                "prioritize",
+                "propose",
+                "reason",
+                "recommend",
+                "open-ended action",
+                "bounded action",
+            ],
             what_can_change=["private memory", "semantic action intent"],
             what_cannot_change=["canonical world state directly"],
         ),
@@ -115,7 +126,21 @@ def default_registry() -> tuple[RegisteredComponentV1, ...]:
             assumptions=["one bounded Luna authority adjudicates the same-moment intent batch"],
             invalid_questions=["stable transition probabilities", "unregistered exact physics"],
             causal_responsibility_tags=["joint_resolution", "adjudication", "coordination"],
-            semantic_triggers=["joint plan", "adjudicate", "coordinate", "resolve competing", "agree"],
+            semantic_triggers=[
+                "adjudicate",
+                "apply",
+                "attempt",
+                "change",
+                "coordinate",
+                "decision",
+                "enact",
+                "execute",
+                "recovery",
+                "restore",
+                "joint plan",
+                "resolve competing",
+                "agree",
+            ],
             what_can_change=["registered canonical records through validated transactions"],
             what_cannot_change=["unregistered state", "actor private memory"],
         ),
@@ -132,6 +157,8 @@ def registry_digest(registry: tuple[RegisteredComponentV1, ...]) -> str:
 def resolve_request(
     request: ComponentRequestV1,
     registry: tuple[RegisteredComponentV1, ...],
+    *,
+    actor_ids: set[str] | None = None,
 ) -> tuple[RegisteredComponentV1 | None, list[str]]:
     text = " ".join(
         [request.behavior_description, *request.required_reads, *request.desired_effects]
@@ -150,7 +177,34 @@ def resolve_request(
         return None, ["no registered semantic trigger matched the requested behavior"]
     scored.sort(key=lambda item: (-item[0], item[1].ref))
     best_score, best, matches = scored[0]
-    tied = [item[1].ref for item in scored if item[0] == best_score]
+    tied_entries = [item[1] for item in scored if item[0] == best_score]
+    tied = [item.ref for item in tied_entries]
     if len(tied) > 1:
+        actor_subjects = set(request.subject_refs) & (actor_ids or set())
+        person_entry = next(
+            (item for item in tied_entries if item.component_kind == "bounded_person_action"),
+            None,
+        )
+        joint_entry = next(
+            (
+                item
+                for item in tied_entries
+                if item.component_kind == "joint_semantic_adjudication"
+            ),
+            None,
+        )
+        if (
+            person_entry is not None
+            and len(actor_subjects) == 1
+            and request.subject_refs[0] in actor_subjects
+        ):
+            return person_entry, [
+                "resolved equal semantic scores to the one named actor's bounded action"
+            ]
+        if joint_entry is not None and len(actor_subjects) != 1:
+            return joint_entry, [
+                "resolved equal semantic scores to joint adjudication over multiple or "
+                "non-person subjects"
+            ]
         return None, [f"ambiguous registry match at score {best_score}: {', '.join(tied)}"]
     return best, [f"matched trusted registry triggers: {', '.join(sorted(matches))}"]

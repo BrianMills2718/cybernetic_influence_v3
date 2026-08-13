@@ -141,3 +141,15 @@ def test_general_proposal_schema_contains_no_executable_reference_field() -> Non
     assert "implementation_ref" not in schema
     assert "template_id" not in schema
     assert "python" not in schema.lower()
+
+
+def test_general_authoring_prompt_defaults_to_a_short_editable_run() -> None:
+    prompt = Path(
+        "src/cybernetic_influence/general_simulation/prompts/general_world_draft.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert "use exactly three scheduled moments" in prompt
+    assert "Use a fourth moment only" in prompt
+    assert "preserve an explicitly requested schedule length" in prompt
+    assert "Each request must name one transition responsibility" in prompt
+    assert "Do not combine a person's interpretation" in prompt

@@ -154,7 +154,9 @@ def compile_general_simulation(
     for request in proposal.component_requests:
         unknown_subjects = sorted(set(request.subject_refs) - declared_refs)
         unknown_reads = sorted(set(request.required_reads) - declared_refs)
-        entry, evidence = resolve_request(request, selected_registry)
+        entry, evidence = resolve_request(
+            request, selected_registry, actor_ids=actor_ids
+        )
         evidence = list(evidence)
         if unknown_subjects:
             evidence.append(f"unknown subject refs: {', '.join(unknown_subjects)}")

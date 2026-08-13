@@ -14,6 +14,10 @@ from cybernetic_influence.general_simulation.compiler import (
     GeneralCompilationError,
     compile_general_simulation,
 )
+from cybernetic_influence.general_simulation.registry import (
+    default_registry,
+    resolve_request,
+)
 
 
 FIXTURES = Path("tests/fixtures/general_simulation")
@@ -69,6 +73,57 @@ def test_unknown_material_behavior_remains_visibly_unapprovable() -> None:
     assert item.classification == "unsupported"
     assert item.blocking
     assert compiled.coverage.blocking_request_ids == ["quantum_prediction"]
+
+
+@pytest.mark.parametrize(
+    ("request_id", "description", "effects", "expected_ref"),
+    [
+        (
+            "assess_outcome",
+            "The incident commander assesses the post-recovery state.",
+            ["Record an outcome assessment and remaining uncertainty."],
+            "bounded_person_action@1",
+        ),
+        (
+            "apply_recovery",
+            "The service environment applies an approved bounded recovery attempt.",
+            ["Change availability according to the validated outcome."],
+            "joint_semantic_adjudication@1",
+        ),
+        (
+            "joint_decision",
+            "The response group jointly adjudicates whether to proceed using delivered claims.",
+            ["Record one coordinated decision and its rationale."],
+            "joint_semantic_adjudication@1",
+        ),
+    ],
+)
+def test_registry_resolves_authentic_general_action_language(
+    request_id: str,
+    description: str,
+    effects: list[str],
+    expected_ref: str,
+) -> None:
+    request = ComponentRequestV1(
+        request_id=request_id,
+        subject_refs=(
+            ["incident_commander", "api_service"]
+            if request_id == "assess_outcome"
+            else ["api_service"]
+        ),
+        behavior_description=description,
+        required_reads=["api_service"],
+        desired_effects=effects,
+        fidelity_need="exact",
+        material_to_question=True,
+    )
+
+    resolved, evidence = resolve_request(
+        request, default_registry(), actor_ids={"incident_commander"}
+    )
+
+    assert resolved is not None, evidence
+    assert resolved.ref == expected_ref
 
 
 def test_invented_implementation_reference_is_rejected_by_authoring_schema() -> None:
