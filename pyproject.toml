@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
+  "gdm-concordia @ git+https://github.com/google-deepmind/concordia.git@131ed0d2ea14754539a3feb9dfd3717d11e859df",
   "jinja2>=3",
   "pydantic>=2",
   "PyYAML>=6",
@@ -32,4 +33,8 @@ files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
 module = "llm_client.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "concordia.*"
 ignore_missing_imports = true
