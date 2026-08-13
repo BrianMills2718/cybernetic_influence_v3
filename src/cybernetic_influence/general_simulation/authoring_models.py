@@ -1,0 +1,231 @@
+"""Semantic authoring contracts for general-world simulations.
+
+These models contain no Python references, prompt fragments, or executable
+predicates. The trusted compiler owns every implementation binding.
+"""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from cybernetic_influence.authoring.models import BehavioralProfileDraft, ProfileStatement
+
+
+_ID = r"^[a-z][a-z0-9_]*$"
+Scalar = None | bool | int | float | str
+OpenValue = Scalar | list[Scalar] | dict[str, Scalar | list[Scalar] | dict[str, Scalar]]
+
+
+class _StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class GeneralBehavioralProfileDraft(BehavioralProfileDraft):
+    """Provider-strict form of the existing person-profile semantics."""
+
+    values: list[ProfileStatement]
+    goals: list[ProfileStatement]
+    beliefs: list[ProfileStatement]
+    decision_tendencies: list[ProfileStatement]
+    social_perceptions: list[ProfileStatement]
+    current_state: list[ProfileStatement]
+    capabilities: list[ProfileStatement]
+    limitations: list[ProfileStatement]
+
+
+class GeneralPersonDraft(_StrictModel):
+    entity_id: str = Field(pattern=_ID)
+    label: str = Field(min_length=1)
+    position: str = Field(min_length=1)
+    disposition: str = Field(min_length=1)
+    memories: list[str] = Field(min_length=1)
+    behavioral_profile: GeneralBehavioralProfileDraft
+
+
+class StateEntryV1(_StrictModel):
+    key: str = Field(pattern=_ID)
+    value: Scalar | list[Scalar]
+
+
+class GeneralWorldRecordProposalV1(_StrictModel):
+    record_id: str = Field(pattern=_ID, description="Stable semantic identity.")
+    kind: str = Field(min_length=1, description="Open semantic kind, not a closed ontology.")
+    label: str = Field(min_length=1, description="Human-readable label.")
+    public_state: list[StateEntryV1] = Field(
+        description="State visible to the named actors."
+    )
+    hidden_state: list[StateEntryV1] = Field(
+        description="World truth withheld absent an information path."
+    )
+    visible_to_actor_ids: list[str] = Field(
+        description="Actors authorized to receive this record's public state."
+    )
+
+
+class GeneralActiveSystemProposalV1(_StrictModel):
+    system_id: str = Field(pattern=_ID)
+    subject_refs: list[str] = Field(min_length=1)
+    behavior_summary: str = Field(min_length=1)
+    representation_strategy: Literal["detailed", "coarse_surrogate", "inert"]
+    causal_responsibility_tags: list[str] = Field(min_length=1)
+
+
+class ComponentRequestV1(_StrictModel):
+    request_id: str = Field(pattern=_ID)
+    subject_refs: list[str] = Field(min_length=1)
+    behavior_description: str = Field(min_length=1)
+    required_reads: list[str]
+    desired_effects: list[str] = Field(min_length=1)
+    fidelity_need: Literal["exact", "bounded", "coarse", "descriptive"]
+    material_to_question: bool
+
+
+class GeneralPlaceProposalV1(_StrictModel):
+    place_id: str = Field(pattern=_ID)
+    label: str = Field(min_length=1)
+    state: list[StateEntryV1]
+
+
+class GeneralPlacementProposalV1(_StrictModel):
+    record_id: str = Field(pattern=_ID)
+    place_id: str = Field(pattern=_ID)
+
+
+class GeneralSpatialLinkProposalV1(_StrictModel):
+    link_id: str = Field(pattern=_ID)
+    origin_place_id: str = Field(pattern=_ID)
+    destination_place_id: str = Field(pattern=_ID)
+    operational: bool
+    public_state: list[StateEntryV1]
+    hidden_state: list[StateEntryV1]
+    visible_to_actor_ids: list[str]
+
+
+class SpatialExtensionV1(_StrictModel):
+    places: list[GeneralPlaceProposalV1]
+    placements: list[GeneralPlacementProposalV1]
+    links: list[GeneralSpatialLinkProposalV1]
+
+
+class InformationRepresentationProposalV1(_StrictModel):
+    representation_id: str = Field(pattern=_ID)
+    content: str = Field(min_length=1)
+    apparent_source: str = Field(min_length=1)
+    recipient_ids: list[str] = Field(min_length=1)
+    hidden_provenance: list[StateEntryV1]
+
+
+class InformationExtensionV1(_StrictModel):
+    representations: list[InformationRepresentationProposalV1]
+
+
+class ResourceStockProposalV1(_StrictModel):
+    resource_id: str = Field(pattern=_ID)
+    quantity: float
+    custodian_id: str = Field(pattern=_ID)
+    conserved: bool
+
+
+class ResourceExtensionV1(_StrictModel):
+    stocks: list[ResourceStockProposalV1]
+
+
+class RelationshipProposalV1(_StrictModel):
+    relationship_id: str = Field(pattern=_ID)
+    participant_refs: list[str] = Field(min_length=2)
+    description: str = Field(min_length=1)
+    material_to_question: bool
+
+
+class RelationshipExtensionV1(_StrictModel):
+    relationships: list[RelationshipProposalV1]
+
+
+class ScheduledMomentProposalV1(_StrictModel):
+    moment_id: str = Field(pattern=_ID)
+    minute: int = Field(ge=0)
+    description: str = Field(min_length=1)
+    external_inject_representation_ids: list[str]
+
+
+class GeneralSimulationProposalV1(_StrictModel):
+    schema_version: Literal[1]
+    proposal_kind: Literal["general_world_v1"]
+    simulation_id: str = Field(pattern=_ID)
+    title: str = Field(min_length=1)
+    question: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    people: list[GeneralPersonDraft] = Field(min_length=1)
+    world_records: list[GeneralWorldRecordProposalV1] = Field(min_length=1)
+    active_systems: list[GeneralActiveSystemProposalV1] = Field(min_length=1)
+    component_requests: list[ComponentRequestV1] = Field(min_length=1)
+    spatial_extension: SpatialExtensionV1 | None
+    information_extension: InformationExtensionV1 | None
+    resource_extension: ResourceExtensionV1 | None
+    relationship_extension: RelationshipExtensionV1 | None
+    schedule: list[ScheduledMomentProposalV1] = Field(min_length=1)
+    fidelity_assumptions: list[str] = Field(min_length=1)
+    declared_invariants: list[str]
+    analysis_requests: list[str]
+    unresolved_questions: list[str]
+
+    @model_validator(mode="after")
+    def unique_ids_and_references(self) -> "GeneralSimulationProposalV1":
+        collections = {
+            "people": [item.entity_id for item in self.people],
+            "world records": [item.record_id for item in self.world_records],
+            "active systems": [item.system_id for item in self.active_systems],
+            "component requests": [item.request_id for item in self.component_requests],
+            "schedule": [item.moment_id for item in self.schedule],
+        }
+        if self.spatial_extension:
+            collections.update(
+                {
+                    "places": [item.place_id for item in self.spatial_extension.places],
+                    "placements": [item.record_id for item in self.spatial_extension.placements],
+                    "spatial links": [item.link_id for item in self.spatial_extension.links],
+                }
+            )
+        if self.information_extension:
+            collections["representations"] = [
+                item.representation_id for item in self.information_extension.representations
+            ]
+        if self.resource_extension:
+            collections["resources"] = [
+                item.resource_id for item in self.resource_extension.stocks
+            ]
+        if self.relationship_extension:
+            collections["relationships"] = [
+                item.relationship_id for item in self.relationship_extension.relationships
+            ]
+        for label, values in collections.items():
+            if len(values) != len(set(values)):
+                raise ValueError(f"duplicate {label} IDs")
+        return self
+
+
+class CoverageItemV1(_StrictModel):
+    request_id: str
+    classification: Literal["exact", "coarse_llm", "descriptive", "unsupported"]
+    resolved_component_ref: str | None = None
+    what_can_change: list[str]
+    what_cannot_change: list[str]
+    assumptions: list[str]
+    blocking: bool
+    compiler_evidence: list[str]
+
+
+class ExecutionCoverageReportV1(_StrictModel):
+    registry_digest: str
+    items: list[CoverageItemV1]
+    blocking_request_ids: list[str]
+
+    @property
+    def approvable(self) -> bool:
+        return not self.blocking_request_ids
+
+
+class GeneralProposalEnvelopeV1(_StrictModel):
+    proposal: GeneralSimulationProposalV1

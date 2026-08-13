@@ -82,7 +82,7 @@ def test_influence_network_can_be_edited_approved_and_run(tmp_path: Path) -> Non
             allow_internal_scripted_coordination=True,
         )
     )
-    draft = api.post("/api/authoring/drafts").json()
+    draft = api.post("/api/authoring/legacy-drafts").json()
     drafted = api.post(
         f"/api/authoring/drafts/{draft['draft_id']}/messages",
         json={
@@ -205,7 +205,7 @@ def test_public_authoring_advertises_and_dispatches_only_certified_models(
     ] == ["codex/gpt-5.6-luna"]
     assert authoring["model"] == "codex/gpt-5.6-luna"
 
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     rejected = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={
@@ -225,7 +225,7 @@ def test_public_authoring_advertises_and_dispatches_only_certified_models(
 
 def test_draft_is_idempotent_revisioned_previewable_approved_and_runnable(tmp_path: Path) -> None:
     api = _client(tmp_path)
-    created = api.post("/api/authoring/drafts")
+    created = api.post("/api/authoring/legacy-drafts")
     assert created.status_code == 200
     draft = created.json()
     draft_id = draft["draft_id"]
@@ -619,7 +619,7 @@ def test_semantic_coordination_authoring_compiles_without_provider_owned_ids(
             authoring_call=semantic_proposer,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     first = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={
@@ -683,7 +683,7 @@ def test_semantic_coordination_candidate_is_repaired_against_compiler_feedback(
             authoring_call=repairable,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     drafted = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={
@@ -916,7 +916,7 @@ def test_authored_live_run_requires_authorization_and_live_options(
 ) -> None:
     monkeypatch.delenv("CYBERNETIC_INFLUENCE_LIVE", raising=False)
     api = _client(tmp_path)
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={
@@ -1000,7 +1000,7 @@ def test_failed_authored_live_run_is_retained_with_provider_evidence(
 
     monkeypatch.setattr(CompiledScenario, "run_live", fail_live)
     api = _client(tmp_path)
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     drafted = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={
@@ -1183,7 +1183,7 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
     assert config["models"][0]["reasoning_efforts"] == ["medium"]
     assert config["models"][0]["default_reasoning_effort"] == "medium"
 
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     first = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={
@@ -1255,7 +1255,7 @@ def test_luna_rejects_unsupported_authoring_effort_before_dispatch(tmp_path: Pat
             authoring_call=proposer,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     response = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={
@@ -1284,7 +1284,7 @@ def test_provider_failure_becomes_a_visible_bounded_needs_input_state(tmp_path: 
             authoring_call=failing,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     failed = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={"expected_revision": 0, "message_id": "m1", "message": "A request."},
@@ -1318,7 +1318,7 @@ def test_unresolved_question_retains_previewable_draft_without_repeating_spend(
             authoring_call=questioning,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     draft = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={"expected_revision": 0, "message_id": "m1", "message": "Model checkout."},
@@ -1343,7 +1343,7 @@ def test_nonretryable_capability_failure_stops_after_one_visible_attempt(tmp_pat
             authoring_call=unsupported,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     failed = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={"expected_revision": 0, "message_id": "m1", "message": "A request."},
@@ -1373,7 +1373,7 @@ def test_quota_failure_stops_once_and_explains_that_the_prior_draft_is_safe(
             authoring_call=exhausted,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     ready = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={
@@ -1402,7 +1402,7 @@ def test_quota_failure_stops_once_and_explains_that_the_prior_draft_is_safe(
 
 def test_unapproved_draft_cannot_run(tmp_path: Path) -> None:
     api = _client(tmp_path)
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     response = api.post(f"/api/authoring/drafts/{draft_id}/runs", json={"execution": "scripted"})
     assert response.status_code == 409
 
@@ -1495,7 +1495,7 @@ def test_direct_person_edit_is_revisioned_idempotent_and_makes_no_llm_call(
             authoring_call=counted_proposer,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     drafted = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={"expected_revision": 0, "message_id": "m1", "message": "Model checkout."},
@@ -1539,7 +1539,7 @@ def test_direct_person_edit_is_revisioned_idempotent_and_makes_no_llm_call(
 
 def test_direct_person_edit_rejects_stale_or_mismatched_content(tmp_path: Path) -> None:
     api = _client(tmp_path)
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     drafted = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={"expected_revision": 0, "message_id": "m1", "message": "Model checkout."},
@@ -1590,7 +1590,7 @@ def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) ->
     config = api.get("/api/config").json()["authoring"]
     assert config["model"] == "codex/gpt-5.6-luna"
     assert config["reasoning_effort"] == "medium"
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     drafted = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={
@@ -1645,7 +1645,7 @@ def test_authoring_repairs_a_compiler_error_before_returning_the_draft(tmp_path:
             authoring_call=repairable,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     drafted = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={"expected_revision": 0, "message_id": "m1", "message": "Model checkout."},
@@ -1688,7 +1688,7 @@ def test_authoring_returns_all_local_schema_issues_to_the_next_repair(tmp_path: 
             authoring_call=repairable,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     body = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={"expected_revision": 0, "message_id": "m1", "message": "Model checkout."},

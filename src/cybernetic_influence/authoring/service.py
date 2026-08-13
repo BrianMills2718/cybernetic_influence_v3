@@ -46,6 +46,15 @@ from cybernetic_influence.llm_backend import (
     structured_backend_options,
 )
 from cybernetic_influence.run_store import now_iso
+from cybernetic_influence.general_simulation.authoring import (
+    GeneralDraftAuthoringService,
+)
+from cybernetic_influence.general_simulation.authoring_models import (
+    GeneralSimulationProposalV1,
+)
+from cybernetic_influence.general_simulation.compiler import (
+    CompiledGeneralSimulationV1,
+)
 
 StructuredCall = Callable[..., tuple[Any, Any]]
 AUTHORING_TASK = "cybernetic_influence_v3_scenario_draft"
@@ -421,6 +430,7 @@ class DraftAuthoringService:
     def __init__(self, store: AuthoringDraftStore, *, call: StructuredCall | None = None) -> None:
         self.store = store
         self.call = call or _structured_call()
+        self.general = GeneralDraftAuthoringService(store, call=self.call)
 
     def create_reviewed_coordination_draft(self) -> dict[str, object]:
         """Create one saved review draft without making a provider call."""
@@ -476,6 +486,16 @@ class DraftAuthoringService:
         model: AuthoringModel = AUTHORING_MODEL,
         reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT,
     ) -> dict[str, object]:
+        existing_document = self.store.get(draft_id)
+        if existing_document.get("target_kind") == "general_world_v1":
+            return self.general.advance(
+                draft_id,
+                expected_revision=expected_revision,
+                message_id=message_id,
+                message=message,
+                model=model,
+                reasoning_effort=reasoning_effort,
+            )
         selected_model = next(
             (item for item in AUTHORING_MODEL_OPTIONS if item["model"] == model),
             None,
@@ -981,8 +1001,30 @@ class DraftAuthoringService:
             raise AuthoringCompilationError("draft has no valid proposal")
         return compile_scenario(ScenarioDraftProposal.model_validate(raw))
 
+    def compile_general(
+        self, document: dict[str, object]
+    ) -> CompiledGeneralSimulationV1:
+        return self.general.compile(document)
+
+    def edit_general_proposal(
+        self,
+        draft_id: str,
+        *,
+        expected_revision: int,
+        edit_id: str,
+        proposal: GeneralSimulationProposalV1,
+    ) -> dict[str, object]:
+        return self.general.edit_proposal(
+            draft_id,
+            expected_revision=expected_revision,
+            edit_id=edit_id,
+            proposal=proposal,
+        )
+
     def approve(self, draft_id: str, *, expected_revision: int) -> dict[str, object]:
         document = self.store.get(draft_id)
+        if document.get("target_kind") == "general_world_v1":
+            return self.general.approve(draft_id, expected_revision=expected_revision)
         if document["revision"] != expected_revision:
             raise DraftConflictError("draft revision has changed; reload before approving")
         compiled = self.compile(document)
@@ -1007,6 +1049,10 @@ class DraftAuthoringService:
 
     def approved_compile(self, draft_id: str) -> CompiledScenario:
         document = self.store.get(draft_id)
+        if document.get("target_kind") == "general_world_v1":
+            raise AuthoringCompilationError(
+                "general-world execution is owned by the Concordia runner and is added in Slice 28E"
+            )
         approval = document.get("approval")
         if document.get("status") != "approved" or not isinstance(approval, dict):
             raise AuthoringCompilationError("draft must be explicitly approved before it can run")
@@ -1017,6 +1063,11 @@ class DraftAuthoringService:
         if receipt_digest is not None and receipt_digest != compiled.composition_receipt.digest:
             raise AuthoringCompilationError("approval no longer matches compiled composition")
         return compiled
+
+    def approved_general_compile(
+        self, draft_id: str
+    ) -> CompiledGeneralSimulationV1:
+        return self.general.approved_compile(draft_id)
 
 
 def _diagnostics(proposal: ScenarioDraftProposal) -> list[dict[str, str]]:

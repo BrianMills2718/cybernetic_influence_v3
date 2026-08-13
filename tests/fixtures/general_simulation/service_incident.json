@@ -1,0 +1,277 @@
+{
+  "schema_version": 1,
+  "proposal_kind": "general_world_v1",
+  "simulation_id": "service_incident_coordination",
+  "title": "Service recovery with preserved evidence",
+  "question": "Can responders restore service while preserving forensic evidence under asymmetric claims about the cause?",
+  "description": "A non-spatial service incident represented through people, records, information paths and coarse semantic transitions.",
+  "people": [
+    {
+      "entity_id": "incident_commander",
+      "label": "Incident commander",
+      "position": "Coordinates recovery priorities.",
+      "disposition": "Balances restoration speed with evidence preservation.",
+      "memories": [
+        "A prior rushed recovery erased diagnostic state."
+      ],
+      "behavioral_profile": {
+        "values": [
+          "Recover safely."
+        ],
+        "goals": [
+          "Restore the API."
+        ],
+        "beliefs": [
+          "The database failure may be causal."
+        ],
+        "decision_tendencies": [
+          "Requests reversible actions first."
+        ],
+        "social_perceptions": [
+          "Security will resist destructive recovery."
+        ],
+        "current_state": [
+          "Customer impact is rising."
+        ],
+        "capabilities": [
+          "Can coordinate the response."
+        ],
+        "limitations": [
+          "Cannot directly administer the database."
+        ]
+      }
+    },
+    {
+      "entity_id": "database_engineer",
+      "label": "Database engineer",
+      "position": "Operates the database service and recovery tooling.",
+      "disposition": "Methodical under pressure.",
+      "memories": [
+        "The replica can be promoted if credentials remain valid."
+      ],
+      "behavioral_profile": {
+        "values": [
+          "Preserve recoverability."
+        ],
+        "goals": [
+          "Restore database availability."
+        ],
+        "beliefs": [
+          "Credential rotation may have broken replication."
+        ],
+        "decision_tendencies": [
+          "Inspects state before mutating it."
+        ],
+        "social_perceptions": [
+          "Commanders often underestimate replication lag."
+        ],
+        "current_state": [
+          "Reviewing service telemetry."
+        ],
+        "capabilities": [
+          "Can propose database recovery actions."
+        ],
+        "limitations": [
+          "Cannot change incident policy alone."
+        ]
+      }
+    }
+  ],
+  "world_records": [
+    {
+      "record_id": "api_service",
+      "kind": "software_service",
+      "label": "Public API",
+      "public_state": [
+        {
+          "key": "status",
+          "value": "unavailable"
+        }
+      ],
+      "hidden_state": [],
+      "visible_to_actor_ids": [
+        "incident_commander",
+        "database_engineer"
+      ]
+    },
+    {
+      "record_id": "database_service",
+      "kind": "software_service",
+      "label": "Primary database",
+      "public_state": [
+        {
+          "key": "status",
+          "value": "degraded"
+        }
+      ],
+      "hidden_state": [
+        {
+          "key": "actual_cause",
+          "value": "expired_replication_credential"
+        }
+      ],
+      "visible_to_actor_ids": [
+        "incident_commander",
+        "database_engineer"
+      ]
+    },
+    {
+      "record_id": "forensic_log",
+      "kind": "evidence_artifact",
+      "label": "Forensic event log",
+      "public_state": [
+        {
+          "key": "preserved",
+          "value": true
+        }
+      ],
+      "hidden_state": [],
+      "visible_to_actor_ids": [
+        "incident_commander",
+        "database_engineer"
+      ]
+    }
+  ],
+  "active_systems": [
+    {
+      "system_id": "commander_actor",
+      "subject_refs": [
+        "incident_commander"
+      ],
+      "behavior_summary": "Interprets incident observations and proposes actions.",
+      "representation_strategy": "detailed",
+      "causal_responsibility_tags": [
+        "commander_intent"
+      ]
+    },
+    {
+      "system_id": "engineer_actor",
+      "subject_refs": [
+        "database_engineer"
+      ],
+      "behavior_summary": "Interprets technical observations and proposes actions.",
+      "representation_strategy": "detailed",
+      "causal_responsibility_tags": [
+        "engineer_intent"
+      ]
+    }
+  ],
+  "component_requests": [
+    {
+      "request_id": "responder_actions",
+      "subject_refs": [
+        "incident_commander",
+        "database_engineer"
+      ],
+      "behavior_description": "Each responder must reason and propose a bounded action from authorized observations.",
+      "required_reads": [
+        "api_service",
+        "database_service",
+        "forensic_log"
+      ],
+      "desired_effects": [
+        "Produce open-ended recovery intent."
+      ],
+      "fidelity_need": "coarse",
+      "material_to_question": true
+    },
+    {
+      "request_id": "incident_messages",
+      "subject_refs": [
+        "public_cause_claim",
+        "technical_credential_report"
+      ],
+      "behavior_description": "Deliver information and message claims only to configured recipients as observations.",
+      "required_reads": [
+        "public_cause_claim",
+        "technical_credential_report"
+      ],
+      "desired_effects": [
+        "Represent asymmetric incident information."
+      ],
+      "fidelity_need": "exact",
+      "material_to_question": true
+    },
+    {
+      "request_id": "recovery_resolution",
+      "subject_refs": [
+        "incident_commander",
+        "database_engineer"
+      ],
+      "behavior_description": "Adjudicate the joint plan, coordinate agreement and resolve competing recovery intents.",
+      "required_reads": [
+        "api_service",
+        "database_service",
+        "forensic_log"
+      ],
+      "desired_effects": [
+        "Commit a validated service-state transaction or reject it."
+      ],
+      "fidelity_need": "coarse",
+      "material_to_question": true
+    }
+  ],
+  "spatial_extension": null,
+  "information_extension": {
+    "representations": [
+      {
+        "representation_id": "public_cause_claim",
+        "content": "A public account claims an intrusion caused the outage.",
+        "apparent_source": "social media",
+        "recipient_ids": [
+          "incident_commander"
+        ],
+        "hidden_provenance": [
+          {
+            "key": "verified",
+            "value": false
+          }
+        ]
+      },
+      {
+        "representation_id": "technical_credential_report",
+        "content": "Replication authentication began failing immediately after credential expiry.",
+        "apparent_source": "database telemetry",
+        "recipient_ids": [
+          "database_engineer"
+        ],
+        "hidden_provenance": [
+          {
+            "key": "ground_truth_match",
+            "value": true
+          }
+        ]
+      }
+    ]
+  },
+  "resource_extension": null,
+  "relationship_extension": null,
+  "schedule": [
+    {
+      "moment_id": "initial_observations",
+      "minute": 0,
+      "description": "Deliver configured incident representations.",
+      "external_inject_representation_ids": [
+        "public_cause_claim",
+        "technical_credential_report"
+      ]
+    },
+    {
+      "moment_id": "joint_recovery_attempt",
+      "minute": 30,
+      "description": "Collect same-revision recovery intents and adjudicate them.",
+      "external_inject_representation_ids": []
+    }
+  ],
+  "fidelity_assumptions": [
+    "Software effects are coarse semantic state transitions, not command execution."
+  ],
+  "declared_invariants": [
+    "reference integrity",
+    "forensic_log remains preserved unless explicitly authorized"
+  ],
+  "analysis_requests": [
+    "waltzman_local_interaction_coordination_v1"
+  ],
+  "unresolved_questions": []
+}

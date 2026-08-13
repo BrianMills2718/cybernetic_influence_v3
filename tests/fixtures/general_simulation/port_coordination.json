@@ -1,0 +1,483 @@
+{
+  "schema_version": 1,
+  "proposal_kind": "general_world_v1",
+  "simulation_id": "relief_port_coordination",
+  "title": "Relief cargo after a bridge failure",
+  "question": "Can local actors form and execute a joint dispatch plan under uneven information and material constraints?",
+  "description": "Four port actors receive shared and targeted claims while routes, fuel, trucks and cargo remain canonical world state.",
+  "people": [
+    {
+      "entity_id": "port_coordinator",
+      "label": "Port operations coordinator",
+      "position": "Coordinates port dispatch sequencing without commanding the other parties.",
+      "disposition": "Pragmatic and attentive to cross-party dependencies.",
+      "memories": [
+        "Prior relief shipments failed when manifests and labor plans diverged."
+      ],
+      "behavioral_profile": {
+        "values": [
+          "Move relief cargo without concealing operational risk."
+        ],
+        "goals": [
+          "Produce an executable shared dispatch sequence."
+        ],
+        "beliefs": [
+          "A replacement route may be usable after inspection."
+        ],
+        "decision_tendencies": [
+          "Requests named owners for unresolved dependencies."
+        ],
+        "social_perceptions": [
+          "Customs and labor each control indispensable local work."
+        ],
+        "current_state": [
+          "Working under a twelve-hour dispatch horizon."
+        ],
+        "capabilities": [
+          "Can convene and communicate a proposed dispatch sequence."
+        ],
+        "limitations": [
+          "Cannot waive customs or labor requirements."
+        ]
+      }
+    },
+    {
+      "entity_id": "customs_officer",
+      "label": "Customs officer",
+      "position": "Reviews custody and release evidence.",
+      "disposition": "Evidence-oriented and sensitive to unverifiable provenance.",
+      "memories": [
+        "A prior false manifest produced a costly seizure."
+      ],
+      "behavioral_profile": {
+        "values": [
+          "Maintain auditable custody."
+        ],
+        "goals": [
+          "Release only cargo with adequate records."
+        ],
+        "beliefs": [
+          "Public contamination claims require technical corroboration."
+        ],
+        "decision_tendencies": [
+          "Separates apparent source from verified provenance."
+        ],
+        "social_perceptions": [
+          "Operations often underestimates legal delay."
+        ],
+        "current_state": [
+          "Awaiting a laboratory message."
+        ],
+        "capabilities": [
+          "Can inspect and release manifests."
+        ],
+        "limitations": [
+          "Cannot certify fuel quality."
+        ]
+      }
+    },
+    {
+      "entity_id": "union_representative",
+      "label": "Union representative",
+      "position": "Represents workers expected to operate the dispatch.",
+      "disposition": "Cooperative when hazards and staffing commitments are concrete.",
+      "memories": [
+        "Workers previously absorbed an unannounced route hazard."
+      ],
+      "behavioral_profile": {
+        "values": [
+          "Avoid shifting hidden risk onto workers."
+        ],
+        "goals": [
+          "Secure a feasible and safe work sequence."
+        ],
+        "beliefs": [
+          "A claim alone does not establish contamination."
+        ],
+        "decision_tendencies": [
+          "Conditions agreement on named safety checks."
+        ],
+        "social_perceptions": [
+          "Dispatchers face incentives to minimize delay."
+        ],
+        "current_state": [
+          "Consulting the available crew."
+        ],
+        "capabilities": [
+          "Can communicate worker availability and conditions."
+        ],
+        "limitations": [
+          "Cannot allocate trucks or fuel."
+        ]
+      }
+    },
+    {
+      "entity_id": "trucking_dispatcher",
+      "label": "Trucking dispatcher",
+      "position": "Controls available trucking assignments.",
+      "disposition": "Schedule-focused but unwilling to promise unavailable equipment.",
+      "memories": [
+        "The main bridge was the normal heavy-truck route."
+      ],
+      "behavioral_profile": {
+        "values": [
+          "Make commitments that can actually be executed."
+        ],
+        "goals": [
+          "Assign trucks and fuel to a workable route."
+        ],
+        "beliefs": [
+          "The temporary access road has uncertain capacity."
+        ],
+        "decision_tendencies": [
+          "Checks route and fuel dependencies before accepting a sequence."
+        ],
+        "social_perceptions": [
+          "The coordinator expects rapid commitment."
+        ],
+        "current_state": [
+          "Two trucks are currently available."
+        ],
+        "capabilities": [
+          "Can assign trucks under dispatch control."
+        ],
+        "limitations": [
+          "Cannot repair infrastructure."
+        ]
+      }
+    }
+  ],
+  "world_records": [
+    {
+      "record_id": "relief_cargo",
+      "kind": "cargo",
+      "label": "Relief cargo",
+      "public_state": [
+        {
+          "key": "status",
+          "value": "awaiting_dispatch"
+        }
+      ],
+      "hidden_state": [],
+      "visible_to_actor_ids": [
+        "port_coordinator",
+        "customs_officer",
+        "union_representative",
+        "trucking_dispatcher"
+      ]
+    },
+    {
+      "record_id": "fuel_truck",
+      "kind": "vehicle",
+      "label": "Fuel truck",
+      "public_state": [
+        {
+          "key": "status",
+          "value": "available"
+        }
+      ],
+      "hidden_state": [],
+      "visible_to_actor_ids": [
+        "port_coordinator",
+        "trucking_dispatcher"
+      ]
+    }
+  ],
+  "active_systems": [
+    {
+      "system_id": "coordinator_actor",
+      "subject_refs": [
+        "port_coordinator"
+      ],
+      "behavior_summary": "Interprets observations and proposes bounded actions.",
+      "representation_strategy": "detailed",
+      "causal_responsibility_tags": [
+        "coordinator_intent"
+      ]
+    },
+    {
+      "system_id": "customs_actor",
+      "subject_refs": [
+        "customs_officer"
+      ],
+      "behavior_summary": "Interprets evidence and proposes bounded actions.",
+      "representation_strategy": "detailed",
+      "causal_responsibility_tags": [
+        "customs_intent"
+      ]
+    },
+    {
+      "system_id": "labor_actor",
+      "subject_refs": [
+        "union_representative"
+      ],
+      "behavior_summary": "Interprets conditions and proposes bounded actions.",
+      "representation_strategy": "detailed",
+      "causal_responsibility_tags": [
+        "labor_intent"
+      ]
+    },
+    {
+      "system_id": "dispatcher_actor",
+      "subject_refs": [
+        "trucking_dispatcher"
+      ],
+      "behavior_summary": "Interprets operational state and proposes bounded actions.",
+      "representation_strategy": "detailed",
+      "causal_responsibility_tags": [
+        "dispatcher_intent"
+      ]
+    }
+  ],
+  "component_requests": [
+    {
+      "request_id": "actor_decisions",
+      "subject_refs": [
+        "port_coordinator",
+        "customs_officer",
+        "union_representative",
+        "trucking_dispatcher"
+      ],
+      "behavior_description": "Each person must reason and propose a bounded action from authorized observations.",
+      "required_reads": [
+        "relief_cargo"
+      ],
+      "desired_effects": [
+        "Produce open-ended action intent without directly changing the world."
+      ],
+      "fidelity_need": "coarse",
+      "material_to_question": true
+    },
+    {
+      "request_id": "information_routes",
+      "subject_refs": [
+        "public_fuel_claim",
+        "technical_fuel_message",
+        "labor_route_message"
+      ],
+      "behavior_description": "Deliver message and information representations only to configured recipients as observations.",
+      "required_reads": [
+        "public_fuel_claim",
+        "technical_fuel_message",
+        "labor_route_message"
+      ],
+      "desired_effects": [
+        "Represent asymmetric information delivery."
+      ],
+      "fidelity_need": "exact",
+      "material_to_question": true
+    },
+    {
+      "request_id": "cargo_movement",
+      "subject_refs": [
+        "relief_cargo",
+        "fuel_truck",
+        "temporary_route"
+      ],
+      "behavior_description": "Move cargo and vehicles only along an operational route and update placement.",
+      "required_reads": [
+        "temporary_route"
+      ],
+      "desired_effects": [
+        "Change movement and placement through topology."
+      ],
+      "fidelity_need": "exact",
+      "material_to_question": true
+    },
+    {
+      "request_id": "fuel_accounting",
+      "subject_refs": [
+        "dispatch_fuel"
+      ],
+      "behavior_description": "Conserve fuel resource stock and custody during allocation.",
+      "required_reads": [
+        "dispatch_fuel"
+      ],
+      "desired_effects": [
+        "Prevent resource stock from becoming negative."
+      ],
+      "fidelity_need": "exact",
+      "material_to_question": true
+    },
+    {
+      "request_id": "joint_resolution",
+      "subject_refs": [
+        "port_coordinator",
+        "customs_officer",
+        "union_representative",
+        "trucking_dispatcher"
+      ],
+      "behavior_description": "Adjudicate the joint plan, coordinate agreement and resolve competing action intents.",
+      "required_reads": [
+        "relief_cargo",
+        "fuel_truck",
+        "dispatch_fuel"
+      ],
+      "desired_effects": [
+        "Commit one validated joint world transaction or reject it."
+      ],
+      "fidelity_need": "coarse",
+      "material_to_question": true
+    }
+  ],
+  "spatial_extension": {
+    "places": [
+      {
+        "place_id": "outside_port",
+        "label": "Outside port",
+        "state": []
+      },
+      {
+        "place_id": "port",
+        "label": "Port",
+        "state": []
+      }
+    ],
+    "placements": [
+      {
+        "record_id": "relief_cargo",
+        "place_id": "outside_port"
+      },
+      {
+        "record_id": "fuel_truck",
+        "place_id": "outside_port"
+      }
+    ],
+    "links": [
+      {
+        "link_id": "main_bridge",
+        "origin_place_id": "outside_port",
+        "destination_place_id": "port",
+        "operational": false,
+        "public_state": [
+          {
+            "key": "condition",
+            "value": "collapsed"
+          }
+        ],
+        "hidden_state": [
+          {
+            "key": "cause",
+            "value": "unknown_to_actors"
+          }
+        ],
+        "visible_to_actor_ids": [
+          "port_coordinator",
+          "union_representative",
+          "trucking_dispatcher"
+        ]
+      },
+      {
+        "link_id": "temporary_route",
+        "origin_place_id": "outside_port",
+        "destination_place_id": "port",
+        "operational": true,
+        "public_state": [
+          {
+            "key": "capacity",
+            "value": "limited"
+          }
+        ],
+        "hidden_state": [],
+        "visible_to_actor_ids": [
+          "port_coordinator",
+          "union_representative",
+          "trucking_dispatcher"
+        ]
+      }
+    ]
+  },
+  "information_extension": {
+    "representations": [
+      {
+        "representation_id": "public_fuel_claim",
+        "content": "A public account claims the port fuel is contaminated.",
+        "apparent_source": "public channel",
+        "recipient_ids": [
+          "port_coordinator",
+          "customs_officer",
+          "union_representative",
+          "trucking_dispatcher"
+        ],
+        "hidden_provenance": [
+          {
+            "key": "verified",
+            "value": false
+          }
+        ]
+      },
+      {
+        "representation_id": "technical_fuel_message",
+        "content": "The sampled fuel passed the named technical screen, with a second sample pending.",
+        "apparent_source": "independent laboratory",
+        "recipient_ids": [
+          "customs_officer",
+          "port_coordinator"
+        ],
+        "hidden_provenance": [
+          {
+            "key": "laboratory_record",
+            "value": "retained"
+          }
+        ]
+      },
+      {
+        "representation_id": "labor_route_message",
+        "content": "The temporary route requires daylight operation and a spotter.",
+        "apparent_source": "worker safety committee",
+        "recipient_ids": [
+          "union_representative",
+          "trucking_dispatcher"
+        ],
+        "hidden_provenance": []
+      }
+    ]
+  },
+  "resource_extension": {
+    "stocks": [
+      {
+        "resource_id": "dispatch_fuel",
+        "quantity": 100.0,
+        "custodian_id": "trucking_dispatcher",
+        "conserved": true
+      }
+    ]
+  },
+  "relationship_extension": null,
+  "schedule": [
+    {
+      "moment_id": "initial_claims",
+      "minute": 0,
+      "description": "Deliver shared and targeted initial representations.",
+      "external_inject_representation_ids": [
+        "public_fuel_claim",
+        "technical_fuel_message",
+        "labor_route_message"
+      ]
+    },
+    {
+      "moment_id": "first_joint_attempt",
+      "minute": 60,
+      "description": "Collect same-revision action intents and adjudicate a joint plan.",
+      "external_inject_representation_ids": []
+    },
+    {
+      "moment_id": "outcome_observation",
+      "minute": 120,
+      "description": "Deliver canonical commit or rejection consequences.",
+      "external_inject_representation_ids": []
+    }
+  ],
+  "fidelity_assumptions": [
+    "Port logistics are represented at a coarse route-and-stock level."
+  ],
+  "declared_invariants": [
+    "reference integrity",
+    "valid placement",
+    "conserved dispatch_fuel"
+  ],
+  "analysis_requests": [
+    "waltzman_local_interaction_coordination_v1"
+  ],
+  "unresolved_questions": []
+}

@@ -113,7 +113,7 @@ def test_structured_authoring_accepts_a_registered_component_composition(
             authoring_call=proposer,
         )
     )
-    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     drafted = api.post(
         f"/api/authoring/drafts/{draft_id}/messages",
         json={

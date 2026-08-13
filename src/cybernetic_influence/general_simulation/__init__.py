@@ -8,6 +8,8 @@ from .models import (
     TransitionAuthoritySpec,
     WorldTransaction,
 )
+from .authoring_models import GeneralSimulationProposalV1
+from .compiler import compile_general_simulation
 from .world import CanonicalWorld
 
 __all__ = [
@@ -18,4 +20,6 @@ __all__ = [
     "SemanticActionIntent",
     "TransitionAuthoritySpec",
     "WorldTransaction",
+    "GeneralSimulationProposalV1",
+    "compile_general_simulation",
 ]

@@ -28,12 +28,16 @@ class _DraftDocument(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     draft_id: str = Field(pattern=r"^draft_[0-9a-f]{12}$")
+    target_kind: Literal["legacy_templates_v1", "general_world_v1"] = (
+        "legacy_templates_v1"
+    )
     revision: int = Field(ge=0)
     status: Literal["draft", "repairing", "needs_input", "ready_for_review", "approved"]
     messages: list["_DraftMessage"] = Field(default_factory=list)
     attempts: list["_DraftAttempt"] = Field(default_factory=list)
     authoring_summary: str = "Describe a bounded situation to begin."
     proposal: dict[str, object] | None = None
+    coverage: dict[str, object] | None = None
     diagnostics: list[dict[str, str]] = Field(default_factory=list)
     approval: dict[str, object] | None = None
     created_at: str
@@ -50,6 +54,7 @@ class _DraftMessage(BaseModel):
         "direct_coordination_edit",
         "direct_component_composition_edit",
         "direct_proposal_edit",
+        "direct_general_proposal_edit",
     ] = "conversation"
     edit_digest: str | None = None
     model: str | None = None
@@ -76,9 +81,19 @@ class AuthoringDraftStore:
         root.mkdir(parents=True, exist_ok=True)
         root.chmod(0o700)
 
-    def create(self, *, now: str) -> dict[str, object]:
+    def create(
+        self,
+        *,
+        now: str,
+        target_kind: Literal["legacy_templates_v1", "general_world_v1"] = (
+            "legacy_templates_v1"
+        ),
+    ) -> dict[str, object]:
         document = _DraftDocument(
-            draft_id=f"draft_{uuid4().hex[:12]}", revision=0, status="draft",
+            draft_id=f"draft_{uuid4().hex[:12]}",
+            target_kind=target_kind,
+            revision=0,
+            status="draft",
             created_at=now, updated_at=now,
         )
         return self._write(document)

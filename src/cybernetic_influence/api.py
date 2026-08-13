@@ -45,6 +45,10 @@ from cybernetic_influence.authoring.store import (
     DraftConflictError,
     DraftNotFoundError,
 )
+from cybernetic_influence.general_simulation.authoring_models import (
+    GeneralSimulationProposalV1,
+)
+from cybernetic_influence.general_simulation.compiler import GeneralCompilationError
 
 from cybernetic_influence import __version__
 from cybernetic_influence.active_runtime import (
@@ -252,6 +256,15 @@ class DraftProposalEditRequest(BaseModel):
     expected_revision: int
     edit_id: str
     proposal: ScenarioDraftProposal
+
+
+class DraftGeneralProposalEditRequest(BaseModel):
+    """One idempotent complete general-world semantic edit."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    expected_revision: int
+    edit_id: str
+    proposal: GeneralSimulationProposalV1
 
 
 class DraftCoordinationEditRequest(BaseModel):
@@ -2385,7 +2398,14 @@ def create_app(
     @app.post("/api/authoring/drafts")
     def create_draft(request: Request) -> dict[str, object]:
         _require_access(request)
-        return drafts.create(now=now_iso())
+        return drafts.create(now=now_iso(), target_kind="general_world_v1")
+
+    @app.post("/api/authoring/legacy-drafts")
+    def create_legacy_draft(request: Request) -> dict[str, object]:
+        """Create a backward-compatible closed-template draft."""
+
+        _require_access(request)
+        return drafts.create(now=now_iso(), target_kind="legacy_templates_v1")
 
     @app.post("/api/authoring/reviewed-coordination-drafts")
     def create_reviewed_coordination_draft(
@@ -2458,10 +2478,19 @@ def create_app(
         _require_access(request)
         try:
             document = drafts.get(draft_id)
+            if document.get("target_kind") == "general_world_v1":
+                compiled_general = authoring.compile_general(document)
+                return {
+                    "status": "ready",
+                    "preview": True,
+                    **compiled_general.preview(),
+                    "draft_id": draft_id,
+                    "draft_revision": document["revision"],
+                }
             compiled = authoring.compile(document)
         except DraftNotFoundError as error:
             raise HTTPException(status_code=404, detail="authoring draft not found") from error
-        except (ValueError, AuthoringCompilationError) as error:
+        except (ValueError, AuthoringCompilationError, GeneralCompilationError) as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         state = compiled.scenario.initial_state
         revision = str(state.revision)
@@ -2532,6 +2561,30 @@ def create_app(
                     status_code=404, detail="authoring draft not found"
                 ) from error
             except (ValueError, AuthoringCompilationError) as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.put("/api/authoring/drafts/{draft_id}/general-proposal")
+    def edit_draft_general_proposal(
+        draft_id: str,
+        body: DraftGeneralProposalEditRequest,
+        request: Request,
+    ) -> dict[str, object]:
+        _require_access(request)
+        with authoring_lock:
+            try:
+                return authoring.edit_general_proposal(
+                    draft_id,
+                    expected_revision=body.expected_revision,
+                    edit_id=body.edit_id,
+                    proposal=body.proposal,
+                )
+            except DraftConflictError as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
+            except DraftNotFoundError as error:
+                raise HTTPException(
+                    status_code=404, detail="authoring draft not found"
+                ) from error
+            except (ValueError, GeneralCompilationError) as error:
                 raise HTTPException(status_code=422, detail=str(error)) from error
 
     @app.put("/api/authoring/drafts/{draft_id}/coordination-configuration")
