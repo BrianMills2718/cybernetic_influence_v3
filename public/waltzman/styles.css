@@ -1235,6 +1235,11 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-person-editor[open] > summary { margin-bottom: 5px; }
 .create-person-editor button, .create-scenario-editor button, .create-revise button { background: transparent; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); cursor: pointer; font-weight: 750; justify-self: start; padding: 10px 14px; }
 .create-scenario-editor[open] { display: grid; gap: 18px; }
+.create-editor-note { color: var(--muted); margin: 0; }
+.create-general-recipients { border: 1px solid var(--line); border-radius: 8px; margin: 0; padding: 10px 12px; }
+.create-general-recipients legend { color: var(--muted); font-size: 0.78rem; padding: 0 5px; }
+.create-general-recipients > div { display: grid; gap: 7px; margin-top: 4px; }
+.create-general-recipients label { align-items: center; color: var(--text); display: flex; font-size: 0.84rem; gap: 8px; }
 .create-scenario-grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
 .create-scenario-concerns { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
 .create-scenario-concerns article { border-top: 1px solid var(--line); display: grid; gap: 10px; padding-top: 12px; }

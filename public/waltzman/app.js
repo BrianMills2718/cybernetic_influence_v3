@@ -51,6 +51,11 @@ let activeRunId = null
 let pollHandle = null
 let authoringDraft = null
 let selectedAuthoringPerson = null
+let selectedGeneralPerson = null
+let selectedGeneralRecord = null
+let selectedGeneralState = null
+let selectedGeneralInformation = null
+let selectedGeneralMoment = null
 let authoredRunPollHandle = null
 let authoredRunId = null
 let authoredRunProgressSequence = 0
@@ -1199,7 +1204,7 @@ function configureControls() {
   })
   $('#create-generate').onclick = generateAuthoringDraft
   $('#create-example-prompt').onclick = () => {
-    $('#create-prompt').value = 'Model seven people deciding whether to issue a joint warning about a contested city election. Give them distinct election-administration, forensic, legal, community, local-media, civil-liberties, and coordination positions, personalities, and memories. Everyone should receive the same public audit bulletin. Then deliver separate technical, legal, and community claims to different overlapping subsets before three decision rounds. Do not dictate anyone’s stance. Let us inspect whether common and heterogeneous inputs change source reliance, perceived risk, dependencies, and readiness to coordinate.'
+    $('#create-prompt').value = 'Model a storm-damaged relief port containing a dock, an inland depot, one truck, finite fuel, relief cargo, a damaged bridge, communications, and four people responsible for port operations, transport, bridge inspection, and aid allocation. A hidden bridge defect should be known initially only to the inspector. At the same scheduled moment, the port operator and transport coordinator should independently propose what to do with the truck. Let an LLM game master adjudicate open-ended actions while exact mechanisms enforce placement, conserved fuel, information access, and valid topology. Explore whether the group can move the cargo before sunset without using unsafe infrastructure.'
     $('#create-prompt').focus()
   }
   $('#create-revise').onclick = reviseAuthoringDraft
@@ -1207,6 +1212,12 @@ function configureControls() {
   $('#create-save-person').onclick = saveAuthoringPerson
   $('#create-save-scenario').onclick = saveCoordinationScenario
   $('#create-save-network').onclick = saveInfluenceNetwork
+  $('#create-general-person-select').onchange = (event) => { selectedGeneralPerson = event.target.value; renderGeneralEditor(authoringDraft.proposal) }
+  $('#create-general-record-select').onchange = (event) => { selectedGeneralRecord = event.target.value; selectedGeneralState = null; renderGeneralEditor(authoringDraft.proposal) }
+  $('#create-general-state-select').onchange = (event) => { selectedGeneralState = event.target.value; renderGeneralEditor(authoringDraft.proposal) }
+  $('#create-general-information-select').onchange = (event) => { selectedGeneralInformation = event.target.value; renderGeneralEditor(authoringDraft.proposal) }
+  $('#create-general-moment-select').onchange = (event) => { selectedGeneralMoment = event.target.value; renderGeneralEditor(authoringDraft.proposal) }
+  $('#create-save-general').onclick = saveGeneralProposal
   $('#create-edit-configuration').onclick = showAuthoredConfiguration
   $('#create-approve').onclick = approveAuthoringDraft
   $('#create-run').onclick = runAuthoredSimulation
@@ -1216,6 +1227,11 @@ function configureControls() {
     authoredResult = null
     document.body.classList.remove('authored-result')
     selectedAuthoringPerson = null
+    selectedGeneralPerson = null
+    selectedGeneralRecord = null
+    selectedGeneralState = null
+    selectedGeneralInformation = null
+    selectedGeneralMoment = null
     authoredRunId = null
     authoredRunProgressSequence = 0
     authoredRunPollFailures = 0
@@ -1357,7 +1373,7 @@ function authoringModel() {
 
 function setAuthoringBusy(busy) {
   authoringBusy = busy
-  for (const id of ['create-generate', 'create-revise', 'create-save-person', 'create-save-scenario', 'create-save-network', 'create-approve', 'create-start-over']) {
+  for (const id of ['create-generate', 'create-revise', 'create-save-person', 'create-save-scenario', 'create-save-network', 'create-save-general', 'create-approve', 'create-start-over']) {
     const control = $(`#${id}`)
     if (control) control.disabled = busy
   }
@@ -1374,7 +1390,107 @@ function draftTemplateLabel(templateId) {
   return labels[templateId] || sentence(templateId || 'unresolved template')
 }
 
+function isGeneralProposal(proposal) {
+  return proposal?.proposal_kind === 'general_world_v1'
+}
+
+function renderGeneralCoverage(draft) {
+  const coverage = draft.coverage || {items:[], blocking_request_ids:[]}
+  const counts = coverage.items.reduce((result, item) => {
+    result[item.classification] = (result[item.classification] || 0) + 1
+    return result
+  }, {})
+  $('#create-coverage-summary').textContent = `Execution coverage · ${counts.exact || 0} exact · ${counts.coarse_llm || 0} coarse LLM · ${counts.descriptive || 0} descriptive · ${counts.unsupported || 0} unsupported`
+  $('#create-coverage-detail').innerHTML = coverage.items.length
+    ? coverage.items.map((item) => `<p><strong>${escapeHtml(sentence(item.request_id))} · ${escapeHtml(sentence(item.classification))}${item.blocking ? ' · blocks approval' : ''}</strong><span>${escapeHtml((item.what_can_change || []).join(' · ') || 'No executable change is claimed.')}</span><small>${escapeHtml((item.assumptions || []).join(' · ') || (item.compiler_evidence || []).join(' · '))}</small></p>`).join('')
+    : '<p><strong>No execution coverage was compiled.</strong><span>The draft cannot be approved until material behavior is classified.</span></p>'
+}
+
+function generalStateEntries(record) {
+  return [...(record?.public_state || []), ...(record?.hidden_state || [])]
+}
+
+function renderGeneralEditor(proposal) {
+  const editor = $('#create-general-editor')
+  if (!isGeneralProposal(proposal)) {
+    editor.hidden = true
+    return
+  }
+  editor.hidden = false
+  $('#create-general-question').value = proposal.question
+  $('#create-general-description').value = proposal.description
+
+  if (!proposal.people.some((item) => item.entity_id === selectedGeneralPerson)) selectedGeneralPerson = proposal.people[0]?.entity_id
+  $('#create-general-person-select').innerHTML = proposal.people.map((item) => `<option value="${escapeHtml(item.entity_id)}">${escapeHtml(item.label)}</option>`).join('')
+  $('#create-general-person-select').value = selectedGeneralPerson
+  const person = proposal.people.find((item) => item.entity_id === selectedGeneralPerson)
+  $('#create-general-person-position').value = person?.position || ''
+  $('#create-general-person-disposition').value = person?.disposition || ''
+  $('#create-general-person-memories').value = (person?.memories || []).join('\n')
+
+  if (!proposal.world_records.some((item) => item.record_id === selectedGeneralRecord)) selectedGeneralRecord = proposal.world_records[0]?.record_id
+  $('#create-general-record-select').innerHTML = proposal.world_records.map((item) => `<option value="${escapeHtml(item.record_id)}">${escapeHtml(item.label)}</option>`).join('')
+  $('#create-general-record-select').value = selectedGeneralRecord
+  const record = proposal.world_records.find((item) => item.record_id === selectedGeneralRecord)
+  const states = generalStateEntries(record)
+  if (!states.some((item) => item.key === selectedGeneralState)) selectedGeneralState = states[0]?.key
+  $('#create-general-state-select').innerHTML = states.map((item) => `<option value="${escapeHtml(item.key)}">${escapeHtml(sentence(item.key))}</option>`).join('')
+  $('#create-general-state-select').value = selectedGeneralState
+  const stateEntry = states.find((item) => item.key === selectedGeneralState)
+  $('#create-general-state-value').value = Array.isArray(stateEntry?.value) ? JSON.stringify(stateEntry.value) : String(stateEntry?.value ?? '')
+
+  const representations = proposal.information_extension?.representations || []
+  if (!representations.some((item) => item.representation_id === selectedGeneralInformation)) selectedGeneralInformation = representations[0]?.representation_id
+  $('#create-general-information-select').innerHTML = representations.map((item) => `<option value="${escapeHtml(item.representation_id)}">${escapeHtml(sentence(item.representation_id))}</option>`).join('')
+  $('#create-general-information-select').value = selectedGeneralInformation || ''
+  const representation = representations.find((item) => item.representation_id === selectedGeneralInformation)
+  $('#create-general-recipients').innerHTML = proposal.people.map((item) => `<label><input type="checkbox" data-general-recipient="${escapeHtml(item.entity_id)}" ${(representation?.recipient_ids || []).includes(item.entity_id) ? 'checked' : ''}>${escapeHtml(item.label)}</label>`).join('')
+
+  if (!proposal.schedule.some((item) => item.moment_id === selectedGeneralMoment)) selectedGeneralMoment = proposal.schedule[0]?.moment_id
+  $('#create-general-moment-select').innerHTML = proposal.schedule.map((item) => `<option value="${escapeHtml(item.moment_id)}">${escapeHtml(item.description)}</option>`).join('')
+  $('#create-general-moment-select').value = selectedGeneralMoment
+  $('#create-general-minute').value = proposal.schedule.find((item) => item.moment_id === selectedGeneralMoment)?.minute ?? 0
+  $('#create-general-status').textContent = 'Choose one item in each section, edit it, then save one retained revision.'
+}
+
+function parseGeneralStateValue(text, original) {
+  if (Array.isArray(original)) {
+    const parsed = JSON.parse(text)
+    if (!Array.isArray(parsed)) throw new Error('List-valued state must remain a JSON list.')
+    return parsed
+  }
+  if (typeof original === 'boolean') {
+    if (!['true', 'false'].includes(text.toLowerCase())) throw new Error('Boolean state must be true or false.')
+    return text.toLowerCase() === 'true'
+  }
+  if (typeof original === 'number') {
+    const parsed = Number(text)
+    if (!Number.isFinite(parsed)) throw new Error('Numeric state must remain a number.')
+    return parsed
+  }
+  return text
+}
+
 function renderAuthoringBrief(proposal) {
+  if (isGeneralProposal(proposal)) {
+    const representations = proposal.information_extension?.representations || []
+    const peopleById = new Map(proposal.people.map((person) => [person.entity_id, person.label]))
+    const recipients = representations.reduce((total, item) => total + item.recipient_ids.length, 0)
+    $('#create-brief-question').innerHTML = `<strong>${escapeHtml(proposal.question)}</strong>`
+    $('#create-brief-people').innerHTML = `<strong>${proposal.people.length} simulated ${proposal.people.length === 1 ? 'person' : 'people'}</strong><p>${proposal.people.map((person) => escapeHtml(person.label)).join(' · ')}</p>`
+    $('#create-brief-influences').innerHTML = representations.length
+      ? `<strong>${representations.length} information ${representations.length === 1 ? 'item' : 'items'} · ${recipients} explicit deliveries</strong><ol>${representations.map((item) => `<li><strong>${escapeHtml(item.apparent_source)} → ${escapeHtml(item.recipient_ids.map((id) => peopleById.get(id) || id).join(', '))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')}</ol>`
+      : '<strong>No information paths are configured.</strong>'
+    $('#create-brief-rule').innerHTML = `<strong>${proposal.schedule.length} scheduled ${proposal.schedule.length === 1 ? 'moment' : 'moments'}</strong><p>${proposal.schedule.map((item) => `Minute ${escapeHtml(item.minute)} · ${escapeHtml(item.description)}`).join('<br>')}</p>`
+    all('[data-create-edit]').forEach((button) => {
+      button.onclick = () => {
+        const target = $('#create-general-editor')
+        target.open = true
+        target.scrollIntoView({behavior:'smooth', block:'start'})
+      }
+    })
+    return
+  }
   const workflow = proposal.workflow || {}
   const people = proposal.people || []
   const peopleById = new Map(people.map((person) => [person.entity_id, person]))
@@ -1459,8 +1575,8 @@ function renderCreateSimulation() {
     ? 'Review and run this simulation.'
     : 'Describe a simulation.'
   $('.create-hero > p').textContent = authoringDraft
-    ? 'Check the collective question, simulated people, information paths, and decision process. Everything below is retained and editable before Luna runs the simulation.'
-    : 'Describe the people, information sources, recipients, and collective decision. Luna will generate an editable simulation before anything runs.'
+    ? 'Check the research question, people, world state, information paths, timing, and execution coverage. Everything below is retained and editable before Luna runs the simulation.'
+    : 'Describe a sociotechnical world, its people, consequential processes, information paths, and the question you want to explore. Luna will generate an editable simulation before anything runs.'
   $('#create-generate').disabled = !author || authoringBusy
   if (!authoringDraft) {
     if (authoredResult && document.body.classList.contains('authored-result')) {
@@ -1495,41 +1611,51 @@ function renderCreateSimulation() {
     $('#create-person-select').innerHTML = ''
     $('#create-scenario-editor').hidden = true
     $('#create-network-editor').hidden = true
+    $('#create-general-editor').hidden = true
     $('#create-raw-configuration').textContent = 'No valid typed configuration has been produced yet.'
     $('#create-approve').hidden = true
     $('#create-run').hidden = true
     return
   }
+  const general = isGeneralProposal(proposal)
   const workflow = proposal.workflow || {}
-  renderAuthoringCoverage(proposal)
+  if (general) renderGeneralCoverage(authoringDraft)
+  else renderAuthoringCoverage(proposal)
   renderCoordinationScenarioEditor(proposal)
   renderInfluenceNetworkEditor(proposal)
+  renderGeneralEditor(proposal)
   $('.create-brief').hidden = false
   renderAuthoringBrief(proposal)
   $('#create-draft-title').textContent = proposal.title
   $('#create-draft-description').textContent = proposal.description
   const boundaries = proposal.analytical_boundaries || []
-  const places = proposal.places || []
-  const information = proposal.information || []
-  const objects = proposal.objects || []
+  const places = general ? (proposal.spatial_extension?.places || []) : (proposal.places || [])
+  const information = general ? (proposal.information_extension?.representations || []) : (proposal.information || [])
+  const objects = general ? proposal.world_records : (proposal.objects || [])
   $('#create-world-facts').innerHTML = [
-    [draftTemplateLabel(workflow.template_id), 'Simulation template'],
+    [general ? 'General compiled world' : draftTemplateLabel(workflow.template_id), 'Execution profile'],
     [`${proposal.people?.length || 0}`, 'People'],
-    [`${objects.length}`, 'World entities and processes'],
+    [`${objects.length}`, 'World records'],
     [`${places.length}`, 'Places'],
     [`${information.length}`, 'Information items'],
-    [`${boundaries.length}`, 'Analytical boundaries'],
+    [`${general ? proposal.active_systems.length : boundaries.length}`, general ? 'Active systems' : 'Analytical boundaries'],
   ].map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
-  $('#create-world-groups').innerHTML = [
+  $('#create-world-groups').innerHTML = general ? [
+    ['World records', objects.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(sentence(item.kind))} · ${(item.public_state || []).map((entry) => `${escapeHtml(sentence(entry.key))}: ${escapeHtml(Array.isArray(entry.value) ? JSON.stringify(entry.value) : entry.value)}`).join(' · ')}</span></li>`).join('')],
+    ['Information paths', information.map((item) => `<li><strong>${escapeHtml(item.apparent_source)} → ${escapeHtml(item.recipient_ids.join(', '))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')],
+    ['Active transition systems', proposal.active_systems.map((item) => `<li><strong>${escapeHtml(sentence(item.system_id))}</strong><span>${escapeHtml(item.behavior_summary)} · ${escapeHtml(sentence(item.representation_strategy))}</span></li>`).join('')],
+  ].filter(([, items]) => items).map(([label, items]) => `<section><h4>${escapeHtml(label)}</h4><ul>${items}</ul></section>`).join('') : [
     ['Groups and analytical boundaries', boundaries.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span></li>`).join('')],
     ['World entities and processes', objects.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span></li>`).join('')],
     ['Information in the scenario', information.map((item) => `<li><strong>${escapeHtml(sentence(item.label))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')],
   ].filter(([, items]) => items).map(([label, items]) => `<section><h4>${escapeHtml(label)}</h4><ul>${items}</ul></section>`).join('')
   $('#create-people-list').innerHTML = proposal.people.map((person) => `<article><strong>${escapeHtml(person.label)}</strong><span>${escapeHtml(person.position)}</span><p>${escapeHtml(person.disposition)}</p></article>`).join('')
+  $('.create-person-editor').hidden = general
   $('#create-person-select').innerHTML = proposal.people.map((person) => `<option value="${escapeHtml(person.entity_id)}">${escapeHtml(person.label)}</option>`).join('')
-  renderAuthoringPersonEditor()
+  if (!general) renderAuthoringPersonEditor()
   $('#create-raw-configuration').textContent = JSON.stringify(proposal, null, 2)
-  const ready = authoringDraft.status === 'ready_for_review' && diagnostics.length === 0
+  const coverageBlocked = (authoringDraft.coverage?.blocking_request_ids || []).length > 0
+  const ready = authoringDraft.status === 'ready_for_review' && diagnostics.length === 0 && !coverageBlocked
   $('#create-approve').hidden = !ready
   $('#create-run').hidden = authoringDraft.status !== 'approved'
   const showingResult = document.body.classList.contains('authored-result')
@@ -1538,7 +1664,9 @@ function renderCreateSimulation() {
   setAuthoringBusy(authoringBusy)
   $('#create-status').textContent = authoringDraft.status === 'approved'
     ? 'This exact simulation is approved. Run it now, or edit it to create a new revision.'
-    : 'Review the people and incoming information. Request a change or approve the simulation.'
+    : general
+      ? 'Review the people, world state, information routes, timing, and execution coverage. Edit directly or request a revision.'
+      : 'Review the people and incoming information. Request a change or approve the simulation.'
 }
 
 async function advanceAuthoringDraft(message) {
@@ -1631,6 +1759,57 @@ async function saveAuthoringPerson() {
     syncUrl()
   } catch (error) {
     $('#create-status').textContent = error.message
+  } finally {
+    setAuthoringBusy(false)
+  }
+}
+
+async function saveGeneralProposal() {
+  const original = authoringDraft?.proposal
+  if (!isGeneralProposal(original)) return
+  const proposal = clone(original)
+  const person = proposal.people.find((item) => item.entity_id === selectedGeneralPerson)
+  const record = proposal.world_records.find((item) => item.record_id === selectedGeneralRecord)
+  const representation = proposal.information_extension?.representations.find((item) => item.representation_id === selectedGeneralInformation)
+  const moment = proposal.schedule.find((item) => item.moment_id === selectedGeneralMoment)
+  const stateEntry = generalStateEntries(record).find((item) => item.key === selectedGeneralState)
+  const minute = Number($('#create-general-minute').value)
+  try {
+    proposal.question = $('#create-general-question').value.trim()
+    proposal.description = $('#create-general-description').value.trim()
+    if (!proposal.question || !proposal.description) throw new Error('The research question and description cannot be empty.')
+    if (person) {
+      person.position = $('#create-general-person-position').value.trim()
+      person.disposition = $('#create-general-person-disposition').value.trim()
+      person.memories = lineItems($('#create-general-person-memories').value)
+      if (!person.position || !person.disposition || !person.memories.length) throw new Error('The selected person needs a position, disposition, and at least one memory.')
+    }
+    if (stateEntry) stateEntry.value = parseGeneralStateValue($('#create-general-state-value').value.trim(), stateEntry.value)
+    if (representation) {
+      representation.recipient_ids = [...document.querySelectorAll('[data-general-recipient]:checked')].map((input) => input.dataset.generalRecipient)
+      if (!representation.recipient_ids.length) throw new Error('The selected information item needs at least one recipient.')
+    }
+    if (moment) {
+      if (!Number.isInteger(minute) || minute < 0) throw new Error('The scheduled minute must be a non-negative whole number.')
+      moment.minute = minute
+    }
+  } catch (error) {
+    $('#create-general-status').textContent = error.message
+    return
+  }
+  setAuthoringBusy(true)
+  $('#create-general-status').textContent = 'Saving this typed revision and recompiling coverage…'
+  try {
+    authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/general-proposal`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({expected_revision:authoringDraft.revision, edit_id:crypto.randomUUID(), proposal}),
+    })
+    renderCreateSimulation()
+    syncUrl()
+    $('#create-general-status').textContent = `Saved revision ${authoringDraft.revision}. Compiler coverage was regenerated without a model call.`
+  } catch (error) {
+    $('#create-general-status').textContent = error.message
   } finally {
     setAuthoringBusy(false)
   }
