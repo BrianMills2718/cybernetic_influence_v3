@@ -437,6 +437,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "saveAuthoringPerson",
         "approveAuthoringDraft",
         "renderAuthoringBrief",
+        "focusAuthoringReview",
         "runAuthoredSimulation",
             "stopAuthoredSimulation",
             "renderAuthoredResult",

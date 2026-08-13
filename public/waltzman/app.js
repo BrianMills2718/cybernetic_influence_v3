@@ -1564,6 +1564,10 @@ async function advanceAuthoringDraft(message) {
   syncUrl()
 }
 
+function focusAuthoringReview() {
+  window.requestAnimationFrame(() => $('#create-review').scrollIntoView({behavior:'smooth', block:'start'}))
+}
+
 async function generateAuthoringDraft() {
   const message = $('#create-prompt').value.trim()
   if (!message) {
@@ -1575,6 +1579,7 @@ async function generateAuthoringDraft() {
   try {
     await advanceAuthoringDraft(message)
     $('#create-prompt').value = ''
+    focusAuthoringReview()
   } catch (error) {
     $('#create-status').textContent = error.message
   } finally {
@@ -1594,6 +1599,7 @@ async function reviseAuthoringDraft() {
   try {
     await advanceAuthoringDraft(message)
     $('#create-revision-prompt').value = ''
+    focusAuthoringReview()
   } catch (error) {
     $('#create-status').textContent = error.message
   } finally {

@@ -1154,7 +1154,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-composer textarea, .create-revise textarea, .create-person-editor textarea, .create-person-editor input, .create-person-editor select, .create-scenario-editor textarea, .create-scenario-editor input, .create-scenario-editor select { background: #07121b; border: 1px solid var(--line); border-radius: 8px; color: var(--text); font: inherit; line-height: 1.55; padding: 12px; width: 100%; }
 .create-composer > div { display: flex; gap: 10px; margin-top: 14px; }
 .create-status { color: var(--muted); margin: 14px 0 0; }
-.create-review { border-top: 1px solid var(--line); padding-top: 32px; }
+.create-review { border-top: 1px solid var(--line); padding-top: 32px; scroll-margin-top: 90px; }
 .create-review.result-mode { border-top: 0; padding-top: 0; }
 .create-review.result-mode > :not(.create-run-status) { display: none; }
 .create-review > header { align-items: start; display: flex; gap: 24px; justify-content: space-between; }
