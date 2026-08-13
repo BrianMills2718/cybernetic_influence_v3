@@ -1514,6 +1514,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "influence_network": {"nodes": network_nodes, "edges": network_edges},
         "simulation_replay": replay,
         "coordination_measurement_readout": readout,
+        "theory_analysis": document.get("theory_analysis"),
         "evidence_counts": {
             "events": len(raw_events)
             if isinstance(raw_events, list)

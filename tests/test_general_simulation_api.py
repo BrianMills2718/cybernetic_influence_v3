@@ -226,4 +226,5 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     summary = api.get(f"/api/runs/{run_id}/summary")
     assert summary.status_code == 200, summary.text
     assert summary.json()["simulation_replay"]["scenes"]
+    assert len(summary.json()["theory_analysis"]["findings"]) == 5
     assert runtime_call.actor_counter == call_count

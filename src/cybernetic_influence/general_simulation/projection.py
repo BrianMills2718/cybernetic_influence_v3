@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from .compiler import CompiledGeneralSimulationV1
+from .analysis_projection import project_waltzman_analysis
 from .models import GeneralGroupSimulationResult
 
 
@@ -217,4 +218,5 @@ def project_general_run(
         "moments": events,
         "traces": traces,
         "general_simulation": result.model_dump(mode="json"),
+        "theory_analysis": project_waltzman_analysis(compiled, result),
     }

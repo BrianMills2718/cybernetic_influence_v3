@@ -2223,9 +2223,13 @@ function renderAuthoredResult(result) {
   renderAuthoredResultRound()
   renderAuthoredReplay()
   const readout = result.coordination_measurement_readout
+  const theory = result.theory_analysis
   const gateRows = gateChecks ? Object.entries(gateChecks).map(([name, check]) => `<li><strong>${escapeHtml(sentence(name))}</strong> ${check.passed ? 'passed' : 'failed'} (${escapeHtml(check.actual)} ${name === 'opposition' ? `of maximum ${check.maximum}` : `of ${check.required} required`})</li>`).join('') : ''
   const limitations = readout?.limitations || ['This is a synthetic model run and does not predict real people or institutions.']
-  $('#create-result-analysis').innerHTML = `<p><strong>${escapeHtml(readout?.headline || 'Retained simulation evidence')}</strong> ${escapeHtml(readout?.explanation || 'The run retains delivered information, decisions, and the exact collective gate.')}</p>${gateRows ? `<h5>Exact decision rule</h5><ul>${gateRows}</ul>` : ''}<h5>Interpret carefully</h5><ul>${limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+  const theoryFindings = theory?.findings?.map((finding) => `<li><strong>${escapeHtml(finding.label)}</strong><span>${escapeHtml(finding.value)}</span><details><summary>Method and limits</summary><p>${escapeHtml(finding.method)}</p><p><strong>Uncertainty:</strong> ${escapeHtml(finding.uncertainty)}</p><p><strong>Limitation:</strong> ${escapeHtml(finding.limitation)}</p><p><strong>Evidence:</strong> ${escapeHtml((finding.evidence_refs || []).join(' · '))}</p></details></li>`).join('') || ''
+  $('#create-result-analysis').innerHTML = theory
+    ? `<p><strong>${escapeHtml(theory.framework)}</strong> ${escapeHtml(theory.method)}</p><ul>${theoryFindings}</ul><h5>Interpretation boundary</h5><p>${escapeHtml(theory.interpretation_boundary)}</p>`
+    : `<p><strong>${escapeHtml(readout?.headline || 'Retained simulation evidence')}</strong> ${escapeHtml(readout?.explanation || 'The run retains delivered information, decisions, and the exact collective gate.')}</p>${gateRows ? `<h5>Exact decision rule</h5><ul>${gateRows}</ul>` : ''}<h5>Interpret carefully</h5><ul>${limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
   $('#create-run-evidence').href = `api/runs/${encodeURIComponent(result.run_id)}`
   $('#create-run-evidence').textContent = 'Open raw retained run'
   $('#create-run-evidence').hidden = false

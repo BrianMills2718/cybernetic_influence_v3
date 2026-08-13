@@ -132,13 +132,13 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "The ontology is a set of separations—not a list of agent types" in page
     assert "One typed world—not one narrative per agent" in page
     assert "Information has a carrier, representation, provenance, route" in page
-    assert "Project-owned ActiveRuntimeSession + CausalSession" in page
-    assert "production integration not yet implemented" in page
+    assert "Stock Concordia simultaneous engine + project-owned canonical world" in page
+    assert "Implemented vertical" in page
     assert "N-ary mechanism semantics" in page
     assert "Undirected spatial links" in page
     assert "Natural language proposes semantic configuration" in page
     assert "Configured structure, spatial topology, and causal history" in page
-    assert "Authority boundary: now versus adopted" in page
+    assert "Current split by execution profile" in page
     assert "A causal simulation workbench with bounded execution coverage" in page
     assert "Execution-parent links" in page
     assert "counterfactual causation" in page
@@ -155,7 +155,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=cleanup1",
-        "assets/app.js?v=authoring2",
+        "assets/app.js?v=authoring3",
     ]
     assert {
         "overview-view",

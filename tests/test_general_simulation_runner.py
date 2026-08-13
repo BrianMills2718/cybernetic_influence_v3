@@ -16,9 +16,13 @@ from cybernetic_influence.general_simulation.models import (
     WorldTransaction,
 )
 from cybernetic_influence.general_simulation.runner import run_general_simulation
+from cybernetic_influence.general_simulation.analysis_projection import (
+    project_waltzman_analysis,
+)
 
 
 FIXTURE = Path("tests/fixtures/general_simulation/port_coordination.json")
+SERVICE_FIXTURE = Path("tests/fixtures/general_simulation/service_incident.json")
 
 
 def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> None:
@@ -110,3 +114,65 @@ def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> Non
     }
     assert technical_recipients == {"port_coordinator", "customs_officer"}
     assert all(item.checkpoint_hash != "pending" for item in result.moments)
+    analysis = project_waltzman_analysis(compiled, result)
+    assert len(analysis["findings"]) == 5
+    for finding in analysis["findings"]:
+        assert finding["method"]
+        assert finding["evidence_refs"]
+        assert finding["uncertainty"]
+        assert finding["limitation"]
+
+
+def test_second_domain_uses_the_same_compiler_runner_and_receipt() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        SERVICE_FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    actor_counter = 0
+
+    def fake_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        nonlocal actor_counter
+        user = json.loads(args[1][1]["content"])
+        if kwargs["response_model"] is ActorDecision:
+            actor_counter += 1
+            context = user["actor_context"]
+            return ActorDecision(
+                assimilation=Assimilation(
+                    attended_observation_ids=[
+                        item["observation_id"] for item in context["observations"]
+                    ],
+                    memory_additions=["Retain the observed incident evidence."],
+                    interpretation="The cause remains uncertain.",
+                ),
+                intent=SemanticActionIntent(
+                    intent_id=f"service_intent_{actor_counter}",
+                    actor_id=context["actor_id"],
+                    base_revision=context["base_revision"],
+                    action="Propose a reversible recovery check.",
+                    target_refs=["api_service", "forensic_log"],
+                    purpose="Restore service without erasing evidence.",
+                    expected_effect="A bounded recovery proposal.",
+                    stated_rationale="Recovery and evidence preservation must be reconciled.",
+                ),
+            ), SimpleNamespace(provider="fixture")
+        return WorldTransaction(
+            transaction_id=f"service_transaction_{user['moment']['moment_id']}",
+            base_revision=user["requirements"]["base_revision"],
+            authority_id=user["requirements"]["authority_id"],
+            intent_ids=user["requirements"]["intent_ids"],
+            operations=[],
+            preconditions=[],
+            consequences=[],
+            stated_rationale="Retain the world pending a reversible recovery action.",
+        ), SimpleNamespace(provider="fixture")
+
+    result = run_general_simulation(
+        compiled,
+        run_id="run_service_fixture",
+        call=fake_call,
+    )
+
+    assert len(result.moments) == 2
+    assert len(result.model_calls) == 6
+    assert result.adoption.engine_class.endswith("simultaneous.Simultaneous")
+    assert result.adoption.game_master_names == ["general_world_game_master"]

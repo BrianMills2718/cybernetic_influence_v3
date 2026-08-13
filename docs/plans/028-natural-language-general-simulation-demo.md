@@ -1,7 +1,7 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: ready_for_implementation
+status: implemented_not_deployed
 created: 2026-08-13
 updated: 2026-08-13
 depends_on:
@@ -12,6 +12,15 @@ depends_on:
 ---
 
 # Slice 28: Natural-language general simulation demo
+
+## Completion record
+
+Slices 28A through 28F were implemented on
+`feature/slice-28-general-demo`. Focused evidence, authentic Luna traces,
+known limitations, and the stakeholder script are recorded in
+`docs/handoffs/028-natural-language-general-simulation-demo.md`. Public
+deployment and exact deployed-build verification remain separate operator
+actions.
 
 ## Implementation handoff
 
