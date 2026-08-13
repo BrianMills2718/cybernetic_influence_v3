@@ -140,44 +140,34 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
         self._question = question
         self._trace_prefix = trace_prefix
         self.receipts: list[ModelCallReceipt] = []
+        self.activation_count = 0
 
-    def get_action_attempt(
-        self,
-        context: entity_component.ComponentContextMapping,
-        action_spec: entity_lib.ActionSpec,
-    ) -> str:
-        del action_spec
-        actor_context = ActorContext.model_validate_json(context[ACTOR_CONTEXT_COMPONENT])
-        call_number = len(self.receipts) + 1
-        parsed, receipt = _call_model(
-            self._call,
-            role="actor",
-            response_model=ActorDecision,
-            system=(
-                "You are one synthetic person in an exploratory causal simulation. "
-                "Use only the supplied authorized observations, accessible world records, "
-                "private memory, and character. Delivery is not truth and an attempted action "
-                "is not guaranteed to succeed. Return an assimilation record and one bounded, "
-                "open-ended semantic action intent against the supplied world revision."
-            ),
-            user=json.dumps(
-                {
-                    "research_question": self._question,
-                    "person": self._person.model_dump(mode="json"),
-                    "actor_context": actor_context.model_dump(mode="json"),
-                },
-                sort_keys=True,
-            ),
-            trace_id=f"{self._trace_prefix}/moment/{call_number}/actor/{self._person.entity_id}",
-        )
-        decision = ActorDecision.model_validate(parsed)
+    def _validate_decision(
+        self, decision: ActorDecision, actor_context: ActorContext
+    ) -> None:
         if decision.intent.actor_id != actor_context.actor_id:
-            raise ValueError("actor output changed actor identity")
+            raise ValueError(
+                f"actor_id must be {actor_context.actor_id!r}; received "
+                f"{decision.intent.actor_id!r}"
+            )
         if decision.intent.base_revision != actor_context.base_revision:
-            raise ValueError("actor intent did not use the frozen world revision")
+            raise ValueError(
+                f"base_revision must be {actor_context.base_revision}; received "
+                f"{decision.intent.base_revision}"
+            )
         available_observations = {
             item.observation_id for item in actor_context.observations
         }
+        unknown_attention = (
+            set(decision.assimilation.attended_observation_ids)
+            - available_observations
+        )
+        if unknown_attention:
+            raise ValueError(
+                "attended_observation_ids contained unavailable IDs "
+                f"{sorted(unknown_attention)}; allowed IDs are "
+                f"{sorted(available_observations)}"
+            )
         available_provenance = available_observations | {
             item.representation_id
             for item in actor_context.observations
@@ -185,9 +175,9 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
         } | {item.record_id for item in actor_context.accessible_records} | {
             item.route_id for item in actor_context.accessible_routes
         }
-        if set(decision.assimilation.attended_observation_ids) - available_observations:
-            raise ValueError("actor attended an observation it did not receive")
-        unknown_provenance = set(decision.assimilation.provenance_links) - available_provenance
+        unknown_provenance = (
+            set(decision.assimilation.provenance_links) - available_provenance
+        )
         available_memories = {
             _normalized_memory(item)
             for item in [*self._person.memories, *actor_context.private_memory]
@@ -203,20 +193,89 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             )
         }
         if unknown_provenance:
-            raise ValueError("actor cited observation provenance it did not receive")
+            raise ValueError(
+                "provenance_links contained unavailable references "
+                f"{sorted(unknown_provenance)}; use exact supplied IDs or one "
+                "unambiguous retained-memory citation"
+            )
+        for revision in decision.assimilation.memory_revisions:
+            if revision.prior_memory not in actor_context.private_memory:
+                raise ValueError(
+                    "memory_revisions.prior_memory did not exactly match a supplied "
+                    "private memory"
+                )
+
+    def get_action_attempt(
+        self,
+        context: entity_component.ComponentContextMapping,
+        action_spec: entity_lib.ActionSpec,
+    ) -> str:
+        del action_spec
+        actor_context = ActorContext.model_validate_json(context[ACTOR_CONTEXT_COMPONENT])
+        self.activation_count += 1
+        call_number = self.activation_count
+        actor_user = json.dumps(
+            {
+                "research_question": self._question,
+                "person": self._person.model_dump(mode="json"),
+                "actor_context": actor_context.model_dump(mode="json"),
+            },
+            sort_keys=True,
+        )
+        parsed, receipt = _call_model(
+            self._call,
+            role="actor",
+            response_model=ActorDecision,
+            system=(
+                "You are one synthetic person in an exploratory causal simulation. "
+                "Use only the supplied authorized observations, accessible world records, "
+                "private memory, and character. Delivery is not truth and an attempted action "
+                "is not guaranteed to succeed. Return an assimilation record and one bounded, "
+                "open-ended semantic action intent against the supplied world revision."
+            ),
+            user=actor_user,
+            trace_id=f"{self._trace_prefix}/moment/{call_number}/actor/{self._person.entity_id}",
+        )
+        decision = ActorDecision.model_validate(parsed)
+        try:
+            self._validate_decision(decision, actor_context)
+        except ValueError as validation_error:
+            self.receipts.append(receipt)
+            repaired, repair_receipt = _call_model(
+                self._call,
+                role="actor",
+                response_model=ActorDecision,
+                system=(
+                    "Repair one rejected synthetic-person output. Preserve the actor's "
+                    "substantive judgment, but make every typed identity, revision, "
+                    "observation ID, provenance reference, and prior-memory reference "
+                    "conform exactly to the supplied authorized context. Do not add new "
+                    "evidence or change the world. Return only the corrected typed output."
+                ),
+                user=json.dumps(
+                    {
+                        "original_input": json.loads(actor_user),
+                        "rejected_output": decision.model_dump(mode="json"),
+                        "validation_error": str(validation_error),
+                    },
+                    sort_keys=True,
+                ),
+                trace_id=(
+                    f"{self._trace_prefix}/moment/{call_number}/actor/"
+                    f"{self._person.entity_id}/repair/1"
+                ),
+            )
+            decision = ActorDecision.model_validate(repaired)
+            receipt = repair_receipt
+            self._validate_decision(decision, actor_context)
         context_component = self.get_entity().get_component(
             ACTOR_CONTEXT_COMPONENT, type_=ActorContextComponent
         )
         if context_component.context is not None:
             for revision in decision.assimilation.memory_revisions:
-                try:
-                    index = context_component.context.private_memory.index(
-                        revision.prior_memory
-                    )
-                except ValueError as exc:
-                    raise ValueError(
-                        "actor attempted to revise memory it did not possess"
-                    ) from exc
+                index = context_component.context.private_memory.index(
+                    revision.prior_memory
+                )
                 context_component.context.private_memory[index] = revision.revised_memory
             context_component.context.private_memory.extend(
                 decision.assimilation.memory_additions
@@ -225,10 +284,14 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
         return decision.intent.model_dump_json()
 
     def get_state(self) -> entity_component.ComponentState:
-        return {"receipts": [item.model_dump(mode="json") for item in self.receipts]}
+        return {
+            "receipts": [item.model_dump(mode="json") for item in self.receipts],
+            "activation_count": self.activation_count,
+        }
 
     def set_state(self, state: entity_component.ComponentState) -> None:
         self.receipts = TypeAdapter(list[ModelCallReceipt]).validate_python(state["receipts"])
+        self.activation_count = int(state.get("activation_count", len(self.receipts)))
 
 
 class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # type: ignore[misc]

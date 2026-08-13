@@ -59,6 +59,64 @@ def test_memory_provenance_accepts_only_unambiguous_sentence_prefixes() -> None:
     )
 
 
+def test_actor_output_gets_one_bounded_validation_repair() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        SERVICE_FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    injected_invalid_output = False
+
+    def repairing_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        nonlocal injected_invalid_output
+        user = json.loads(args[1][1]["content"])
+        if kwargs["response_model"] is ActorDecision:
+            context = user.get("actor_context") or user["original_input"]["actor_context"]
+            observations = [item["observation_id"] for item in context["observations"]]
+            if not injected_invalid_output:
+                injected_invalid_output = True
+                observations.append("consequence:invented-observation")
+            return ActorDecision(
+                assimilation=Assimilation(
+                    attended_observation_ids=observations,
+                    memory_additions=[],
+                    memory_revisions=[],
+                    provenance_links=[],
+                    interpretation="Retain only authorized evidence.",
+                ),
+                intent=SemanticActionIntent(
+                    intent_id=f"intent_{context['actor_id']}_{context['base_revision']}",
+                    actor_id=context["actor_id"],
+                    base_revision=context["base_revision"],
+                    action="Propose a reversible check.",
+                    target_refs=[],
+                    purpose="Preserve evidence.",
+                    expected_effect="A bounded proposal.",
+                    stated_rationale="The cause remains uncertain.",
+                ),
+            ), SimpleNamespace(provider="fixture")
+        return WorldTransaction(
+            transaction_id=f"transaction_{user['moment']['moment_id']}",
+            base_revision=user["requirements"]["base_revision"],
+            authority_id=user["requirements"]["authority_id"],
+            intent_ids=user["requirements"]["intent_ids"],
+            operations=[],
+            preconditions=[],
+            consequences=[],
+            evidence_refs=user["requirements"]["intent_ids"],
+            stated_rationale="Retain the current world.",
+        ), SimpleNamespace(provider="fixture")
+
+    result = run_general_simulation(
+        compiled,
+        run_id="run_actor_repair_fixture",
+        call=repairing_call,
+    )
+
+    assert len(result.moments) == 2
+    assert len(result.model_calls) == 7
+    assert any(item.trace_id.endswith("/repair/1") for item in result.model_calls)
+
+
 def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         FIXTURE.read_text(encoding="utf-8")
