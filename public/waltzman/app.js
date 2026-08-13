@@ -5,7 +5,6 @@ const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'darsia', 'regional']
 const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', darsia:'Darsia', regional:'Regional'}
 const preferredModel = 'codex/gpt-5.6-luna'
 const preferredAuthoringModel = 'codex/gpt-5.6-luna'
-const featuredRunIds = ['run_8924342b56ce', 'run_946a10a820fc', 'run_05acbaea1137']
 const caseNetworkRunId = 'run_5010214f2466'
 const guideRunId = 'run_ffe88e1c15d5'
 const personProfileFields = {
@@ -61,6 +60,9 @@ let authoredResult = null
 let authoredResultRoundIndex = 0
 let authoredReplaySceneIndex = 0
 let retainedRunHistory = []
+let retainedRunHistoryLoad = null
+let retainedLiveRunsLoad = null
+let retainedLiveRunsLoaded = false
 let simulationLoadingRunId = null
 
 const state = {
@@ -318,7 +320,7 @@ function readStateFromUrl() {
   const requestedGuideStep = Number(params.get('guide_step'))
   if (Number.isInteger(requestedGuideStep) && requestedGuideStep >= 1 && requestedGuideStep <= 7) state.guideStep = requestedGuideStep - 1
   const requestedRun = params.get('run')
-  if (requestedRun && dataset.runs.some((run) => run.run_id === requestedRun)) state.runId = requestedRun
+  if (requestedRun) state.runId = requestedRun
   const requestedRound = Number(params.get('round'))
   if ([1, 2, 3].includes(requestedRound)) state.round = requestedRound
   const requestedPerson = params.get('person')
@@ -332,6 +334,7 @@ function readStateFromUrl() {
 }
 
 function applyRunScopeFromUrl() {
+  if (!['compare', 'inspect'].includes(state.view)) return
   const rawScope = new URLSearchParams(window.location.search).get('runs')
   if (!rawScope) return
   const requested = rawScope.split(',').map((item) => item.trim()).filter(Boolean)
@@ -531,104 +534,8 @@ function renderComparison() {
   all('[data-open-run]').forEach((button) => { button.onclick = () => openRun(button.dataset.openRun) })
 }
 
-function personStance(run, roundNumber, personId) {
-  return run.rounds.find((round) => round.round === roundNumber)?.stances.find((stance) => stance.person_id === personId) || null
-}
-
-function conditionStory(run) {
-  const stories = {
-    baseline:{step:'1', title:'Baseline', change:'No pressure enters the coalition.', explanation:'The agents receive only common round results and remain ready to act.'},
-    responsive_exercise_injects:{step:'2', title:'Heterogeneous local pressure', change:'Different subgroups receive different locally relevant developments.', explanation:'The content varies by location, while reported risk and coordination move in the same direction.'},
-    capacity_inject_replay_with_stabilization:{step:'3', title:'Pressure + stabilization', change:'The same pressure remains and an authoritative intervention is added.', explanation:'Verified allocations bound uncertainty and make the coalition’s commitments compatible.'},
-    adaptive_cso_stabilization:{step:'4', title:'Pressure + adaptive CSO', change:'A defensive cell observes the degraded decision environment and chooses a bounded response.', explanation:'The monitor detects, the diagnostician explains, and the planner selects an authorized intervention before agents decide again.'},
-  }
-  return stories[run.condition] || {step:'•', title:run.condition_label, change:'External environment varied', explanation:'Inspect the retained run for its exact developments.'}
-}
-
 function renderMechanism() {
-  if (autonomousProbe) {
-    renderAutonomousProbe()
-    return
-  }
-  $('#mechanism-person-select').innerHTML = dataset.people.map((person) => `<option value="${escapeHtml(person.person_id)}">${escapeHtml(person.person_label)}</option>`).join('')
-  $('#mechanism-person-select').value = state.mechanismPersonId
-  $('#mechanism-person-select').onchange = (event) => {
-    state.mechanismPersonId = event.target.value
-    renderMechanism()
-    syncUrl()
-  }
-  const baseline = dataset.runs.find((run) => run.condition === 'baseline')
-  const pressure = dataset.runs.find((run) => run.condition === 'responsive_exercise_injects')
-  const stabilized = dataset.runs.find((run) => run.condition === 'capacity_inject_replay_with_stabilization')
-  const exampleRuns = [baseline, pressure, stabilized].filter(Boolean)
-  const stageStories = {
-    baseline:{prompt:'No external pressure', development:'The coalition receives only its shared decision history.', chain:['Common information','Risks remain bounded','Coordination remains ready'], trust:'Not measured in this probe', risk:'No new risk enters the coalition'},
-    responsive_exercise_injects:{prompt:'Different local signals. Same directional effect.', development:'Alba receives a laboratory failure, Borin a staffing demand, Cyrenia a supply condition, and the regional institution an infeasibility warning.', chain:['Heterogeneous local inputs','Capacity or legitimacy becomes primary','Coordination collapses'], trust:'Not measured in this probe', risk:'12 of 12 report capacity or legitimacy and request action'},
-    capacity_inject_replay_with_stabilization:{prompt:'Detect → diagnose → stabilize', development:'The same local pressures remain. A verified allocation then supplies testing, clinicians, equipment, and reserve capacity.', chain:['Same heterogeneous pressure','Authoritative facts bound uncertainty','Coordination returns'], trust:'Reliance on the verified authority is observable; private trust is not measured', risk:'Named concerns receive concrete answers'},
-  }
-  const renderExampleStage = () => {
-    const index = Math.min(state.exampleEnvironment, exampleRuns.length - 1)
-    const run = exampleRuns[index]
-    if (!run) return
-    const story = conditionStory(run)
-    const stage = stageStories[run.condition] || {prompt:story.title, development:story.explanation}
-    $('#example-environment-select').innerHTML = exampleRuns.map((candidate, candidateIndex) => `<button type="button" data-example-environment="${candidateIndex}" class="${candidateIndex === index ? 'active' : ''}"><b>${candidateIndex + 1}</b><span>${escapeHtml(conditionStory(candidate).title)}</span></button>`).join('')
-    const finalCounts = countsText(run.rounds.at(-1).decision_counts)
-    const gateResult = run.outcome === 'joint_response_approved' ? 'gate passes' : 'gate fails'
-    $('#example-stage').innerHTML = `<header><div><span>Condition ${index + 1} of ${exampleRuns.length}</span><h3>${escapeHtml(stage.prompt)}</h3></div>${outcomeBadge(run)}</header><p>${escapeHtml(stage.development)}</p><div class="probe-chain">${stage.chain.map((item) => `<span>${escapeHtml(item)}</span>`).join('<i>→</i>')}</div><div class="stage-trajectory">${run.rounds.map((round) => `<div><b>Round ${round.round}</b>${stackedBar(round.decision_counts, 'stage-bar')}<strong>${escapeHtml(countsText(round.decision_counts))}</strong></div>`).join('')}</div><dl class="decision-environment-readout"><div><dt>Trust structure</dt><dd>${escapeHtml(stage.trust)}</dd></div><div><dt>Perceived risk</dt><dd>${escapeHtml(stage.risk)}</dd></div><div><dt>Coordination readiness</dt><dd>${escapeHtml(`${finalCounts} · ${gateResult}`)}</dd></div></dl>`
-    all('[data-example-environment]').forEach((button) => { button.onclick = () => { state.exampleEnvironment = Number(button.dataset.exampleEnvironment); renderExampleStage() } })
-    $('#example-next').textContent = index === exampleRuns.length - 1 ? 'Restart probe ↻' : 'Next condition →'
-  }
-  renderExampleStage()
-  $('#example-next').onclick = () => { state.exampleEnvironment = (state.exampleEnvironment + 1) % exampleRuns.length; renderExampleStage() }
-  $('#open-full-analysis').onclick = () => { const details = $('#full-example-analysis'); details.open = true; details.scrollIntoView({behavior:'smooth', block:'start'}) }
-  $('#case-trajectories').innerHTML = exampleRuns.map((run) => {
-    const story = conditionStory(run)
-    return `<article><header><span>Environment ${escapeHtml(story.step)}</span><strong>${escapeHtml(story.title)}</strong>${outcomeBadge(run)}</header><div>${run.rounds.map((round) => `<div class="case-trajectory-round"><b>R${round.round}</b>${stackedBar(round.decision_counts, 'case-trajectory-bar')}<span>${escapeHtml(countsText(round.decision_counts))}</span></div>`).join('')}</div></article>`
-  }).join('')
-  $('#case-overview-table').innerHTML = exampleRuns.map((run) => {
-    const story = conditionStory(run)
-    return `<tr><th scope="row"><span>Environment ${escapeHtml(story.step)}</span>${escapeHtml(story.title)}</th>${run.rounds.map((round) => `<td>${escapeHtml(countsText(round.decision_counts))}</td>`).join('')}<td>${outcomeBadge(run)}</td></tr>`
-  }).join('')
-  $('#case-gate-table').innerHTML = exampleRuns.map((run) => {
-    const story = conditionStory(run)
-    return run.gate_checks.map((check, index) => `<tr>${index === 0 ? `<th scope="rowgroup" rowspan="${run.gate_checks.length}">Environment ${escapeHtml(story.step)}<small>${escapeHtml(story.title)}</small></th>` : ''}<td>${escapeHtml(check.label)}</td><td>${escapeHtml(check.required)}</td><td>${escapeHtml(check.observed)}</td><td><span class="gate-status ${check.passed ? 'gate-pass' : 'gate-fail'}">${check.passed ? '✓ Passed' : '× Failed'}</span></td></tr>`).join('')
-  }).join('')
-
-  const finalStances = dataset.runs.map((run) => ({run, stance:personStance(run, 3, state.mechanismPersonId)})).filter((item) => item.stance)
-  $('#waltzman-lens').innerHTML = finalStances.map(({run, stance}) => {
-    const story = conditionStory(run)
-    const path = [1, 2, 3].map((round) => sentence(personStance(run, round, state.mechanismPersonId)?.decision || 'unknown')).join(' → ')
-    return `<article class="lens-card"><span>${escapeHtml(story.change)}</span><strong>${escapeHtml(path)}</strong><p>Final concern: ${escapeHtml(sentence(stance.risk))}. Final request: ${escapeHtml(sentence(stance.request))}.</p></article>`
-  }).join('')
-  $('#mechanism-person-title').textContent = `${labelPerson(state.mechanismPersonId)} across decision environments`
-  $('#mechanism-table').innerHTML = dataset.runs.map((run) => {
-    const cells = [1, 2, 3].map((round) => {
-      const stance = personStance(run, round, state.mechanismPersonId)
-      return `<td class="mechanism-cell">${decisionPill(stance?.decision || 'unknown')}<small>Risk · ${escapeHtml(sentence(stance?.risk || 'unknown'))}<br>Request · ${escapeHtml(sentence(stance?.request || 'unknown'))}</small></td>`
-    }).join('')
-    const story = conditionStory(run)
-    return `<tr><td><button type="button" class="matrix-run" data-open-mechanism-run="${escapeHtml(run.run_id)}">${escapeHtml(story.title)}</button></td><td>${escapeHtml(story.change)}</td>${cells}<td>${outcomeBadge(run)}</td></tr>`
-  }).join('')
-  all('[data-open-mechanism-run]').forEach((button) => {
-    button.onclick = () => {
-      state.personId = state.mechanismPersonId
-      openRun(button.dataset.openMechanismRun, false)
-    }
-  })
-
-  const previewStance = pressure ? personStance(pressure, 3, state.mechanismPersonId) : null
-  $('#agent-evidence-preview').innerHTML = previewStance ? `
-    <div><span class="section-kicker">Evidence preview · Environment 2 · Round 3</span><h3 id="agent-preview-title">${escapeHtml(labelPerson(state.mechanismPersonId))}</h3></div>
-    <dl><div><dt>Decision</dt><dd>${decisionPill(previewStance.decision)}</dd></div><div><dt>Primary concern</dt><dd>${escapeHtml(sentence(previewStance.risk))}</dd></div><div><dt>Requested next step</dt><dd>${escapeHtml(sentence(previewStance.request))}</dd></div><div><dt>Structured rationale</dt><dd>${escapeHtml(previewStance.rationale)}</dd></div></dl>
-    <button id="inspect-all-evidence" class="secondary-cta" type="button">Inspect all agent decisions</button>` : `
-    <div><span class="section-kicker">Evidence preview</span><h3 id="agent-preview-title">Participant evidence unavailable</h3></div>`
-  const evidenceButton = $('#inspect-all-evidence')
-  if (evidenceButton) evidenceButton.onclick = () => {
-    const details = $('#all-agent-evidence')
-    details.open = true
-    details.scrollIntoView({behavior:'smooth', block:'start'})
-  }
+  if (autonomousProbe) renderAutonomousProbe()
 }
 
 function renderAutonomousProbe() {
@@ -1237,9 +1144,15 @@ function renderView() {
   }
   if (state.view === 'simulations') renderSimulationLibrary()
   if (state.view === 'create') renderCreateSimulation()
-  if (state.view === 'compare') renderComparison()
+  if (state.view === 'compare') {
+    renderComparison()
+    void ensureRetainedLiveRuns()
+  }
   if (state.view === 'mechanism') renderMechanism()
-  if (state.view === 'inspect') renderInspector()
+  if (state.view === 'inspect') {
+    renderInspector()
+    if (!dataset.runs.some((run) => run.run_id === state.runId)) void ensureRetainedLiveRuns()
+  }
   if (state.view === 'method') renderMethod()
 }
 
@@ -1312,18 +1225,6 @@ function configureControls() {
     renderCreateSimulation()
     syncUrl()
   }
-  all('[data-featured-example]').forEach((button) => {
-    button.onclick = () => {
-      const available = new Set(dataset.runs.map((run) => run.run_id))
-      const missing = featuredRunIds.filter((runId) => !available.has(runId))
-      if (missing.length) throw new Error(`featured example is unavailable: ${missing.join(', ')}`)
-      const url = new URL(window.location.href)
-      url.searchParams.set('view', 'mechanism')
-      url.searchParams.set('mechanism_person', 'alba_epidemiologist')
-      url.searchParams.set('runs', featuredRunIds.join(','))
-      window.location.assign(url)
-    }
-  })
   $('#reset-configuration').onclick = () => {
     editableConfiguration = clone(defaultConfiguration)
     renderRunSetup()
@@ -2289,38 +2190,57 @@ async function pollLiveRun() {
   }
 }
 
-async function loadRetainedLiveRuns() {
-  let history
-  try {
-    history = await apiRequest('api/runs')
-  } catch (error) {
+async function loadRetainedRunHistory() {
+  if (retainedRunHistoryLoad) return retainedRunHistoryLoad
+  retainedRunHistoryLoad = apiRequest('api/runs').then((history) => {
+    retainedRunHistory = history.runs || []
+    if (state.view === 'simulations') renderSimulationLibrary()
+    return retainedRunHistory
+  }).catch((error) => {
+    retainedRunHistoryLoad = null
     console.warn(`retained live runs unavailable: ${error.message}`)
-    return
-  }
-  retainedRunHistory = history.runs || []
-  if (state.view === 'simulations') renderSimulationLibrary()
-  const summaries = (history.runs || []).filter((run) =>
-    run.scenario === 'regional_outbreak' && run.execution === 'live' && run.status === 'completed'
-  )
-  const retained = []
-  for (const summary of summaries) {
-    try {
-      const raw = summary.run_id === caseNetworkRunId && caseNetworkRun
-        ? caseNetworkRun
-        : await apiRequest(`api/runs/${encodeURIComponent(summary.run_id)}`)
-      if (summary.run_id === caseNetworkRunId) {
-        caseNetworkRun = raw
-        caseNetworkError = null
+    return retainedRunHistory
+  })
+  return retainedRunHistoryLoad
+}
+
+async function ensureRetainedLiveRuns() {
+  if (retainedLiveRunsLoaded) return
+  if (retainedLiveRunsLoad) return retainedLiveRunsLoad
+  retainedLiveRunsLoad = (async () => {
+    const history = await loadRetainedRunHistory()
+    const summaries = history.filter((run) =>
+      run.scenario === 'regional_outbreak' && run.execution === 'live' && run.status === 'completed'
+    )
+    const retained = []
+    for (const summary of summaries) {
+      try {
+        const raw = summary.run_id === caseNetworkRunId && caseNetworkRun
+          ? caseNetworkRun
+          : await apiRequest(`api/runs/${encodeURIComponent(summary.run_id)}`)
+        if (summary.run_id === caseNetworkRunId) {
+          caseNetworkRun = raw
+          caseNetworkError = null
+        }
+        retained.push(projectLiveRun(raw))
+      } catch (error) {
+        console.warn(`retained run ${summary.run_id} unavailable: ${error.message}`)
       }
-      retained.push(projectLiveRun(raw))
-    } catch (error) {
-      console.warn(`retained run ${summary.run_id} unavailable: ${error.message}`)
     }
-  }
-  dataset.runs = [
-    ...retained,
-    ...dataset.runs.filter((run) => !retained.some((candidate) => candidate.run_id === run.run_id)),
-  ]
+    dataset.runs = [
+      ...retained,
+      ...dataset.runs.filter((run) => !retained.some((candidate) => candidate.run_id === run.run_id)),
+    ]
+    retainedLiveRunsLoaded = true
+    applyRunScopeFromUrl()
+    renderRail()
+    configureControls()
+    renderView()
+  })().catch((error) => {
+    retainedLiveRunsLoad = null
+    console.warn(`regional evidence unavailable: ${error.message}`)
+  })
+  return retainedLiveRunsLoad
 }
 
 async function loadWorkbench() {
@@ -2344,8 +2264,13 @@ async function loadWorkbench() {
     state.runId = dataset.runs[0].run_id
     try { runtimeConfig = await apiRequest('api/config') } catch (error) { console.warn(`live simulator unavailable: ${error.message}`) }
     configureRuntime()
-    applyRunScopeFromUrl()
     readStateFromUrl()
+    const requestedScope = new URLSearchParams(window.location.search).get('runs')
+    const needsRetainedRegionalEvidence = state.view === 'compare' ||
+      (['compare', 'inspect'].includes(state.view) && Boolean(requestedScope)) ||
+      (state.view === 'inspect' && !dataset.runs.some((run) => run.run_id === state.runId))
+    if (needsRetainedRegionalEvidence) await ensureRetainedLiveRuns()
+    applyRunScopeFromUrl()
     await loadAuthoringDraftFromUrl()
     renderRail()
     configureControls()
@@ -2353,12 +2278,7 @@ async function loadWorkbench() {
     await loadAuthoredRunFromUrl()
     $('#loading').hidden = true
     $('#workbench').hidden = false
-    void loadRetainedLiveRuns().then(() => {
-      applyRunScopeFromUrl()
-      renderRail()
-      configureControls()
-      renderView()
-    })
+    void loadRetainedRunHistory()
   } catch (error) {
     $('#loading').hidden = true
     $('#load-error').hidden = false

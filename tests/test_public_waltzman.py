@@ -72,10 +72,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Coordination Environment Lab" in page
     assert "New simulation" in page
     assert "Guided example" in page
-    assert "Simulations" in page
+    assert "All simulations" in page
     assert "Methodology" in page
     assert "Every completed simulation automatically becomes the same guided replay" in page
-    assert "Open the curated outbreak case" in page
+    assert "Open the flagship case study" in page
     assert "Lab workspace" in page
     assert "Choose, configure, run" in page
     assert "Overview" in page
@@ -107,24 +107,13 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "The experiment in three steps" in page
     assert "What the resource package did not solve" in page
     assert "Shared intent is not enough for collective action" in page
-    assert "Inspect all agent decisions" in page
-    assert "Waltzman mechanism probe" in page
     assert "From Minds to Coordination · autonomous influence probe" in page
     assert "Influence agents cannot vote or edit participants" in page
     assert "Run this condition again" in page
-    assert "Can different local pressures push a coalition" in page
-    assert "bounded exercise controller" in page
-    assert "1 experiment" in page
-    assert "3 decision rounds per condition" in page
-    assert "Launch a joint regional response—or wait" in page
-    assert "What each stance means" in page
-    assert "Twenty-four regional clinicians" in page
-    assert "10% regional reserve" in page
     assert "What enters the decision environment?" in page
     assert "Edit one role—or keep the reviewed coalition" in page
     assert "Institutional oughts—not personal commands" in page
     assert "Edit personal character and memory" in page
-    assert "Mechanism analysis and retained evidence" in page
     assert "Generate editable configuration" in page
     assert "Runnable now:" in page
     assert "1 · Describe" in page
@@ -145,12 +134,12 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Configured structure, spatial topology, and causal history" in page
     assert "Authority boundary: now versus adopted" in page
     assert shape.stylesheets == [
-        "assets/graph-canvas.css?v=ontology2",
-        "assets/styles.css?v=ontology2",
+        "assets/graph-canvas.css?v=cleanup1",
+        "assets/styles.css?v=cleanup1",
     ]
     assert shape.scripts == [
-        "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=ontology2",
+        "assets/graph-canvas.js?v=cleanup1",
+        "assets/app.js?v=cleanup1",
     ]
     assert {
         "overview-view",
@@ -247,16 +236,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "trajectory-grid",
         "run-matrix",
         "mechanism-view",
-        "example-environment-select",
-        "example-stage",
-        "full-example-analysis",
-        "case-trajectories",
-        "case-overview-table",
-        "case-gate-table",
-        "agent-evidence-preview",
-        "all-agent-evidence",
-        "waltzman-lens",
-        "mechanism-table",
+        "probe-condition-select",
+        "probe-condition",
+        "probe-next",
+        "run-probe",
         "run-select",
         "environment-results",
         "decision-gate-results",
@@ -409,13 +392,13 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "renderRunSetup",
         "startLiveRun",
         "pollLiveRun",
-        "loadRetainedLiveRuns",
+        "loadRetainedRunHistory",
+        "ensureRetainedLiveRuns",
         "projectLiveRun",
         "renderComparison",
         "renderMechanism",
         "renderAutonomousProbe",
         "startAutonomousProbe",
-        "conditionStory",
         "renderInspector",
         "renderEnvironment",
         "renderGate",
@@ -424,7 +407,6 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "applyRunScopeFromUrl",
         "syncUrl",
         "view:'overview'",
-        "featuredRunIds",
         "renderResearchCase",
         "caseSystemProjection",
         "caseExactProjection",
@@ -489,9 +471,25 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "for (const run of dataset.runs) run.configuration" not in script
     assert "guide_clinic" not in script
     assert "authored teaching sequence" not in script
-    assert "await loadRetainedLiveRuns()" not in script
+    assert "loadRetainedLiveRuns" not in script
+    assert "conditionStory" not in script
+    assert "example-environment-select" not in script
+    assert "#mechanism-view:has(.swarm-demo)" not in style
+    for obsolete_id in (
+        "example-environment-select",
+        "example-stage",
+        "full-example-analysis",
+        "case-trajectories",
+        "case-overview-table",
+        "case-gate-table",
+        "agent-evidence-preview",
+        "all-agent-evidence",
+        "waltzman-lens",
+        "mechanism-table",
+    ):
+        assert obsolete_id not in PAGE.read_text(encoding="utf-8")
     assert script.index("$('#workbench').hidden = false") < script.index(
-        "void loadRetainedLiveRuns().then"
+        "void loadRetainedRunHistory()"
     )
     assert "cannot launch new model runs" not in json.dumps(_dataset())
     assert "[hidden] { display: none !important; }" in style

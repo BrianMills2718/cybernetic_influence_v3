@@ -6,8 +6,8 @@
   <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology2">
-  <link rel="stylesheet" href="assets/styles.css?v=ontology2">
+  <link rel="stylesheet" href="assets/graph-canvas.css?v=cleanup1">
+  <link rel="stylesheet" href="assets/styles.css?v=cleanup1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -427,99 +427,6 @@
           <section class="swarm-explainer"><article><span>1</span><div><strong>Sources observe</strong><p>They receive only public meeting snapshots.</p></div></article><i>→</i><article><span>2</span><div><strong>Sources choose</strong><p>They may speak, adapt a follow-up, or stay silent.</p></div></article><i>→</i><article><span>3</span><div><strong>Participants decide</strong><p>Only coalition members choose their own stance.</p></div></article></section>
           <details class="probe-method"><summary>What this demonstrates</summary><p>This is a synthetic mechanism demonstration inspired by Waltzman’s account of influence moving from individual cognition into coordination. It tests whether heterogeneous, feedback-responsive signals can alter perceived risk and collective readiness without a central controller dictating participant decisions. It does not estimate human behavior.</p></details>
         </div>
-        <header class="workspace-header case-header">
-          <div>
-            <div class="artifact-type"><strong>Waltzman mechanism probe</strong><span>Authentic retained model decisions · fictional scenario</span></div>
-            <h2 id="mechanism-title">Can different local pressures push a coalition toward the same failure?</h2>
-            <p>Twelve AI agents receive different, locally relevant developments. The signals do not share one narrative, but their accumulated effect may still change perceived risk and the coalition’s readiness to act.</p>
-          </div>
-        </header>
-
-        <section class="example-game" aria-label="Example simulation">
-          <div class="mission-objective"><span>Question</span><strong>Does heterogeneous pressure degrade the decision environment—and can a stabilizing intervention restore coordinated action?</strong></div>
-          <p class="probe-boundary">This probe isolates one mechanism from <em>From Minds to Coordination</em>. The participants are autonomous LLM agents; the pressure source is a bounded exercise controller, not yet an autonomous influence swarm.</p>
-          <nav id="example-environment-select" class="environment-select" aria-label="Choose environment"></nav>
-          <div id="example-stage" class="example-stage" aria-live="polite"></div>
-          <div class="example-actions"><button id="example-next" class="primary-cta" type="button">Next condition →</button><button id="open-full-analysis" class="secondary-cta" type="button">Inspect the mechanism</button><button class="quiet-button" type="button" data-open-lab>Run your own</button></div>
-        </section>
-
-        <details id="full-example-analysis" class="full-analysis">
-          <summary>Mechanism analysis and retained evidence</summary>
-          <div class="full-analysis-body">
-        <section class="experiment-structure" aria-label="Experiment structure">
-          <span>Experiment structure</span><strong>1 experiment</strong><i>→</i><strong>3 conditions</strong><i>→</i><strong>3 decision rounds per condition</strong><i>→</i><strong>12 independent agent decisions per round</strong>
-        </section>
-
-        <section class="case-overview" aria-labelledby="case-overview-title">
-          <div class="case-comparison-heading"><span class="section-kicker">Result first</span><h3 id="case-overview-title">How the decision environment changed across three conditions</h3></div>
-          <div id="case-trajectories" class="case-trajectories"></div>
-          <div class="table-scroll" role="region" aria-label="Three environment result comparison" tabindex="0">
-            <table class="case-overview-table">
-              <thead><tr><th>Environment</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Outcome</th></tr></thead>
-              <tbody id="case-overview-table"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="case-setup" aria-label="Scenario setup">
-          <div><span>The decision</span><h3>Launch a joint regional response—or wait</h3><p>A respiratory outbreak is growing across the fictional countries of Alba, Borin, and Cyrenia. The plan shares de-identified case data, laboratory capacity, mixed investigation teams, and supplies.</p></div>
-          <div><span>Participants and baseline conditions</span><h3>Twelve roles begin with an executable plan</h3><p>Each country contributes an epidemiologist, policy delegate, and operations lead; three regional roles coordinate shared action. Legal, scientific, privacy, and initial resource prerequisites are already satisfied.</p></div>
-        </section>
-
-        <section class="decision-contract" aria-labelledby="decision-contract-title">
-          <div class="case-comparison-heading"><span class="section-kicker">Decision contract</span><h3 id="decision-contract-title">What each stance means—and exactly how approval is calculated</h3></div>
-          <div class="decision-definitions">
-            <article><b class="decision-support">Support</b><p>Ready to proceed now.</p></article>
-            <article><b class="decision-conditional">Conditional</b><p>Ready if a named requirement is satisfied.</p></article>
-            <article><b class="decision-defer">Defer</b><p>Insufficient basis or capacity to proceed now.</p></article>
-            <article><b class="decision-oppose">Oppose</b><p>Recommends not proceeding.</p></article>
-          </div>
-          <p class="gate-rule">The coalition approves after round three only when all three gates pass.</p>
-          <div class="table-scroll" role="region" aria-label="Approval gate calculations" tabindex="0">
-            <table class="gate-audit-table"><thead><tr><th>Environment</th><th>Approval condition</th><th>Required</th><th>Observed</th><th>Status</th></tr></thead><tbody id="case-gate-table"></tbody></table>
-          </div>
-        </section>
-
-        <section class="dependency-comparison" aria-labelledby="dependency-title">
-          <div class="case-comparison-heading"><span class="section-kicker">What changed</span><h3 id="dependency-title">Each constraint creates a dependency; the verified package resolves it in place</h3></div>
-          <div class="dependency-grid">
-            <article><span>Alba</span><h4>Laboratory capacity</h4><p><b>Constraint</b> Equipment failure removes half of the strongest laboratory’s capacity.</p><p><b>Minimum</b> Preserve domestic confirmation capacity.</p><p class="resolution"><b>Verified resolution</b> A mobile unit restores shared testing while Alba retains half its laboratory.</p></article>
-            <article><span>Borin</span><h4>Clinical staffing</h4><p><b>Constraint</b> The transport hub cannot handle the surge without more clinicians.</p><p><b>Minimum</b> Receive staff before keeping the hub open.</p><p class="resolution"><b>Verified resolution</b> Twenty-four regional clinicians are assigned before the surge.</p></article>
-            <article><span>Cyrenia</span><h4>Field-team supplies</h4><p><b>Constraint</b> Field teams lack diagnostics and protective equipment.</p><p><b>Minimum</b> Receive a named shipment before deployment.</p><p class="resolution"><b>Verified resolution</b> Diagnostics and protective equipment are confirmed for delivery.</p></article>
-            <article class="regional-dependency"><span>Regional conflict</span><h4>The minimum requirements cannot all be met within 48 hours</h4><p class="resolution"><b>Verified resolution</b> The complete allocation satisfies all three minimums and retains a 10% regional reserve.</p></article>
-          </div>
-        </section>
-
-        <section class="causal-comparison" aria-labelledby="causal-title">
-          <div class="case-comparison-heading"><span class="section-kicker">Causal chain within the simulation</span><h3 id="causal-title">Different inputs, one directional change</h3></div>
-          <div class="causal-path causal-failed"><strong>Locally different pressures</strong><i>→</i><span>Capacity and legitimacy become salient risks</span><i>→</i><span>Verification and resource requests accumulate</span><i>→</i><span>Readiness falls</span><i>→</i><b>Decision gate fails</b></div>
-          <div class="causal-path causal-restored"><strong>Authoritative stabilization</strong><i>→</i><span>Uncertainty and allocations become bounded</span><i>→</i><span>Commitments become compatible</span><i>→</i><span>Readiness returns</span><i>→</i><b>Decision gate passes</b></div>
-          <p>The intervention changes the decision environment; it does not alter participant mandates or dictate votes. This probe directly tests coordination readiness and perceived risk. It does not claim to measure private trust or reproduce a fully autonomous influence swarm.</p>
-        </section>
-
-        <section id="agent-evidence-preview" class="agent-evidence-preview" aria-labelledby="agent-preview-title"></section>
-
-        <details id="all-agent-evidence" class="advanced-evidence">
-          <summary><span>Inspect all agent decisions</span><small>Compare one participant’s decisions, concerns, requests, and structured outputs across environments</small></summary>
-          <div class="advanced-evidence-body">
-            <div class="advanced-evidence-heading">
-              <div><span class="eyebrow">Participant example</span><h3 id="mechanism-person-title">Participant trajectory by condition</h3></div>
-              <label class="select-control">Participant
-                <select id="mechanism-person-select"></select>
-              </label>
-            </div>
-            <div id="waltzman-lens" class="waltzman-lens"></div>
-            <div class="table-scroll" role="region" aria-label="Role-aligned mechanism comparison" tabindex="0">
-              <table>
-                <thead><tr><th>Condition</th><th>What changed</th><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Coalition result</th></tr></thead>
-                <tbody id="mechanism-table"></tbody>
-              </table>
-            </div>
-            <p class="advanced-paths">Use <strong>Inspect decisions</strong> to read every structured rationale and outside development, or <strong>How it works</strong> for the experiment contract and limitations.</p>
-          </div>
-        </details>
-          </div>
-        </details>
       </section>
 
       <section id="inspect-view" class="workspace-view" aria-labelledby="inspect-title" hidden>
@@ -746,7 +653,7 @@
     </section>
   </main>
 
-  <script src="assets/graph-canvas.js?v=ontology2" defer></script>
-  <script src="assets/app.js?v=ontology2" defer></script>
+  <script src="assets/graph-canvas.js?v=cleanup1" defer></script>
+  <script src="assets/app.js?v=cleanup1" defer></script>
 </body>
 </html>
