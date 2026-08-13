@@ -876,7 +876,7 @@ function renderGuide() {
   $('#guide-progress').innerHTML = guideSteps.map((candidate, index) => `<button type="button" data-guide-step="${index}" class="${index === state.guideStep ? 'active' : ''}" aria-label="Open step ${index + 1}: ${escapeHtml(candidate.title)}" aria-current="${index === state.guideStep ? 'step' : 'false'}">${index + 1}</button>`).join('')
   $('#guide-previous').disabled = state.guideStep === 0
   $('#guide-next').textContent = state.guideStep === guideSteps.length - 1
-    ? 'Continue: Explore all simulations →'
+    ? 'Continue: Create your own simulation →'
     : `Next: ${guideSteps[state.guideStep + 1].kicker} →`
   all('[data-guide-step]').forEach((button) => {
     button.onclick = () => { state.guideStep = Number(button.dataset.guideStep); renderGuide(); syncUrl() }
@@ -919,7 +919,7 @@ async function ensureGuideRun() {
 function advanceGuide(direction) {
   const next = state.guideStep + direction
   if (next >= guideSteps.length) {
-    state.view = 'simulations'
+    state.view = 'create'
     renderView()
     syncUrl()
     window.scrollTo({top:0, behavior:'auto'})

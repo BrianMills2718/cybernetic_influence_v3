@@ -71,7 +71,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert shape.h1_count == 1
     assert "Coordination Environment Lab" in page
     assert "New simulation" in page
-    assert "Guided example" in page
+    assert ">Guided example</button>" not in page
+    assert "Start the product walkthrough" in page
+    assert "Understand the purpose" in page
+    assert "Read a simulation" in page
+    assert "Create your own" in page
     assert "All simulations" in page
     assert "Methodology" in page
     assert "Every completed simulation automatically becomes the same guided replay" in page
@@ -91,8 +95,8 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Explore detection and bounded response" in page
     assert "below the level of “the institution”" not in page
     assert "Homogeneous broadcasts" in page
-    assert "See how the simulator turns a configured world into a causal record" in page
-    assert "Canonical walkthrough · retained Luna execution" in page
+    assert "Learn how to read a simulation before building one" in page
+    assert "Product walkthrough · retained Luna execution" in page
     assert "Every displayed node, connection, mechanism, and event comes from the retained run" in page
     assert "The view switches from configured structure to realized causal events" in page
     assert "Deliver one generator before the clinic loses power" not in page
@@ -135,11 +139,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Authority boundary: now versus adopted" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=cleanup1",
-        "assets/styles.css?v=authoring1",
+        "assets/styles.css?v=walkthrough1",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=cleanup1",
-        "assets/app.js?v=authoring1",
+        "assets/app.js?v=walkthrough1",
     ]
     assert {
         "overview-view",

@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=cleanup1">
-  <link rel="stylesheet" href="assets/styles.css?v=authoring1">
+  <link rel="stylesheet" href="assets/styles.css?v=walkthrough1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -21,7 +21,6 @@
     <nav class="view-tabs" aria-label="Primary navigation">
       <button type="button" data-view="overview">Overview</button>
       <button type="button" data-view="case">Case study</button>
-      <button type="button" data-view="guide">Guided example</button>
       <button type="button" data-view="create">New simulation</button>
       <span class="view-tabs-divider" aria-hidden="true"></span>
       <button type="button" data-view="simulations">All simulations</button>
@@ -89,12 +88,18 @@
         <section class="overview-flow" aria-label="Product workflow">
           <article><b>1</b><div><strong>Describe a world</strong><p>Start in ordinary language.</p></div></article><i>→</i><article><b>2</b><div><strong>Review the configuration</strong><p>Edit the generated people and scenario assumptions.</p></div></article><i>→</i><article><b>3</b><div><strong>Run and inspect</strong><p>Follow the world, actions, coordination process, and evidence.</p></div></article>
         </section>
+        <button class="walkthrough-start" type="button" data-view="guide"><span>New here?</span><strong>Start the product walkthrough →</strong><small>Learn how to read one retained simulation, then create your own.</small></button>
       </section>
 
       <section id="guide-view" class="workspace-view guided-example" aria-labelledby="guide-title" hidden>
+        <nav class="walkthrough-path" aria-label="Product walkthrough">
+          <button type="button" data-view="overview"><b>1</b><span>Understand the purpose</span></button>
+          <div class="active" aria-current="step"><b>2</b><span>Read a simulation</span></div>
+          <button type="button" data-view="create"><b>3</b><span>Create your own</span></button>
+        </nav>
         <header class="guide-header">
-          <div><span class="case-label">Canonical walkthrough · retained Luna execution</span><h2 id="guide-title">See how the simulator turns a configured world into a causal record.</h2><p>This walkthrough reveals one completed election-certification simulation in seven steps. Every displayed node, connection, mechanism, and event comes from the retained run—not from a separate teaching ontology.</p></div>
-          <button class="quiet-button" type="button" data-view="simulations">Explore completed simulations</button>
+          <div><span class="case-label">Product walkthrough · retained Luna execution</span><h2 id="guide-title">Learn how to read a simulation before building one.</h2><p>This part of the walkthrough reveals one completed election-certification simulation in seven steps. Every displayed node, connection, mechanism, and event comes from the retained run—not from a separate teaching ontology.</p></div>
+          <button class="quiet-button" type="button" data-view="overview">Back to overview</button>
         </header>
 
         <nav class="guide-controls" aria-label="Walkthrough controls">
@@ -663,6 +668,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=cleanup1" defer></script>
-  <script src="assets/app.js?v=authoring1" defer></script>
+  <script src="assets/app.js?v=walkthrough1" defer></script>
 </body>
 </html>
