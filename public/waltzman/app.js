@@ -1172,6 +1172,27 @@ function navigateLab(view, section = 'overview') {
   window.requestAnimationFrame(() => target ? $(target).scrollIntoView({behavior:'auto', block:'start'}) : window.scrollTo({top:0, behavior:'auto'}))
 }
 
+function resetAuthoringWorkspace() {
+  authoringDraft = null
+  authoredResult = null
+  authoredRunId = null
+  authoredRunProgressSequence = 0
+  authoredRunPollFailures = 0
+  selectedAuthoringPerson = null
+  selectedGeneralPerson = null
+  selectedGeneralRecord = null
+  selectedGeneralState = null
+  selectedGeneralInformation = null
+  selectedGeneralMoment = null
+  document.body.classList.remove('authored-result')
+  $('#create-review').classList.remove('result-mode')
+  $('#create-run-status').hidden = true
+  $('#create-result').hidden = true
+  $('.create-composer').hidden = false
+  $('.create-hero .case-label').textContent = 'Create a simulation'
+  if (authoredRunPollHandle) window.clearTimeout(authoredRunPollHandle)
+}
+
 function openRun(runId, resetPerson = true) {
   state.runId = runId
   state.round = 3
@@ -1188,7 +1209,12 @@ function configureControls() {
   $('#run-select').innerHTML = dataset.runs.map((run) => `<option value="${escapeHtml(run.run_id)}">${escapeHtml(runLabel(run))} · ${escapeHtml(run.run_id)}</option>`).join('')
   $('#run-select').onchange = (event) => openRun(event.target.value)
   all('[data-view]').forEach((button) => {
-    button.onclick = () => { state.view = button.dataset.view; renderView(); syncUrl() }
+    button.onclick = () => {
+      if (button.dataset.view === 'create') resetAuthoringWorkspace()
+      state.view = button.dataset.view
+      renderView()
+      syncUrl()
+    }
   })
   all('[data-case-graph]').forEach((button) => {
     button.onclick = () => { caseGraphMode = button.dataset.caseGraph; renderCaseNetworkGraph() }
@@ -1227,21 +1253,7 @@ function configureControls() {
   $('#create-run').onclick = runAuthoredSimulation
   $('#create-stop').onclick = stopAuthoredSimulation
   $('#create-start-over').onclick = () => {
-    authoringDraft = null
-    authoredResult = null
-    document.body.classList.remove('authored-result')
-    selectedAuthoringPerson = null
-    selectedGeneralPerson = null
-    selectedGeneralRecord = null
-    selectedGeneralState = null
-    selectedGeneralInformation = null
-    selectedGeneralMoment = null
-    authoredRunId = null
-    authoredRunProgressSequence = 0
-    authoredRunPollFailures = 0
-    if (authoredRunPollHandle) window.clearTimeout(authoredRunPollHandle)
-    $('#create-run-status').hidden = true
-    $('#create-result').hidden = true
+    resetAuthoringWorkspace()
     renderCreateSimulation()
     syncUrl()
   }
@@ -1591,6 +1603,8 @@ function renderCreateSimulation() {
       return
     }
     setCreateFlow('describe')
+    $('.create-composer').hidden = false
+    $('.create-hero .case-label').textContent = 'Create a simulation'
     $('#create-review').hidden = true
     $('#create-status').textContent = author
       ? 'Describe a sociotechnical world to begin. The authoring model will generate a retained typed draft.'

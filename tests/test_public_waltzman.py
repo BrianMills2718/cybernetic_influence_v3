@@ -155,7 +155,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=cleanup1",
-        "assets/app.js?v=authoring4",
+        "assets/app.js?v=authoring5",
     ]
     assert {
         "overview-view",
@@ -415,6 +415,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "if every typed output needs one repair" in script
     assert "Causal moments" in script
     assert "Retained model calls" in script
+    assert "function resetAuthoringWorkspace()" in script
+    assert "if (button.dataset.view === 'create') resetAuthoringWorkspace()" in script
 
     for capability in (
         "renderRunSetup",
