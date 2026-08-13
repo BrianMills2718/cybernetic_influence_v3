@@ -1374,6 +1374,49 @@ function draftTemplateLabel(templateId) {
   return labels[templateId] || sentence(templateId || 'unresolved template')
 }
 
+function renderAuthoringBrief(proposal) {
+  const workflow = proposal.workflow || {}
+  const people = proposal.people || []
+  const peopleById = new Map(people.map((person) => [person.entity_id, person]))
+  const objectsById = new Map((proposal.objects || []).map((item) => [item.entity_id, item]))
+  const informationById = new Map((proposal.information || []).map((item) => [item.information_id, item]))
+  const deliveries = workflow.deliveries || []
+  const question = workflow.collective_question || workflow.collective_goal?.description || proposal.description
+  $('#create-brief-question').innerHTML = `<strong>${escapeHtml(question)}</strong>`
+  $('#create-brief-people').innerHTML = `<strong>${people.length} independent ${people.length === 1 ? 'person' : 'people'}</strong><p>${people.map((person) => escapeHtml(person.label)).join(' · ')}</p>`
+  if (deliveries.length) {
+    $('#create-brief-influences').innerHTML = `<ol>${deliveries.map((delivery) => {
+      const source = objectsById.get(delivery.source_id)?.label || delivery.source_id
+      const recipients = (delivery.recipient_ids || []).map((id) => peopleById.get(id)?.label || id)
+      const content = informationById.get(delivery.information_id)?.content || delivery.information_id
+      return `<li><strong>${escapeHtml(source)} → ${escapeHtml(recipients.join(', '))}</strong><span>Minute ${escapeHtml(delivery.delivery_minutes)} · ${escapeHtml(content)}</span></li>`
+    }).join('')}</ol>`
+  } else {
+    const information = proposal.information || []
+    $('#create-brief-influences').innerHTML = information.length
+      ? `<strong>${information.length} configured information ${information.length === 1 ? 'item' : 'items'}</strong><p>${information.map((item) => escapeHtml(item.label)).join(' · ')}</p>`
+      : '<strong>No incoming information is configured.</strong>'
+  }
+  const rounds = workflow.round_minutes || (proposal.timing_assumptions || []).filter((item) => item.name.startsWith('decision_round_')).map((item) => item.minutes)
+  const rule = workflow.decision_rule
+  $('#create-brief-rule').innerHTML = rule
+    ? `<strong>${rounds.length} decision ${rounds.length === 1 ? 'round' : 'rounds'} · minutes ${escapeHtml(rounds.join(', '))}</strong><p>Passes with at least ${escapeHtml(rule.minimum_support)} full support, ${escapeHtml(rule.minimum_support_or_conditional)} support or conditional support, and no more than ${escapeHtml(rule.maximum_oppose)} opposition.</p>`
+    : `<strong>${rounds.length ? `${rounds.length} configured decision rounds` : draftTemplateLabel(workflow.template_id)}</strong><p>The reviewed template supplies the exact terminal rule.</p>`
+  const networkEditor = $('#create-network-editor')
+  const scenarioEditor = $('#create-scenario-editor')
+  all('[data-create-edit]').forEach((button) => {
+    button.onclick = () => {
+      let target
+      if (button.dataset.createEdit === 'people') target = $('.create-person-editor')
+      else target = !networkEditor.hidden ? networkEditor : !scenarioEditor.hidden ? scenarioEditor : $('.create-revise')
+      if (target.tagName === 'DETAILS') target.open = true
+      target.scrollIntoView({behavior:'smooth', block:'start'})
+      const focusTarget = target.querySelector('select, textarea, input')
+      if (focusTarget) window.setTimeout(() => focusTarget.focus(), 350)
+    }
+  })
+}
+
 function renderAuthoringPersonEditor() {
   const people = authoringDraft?.proposal?.people || []
   if (!people.length) return
@@ -1411,6 +1454,13 @@ function renderCreateSimulation() {
     $('#create-result').hidden = true
   }
   const author = authoringModel()
+  $('#create-view').classList.toggle('has-draft', Boolean(authoringDraft))
+  $('#create-title').textContent = authoringDraft
+    ? 'Review and run this simulation.'
+    : 'Build an influence-and-coordination simulation from a description.'
+  $('.create-hero > p').textContent = authoringDraft
+    ? 'Check the collective question, simulated people, information paths, and decision process. Everything below is retained and editable before Luna runs the simulation.'
+    : 'Describe the people, information sources, who receives which messages, and the collective decision. The authoring model generates an editable configuration; Luna then drives each person from their own character, memory, and received information.'
   $('#create-generate').disabled = !author || authoringBusy
   if (!authoringDraft) {
     if (authoredResult && document.body.classList.contains('authored-result')) {
@@ -1434,6 +1484,7 @@ function renderCreateSimulation() {
     ? diagnostics.map((item) => `<p class="create-diagnostic ${escapeHtml(item.severity)}"><strong>${escapeHtml(sentence(item.severity))}</strong>${escapeHtml(item.message)}</p>`).join('')
     : '<p class="create-diagnostic ready"><strong>Compiler check passed</strong>The draft can be reviewed and approved.</p>'
   if (!proposal) {
+    $('.create-brief').hidden = true
     setCreateFlow('review')
     $('#create-status').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
     $('#create-draft-title').textContent = 'Draft needs more information'
@@ -1453,6 +1504,8 @@ function renderCreateSimulation() {
   renderAuthoringCoverage(proposal)
   renderCoordinationScenarioEditor(proposal)
   renderInfluenceNetworkEditor(proposal)
+  $('.create-brief').hidden = false
+  renderAuthoringBrief(proposal)
   $('#create-draft-title').textContent = proposal.title
   $('#create-draft-description').textContent = proposal.description
   const boundaries = proposal.analytical_boundaries || []

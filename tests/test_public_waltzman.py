@@ -135,11 +135,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Authority boundary: now versus adopted" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=cleanup1",
-        "assets/styles.css?v=cleanup1",
+        "assets/styles.css?v=authoring1",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=cleanup1",
-        "assets/app.js?v=cleanup1",
+        "assets/app.js?v=authoring1",
     ]
     assert {
         "overview-view",
@@ -184,6 +184,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-prompt",
         "create-generate",
         "create-review",
+        "create-brief-question",
+        "create-brief-people",
+        "create-brief-influences",
+        "create-brief-rule",
         "create-world-facts",
         "create-world-groups",
         "create-people-list",
@@ -432,6 +436,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "advanceAuthoringDraft",
         "saveAuthoringPerson",
         "approveAuthoringDraft",
+        "renderAuthoringBrief",
         "runAuthoredSimulation",
             "stopAuthoredSimulation",
             "renderAuthoredResult",

@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=cleanup1">
-  <link rel="stylesheet" href="assets/styles.css?v=cleanup1">
+  <link rel="stylesheet" href="assets/styles.css?v=authoring1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -253,6 +253,16 @@
         <section id="create-review" class="create-review" hidden>
           <header><div><span>Generated simulation plan</span><h3 id="create-draft-title">Draft</h3><p id="create-draft-description"></p></div><div class="draft-state"><span id="create-draft-revision"></span><strong id="create-draft-state"></strong></div></header>
           <div id="create-diagnostics"></div>
+          <section class="create-brief" aria-labelledby="create-brief-title">
+            <header><div><span>Simulation brief</span><h3 id="create-brief-title">Check what the simulation will do</h3></div><p>These are the consequential choices. Edit them directly, ask the authoring model for a revision, or approve and run.</p></header>
+            <div class="create-brief-grid">
+              <article><span>1 · Collective question</span><div id="create-brief-question"></div><button type="button" data-create-edit="network">Edit question and schedule</button></article>
+              <article><span>2 · Simulated people</span><div id="create-brief-people"></div><button type="button" data-create-edit="people">Edit a person</button></article>
+              <article><span>3 · Information paths</span><div id="create-brief-influences"></div><button type="button" data-create-edit="network">Edit messages and recipients</button></article>
+              <article><span>4 · Decision process</span><div id="create-brief-rule"></div><button type="button" data-create-edit="network">Edit rounds and decision rule</button></article>
+            </div>
+          </section>
+          <div class="create-actions"><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation</button><button id="create-start-over" class="quiet-button" type="button">Change the original description</button></div>
           <details id="create-coverage" class="create-coverage"><summary id="create-coverage-summary">What will actually run</summary><div id="create-coverage-detail"></div></details>
           <section class="create-world-summary" aria-labelledby="create-world-title"><div><span>World</span><h3 id="create-world-title">What the draft contains</h3></div><div id="create-world-facts"></div><div id="create-world-groups"></div></section>
           <section class="create-people" aria-labelledby="create-people-title"><div><span>People</span><h3 id="create-people-title">Review the simulated people</h3></div><div id="create-people-list"></div></section>
@@ -261,7 +271,6 @@
           <details id="create-network-editor" class="create-scenario-editor" hidden><summary>Edit the influence network directly</summary><div class="create-scenario-grid"><label>Simulation title<input id="create-network-title"></label><label>Situation<textarea id="create-network-description" rows="3"></textarea></label><label>Collective decision<textarea id="create-network-question" rows="3"></textarea></label><label>Decision-round times <small>Comma separated</small><input id="create-network-rounds"></label><label>What people see from earlier rounds<select id="create-network-feedback"><option value="none">Only the shared question</option><option value="stances">Public stances</option><option value="stances_and_reasons">Stances and stated reasons</option></select></label><label>Minimum full support<input id="create-network-min-support" type="number" min="0" step="1"></label><label>Minimum support or conditional<input id="create-network-min-combined" type="number" min="1" step="1"></label><label>Maximum opposition<input id="create-network-max-oppose" type="number" min="0" step="1"></label></div><div><h4>Messages and explicit recipients</h4><div id="create-network-deliveries" class="create-network-deliveries"></div></div><button id="create-save-network" type="button">Save network without another model call</button><p id="create-network-status" class="create-status" aria-live="polite"></p></details>
           <section class="create-revise"><label for="create-revision-prompt"><strong>Tell the authoring model what to change</strong><textarea id="create-revision-prompt" rows="4" placeholder="Make the technical reviewer more skeptical, clarify the legal constraint, and delay the local-health report until the third meeting."></textarea></label><button id="create-revise" type="button">Generate revised configuration</button></section>
           <details class="create-raw"><summary>Inspect complete typed configuration</summary><pre id="create-raw-configuration"></pre></details>
-          <div class="create-actions"><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation</button><button id="create-start-over" class="quiet-button" type="button">Start over</button></div>
           <section id="create-run-status" class="create-run-status" hidden aria-live="polite">
             <strong id="create-run-heading"></strong>
             <p id="create-run-detail"></p>
@@ -654,6 +663,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=cleanup1" defer></script>
-  <script src="assets/app.js?v=cleanup1" defer></script>
+  <script src="assets/app.js?v=authoring1" defer></script>
 </body>
 </html>
