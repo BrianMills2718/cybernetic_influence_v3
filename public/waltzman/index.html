@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=cleanup1">
-  <link rel="stylesheet" href="assets/styles.css?v=methodology2">
+  <link rel="stylesheet" href="assets/styles.css?v=authoring1">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -242,16 +242,16 @@
       <section id="create-view" class="workspace-view create-simulation" aria-labelledby="create-title" hidden>
         <header class="create-hero">
           <span class="case-label">Create a simulation</span>
-          <h2 id="create-title">Build an influence-and-coordination simulation from a description.</h2>
-          <p>Describe the people, information sources, who receives which messages, and the collective decision. The authoring model generates an editable configuration; Luna then drives each person from their own character, memory, and received information.</p>
+          <h2 id="create-title">Describe a simulation.</h2>
+          <p>Describe the people, information sources, recipients, and collective decision. Luna will generate an editable simulation before anything runs.</p>
           <p class="create-capability-note"><strong>Runnable now:</strong> influence networks with 3–12 people, targeted or broadcast messages, repeated decision rounds, and an exact collective decision rule.</p>
         </header>
 
         <nav class="create-flow" aria-label="Simulation workflow"><span class="active">1 · Describe</span><span>2 · Review</span><span>3 · Run</span><span>4 · Replay</span></nav>
 
         <section class="create-composer" aria-labelledby="create-prompt-title">
-          <label for="create-prompt"><strong id="create-prompt-title">What collective decision and information environment should it model?</strong><textarea id="create-prompt" rows="7" placeholder="For example: Seven people must decide whether to issue a joint election warning. Everyone receives the same public audit bulletin; selected people also receive different technical, legal, and community claims before three decision rounds."></textarea></label>
-          <div><button id="create-generate" class="primary-cta" type="button">Generate editable configuration</button><button id="create-example-prompt" class="quiet-button" type="button">Use example prompt</button></div>
+          <label for="create-prompt"><strong id="create-prompt-title">What should happen in the simulation?</strong><textarea id="create-prompt" rows="5" placeholder="For example: Seven people must decide whether to issue a joint election warning. Everyone receives the same public audit bulletin; selected people also receive different technical, legal, and community claims before three decision rounds."></textarea></label>
+          <div><button id="create-generate" class="primary-cta" type="button">Generate editable simulation</button><button id="create-example-prompt" class="quiet-button" type="button">Use example prompt</button></div>
           <p id="create-status" class="create-status" aria-live="polite">Describe a collective decision and the influences entering it.</p>
         </section>
 
@@ -674,6 +674,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=cleanup1" defer></script>
-  <script src="assets/app.js?v=methodology2" defer></script>
+  <script src="assets/app.js?v=authoring1" defer></script>
 </body>
 </html>

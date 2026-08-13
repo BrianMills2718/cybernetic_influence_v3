@@ -1156,10 +1156,10 @@ tbody tr:last-child td { border-bottom: 0; }
 /* Conversational typed authoring. */
 .guided-result #create-view { margin: 0 auto; max-width: 1120px; }
 .guided-result.authored-result #create-view { max-width: 1440px; }
-.create-simulation { display: grid; gap: 36px; }
+.create-simulation { display: grid; gap: 22px; }
 .create-hero { max-width: 900px; }
-.create-hero h2 { font-size: clamp(2.5rem, 5vw, 4.5rem); letter-spacing: -0.05em; line-height: 1.03; margin: 14px 0 20px; max-width: 17ch; }
-.create-hero > p { color: var(--muted); font-size: 1.05rem; line-height: 1.7; max-width: 75ch; }
+.create-hero h2 { font-size: clamp(2rem, 3.6vw, 3.4rem); letter-spacing: -0.045em; line-height: 1.03; margin: 10px 0 12px; max-width: 20ch; }
+.create-hero > p { color: var(--muted); font-size: 0.95rem; line-height: 1.55; margin: 0 0 10px; max-width: 72ch; }
 .create-hero .create-capability-note { border-left: 2px solid var(--accent); font-size: 0.82rem; padding-left: 12px; }
 .create-hero .create-capability-note strong { color: var(--text); }
 .create-simulation.has-draft { gap: 22px; }
@@ -1169,7 +1169,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-flow { display: grid; gap: 1px; grid-template-columns: repeat(4, 1fr); max-width: 760px; }
 .create-flow span { background: var(--panel); color: var(--muted); font-size: 0.75rem; font-weight: 750; padding: 11px 13px; }
 .create-flow span.active { background: #173249; color: #fff; }
-.create-composer { background: var(--panel); border: 1px solid var(--line-strong); border-radius: 14px; padding: 26px; }
+.create-composer { background: var(--panel); border: 1px solid var(--line-strong); border-radius: 14px; padding: 22px 26px; }
 .create-composer label, .create-revise label, .create-person-editor label, .create-scenario-editor label { color: var(--muted); display: grid; font-size: 0.78rem; gap: 8px; }
 .create-composer label > strong, .create-revise label > strong { color: var(--text); font-size: 1.1rem; }
 .create-composer textarea, .create-revise textarea, .create-person-editor textarea, .create-person-editor input, .create-person-editor select, .create-scenario-editor textarea, .create-scenario-editor input, .create-scenario-editor select { background: #07121b; border: 1px solid var(--line); border-radius: 8px; color: var(--text); font: inherit; line-height: 1.55; padding: 12px; width: 100%; }
@@ -1416,8 +1416,15 @@ tbody tr:last-child td { border-bottom: 0; }
   .overview-capabilities > div, .overview-influence > div, .national-network-grid, #create-world-facts, #create-world-groups, .create-brief-grid { grid-template-columns: 1fr; }
   .create-brief > header { align-items: start; flex-direction: column; gap: 8px; }
   .national-network-grid .regional-network { grid-column: auto; }
+  .create-simulation { gap: 16px; }
+  .create-hero h2 { font-size: 2.35rem; margin: 7px 0 9px; }
+  .create-hero > p { font-size: 0.83rem; line-height: 1.42; margin-bottom: 7px; }
+  .create-hero .create-capability-note { font-size: 0.72rem; }
+  .create-composer { padding: 17px; }
+  .create-composer textarea { max-height: 116px; }
   .create-composer > div, .create-actions { align-items: stretch; flex-direction: column; }
-  .create-flow { grid-template-columns: 1fr 1fr; }
+  .create-flow { grid-template-columns: repeat(4, 1fr); }
+  .create-flow span { font-size: 0.66rem; padding: 9px 6px; text-align: center; }
   .create-replay-controls { align-items: stretch; flex-direction: column; }
   .create-replay-controls > div:last-child { display: grid; grid-template-columns: .7fr 1.3fr; }
   .create-result-facts { grid-template-columns: 1fr 1fr; }

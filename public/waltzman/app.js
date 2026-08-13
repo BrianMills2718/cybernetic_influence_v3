@@ -1457,10 +1457,10 @@ function renderCreateSimulation() {
   $('#create-view').classList.toggle('has-draft', Boolean(authoringDraft))
   $('#create-title').textContent = authoringDraft
     ? 'Review and run this simulation.'
-    : 'Build an influence-and-coordination simulation from a description.'
+    : 'Describe a simulation.'
   $('.create-hero > p').textContent = authoringDraft
     ? 'Check the collective question, simulated people, information paths, and decision process. Everything below is retained and editable before Luna runs the simulation.'
-    : 'Describe the people, information sources, who receives which messages, and the collective decision. The authoring model generates an editable configuration; Luna then drives each person from their own character, memory, and received information.'
+    : 'Describe the people, information sources, recipients, and collective decision. Luna will generate an editable simulation before anything runs.'
   $('#create-generate').disabled = !author || authoringBusy
   if (!authoringDraft) {
     if (authoredResult && document.body.classList.contains('authored-result')) {
