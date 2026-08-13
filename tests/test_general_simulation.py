@@ -20,11 +20,12 @@ from cybernetic_influence.general_simulation.models import (
     Assimilation,
     Consequence,
     PatchOperation,
+    Precondition,
     SemanticActionIntent,
     TypedTarget,
     WorldTransaction,
 )
-from cybernetic_influence.general_simulation.world import state_hash
+from cybernetic_influence.general_simulation.world import CanonicalWorld, state_hash
 
 
 def structured_stub(
@@ -117,6 +118,51 @@ def test_actor_context_never_contains_hidden_sabotage_cause() -> None:
     _prepare_world(world)
 
     assert "sabotage" not in world.actor_context("worker").model_dump_json().lower()
+
+
+def test_world_supports_typed_nested_state_fields() -> None:
+    spec = bridge_port_spec()
+    spec.initial_state.records["fuel_truck"].state["status"] = "available"
+    authority = next(
+        item for item in spec.authorities if item.authority_id == "port_deterministic_mechanics"
+    )
+    authority.patch_grammar.allowed_record_types.append("record")
+    world = CanonicalWorld(spec)
+
+    result = world.validate_and_commit(
+        WorldTransaction(
+            transaction_id="nested-state-update",
+            base_revision=0,
+            authority_id=authority.authority_id,
+            intent_ids=["fixture"],
+            operations=[
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="record",
+                        record_id="fuel_truck",
+                        field="state.status",
+                    ),
+                    value="assigned",
+                )
+            ],
+            preconditions=[
+                Precondition(
+                    target=TypedTarget(
+                        record_type="record",
+                        record_id="fuel_truck",
+                        field="state.status",
+                    ),
+                    expected="available",
+                )
+            ],
+            consequences=[],
+            stated_rationale="Exercise a semantic nested state field.",
+        )
+    )
+
+    assert result.accepted
+    assert world.state.records["fuel_truck"].state["status"] == "assigned"
 
 
 def test_strict_checkpoint_rejects_missing_canonical_world() -> None:
@@ -263,9 +309,10 @@ def test_stock_concordia_vertical_restores_and_commits_open_action() -> None:
 
 
 def test_concordia_adapter_does_not_import_legacy_project_runtimes() -> None:
-    source = Path(
-        "src/cybernetic_influence/general_simulation/concordia_runtime.py"
-    ).read_text(encoding="utf-8")
+    package = Path("src/cybernetic_influence/general_simulation")
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted(package.glob("*.py"))
+    )
 
     assert "CausalSession" not in source
     assert "ActiveRuntimeSession" not in source

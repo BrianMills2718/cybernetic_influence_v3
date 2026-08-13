@@ -49,6 +49,8 @@ from cybernetic_influence.general_simulation.authoring_models import (
     GeneralSimulationProposalV1,
 )
 from cybernetic_influence.general_simulation.compiler import GeneralCompilationError
+from cybernetic_influence.general_simulation.projection import project_general_run
+from cybernetic_influence.general_simulation.runner import run_general_simulation
 
 from cybernetic_influence import __version__
 from cybernetic_influence.active_runtime import (
@@ -1616,6 +1618,7 @@ def create_app(
     *,
     authoring_root: Path | None = None,
     authoring_call: StructuredCall | None = None,
+    general_simulation_call: StructuredCall | None = None,
     measurement_call: MeasurementStructuredCall | None = None,
     allow_internal_scripted_coordination: bool = False,
     allow_inline_styles: bool = False,
@@ -2676,6 +2679,164 @@ def create_app(
                 effective_llm = resolve_live_configuration(body.llm_options)
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error)) from error
+        try:
+            draft_document = drafts.get(draft_id)
+        except DraftNotFoundError as error:
+            raise HTTPException(status_code=404, detail="authoring draft not found") from error
+        if draft_document.get("target_kind") == "general_world_v1":
+            if not live or effective_llm is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="general-world simulations require live Luna execution",
+                )
+            try:
+                general_compiled = authoring.approved_general_compile(draft_id)
+            except (ValueError, GeneralCompilationError) as error:
+                raise HTTPException(status_code=409, detail=str(error)) from error
+            worker_execution = bool(getattr(authored_live_worker_context, "active", False))
+            lock_acquired = True if worker_execution else live_lock.acquire(blocking=False)
+            if not lock_acquired:
+                raise HTTPException(status_code=409, detail="another live run is already active")
+            run_id = (
+                str(authored_live_worker_context.run_id)
+                if worker_execution
+                else f"run_{uuid4().hex[:12]}"
+            )
+            if worker_execution:
+                try:
+                    initial = runs.get(run_id)
+                except (InvalidRunIdError, RunNotFoundError, RunCorruptError) as error:
+                    raise RuntimeError("general live worker could not reopen its run") from error
+                created_at = str(initial["created_at"])
+            else:
+                created_at = now_iso()
+                initial = {
+                    "run_id": run_id,
+                    "created_at": created_at,
+                    "status": "running",
+                    "scenario": general_compiled.proposal.simulation_id,
+                    "profile": "general_world_v1",
+                    "arm": "approved_draft",
+                    "execution": "live",
+                    "model_calls": 0,
+                    "cost": 0.0,
+                    "llm_configuration": effective_llm.model_dump(mode="json"),
+                    "authoring": {
+                        "draft_id": draft_id,
+                        "proposal_kind": "general_world_v1",
+                        "proposal_digest": general_compiled.proposal_digest,
+                        "registry_digest": general_compiled.registry_digest,
+                        "title": general_compiled.proposal.title,
+                        "description": general_compiled.proposal.description,
+                        "question": general_compiled.proposal.question,
+                        "people": [
+                            {
+                                "entity_id": person.entity_id,
+                                "label": person.label,
+                                "position": person.position,
+                            }
+                            for person in general_compiled.proposal.people
+                        ],
+                        "coverage": general_compiled.coverage.model_dump(mode="json"),
+                    },
+                    "live_progress": [],
+                    "progress_sequence": 0,
+                }
+                runs.save(initial)
+            if not worker_execution:
+                def execute_general_live_worker() -> None:
+                    authored_live_worker_context.active = True
+                    authored_live_worker_context.run_id = run_id
+                    try:
+                        run_approved_draft(draft_id, body, request)
+                    except Exception as error:
+                        runs.save(
+                            {
+                                **initial,
+                                "status": "failed",
+                                "error": f"{type(error).__name__}: {error}",
+                            }
+                        )
+                        if live_lock.locked():
+                            live_lock.release()
+                    finally:
+                        del authored_live_worker_context.run_id
+                        del authored_live_worker_context.active
+
+                Thread(
+                    target=execute_general_live_worker,
+                    name=f"cybernetic-general-live-{run_id}",
+                    daemon=True,
+                ).start()
+                return JSONResponse(status_code=202, content=initial)
+
+            def retain_general_progress(
+                update: dict[str, object], checkpoint: dict[str, object]
+            ) -> None:
+                current = runs.get(run_id)
+                history = current.get("live_progress")
+                retained_history = history if isinstance(history, list) else []
+                raw_sequence = current.get("progress_sequence", 0)
+                sequence = (raw_sequence if isinstance(raw_sequence, int) else 0) + 1
+                completed_moments = update.get("completed_moments", 0)
+                completed_moment_count = (
+                    completed_moments if isinstance(completed_moments, int) else 0
+                )
+                runs.save(
+                    {
+                        **current,
+                        "live_progress": [*retained_history, {**update, "sequence": sequence}],
+                        "progress_sequence": sequence,
+                        "model_calls": completed_moment_count
+                        * (len(general_compiled.proposal.people) + 1),
+                        "general_checkpoint": checkpoint,
+                    }
+                )
+
+            try:
+                general_result = run_general_simulation(
+                    general_compiled,
+                    run_id=run_id,
+                    call=general_simulation_call,
+                    progress_observer=retain_general_progress,
+                )
+                projected = project_general_run(
+                    general_compiled,
+                    general_result,
+                    run_id=run_id,
+                    created_at=created_at,
+                    execution="live",
+                )
+                projected["llm_configuration"] = initial["llm_configuration"]
+                retained = runs.get(run_id)
+                projected["live_progress"] = retained.get("live_progress", [])
+                projected["progress_sequence"] = retained.get("progress_sequence", 0)
+                projected["general_checkpoint"] = retained.get("general_checkpoint")
+                return runs.save(projected)
+            except Exception as error:
+                failed = runs.get(run_id)
+                failed_progress = failed.get("live_progress")
+                retained_failed = runs.save(
+                    {
+                        **failed,
+                        "status": "failed",
+                        "error": f"{type(error).__name__}: {error}",
+                        "resume_boundary": {
+                            "completed_moments": (
+                                len(failed_progress)
+                                if isinstance(failed_progress, list)
+                                else 0
+                            ),
+                            "checkpoint_retained": isinstance(
+                                failed.get("general_checkpoint"), dict
+                            ),
+                        },
+                    }
+                )
+                return retained_failed
+            finally:
+                if live_lock.locked():
+                    live_lock.release()
         try:
             compiled = authoring.approved_compile(draft_id)
         except DraftNotFoundError as error:

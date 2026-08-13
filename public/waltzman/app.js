@@ -2299,7 +2299,7 @@ async function runAuthoredSimulation() {
     $('#create-run-heading').textContent = 'Simulation running'
     $('#create-run-detail').textContent = `Retained run ${run.run_id} has started.`
     $('#create-stop').disabled = false
-    $('#create-stop').hidden = false
+    $('#create-stop').hidden = isGeneralProposal(authoringDraft.proposal)
     syncUrl()
     scheduleAuthoredRunPoll(run.run_id, 300)
   } catch (error) {

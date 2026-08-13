@@ -95,6 +95,7 @@ def _call_model(
     system: str,
     user: str,
     trace_id: str,
+    timeout_s: int = 100,
 ) -> tuple[Any, ModelCallReceipt]:
     with structured_backend_options(CODEX_LUNA_MODEL) as backend_options:
         parsed, meta = call(
@@ -110,7 +111,7 @@ def _call_model(
                 "inside an analyst-authored causal simulation."
             ),
             reasoning_effort="medium",
-            timeout=100,
+            timeout=timeout_s,
             **backend_options,
         )
     provider = str(getattr(meta, "provider", "codex"))

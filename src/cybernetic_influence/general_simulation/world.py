@@ -47,10 +47,20 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
         return self._state.model_copy(deep=True)
 
     @property
+    def spec(self) -> GeneralWorldSpec:
+        return self._spec.model_copy(deep=True)
+
+    @property
     def evidence(self) -> list[TransitionEvidence]:
         return copy.deepcopy(self._evidence)
 
-    def actor_context(self, actor_id: str) -> ActorContext:
+    def actor_context(
+        self,
+        actor_id: str,
+        *,
+        current_minute: int = 0,
+        delivered_representation_ids: set[str] | None = None,
+    ) -> ActorContext:
         access = next(
             (item for item in self._spec.actor_access if item.actor_id == actor_id), None
         )
@@ -61,6 +71,10 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             for item in self._state.representations.values()
             if actor_id in item.recipient_ids
             and item.representation_id in access.representation_ids
+            and (
+                delivered_representation_ids is None
+                or item.representation_id in delivered_representation_ids
+            )
         ]
         representation_observations = [
             Observation(
@@ -91,6 +105,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
         return ActorContext(
             actor_id=actor_id,
             base_revision=self._state.revision,
+            current_minute=current_minute,
             observations=observations,
             accessible_records=[
                 item.model_copy(update={"hidden_state": {}}, deep=True)
@@ -250,7 +265,13 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             return None
         if target.field is None:
             return cast(JsonValue, item.model_dump(mode="json"))
-        return cast(JsonValue, getattr(item, target.field))
+        segments = target.field.split(".")
+        value: Any = getattr(item, segments[0])
+        for segment in segments[1:]:
+            if not isinstance(value, dict):
+                raise ValueError(f"{target.field} does not identify nested state")
+            value = value[segment]
+        return cast(JsonValue, value)
 
     def _apply(self, state: GeneralWorldState, operation: PatchOperation) -> None:
         container = self._container(state, operation.target)
@@ -285,7 +306,20 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
         if operation.target.field is None:
             raise ValueError(f"{operation.operation} requires a target field")
         item = container[record_id]
-        setattr(item, operation.target.field, operation.value)
+        segments = operation.target.field.split(".")
+        if len(segments) == 1:
+            setattr(item, segments[0], operation.value)
+            return
+        value: Any = getattr(item, segments[0])
+        for segment in segments[1:-1]:
+            if not isinstance(value, dict):
+                raise ValueError(
+                    f"{operation.target.field} does not identify nested state"
+                )
+            value = value[segment]
+        if not isinstance(value, dict):
+            raise ValueError(f"{operation.target.field} does not identify nested state")
+        value[segments[-1]] = operation.value
 
     def _invariant_errors(self, state: GeneralWorldState) -> list[str]:
         errors: list[str] = []

@@ -156,6 +156,7 @@ class GeneralWorldSpec(StrictModel):
 class ActorContext(StrictModel):
     actor_id: str
     base_revision: int
+    current_minute: int = 0
     observations: list[Observation]
     accessible_records: list[WorldRecord]
     accessible_routes: list[Route]
@@ -255,4 +256,29 @@ class GeneralSimulationResult(StrictModel):
     transition_evidence: list[TransitionEvidence]
     model_calls: list[ModelCallReceipt]
     actor_contexts: list[ActorContext]
+    adoption: AdoptionReceipt
+
+
+class GeneralMomentEvidence(StrictModel):
+    moment_id: str
+    minute: int
+    description: str
+    frozen_revision: int
+    actor_ids: list[str]
+    intent_ids: list[str]
+    resulting_revision: int
+    checkpoint_hash: str
+
+
+class GeneralGroupSimulationResult(StrictModel):
+    simulation_id: str
+    title: str
+    question: str
+    proposal_digest: str
+    registry_digest: str
+    final_state: GeneralWorldState
+    transition_evidence: list[TransitionEvidence]
+    model_calls: list[ModelCallReceipt]
+    moments: list[GeneralMomentEvidence]
+    checkpoints: list[dict[str, Any]]
     adoption: AdoptionReceipt
