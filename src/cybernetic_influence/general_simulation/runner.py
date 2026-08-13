@@ -461,6 +461,74 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             validation = world.validate_and_commit(
                 transaction, envelope_corrections=corrections
             )
+            grammar_errors = [
+                error
+                for error in validation.errors
+                if "outside authority grammar" in error
+            ]
+            if grammar_errors and len(grammar_errors) == len(validation.errors):
+                self.receipts.append(receipt)
+                repaired, repair_receipt = _call_model(
+                    self._call,
+                    role="adjudicator",
+                    response_model=WorldTransaction,
+                    system=(
+                        "Repair one rejected transition-authority output. Preserve the "
+                        "substantive judgment, but use only operations and target record "
+                        "types in the supplied authority patch grammar. Actor-visible "
+                        "communications belong in consequences; do not create, replace, "
+                        "or rebind information representations unless the grammar explicitly "
+                        "allows that target type. Do not evade a world invariant or invent "
+                        "new evidence. Return only the corrected typed transaction."
+                    ),
+                    user=json.dumps(
+                        {
+                            "original_input": {
+                                "research_question": self._proposal.question,
+                                "moment": moment.model_dump(mode="json"),
+                                "world": world.state.model_dump(mode="json"),
+                                "intents": [item.model_dump(mode="json") for item in intents],
+                                "authority": authority.model_dump(mode="json"),
+                                "requirements": {
+                                    "authority_id": self._authority_id,
+                                    "base_revision": world.state.revision,
+                                    "intent_ids": [item.intent_id for item in intents],
+                                    "actor_visible_consequences_may_name": actor_ids,
+                                },
+                            },
+                            "rejected_output": transaction.model_dump(mode="json"),
+                            "validation_errors": validation.errors,
+                        },
+                        sort_keys=True,
+                    ),
+                    trace_id=(
+                        f"{self._trace_prefix}/moment/{len(self.moments) + 1}/"
+                        "adjudicator/repair/1"
+                    ),
+                    timeout_s=180,
+                )
+                repaired_transaction = WorldTransaction.model_validate(repaired).model_copy(
+                    update={
+                        "authority_id": self._authority_id,
+                        "base_revision": world.state.revision,
+                        "intent_ids": [item.intent_id for item in intents],
+                    }
+                )
+                if set(repaired_transaction.evidence_refs) - allowed_evidence_refs:
+                    raise ValueError("repaired adjudicator output cited unknown canonical evidence")
+                repaired_unknown_recipients = {
+                    item.recipient_id for item in repaired_transaction.consequences
+                } - set(actor_ids)
+                if repaired_unknown_recipients:
+                    raise ValueError("repaired adjudicator consequence named an unknown actor")
+                validation = world.validate_and_commit(
+                    repaired_transaction,
+                    envelope_corrections=[
+                        "one bounded repair followed an authority-grammar rejection"
+                    ],
+                )
+                transaction = repaired_transaction
+                receipt = repair_receipt
             self.receipts.append(receipt)
             self.moments.append(
                 GeneralMomentEvidence(

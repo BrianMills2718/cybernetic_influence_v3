@@ -1481,13 +1481,13 @@ function renderAuthoringBrief(proposal) {
     const peopleById = new Map(proposal.people.map((person) => [person.entity_id, person.label]))
     const recipients = representations.reduce((total, item) => total + item.recipient_ids.length, 0)
     const plannedCalls = proposal.schedule.length * (proposal.people.length + 1)
-    const maximumCalls = proposal.schedule.length * ((proposal.people.length * 2) + 1)
+    const maximumCalls = proposal.schedule.length * ((proposal.people.length * 2) + 2)
     $('#create-brief-question').innerHTML = `<strong>${escapeHtml(proposal.question)}</strong>`
     $('#create-brief-people').innerHTML = `<strong>${proposal.people.length} simulated ${proposal.people.length === 1 ? 'person' : 'people'}</strong><p>${proposal.people.map((person) => escapeHtml(person.label)).join(' · ')}</p>`
     $('#create-brief-influences').innerHTML = representations.length
       ? `<strong>${representations.length} information ${representations.length === 1 ? 'item' : 'items'} · ${recipients} explicit deliveries</strong><ol>${representations.map((item) => `<li><strong>${escapeHtml(item.apparent_source)} → ${escapeHtml(item.recipient_ids.map((id) => peopleById.get(id) || id).join(', '))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')}</ol>`
       : '<strong>No information paths are configured.</strong>'
-    $('#create-brief-rule').innerHTML = `<strong>${proposal.schedule.length} scheduled ${proposal.schedule.length === 1 ? 'moment' : 'moments'} · ${plannedCalls} planned model calls</strong><p>Up to ${maximumCalls} calls if every person output needs one repair.<br>${proposal.schedule.map((item) => `Minute ${escapeHtml(item.minute)} · ${escapeHtml(item.description)}`).join('<br>')}</p>`
+    $('#create-brief-rule').innerHTML = `<strong>${proposal.schedule.length} scheduled ${proposal.schedule.length === 1 ? 'moment' : 'moments'} · ${plannedCalls} planned model calls</strong><p>Up to ${maximumCalls} calls if every typed output needs one repair.<br>${proposal.schedule.map((item) => `Minute ${escapeHtml(item.minute)} · ${escapeHtml(item.description)}`).join('<br>')}</p>`
     all('[data-create-edit]').forEach((button) => {
       button.onclick = () => {
         const target = $('#create-general-editor')

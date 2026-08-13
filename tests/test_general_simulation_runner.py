@@ -14,7 +14,9 @@ from cybernetic_influence.general_simulation.compiler import compile_general_sim
 from cybernetic_influence.general_simulation.models import (
     ActorDecision,
     Assimilation,
+    PatchOperation,
     SemanticActionIntent,
+    TypedTarget,
     WorldTransaction,
 )
 from cybernetic_influence.general_simulation.runner import (
@@ -115,6 +117,80 @@ def test_actor_output_gets_one_bounded_validation_repair() -> None:
     assert len(result.moments) == 2
     assert len(result.model_calls) == 7
     assert any(item.trace_id.endswith("/repair/1") for item in result.model_calls)
+
+
+def test_adjudicator_output_gets_one_authority_grammar_repair() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        SERVICE_FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    injected_invalid_output = False
+
+    def repairing_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        nonlocal injected_invalid_output
+        user = json.loads(args[1][1]["content"])
+        if kwargs["response_model"] is ActorDecision:
+            context = user["actor_context"]
+            return ActorDecision(
+                assimilation=Assimilation(
+                    attended_observation_ids=[],
+                    memory_additions=[],
+                    memory_revisions=[],
+                    provenance_links=[],
+                    interpretation="Retain only authorized evidence.",
+                ),
+                intent=SemanticActionIntent(
+                    intent_id=f"intent_{context['actor_id']}_{context['base_revision']}",
+                    actor_id=context["actor_id"],
+                    base_revision=context["base_revision"],
+                    action="Propose a reversible check.",
+                    target_refs=[],
+                    purpose="Preserve evidence.",
+                    expected_effect="A bounded proposal.",
+                    stated_rationale="The cause remains uncertain.",
+                ),
+            ), SimpleNamespace(provider="fixture")
+        source = user.get("original_input", user)
+        operations: list[PatchOperation] = []
+        if not injected_invalid_output:
+            injected_invalid_output = True
+            operations = [
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="representation",
+                        record_id="service_status_update",
+                        field="content",
+                    ),
+                    value="An impermissible direct representation edit.",
+                )
+            ]
+        return WorldTransaction(
+            transaction_id=f"transaction_{source['moment']['moment_id']}",
+            base_revision=source["requirements"]["base_revision"],
+            authority_id=source["requirements"]["authority_id"],
+            intent_ids=source["requirements"]["intent_ids"],
+            operations=operations,
+            preconditions=[],
+            consequences=[],
+            evidence_refs=source["requirements"]["intent_ids"],
+            stated_rationale="Retain the current world after bounded validation.",
+        ), SimpleNamespace(provider="fixture")
+
+    result = run_general_simulation(
+        compiled,
+        run_id="run_adjudicator_repair_fixture",
+        call=repairing_call,
+    )
+
+    planned_calls = len(proposal.schedule) * (len(proposal.people) + 1)
+    assert len(result.model_calls) == planned_calls + 1
+    assert any(
+        item.trace_id.endswith("/adjudicator/repair/1")
+        for item in result.model_calls
+    )
+    assert result.transition_evidence[0].validation.accepted is False
+    assert result.transition_evidence[1].validation.accepted is True
 
 
 def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> None:

@@ -412,7 +412,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     style = STYLE.read_text(encoding="utf-8")
 
     assert "planned model calls" in script
-    assert "if every person output needs one repair" in script
+    assert "if every typed output needs one repair" in script
 
     for capability in (
         "renderRunSetup",
