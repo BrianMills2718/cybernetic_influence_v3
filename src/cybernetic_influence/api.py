@@ -1490,6 +1490,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         raw_moments=raw_moments,
     )
     readout = coordination_measurement_readout(document).model_dump(mode="json")
+    is_general_world = document.get("profile") == "general_world_v1"
     return {
         "run_id": document.get("run_id"),
         "created_at": document.get("created_at"),
@@ -1497,6 +1498,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "scenario": document.get("scenario"),
         "arm": document.get("arm"),
         "execution": document.get("execution"),
+        "profile": document.get("profile"),
         "title": authoring.get("title"),
         "description": authoring.get("description"),
         "template_id": authoring.get("template_id"),
@@ -1506,6 +1508,11 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "completion": projected_completion,
         "participant_model_calls": document.get(
             "agent_model_calls", document.get("model_calls", 0)
+        ),
+        "causal_moments": (
+            len(raw_moments)
+            if is_general_world and isinstance(raw_moments, list)
+            else None
         ),
         "narration_model_calls": document.get("narration_model_calls", 0),
         "participants": list(participants.values()),

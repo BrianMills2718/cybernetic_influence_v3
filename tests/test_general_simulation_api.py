@@ -230,6 +230,10 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     call_count = runtime_call.actor_counter
     summary = api.get(f"/api/runs/{run_id}/summary")
     assert summary.status_code == 200, summary.text
-    assert summary.json()["simulation_replay"]["scenes"]
-    assert len(summary.json()["theory_analysis"]["findings"]) == 5
+    summary_payload = summary.json()
+    assert summary_payload["profile"] == "general_world_v1"
+    assert summary_payload["causal_moments"] == 3
+    assert summary_payload["participant_model_calls"] == 15
+    assert summary_payload["simulation_replay"]["scenes"]
+    assert len(summary_payload["theory_analysis"]["findings"]) == 5
     assert runtime_call.actor_counter == call_count

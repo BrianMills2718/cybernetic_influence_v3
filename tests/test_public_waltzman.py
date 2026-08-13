@@ -413,6 +413,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
 
     assert "planned model calls" in script
     assert "if every typed output needs one repair" in script
+    assert "Causal moments" in script
+    assert "Retained model calls" in script
 
     for capability in (
         "renderRunSetup",

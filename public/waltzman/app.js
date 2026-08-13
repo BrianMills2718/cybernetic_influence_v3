@@ -2209,10 +2209,13 @@ function renderAuthoredResult(result) {
     ? `Collective question: ${replayQuestion}`
     : 'Advance one retained step at a time.'
   const gateChecks = result.outcome?.gate_checks
+  const generalWorldResult = result.profile === 'general_world_v1'
   const resultFacts = [
     [String((result.participants || []).length), 'Simulated people'],
-    [String((result.rounds || []).length || (result.simulation_replay?.scenes || []).filter((scene) => scene.kind === 'event').length), (result.rounds || []).length ? 'Decision rounds' : 'Retained events'],
-    [String(Number(result.participant_model_calls || 0)), result.execution === 'live' ? 'Retained Luna decisions' : 'Retained reference decisions'],
+    generalWorldResult
+      ? [String(Number(result.causal_moments || 0)), 'Causal moments']
+      : [String((result.rounds || []).length || (result.simulation_replay?.scenes || []).filter((scene) => scene.kind === 'event').length), (result.rounds || []).length ? 'Decision rounds' : 'Retained events'],
+    [String(Number(result.participant_model_calls || 0)), generalWorldResult ? 'Retained model calls' : result.execution === 'live' ? 'Retained Luna decisions' : 'Retained reference decisions'],
   ]
   $('#create-result-facts').innerHTML = resultFacts.map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
   $('#create-result-people').innerHTML = (result.participants || []).map((person) => {
