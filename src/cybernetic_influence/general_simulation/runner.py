@@ -49,6 +49,34 @@ from .world import CanonicalWorld
 ProgressObserver = Callable[[dict[str, Any], dict[str, Any]], None]
 
 
+def _normalized_memory(value: str) -> str:
+    return " ".join(value.lower().split())
+
+
+def _memory_reference_is_grounded(reference: str, memories: set[str]) -> bool:
+    """Accept one unambiguous retained-memory citation.
+
+    Natural-language models sometimes cite the relevant leading sentence(s) of
+    a retained memory instead of copying a later, unrelated sentence.  Treat a
+    unique sentence-boundary prefix as a reference to that retained string,
+    while continuing to reject paraphrases, fragments, and ambiguous prefixes.
+    """
+    normalized = _normalized_memory(reference)
+    if not normalized:
+        return False
+    exact_matches = {memory for memory in memories if memory == normalized}
+    if exact_matches:
+        return True
+    if len(normalized) < 24 or normalized[-1] not in ".?!":
+        return False
+    prefix_matches = {
+        memory
+        for memory in memories
+        if memory.startswith(normalized) and len(memory) > len(normalized)
+    }
+    return len(prefix_matches) == 1
+
+
 def _checkpoint_hash(checkpoint: Mapping[str, Any]) -> str:
     encoded = json.dumps(checkpoint, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode()).hexdigest()
@@ -161,7 +189,7 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             raise ValueError("actor attended an observation it did not receive")
         unknown_provenance = set(decision.assimilation.provenance_links) - available_provenance
         available_memories = {
-            " ".join(item.lower().split())
+            _normalized_memory(item)
             for item in [*self._person.memories, *actor_context.private_memory]
         }
         unknown_provenance = {
@@ -169,8 +197,9 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             for item in unknown_provenance
             if not (
                 item.startswith("private_memory:")
-                and " ".join(item.partition(":")[2].lower().split())
-                in available_memories
+                and _memory_reference_is_grounded(
+                    item.partition(":")[2], available_memories
+                )
             )
         }
         if unknown_provenance:

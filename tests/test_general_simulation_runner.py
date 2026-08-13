@@ -17,7 +17,11 @@ from cybernetic_influence.general_simulation.models import (
     SemanticActionIntent,
     WorldTransaction,
 )
-from cybernetic_influence.general_simulation.runner import run_general_simulation
+from cybernetic_influence.general_simulation.runner import (
+    _memory_reference_is_grounded,
+    _normalized_memory,
+    run_general_simulation,
+)
 from cybernetic_influence.general_simulation.analysis_projection import (
     project_waltzman_analysis,
 )
@@ -25,6 +29,34 @@ from cybernetic_influence.general_simulation.analysis_projection import (
 
 FIXTURE = Path("tests/fixtures/general_simulation/port_coordination.json")
 SERVICE_FIXTURE = Path("tests/fixtures/general_simulation/service_incident.json")
+
+
+def test_memory_provenance_accepts_only_unambiguous_sentence_prefixes() -> None:
+    first = (
+        "At minute 105, the outage remains active across multiple regions. "
+        "The external dependency remains unknown."
+    )
+    second = "At minute 75, the outage remains active across one region."
+    memories = {_normalized_memory(first), _normalized_memory(second)}
+
+    assert _memory_reference_is_grounded(first, memories)
+    assert _memory_reference_is_grounded(
+        "At minute 105, the outage remains active across multiple regions.", memories
+    )
+    assert not _memory_reference_is_grounded(
+        "The outage remains active across multiple regions.", memories
+    )
+    assert not _memory_reference_is_grounded("At minute 105", memories)
+
+    ambiguous = memories | {
+        _normalized_memory(
+            "At minute 105, the outage remains active across multiple regions. "
+            "A different dependency remains unknown."
+        )
+    }
+    assert not _memory_reference_is_grounded(
+        "At minute 105, the outage remains active across multiple regions.", ambiguous
+    )
 
 
 def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> None:
