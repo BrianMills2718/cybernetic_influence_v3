@@ -149,7 +149,12 @@ def test_general_authoring_prompt_defaults_to_a_short_editable_run() -> None:
     ).read_text(encoding="utf-8")
 
     assert "use exactly three scheduled moments" in prompt
-    assert "Use a fourth moment only" in prompt
+    assert "Use a fourth moment when sensing or verification" in prompt
     assert "preserve an explicitly requested schedule length" in prompt
+    assert "Initial state is already present before the schedule begins" in prompt
+    assert "never spend a scheduled moment merely restating" in prompt
+    assert "include a moment in which someone can attempt to sense" in prompt
+    assert "do not pre-author success" in prompt
+    assert "every moment advances the causal path" in prompt
     assert "Each request must name one transition responsibility" in prompt
     assert "Do not combine a person's interpretation" in prompt
