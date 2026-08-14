@@ -427,6 +427,8 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         for fact in scene["facts"]
     )
     event_scenes = [scene for scene in replay_scenes if scene["kind"] == "event"]
+    assert all(len(scene["visible_node_ids"]) <= 12 for scene in event_scenes)
+    assert all(len(scene["visible_edge_ids"]) <= 18 for scene in event_scenes)
     assert all(
         any(fact["label"] == "World change" for fact in scene["facts"])
         for scene in event_scenes
@@ -447,6 +449,8 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         summary_payload["influence_network"]["nodes"]
     )
     outcome_scene = replay_scenes[-1]
+    assert len(outcome_scene["visible_node_ids"]) <= 12
+    assert len(outcome_scene["visible_edge_ids"]) <= 18
     assert outcome_scene["summary"] == (
         "The retained evidence does not establish completion of the objective."
     )

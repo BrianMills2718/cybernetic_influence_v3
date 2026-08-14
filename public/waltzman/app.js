@@ -2272,7 +2272,8 @@ function scheduleAuthoredRunPoll(runId, delay = 1800) {
 }
 
 function authoredStepPayload(step) {
-  return step.actions?.map((item) => item.payload).find((payload) => payload?.stance) || null
+  const payloads = step.actions?.map((item) => item.payload).filter((payload) => payload && typeof payload === 'object') || []
+  return payloads.find((payload) => payload.stance) || payloads[0] || null
 }
 
 function renderAuthoredResultRound() {
@@ -2284,9 +2285,11 @@ function renderAuthoredResultRound() {
     return
   }
   authoredResultRoundIndex = Math.min(authoredResultRoundIndex, rounds.length - 1)
+  const generalWorld = result.profile === 'general_world_v1'
   $('#create-result-round-tabs').innerHTML = rounds.map((round, index) => {
     const counts = countValues((round.decisions || []).map((step) => authoredStepPayload(step)?.stance || 'defer'))
-    return `<button type="button" data-authored-round="${index}" class="${index === authoredResultRoundIndex ? 'active' : ''}"><span>Round ${escapeHtml(round.round_index)}</span><strong>${escapeHtml(countsText(counts))}</strong></button>`
+    const summary = generalWorld ? `${round.decisions?.length || 0} actions` : countsText(counts)
+    return `<button type="button" data-authored-round="${index}" class="${index === authoredResultRoundIndex ? 'active' : ''}"><span>${generalWorld ? 'Moment' : 'Round'} ${escapeHtml(round.round_index)}</span><strong>${escapeHtml(summary)}</strong></button>`
   }).join('')
   const round = rounds[authoredResultRoundIndex]
   const messages = new Map()
@@ -2302,6 +2305,14 @@ function renderAuthoredResultRound() {
     : '<p class="create-result-no-change">No new messages arrived since the prior decision round.</p>'
   const decisionsHtml = (round.decisions || []).map((step) => {
     const payload = authoredStepPayload(step)
+    if (generalWorld) {
+      const details = [
+        payload?.action ? `<p><b>Attempt:</b> ${escapeHtml(payload.action)}</p>` : `<p>${escapeHtml(step.orientation || 'No public action retained.')}</p>`,
+        payload?.purpose ? `<p><b>Purpose:</b> ${escapeHtml(payload.purpose)}</p>` : '',
+        payload?.stated_rationale ? `<p><b>Rationale:</b> ${escapeHtml(payload.stated_rationale)}</p>` : '',
+      ].join('')
+      return `<article><header><strong>${escapeHtml(step.person_label)}</strong><span class="decision-pill">action</span></header>${details}</article>`
+    }
     const stance = payload?.stance || 'defer'
     const details = [
       payload?.source_assessment ? `<p><b>Source judgment:</b> ${escapeHtml(payload.source_assessment)}</p>` : '',
@@ -2311,7 +2322,7 @@ function renderAuthoredResultRound() {
     ].join('')
     return `<article><header><strong>${escapeHtml(step.person_label)}</strong>${decisionPill(stance)}</header>${details || `<p>${escapeHtml(step.orientation || 'No public rationale retained.')}</p>`}</article>`
   }).join('')
-  $('#create-result-round').innerHTML = `<div class="create-result-round-intro"><span>Round ${escapeHtml(round.round_index)}</span><strong>${messages.size ? `${messages.size} new message${messages.size === 1 ? '' : 's'} entered before this decision` : 'The same information environment continued'}</strong></div><div class="create-result-round-columns"><section><h5>What entered the network</h5>${informationHtml}</section><section><h5>How each person responded</h5>${decisionsHtml}</section></div>`
+  $('#create-result-round').innerHTML = `<div class="create-result-round-intro"><span>${generalWorld ? 'Moment' : 'Round'} ${escapeHtml(round.round_index)}</span><strong>${messages.size ? `${messages.size} new message${messages.size === 1 ? '' : 's'} entered before this ${generalWorld ? 'action' : 'decision'}` : 'The same information environment continued'}</strong></div><div class="create-result-round-columns"><section><h5>What entered the network</h5>${informationHtml}</section><section><h5>How each person responded</h5>${decisionsHtml}</section></div>`
   all('[data-authored-round]').forEach((button) => {
     button.onclick = () => {
       authoredResultRoundIndex = Number(button.dataset.authoredRound)

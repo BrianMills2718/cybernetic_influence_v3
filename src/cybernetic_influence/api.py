@@ -1158,6 +1158,7 @@ def _simulation_replay(
 
     visible_event_nodes = list(setup_ids)
     visible_event_edges: list[str] = []
+    outcome_changed_nodes: list[str] = []
     if (general_world or not rounds) and isinstance(raw_moments, list):
         for index, moment in enumerate(raw_moments[:10], start=1):
             if not isinstance(moment, dict):
@@ -1305,19 +1306,18 @@ def _simulation_replay(
                     [*participants, *contract_node_ids, *changed_node_ids, *evidence_node_ids]
                 )
             )
-            visible_event_nodes.extend(moment_node_ids)
+            visible_event_nodes = list(dict.fromkeys(moment_node_ids))[:12]
             visible_event_node_set = set(visible_event_nodes)
             induced_edge_ids = [
                 edge_id
                 for edge_id, edge in edge_by_id.items()
                 if edge.get("source") in visible_event_node_set
                 and edge.get("target") in visible_event_node_set
-                and (
-                    edge.get("source") in moment_node_ids
-                    or edge.get("target") in moment_node_ids
-                )
             ]
-            visible_event_edges.extend([*induced_edge_ids, *changed_edge_ids])
+            visible_event_edges = list(
+                dict.fromkeys([*changed_edge_ids, *induced_edge_ids])
+            )[:18]
+            outcome_changed_nodes.extend(changed_node_ids)
             add_scene(
                 scene_id=f"event_{index}",
                 kind="event",
@@ -1355,6 +1355,26 @@ def _simulation_replay(
             for stance in ("support", "conditional", "defer", "oppose")
             if isinstance((value := counts.get(stance)), int) and value
         )
+    outcome_visible_nodes = (
+        list(
+            dict.fromkeys(
+                [*person_ids, *gate_ids, *outcome_changed_nodes, *visible_event_nodes]
+            )
+        )[:12]
+        if general_world
+        else list(node_ids)
+    )
+    outcome_visible_node_set = set(outcome_visible_nodes)
+    outcome_visible_edges = (
+        [
+            edge_id
+            for edge_id, edge in edge_by_id.items()
+            if edge.get("source") in outcome_visible_node_set
+            and edge.get("target") in outcome_visible_node_set
+        ][:18]
+        if general_world
+        else list(edge_by_id)
+    )
     add_scene(
         scene_id="outcome",
         kind="outcome",
@@ -1365,8 +1385,8 @@ def _simulation_replay(
             or summary
             or "The run reached its retained terminal state."
         ),
-        visible_nodes=(visible_event_nodes if general_world else list(node_ids)),
-        visible_edges=(visible_event_edges if general_world else list(edge_by_id)),
+        visible_nodes=outcome_visible_nodes,
+        visible_edges=outcome_visible_edges,
         focus_nodes=gate_ids,
         focus_edges=decision_edge_ids,
         facts=(
