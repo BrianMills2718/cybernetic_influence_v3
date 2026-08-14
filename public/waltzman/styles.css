@@ -1165,7 +1165,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-simulation.has-draft { gap: 22px; }
 .create-simulation.has-draft .create-hero h2 { font-size: clamp(2rem, 3.5vw, 3.2rem); margin-bottom: 12px; max-width: 22ch; }
 .create-simulation.has-draft .create-hero > p { font-size: 0.95rem; line-height: 1.55; }
-.create-simulation.has-draft .create-capability-note, .create-simulation.has-draft .create-composer { display: none; }
+.create-simulation.has-draft .create-capability-note { display: none; }
 .create-flow { display: grid; gap: 1px; grid-template-columns: repeat(4, 1fr); max-width: 760px; }
 .create-flow span { background: var(--panel); color: var(--muted); font-size: 0.75rem; font-weight: 750; padding: 11px 13px; }
 .create-flow span.active { background: #173249; color: #fff; }
