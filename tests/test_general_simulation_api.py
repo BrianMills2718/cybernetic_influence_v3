@@ -364,6 +364,11 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     )
     draft = api.post("/api/authoring/drafts").json()
     proposal = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    proposal["analysis_spec"] = {
+        "analysis_id": "waltzman_port_diagnostic",
+        "profile": "waltzman_coordination_v1",
+        "purpose": "Inspect influence-to-coordination signals in the retained run.",
+    }
     edited = api.put(
         f"/api/authoring/drafts/{draft['draft_id']}/general-proposal",
         json={"expected_revision": 0, "edit_id": "fixture", "proposal": proposal},
@@ -450,5 +455,8 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         {"label": "Committed transitions", "value": "3"},
         {"label": "Final world revision", "value": "3"},
     ]
-    assert summary_payload["theory_analysis"] is None
+    assert summary_payload["theory_analysis"]["framework"] == (
+        "Waltzman-informed diagnostic projection"
+    )
+    assert len(summary_payload["theory_analysis"]["findings"]) == 5
     assert runtime_call.actor_counter == call_count

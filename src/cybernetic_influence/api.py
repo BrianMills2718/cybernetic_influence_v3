@@ -3799,8 +3799,13 @@ def create_app(
             document["coordination_measurement_readout"] = (
                 coordination_measurement_readout(document).model_dump(mode="json")
             )
-            projected_theory = project_retained_theory_analysis(
-                document.get("theory_analysis")
+            raw_theory = document.get("theory_analysis")
+            projected_theory = (
+                raw_theory
+                if isinstance(raw_theory, dict)
+                and raw_theory.get("framework")
+                == "Waltzman-informed diagnostic projection"
+                else project_retained_theory_analysis(raw_theory)
             )
             if projected_theory is not None:
                 document["theory_analysis"] = projected_theory
