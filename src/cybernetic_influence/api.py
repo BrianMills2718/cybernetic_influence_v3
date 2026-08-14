@@ -943,7 +943,7 @@ def _simulation_replay(
     add_scene(
         scene_id="question",
         kind="question",
-        scene_title=("The collective question" if gate_ids else "The research question"),
+        scene_title=("The collective question" if gate_ids else "The operational objective"),
         scene_summary=question,
         visible_nodes=gate_ids,
         visible_edges=[],

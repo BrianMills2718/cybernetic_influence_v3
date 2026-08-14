@@ -369,7 +369,7 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         for node in summary_payload["influence_network"]["nodes"]
     )
     assert summary_payload["simulation_replay"]["scenes"][0]["visible_node_ids"] == []
-    assert summary_payload["simulation_replay"]["scenes"][0]["title"] == "The research question"
+    assert summary_payload["simulation_replay"]["scenes"][0]["title"] == "The operational objective"
     replay_scenes = summary_payload["simulation_replay"]["scenes"]
     assert len([scene for scene in replay_scenes if scene["kind"] == "event"]) == 3
     assert not any(scene["kind"] == "decisions" for scene in replay_scenes)
