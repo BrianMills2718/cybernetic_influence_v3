@@ -3,7 +3,7 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-08-11
+updated: 2026-08-14
 supersedes: earlier comparison-centered and configurable Waltzman-Levin goals as the active product frontier; retained below as baseline evidence
 ---
 
@@ -165,8 +165,17 @@ select the product foundation.
   on 2026-07-31 and reaffirmed its outer-lifecycle boundary after current-source
   inspection and a disposable bridge/port probe on 2026-08-11. Wargaming is an
   exemplar, not the goal.
-- Current Cybernetic Influence behavior remains the parity baseline. No
-  Concordia-first product implementation has begun.
+- Current Cybernetic Influence behavior remains the parity baseline. Slice 28
+  implemented a Concordia-owned general-world authoring, execution, checkpoint,
+  evidence, graph, and replay path in port and service-incident domains without
+  invoking the old causal/active runtime.
+- The Slice 28 implementation coupled its global question and analysis
+  selection into the general proposal. The question enters every actor and the
+  transition authority as `research_question`, and the final transition call
+  also assesses that objective. ADR-014 accepts the correction: runtime
+  receives only separate scenario and run contracts; analysis consumes
+  theory-neutral retained evidence after execution. Slice 29 is the active
+  implementation authority for that refactor.
 - The user-approved public outbreak workbench is deployed at
   <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>. It remains a retained
   example and capability baseline, not the generalized product architecture. A

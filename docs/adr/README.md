@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-07-31
+updated: 2026-08-14
 ---
 
 # Architectural Decisions
@@ -26,3 +26,4 @@ plans provide scoped execution and historical evidence.
 | [011](011-declared-representation-depth.md) | Declared subsystem representation depth | accepted direction; general framework deferred |
 | [012](012-decision-environment-measures-are-derived.md) | Trust, risk, coordination, and directional patterns are derived evidence-bound analyst views | accepted |
 | [013](013-generalized-simulator-foundation.md) | Concordia owns the generalized simulation foundation; selected Cybernetic Influence capabilities migrate through public component and projection seams | accepted |
+| [014](014-separate-simulation-and-analysis-authority.md) | Scenario and run contracts own causal execution; analysis remains a separately attachable read-only authority over retained evidence | accepted |

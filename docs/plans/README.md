@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-08-13
+updated: 2026-08-14
 ---
 
 # Implementation Plans
@@ -12,13 +12,17 @@ updated: 2026-08-13
 
 ## Active execution
 
+[Slice 29: Separate scenario, run, analysis, and experiment authority](029-separate-simulation-run-analysis.md)
+is the approved current-to-target refactor. It preserves one conversational
+authoring experience while preventing analyst purpose from entering actor or
+transition-authority contexts, makes run evidence theory-neutral, and permits
+post-run analysis attachment without simulation effects.
+
 [Slice 28: Natural-language general simulation demo](028-natural-language-general-simulation-demo.md)
-is the implementation-ready stakeholder pilot plan. It first repairs the
-hidden authoring input, then productionizes the adopted Concordia world seam,
-adds compiler-generated execution coverage, and proves the same authoring,
-execution, and replay path in two domains. It depends on the accepted Slice 27
-foundation handoff and does not authorize a shortcut that generalizes the old
-runtime.
+is the implemented general-authoring foundation. Its monolithic
+`GeneralSimulationProposalV1` contract is superseded in part by Slice 29; its
+Concordia world, trusted compiler, evidence, generic graph, and replay seams
+remain the implementation baseline to extend rather than replace.
 
 [Slice 24: Configurable theory-informed simulation MVP](024-configurable-theory-analysis-mvp.md)
 remains the MVP authority. Packets 24A0–24D are technically complete. Its only

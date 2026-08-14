@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-08-13
+updated: 2026-08-14
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -47,16 +47,22 @@ in [ADR-013](adr/013-generalized-simulator-foundation.md). A current-source
 revisit and disposable authentic Luna bridge/port probe reaffirmed that choice
 on 2026-08-11 while making its remaining uncertainties explicit. The current
 Cybernetic Influence product and retained runs are the parity baseline.
-[Slice 27](handoffs/027-foundation-implementation.md) is the first production
-Concordia world-transition vertical and awaits explicit implementation
-authorization.
 
-[Slice 28](plans/028-natural-language-general-simulation-demo.md) turns that
-foundation into the next stakeholder-facing capability: an immediately visible
-natural-language authoring surface, an editable general world proposal, a
-compiler-generated execution coverage report, Concordia-owned live execution,
-and automatic replay in two materially different domains. Its detailed plan is
-ready for implementation; no Slice 28 production code has begun.
+[Slice 28](plans/028-natural-language-general-simulation-demo.md) implemented
+the first stakeholder-facing general path: discoverable natural-language
+authoring, an editable semantic world proposal, compiler-generated execution
+coverage, Concordia-owned live execution, strict checkpoints, and generic
+replay in port and service-incident domains. Its authentic traces established
+the execution seam while exposing one architectural regression: scenario,
+run, analysis, and objective-assessment concerns were coupled in the new
+`GeneralSimulationProposalV1` path.
+
+[ADR-014](adr/014-separate-simulation-and-analysis-authority.md) corrects that
+boundary. [Slice 29](plans/029-separate-simulation-run-analysis.md) is the
+active refactor: preserve one conversational experience while compiling
+separate scenario, run, analysis, and future experiment contracts; remove
+analyst-purpose leakage from actors and transition authorities; and permit
+analysis attachment after a theory-neutral run completes.
 
 ## Retained Baseline Outcome Probe
 
@@ -271,9 +277,10 @@ conditions, not evidence of hostile attribution or an operational detector.
 | `MVP-C6` | One integrated private review flow | evidence | technical execution passed; stakeholder judgment pending | Analyst authors, approves, runs, understands, and disputes the canonical example without raw JSON |
 | `POST-C1` | `ExperimentSpec` and matched decision-environment experiment | hard after foundation decision | provider-free mechanism proof technically satisfied; stakeholder readout pending | Baseline, fixed pressure, adaptive pressure, and authoritative validation have two retained runs each, cross-condition contrasts, time/subgroup measures, and exact evidence step-down |
 | `POST-C2` | Perturbation, robustness, and persuadability assays | optional | Packets 22A0–22A2 technically satisfied; stakeholder readout pending | Five matched provider-free rows distinguish concrete pathways and step down through one comparison UI to exact retained evidence |
-| `GEN-C0` | Concordia owns one general world-transition vertical end to end | hard | research probe passed; production implementation not authorized | Bridge/port world compiles from domain-neutral contracts, executes deterministic and Luna transitions, restores strictly, and proves the old runtime did not execute |
-| `GEN-C1` | Current Cybernetic Influence capability parity on Concordia | hard | blocked by `GEN-C0` | Authoring, execution, retention, replay, maps, narration, and analyses are inspectably equivalent at their public boundaries |
-| `GEN-C2` | Cross-domain generalization | evidence | blocked by `GEN-C1` | One materially different exemplar reuses the same seams without generated code or a scenario-specific runtime |
+| `GEN-C0` | Concordia owns one general world-transition vertical end to end | hard | satisfied by Slice 28 | Port and service worlds compile from domain-neutral contracts, execute authentic Luna actors and adjudicators, restore strictly, and prove the old runtime did not execute |
+| `GEN-C1` | Current Cybernetic Influence capability parity on Concordia | hard | partially satisfied; contract separation is the direct blocker | Authoring, execution, retention, replay, maps, narration, and analyses are inspectably equivalent without coupling analyst purpose into execution |
+| `GEN-C2` | Cross-domain generalization | evidence | representative port/service seam observed; broader claim deferred | One materially different exemplar reuses the same seams without generated code or a scenario-specific runtime |
+| `GEN-C3` | Scenario, run, analysis, and experiment authority are separated | hard | approved in ADR-014; implementation selected as Slice 29 | One authentic run has analysis-free actor/adjudicator inputs and theory-neutral evidence; post-run analysis attachment changes no simulation call, context, revision, or evidence digest |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
 Packet 24E supplies the candidate surface for that judgment; it does not mark
@@ -283,21 +290,19 @@ the judgment passed on the operator's behalf.
 
 There are four explicit tracks rather than one blended implementation queue:
 
-1. **Concordia general vertical — next engineering boundary.** After
-   explicit implementation authorization, execute the bounded
-   [Slice 27 handoff](handoffs/027-foundation-implementation.md). Implement the
-   bridge/port world-context-intent-patch path with stock Concordia, a strict
-   checkpoint, and authentic Luna actor/adjudicator calls. Fail if the old
-   causal/active runtime executes behind the new surface.
-2. **Product adoption — conditional.** Route one intended product consumer
-   through the adopted contracts so later scenarios cannot silently bypass the
-   richer machinery. Give each existing capability an explicit reuse, adapt,
-   replace, retire, or bounded-exception disposition rather than migrating it
-   automatically.
-3. **Cross-domain generalization — conditional.** After adoption, select one
-   materially different exemplar and require it to reuse the same reviewed
-   component and execution seams. Wargaming is one candidate exemplar, not the
-   roadmap goal.
+1. **Contract and authority separation — active engineering boundary.** Execute
+   [Slice 29](plans/029-separate-simulation-run-analysis.md). Freeze the split
+   contracts, remove analyst-purpose leakage from actors and the transition
+   authority, and obtain one authentic Luna port run before UI or documentation
+   expansion.
+2. **Post-run analysis adoption — same selected refactor.** Make run evidence
+   valid without analysis, attach Waltzman analysis after completion, and prove
+   that attachment changes no simulation calls, contexts, world revisions, or
+   evidence digests.
+3. **Public authoring adoption — conditional on the authentic separation
+   probe.** Keep one conversation but render World, Run, and optional Analysis
+   separately; new drafts write only V2 while immutable V1 artifacts remain
+   readable through a bounded adapter.
 4. **Stakeholder readout — separate retained MVP boundary.** Review corrected run
    `run_eded0f70b15f` and decide whether its situation, trajectory, Waltzman
    readout, Levin readout, evidence, and limitations are understandable without
@@ -333,8 +338,10 @@ calibration, causal attribution, or operational detection.
 | [Slice 25](plans/025-typed-component-composition.md) | 25A–25C retained; 25D paused | Useful local composition evidence, but not authority for choosing the generalized product foundation |
 | [Slice 26](plans/026-concordia-foundation-research.md) | research complete; owner disposition recorded | Source audit remains valid; owner revised the invariant premise and selected Candidate A |
 | [ADR 013](adr/013-generalized-simulator-foundation.md) | accepted | Concordia owns the simulation foundation; selected CI capabilities migrate as components/projections |
-| [Foundation Slice 27](handoffs/027-foundation-implementation.md) | designed; awaiting implementation authorization | General bridge/port vertical exercises the adopted world-transition seam without the old runtime as hidden executor |
-| [Slice 28](plans/028-natural-language-general-simulation-demo.md) | implementation-ready | Stakeholder pilot joins discoverable natural-language authoring to the Concordia general-world seam and automatic cross-domain replay |
+| [Foundation Slice 27](handoffs/027-foundation-implementation.md) | implemented through Slice 28 | General bridge/port vertical exercises the adopted world-transition seam without the old runtime as hidden executor |
+| [Slice 28](plans/028-natural-language-general-simulation-demo.md) | implemented foundation; superseded in part | General authoring, Concordia execution, evidence, graphs, and replay are retained; its monolithic proposal is replaced by Slice 29 |
+| [ADR 014](adr/014-separate-simulation-and-analysis-authority.md) | accepted | Causal execution receives only scenario/run contracts; analysis is a separately attachable read-only authority |
+| [Slice 29](plans/029-separate-simulation-run-analysis.md) | approved active refactor | Owns current-to-target gaps, V2 contracts, migration, authentic isolation proof, UI adoption, and V1 disposition |
 | [Experiment Slice 27](plans/027-coordination-dynamics-experiment.md) | provider-free mechanism proof technically complete; stakeholder readout pending | Four conditions and eight ordinary retained runs isolate pressure presence, adaptation, and authoritative validation with evidence step-down |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |
@@ -390,19 +397,20 @@ not silently recreate the old runtime as a universal invariant set.
   preserving every existing CI invariant. The owner clarified the broader,
   exploratory general-simulation goal and adopted Candidate A. The source audit
   remains evidence; the product tradeoff changed.
-- `GEN-C0` has a successful disposable architecture probe and a production
-  handoff, but production implementation is not authorized by the architecture
-  approval alone. `GEN-C1` and `GEN-C2` remain conditional on an adopted
-  production consumer, not merely isolated contract code.
+- `GEN-C0` is satisfied by the Slice 28 production path and authentic traces.
+  `GEN-C1` is partially satisfied but cannot close while analyst purpose enters
+  actor and adjudicator contexts. `GEN-C3` is the selected direct blocker and
+  adoption correction. `GEN-C2` retains one representative cross-domain proof;
+  broader generality remains conditional on the corrected path.
 
 ## Continue, Reset, Scale, Stop
 
 - **Decision:** reset the foundation to Concordia while retaining the current
   product as parity evidence. Retain useful CI mechanisms and surfaces; replace
   its foundational runtime authority; clear the obsolete Candidate C handoff.
-- **Continue:** begin Slice 27 only after explicit implementation
-  authorization. The independent M7 readout remains open and does not block the
-  architecture migration.
+- **Continue:** execute Slice 29A and 29B, then obtain the authentic analysis-free
+  port continuation before more UI, methodology, or generality work. The
+  independent M7 readout remains open and does not block this correction.
 - **Reset:** at the earliest of roughly 45 minutes, two consecutive non-outcome
   increments, or user concern about pace, compare the current path with the most
   valuable reversible next move. Reset immediately if configuration requires
