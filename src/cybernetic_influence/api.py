@@ -793,6 +793,20 @@ def _simulation_replay(
 ) -> dict[str, object]:
     """Build one small, evidence-backed walkthrough independent of page layout."""
 
+    def replay_value(value: object) -> str:
+        if isinstance(value, bool):
+            return "yes" if value else "no"
+        if isinstance(value, str):
+            return value.replace("_", " ")
+        if isinstance(value, dict):
+            return "; ".join(
+                f"{str(key).replace('_', ' ')}: {replay_value(item)}"
+                for key, item in list(value.items())[:4]
+            )
+        if isinstance(value, list):
+            return ", ".join(replay_value(item) for item in value[:4])
+        return str(value)
+
     question = "What collective outcome will emerge?"
     for round_item in rounds:
         decisions = round_item.get("decisions")
@@ -840,6 +854,11 @@ def _simulation_replay(
     ]
     node_kind_by_id = {
         str(node["id"]): node.get("kind")
+        for node in network_nodes
+        if isinstance(node.get("id"), str)
+    }
+    node_label_by_id = {
+        str(node["id"]): str(node.get("label") or node["id"])
         for node in network_nodes
         if isinstance(node.get("id"), str)
     }
@@ -1075,13 +1094,90 @@ def _simulation_replay(
                 and isinstance(parent_revision, int)
                 and resulting_revision > parent_revision
             )
+            transition = moment.get("transition")
+            transaction = (
+                transition.get("transaction")
+                if isinstance(transition, dict)
+                else None
+            )
+            operations = (
+                transaction.get("operations")
+                if isinstance(transaction, dict)
+                and isinstance(transaction.get("operations"), list)
+                else []
+            )
+            consequences = (
+                transaction.get("consequences")
+                if isinstance(transaction, dict)
+                and isinstance(transaction.get("consequences"), list)
+                else []
+            )
+            rationale = (
+                transaction.get("stated_rationale")
+                if isinstance(transaction, dict)
+                and isinstance(transaction.get("stated_rationale"), str)
+                else None
+            )
+            change_facts: list[tuple[str, str]] = []
+            for operation in operations[:5]:
+                if not isinstance(operation, dict):
+                    continue
+                target = operation.get("target")
+                if not isinstance(target, dict) or not isinstance(
+                    target.get("record_id"), str
+                ):
+                    continue
+                target_id = str(target["record_id"])
+                target_label = node_label_by_id.get(
+                    target_id, target_id.replace("_", " ").title()
+                )
+                raw_value = operation.get("value")
+                if operation.get("operation") == "create":
+                    created_label = (
+                        raw_value.get("label")
+                        if isinstance(raw_value, dict)
+                        and isinstance(raw_value.get("label"), str)
+                        else target_label
+                    )
+                    change_facts.append(("World change", f"Created {created_label}"))
+                    continue
+                field = str(target.get("field") or "state").replace("_", " ")
+                rendered_value = replay_value(raw_value)
+                change_facts.append(
+                    ("World change", f"{target_label} · {field}: {rendered_value}")
+                )
+            communication_facts: list[tuple[str, str]] = []
+            for consequence in consequences[:3]:
+                if not isinstance(consequence, dict):
+                    continue
+                recipient = consequence.get("recipient_id")
+                content = consequence.get("content")
+                if not isinstance(recipient, str) or not isinstance(content, str):
+                    continue
+                source = str(
+                    consequence.get("apparent_source") or "world"
+                ).replace("_", " ").capitalize()
+                recipient_label = node_label_by_id.get(
+                    recipient, recipient.replace("_", " ").title()
+                )
+                compact_content = (
+                    content if len(content) <= 220 else f"{content[:217].rstrip()}…"
+                )
+                communication_facts.append(
+                    ("Communication", f"{source} → {recipient_label}: {compact_content}")
+                )
+            transition_facts = [*change_facts, *communication_facts]
+            if transition_committed and not transition_facts:
+                transition_facts = [
+                    ("World change", "No canonical fields changed in this committed moment.")
+                ]
             add_scene(
                 scene_id=f"event_{index}",
                 kind="event",
                 scene_title=str(moment.get("event_id") or f"World moment {index}")
                 .replace("_", " ")
                 .capitalize(),
-                scene_summary=narrative,
+                scene_summary=(rationale.strip() if rationale and rationale.strip() else narrative),
                 visible_nodes=visible_event_nodes,
                 visible_edges=visible_event_edges,
                 focus_nodes=participants,
@@ -1089,9 +1185,10 @@ def _simulation_replay(
                 facts=[
                     ("Moment", str(index)),
                     ("People acting", str(len(participants))),
-                    (
-                        "World transition",
-                        "Committed" if transition_committed else "No change committed",
+                    *(
+                        transition_facts
+                        if transition_committed
+                        else [("World change", "No change committed.")]
                     ),
                 ],
             )
@@ -1409,6 +1506,29 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         if isinstance(narrated_moments, list)
         else document.get("moments", [])
     )
+    if document.get("profile") == "general_world_v1" and isinstance(
+        raw_moments, list
+    ):
+        general_simulation = document.get("general_simulation")
+        transition_evidence = (
+            general_simulation.get("transition_evidence")
+            if isinstance(general_simulation, dict)
+            else None
+        )
+        if isinstance(transition_evidence, list):
+            raw_moments = [
+                {
+                    **moment,
+                    **(
+                        {"transition": transition_evidence[index]}
+                        if index < len(transition_evidence)
+                        and isinstance(transition_evidence[index], dict)
+                        else {}
+                    ),
+                }
+                for index, moment in enumerate(raw_moments)
+                if isinstance(moment, dict)
+            ]
     rounds: dict[int, dict[str, object]] = {}
     for step in decision_steps:
         raw_round_index = step.get("round_index")

@@ -312,6 +312,16 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         for scene in replay_scenes
         for fact in scene["facts"]
     )
+    event_scenes = [scene for scene in replay_scenes if scene["kind"] == "event"]
+    assert all(
+        any(fact["label"] == "World change" for fact in scene["facts"])
+        for scene in event_scenes
+    )
+    assert not any(
+        fact["label"] == "World transition"
+        for scene in event_scenes
+        for fact in scene["facts"]
+    )
     assert replay_scenes[1]["facts"] == [
         {"label": "People", "value": "4"},
         {"label": "Other world components", "value": "8"},
