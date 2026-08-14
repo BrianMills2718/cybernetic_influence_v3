@@ -159,19 +159,39 @@ class SensingRuleProposalV1(_StrictModel):
     result_recipient_ids: list[str] = Field(min_length=1)
 
 
+class ResourceQuantityRequirementV1(_StrictModel):
+    resource_id: str = Field(pattern=_ID)
+    quantity: float = Field(gt=0)
+
+
 class ResourceTransformationProposalV1(_StrictModel):
     transformation_id: str = Field(pattern=_ID)
     operator_ids: list[str] = Field(min_length=1)
-    input_resource_quantities: dict[str, float] = Field(min_length=1)
+    input_resource_quantities: list[ResourceQuantityRequirementV1] = Field(min_length=1)
     output_resource_id: str = Field(pattern=_ID)
     output_quantity: float = Field(gt=0)
     maximum_batches: int = Field(ge=1)
     public_inventory_record_id: str = Field(pattern=_ID)
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_resource_quantity_map(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        migrated = dict(value)
+        quantities = migrated.get("input_resource_quantities")
+        if isinstance(quantities, dict):
+            migrated["input_resource_quantities"] = [
+                {"resource_id": resource_id, "quantity": quantity}
+                for resource_id, quantity in quantities.items()
+            ]
+        return migrated
+
     @model_validator(mode="after")
-    def positive_inputs(self) -> "ResourceTransformationProposalV1":
-        if any(quantity <= 0 for quantity in self.input_resource_quantities.values()):
-            raise ValueError("transformation input quantities must be positive")
+    def unique_input_resources(self) -> "ResourceTransformationProposalV1":
+        resource_ids = [item.resource_id for item in self.input_resource_quantities]
+        if len(resource_ids) != len(set(resource_ids)):
+            raise ValueError("transformation input resource IDs must be unique")
         return self
 
 

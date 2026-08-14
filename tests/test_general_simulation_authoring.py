@@ -190,6 +190,30 @@ def test_pre_transition_contract_proposal_migrates_to_empty_contract_lists() -> 
     assert parsed.resource_transformations == []
 
 
+def test_general_proposal_schema_has_no_open_object_maps() -> None:
+    schema = GeneralProposalEnvelopeV1.model_json_schema()
+
+    def open_objects(value: object, path: str = "$") -> list[str]:
+        if isinstance(value, list):
+            return [
+                item
+                for index, child in enumerate(value)
+                for item in open_objects(child, f"{path}/{index}")
+            ]
+        if not isinstance(value, dict):
+            return []
+        found = []
+        if value.get("type") == "object" and value.get("additionalProperties") is not False:
+            found.append(path)
+        return found + [
+            item
+            for key, child in value.items()
+            for item in open_objects(child, f"{path}/{key}")
+        ]
+
+    assert open_objects(schema) == []
+
+
 def test_general_authoring_prompt_defaults_to_a_short_editable_run() -> None:
     prompt = Path(
         "src/cybernetic_influence/general_simulation/prompts/general_world_draft.yaml"

@@ -130,7 +130,10 @@ def compile_general_simulation(
     )
     for transformation in proposal.resource_transformations:
         unknown_resources = sorted(
-            ({*transformation.input_resource_quantities, transformation.output_resource_id})
+            ({
+                *(item.resource_id for item in transformation.input_resource_quantities),
+                transformation.output_resource_id,
+            })
             - resource_ids
         )
         if unknown_resources:
