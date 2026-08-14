@@ -64,6 +64,7 @@ let authoringBusy = false
 let authoredResult = null
 let authoredResultRoundIndex = 0
 let authoredReplaySceneIndex = 0
+let authoredDraftWalkthroughStep = 0
 let retainedRunHistory = []
 let retainedRunHistoryLoad = null
 let retainedLiveRunsLoad = null
@@ -1249,6 +1250,19 @@ function configureControls() {
   $('#create-general-information-select').onchange = (event) => { selectedGeneralInformation = event.target.value; renderGeneralEditor(authoringDraft.proposal) }
   $('#create-general-moment-select').onchange = (event) => { selectedGeneralMoment = event.target.value; renderGeneralEditor(authoringDraft.proposal) }
   $('#create-save-general').onclick = saveGeneralProposal
+  $('#create-draft-walkthrough-previous').onclick = () => {
+    authoredDraftWalkthroughStep = Math.max(0, authoredDraftWalkthroughStep - 1)
+    renderGeneralDraftWalkthrough(authoringDraft.proposal)
+  }
+  $('#create-draft-walkthrough-next').onclick = () => {
+    if (authoredDraftWalkthroughStep < 3) {
+      authoredDraftWalkthroughStep += 1
+      renderGeneralDraftWalkthrough(authoringDraft.proposal)
+      return
+    }
+    $('.create-actions').scrollIntoView({behavior:'smooth', block:'center'})
+  }
+  $('#create-resolve-questions').onclick = keepQuestionsInsideSimulation
   $('#create-edit-configuration').onclick = showAuthoredConfiguration
   $('#create-approve').onclick = approveAuthoringDraft
   $('#create-run').onclick = runAuthoredSimulation
@@ -1390,10 +1404,89 @@ function authoringModel() {
 
 function setAuthoringBusy(busy) {
   authoringBusy = busy
-  for (const id of ['create-generate', 'create-revise', 'create-save-person', 'create-save-scenario', 'create-save-network', 'create-save-general', 'create-approve', 'create-start-over']) {
+  for (const id of ['create-generate', 'create-revise', 'create-save-person', 'create-save-scenario', 'create-save-network', 'create-save-general', 'create-resolve-questions', 'create-approve', 'create-start-over']) {
     const control = $(`#${id}`)
     if (control) control.disabled = busy
   }
+}
+
+function generalDraftProjection(proposal) {
+  const nodes = []
+  const edges = []
+  const addNode = (id, kind, label, description) => {
+    if (id && !nodes.some((item) => item.id === id)) nodes.push({id, kind, label, description, state:{configured:true}})
+  }
+  const addEdge = (id, kind, source, target, description) => {
+    if (source && target && nodes.some((item) => item.id === source) && nodes.some((item) => item.id === target)) edges.push({id, kind, source, target, enabled:true, description, routeIds:[id]})
+  }
+  addNode('configured_research_question', 'decision_record', 'Research question', proposal.question)
+  for (const person of proposal.people || []) addNode(person.entity_id, 'person', person.label, `${person.position}. ${person.disposition}`)
+  for (const record of proposal.world_records || []) addNode(record.record_id, record.kind === 'fulfillment_outcome' ? 'decision_record' : 'thing', record.label, `Canonical ${sentence(record.kind)} record with public and access-controlled state.`)
+  for (const place of proposal.spatial_extension?.places || []) addNode(place.place_id, 'place', place.label, 'Configured place in the spatial extension.')
+  for (const system of proposal.active_systems || []) addNode(system.system_id, 'mechanism', sentence(system.system_id), `${system.behavior_summary} Representation: ${sentence(system.representation_strategy)}.`)
+  for (const representation of proposal.information_extension?.representations || []) {
+    const sourceId = `source:${representation.apparent_source}`
+    addNode(sourceId, 'information_source', representation.apparent_source, 'Apparent source named by this configured representation.')
+    addNode(representation.representation_id, 'information', sentence(representation.representation_id), representation.content)
+    addEdge(`issued:${representation.representation_id}`, 'issued_information', sourceId, representation.representation_id, 'Configured apparent source of this information representation.')
+    for (const recipientId of representation.recipient_ids || []) addEdge(`delivery:${representation.representation_id}:${recipientId}`, 'delivered_to', representation.representation_id, recipientId, 'Configured delivery route; receipt during the run is retained separately.')
+  }
+  for (const system of proposal.active_systems || []) {
+    for (const subjectId of system.subject_refs || []) addEdge(`binding:${system.system_id}:${subjectId}`, 'mechanism_binding', subjectId, system.system_id, 'Configured subject within this transition authority’s causal responsibility.')
+  }
+  for (const placement of proposal.spatial_extension?.placements || []) addEdge(`placement:${placement.record_id}`, 'spatial_link', placement.record_id, placement.place_id, 'Configured placement before the run begins.')
+  return {nodes, edges}
+}
+
+function renderGeneralDraftWalkthrough(proposal) {
+  const section = $('#create-draft-walkthrough')
+  if (!isGeneralProposal(proposal)) {
+    section.hidden = true
+    window.CyberneticGraph?.clear?.($('#create-draft-network-graph'))
+    return
+  }
+  section.hidden = false
+  const projection = generalDraftProjection(proposal)
+  const ids = {
+    people:new Set((proposal.people || []).map((item) => item.entity_id)),
+    world:new Set((proposal.world_records || []).map((item) => item.record_id)),
+    information:new Set((proposal.information_extension?.representations || []).flatMap((item) => [`source:${item.apparent_source}`, item.representation_id, ...(item.recipient_ids || [])])),
+    systems:new Set((proposal.active_systems || []).flatMap((item) => [item.system_id, ...(item.subject_refs || [])])),
+  }
+  const steps = [
+    {kind:'Question', title:'What is this simulation asking?', summary:proposal.question, nodeIds:new Set(['configured_research_question']), edgeKinds:new Set()},
+    {kind:'People and world', title:'Who exists, and what state can matter?', summary:`${proposal.people.length} modeled people act from their own configured context. ${proposal.world_records.length} canonical records hold the consequential world state; a record is not automatically an actor.`, nodeIds:new Set([...ids.people, ...ids.world]), edgeKinds:new Set()},
+    {kind:'Information paths', title:'Who can receive which representations?', summary:'These arrows are configured delivery routes. They do not mean the information is true, noticed, believed, or acted upon.', nodeIds:ids.information, edgeKinds:new Set(['issued_information', 'delivered_to'])},
+    {kind:'Transition authority', title:'What can actually change the world?', summary:`${proposal.active_systems.length} active transition systems may adjudicate bounded changes. Exact invariants still validate every committed patch.`, nodeIds:ids.systems, edgeKinds:new Set(['mechanism_binding'])},
+  ]
+  authoredDraftWalkthroughStep = Math.max(0, Math.min(authoredDraftWalkthroughStep, steps.length - 1))
+  const step = steps[authoredDraftWalkthroughStep]
+  const visibleNodes = projection.nodes.filter((item) => step.nodeIds.has(item.id))
+  const visibleIds = new Set(visibleNodes.map((item) => item.id))
+  const visibleEdges = projection.edges.filter((item) => step.edgeKinds.has(item.kind) && visibleIds.has(item.source) && visibleIds.has(item.target))
+  $('#create-draft-walkthrough-progress').textContent = `Step ${authoredDraftWalkthroughStep + 1} of ${steps.length}`
+  $('#create-draft-walkthrough-kind').textContent = step.kind
+  $('#create-draft-walkthrough-title').textContent = step.title
+  $('#create-draft-walkthrough-summary').textContent = step.summary
+  $('#create-draft-walkthrough-previous').disabled = authoredDraftWalkthroughStep === 0
+  $('#create-draft-walkthrough-next').textContent = authoredDraftWalkthroughStep === steps.length - 1 ? 'Review and approve ↓' : 'Next →'
+  $('#create-draft-network-status').textContent = `${visibleNodes.length} configured items · ${visibleEdges.length} configured paths · no runtime event is implied`
+  const graph = $('#create-draft-network-graph')
+  if (!visibleNodes.length || !window.CyberneticGraph) {
+    graph.innerHTML = '<p class="create-result-no-graph">No configured graph items are available for this step.</p>'
+    return
+  }
+  window.CyberneticGraph.render(graph, {
+    nodes:visibleNodes, edges:visibleEdges, legendNodes:visibleNodes, legendEdges:visibleEdges,
+    boundaries:[], world:null, trajectory:{nodes:[], edges:[]}, graphDiagnostics:{nodeClassification:{}, edgeClassification:{}, warnings:[]},
+    viewMode:'causal', event:null, initialRevision:authoringDraft?.revision || 0, title:step.title, subtitle:'configured before execution', showLegend:true, showMiniMap:false,
+    selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
+    onSelectNode:(nodeId) => {
+      const item = projection.nodes.find((candidate) => candidate.id === nodeId)
+      if (item) $('#create-draft-walkthrough-selection').innerHTML = `<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span>`
+    },
+    onSelectEdge:(item) => { $('#create-draft-walkthrough-selection').innerHTML = `<strong>${escapeHtml(sentence(item.kind))}</strong><span>${escapeHtml(item.description)}</span>` },
+  })
 }
 
 function draftTemplateLabel(templateId) {
@@ -1645,6 +1738,7 @@ function renderCreateSimulation() {
   renderCoordinationScenarioEditor(proposal)
   renderInfluenceNetworkEditor(proposal)
   renderGeneralEditor(proposal)
+  renderGeneralDraftWalkthrough(proposal)
   $('.create-brief').hidden = false
   renderAuthoringBrief(proposal)
   $('#create-draft-title').textContent = proposal.title
@@ -1677,8 +1771,24 @@ function renderCreateSimulation() {
   $('#create-raw-configuration').textContent = JSON.stringify(proposal, null, 2)
   const coverageBlocked = (authoringDraft.coverage?.blocking_request_ids || []).length > 0
   const ready = authoringDraft.status === 'ready_for_review' && diagnostics.length === 0 && !coverageBlocked
+  const onlyOpenQuestions = general && diagnostics.length > 0 && diagnostics.every((item) => item.code === 'unresolved') && !coverageBlocked
+  $('#create-resolve-questions').hidden = !onlyOpenQuestions
   $('#create-approve').hidden = !ready
   $('#create-run').hidden = authoringDraft.status !== 'approved'
+  $('#create-action-heading').textContent = authoringDraft.status === 'approved'
+    ? 'Approved and ready to run'
+    : onlyOpenQuestions
+      ? 'Choose where these decisions belong'
+      : ready
+        ? 'Ready for your decision'
+        : 'Resolve the items above before running'
+  $('#create-action-detail').textContent = authoringDraft.status === 'approved'
+    ? 'Luna will now operate the modeled people and coarse transition authorities.'
+    : onlyOpenQuestions
+      ? 'These questions can remain endogenous: the modeled people decide them during the run instead of you deciding them in advance.'
+      : ready
+        ? 'Approve this exact retained configuration, then run it with Luna.'
+        : 'Unsupported material behavior or invalid configuration must be corrected before approval.'
   const showingResult = document.body.classList.contains('authored-result')
     && !$('#create-result').hidden
   setCreateFlow(showingResult ? 'replay' : authoringDraft.status === 'approved' ? 'run' : 'review')
@@ -1688,6 +1798,28 @@ function renderCreateSimulation() {
     : general
       ? 'Review the people, world state, information routes, timing, and execution coverage. Edit directly or request a revision.'
       : 'Review the people and incoming information. Request a change or approve the simulation.'
+}
+
+async function keepQuestionsInsideSimulation() {
+  if (!authoringDraft || !isGeneralProposal(authoringDraft.proposal)) return
+  const proposal = clone(authoringDraft.proposal)
+  proposal.unresolved_questions = []
+  setAuthoringBusy(true)
+  $('#create-status').textContent = 'Keeping these choices inside the simulation and recompiling…'
+  try {
+    authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/general-proposal`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({expected_revision:authoringDraft.revision, edit_id:crypto.randomUUID(), proposal}),
+    })
+    renderCreateSimulation()
+    $('.create-actions').scrollIntoView({behavior:'smooth', block:'center'})
+    syncUrl()
+  } catch (error) {
+    $('#create-status').textContent = error.message
+  } finally {
+    setAuthoringBusy(false)
+  }
 }
 
 async function advanceAuthoringDraft(message) {

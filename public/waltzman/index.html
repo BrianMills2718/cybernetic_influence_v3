@@ -258,6 +258,24 @@
         <section id="create-review" class="create-review" hidden>
           <header><div><span>Generated simulation plan</span><h3 id="create-draft-title">Draft</h3><p id="create-draft-description"></p></div><div class="draft-state"><span id="create-draft-revision"></span><strong id="create-draft-state"></strong></div></header>
           <div id="create-diagnostics"></div>
+          <section id="create-draft-walkthrough" class="create-draft-walkthrough" aria-labelledby="create-draft-walkthrough-title">
+            <header class="create-draft-walkthrough-controls">
+              <div><span>Configuration walkthrough</span><strong id="create-draft-walkthrough-progress">Step 1</strong></div>
+              <div><button id="create-draft-walkthrough-previous" type="button">Previous</button><button id="create-draft-walkthrough-next" class="primary-cta" type="button">Next →</button></div>
+            </header>
+            <div class="create-draft-walkthrough-stage">
+              <aside>
+                <span id="create-draft-walkthrough-kind">Question</span>
+                <h3 id="create-draft-walkthrough-title">What is this simulation asking?</h3>
+                <p id="create-draft-walkthrough-summary"></p>
+                <p id="create-draft-walkthrough-selection" class="create-result-network-inspector">Select a visible item to inspect its configured meaning.</p>
+              </aside>
+              <section aria-label="Configured simulation visualization">
+                <div id="create-draft-network-graph" class="react-canvas-host"></div>
+                <p id="create-draft-network-status">This is the configured world before anything runs.</p>
+              </section>
+            </div>
+          </section>
           <section class="create-brief" aria-labelledby="create-brief-title">
             <header><div><span>Simulation brief</span><h3 id="create-brief-title">Check what the simulation will do</h3></div><p>These are the consequential choices. Edit them directly, ask the authoring model for a revision, or approve and run.</p></header>
             <div class="create-brief-grid">
@@ -267,7 +285,7 @@
               <article><span>4 · Decision process</span><div id="create-brief-rule"></div><button type="button" data-create-edit="network">Edit rounds and decision rule</button></article>
             </div>
           </section>
-          <div class="create-actions"><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation</button><button id="create-start-over" class="quiet-button" type="button">Change the original description</button></div>
+          <div class="create-actions"><div><strong id="create-action-heading">Ready for your decision</strong><span id="create-action-detail">Approve this exact configuration, then run it with Luna.</span></div><button id="create-resolve-questions" class="primary-cta" type="button" hidden>Keep these choices inside the simulation</button><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation with Luna</button><button id="create-start-over" class="quiet-button" type="button">Change description</button></div>
           <details id="create-coverage" class="create-coverage"><summary id="create-coverage-summary">What will actually run</summary><div id="create-coverage-detail"></div></details>
           <section class="create-world-summary" aria-labelledby="create-world-title"><div><span>World</span><h3 id="create-world-title">What the draft contains</h3></div><div id="create-world-facts"></div><div id="create-world-groups"></div></section>
           <section class="create-people" aria-labelledby="create-people-title"><div><span>People</span><h3 id="create-people-title">Review the simulated people</h3></div><div id="create-people-list"></div></section>
