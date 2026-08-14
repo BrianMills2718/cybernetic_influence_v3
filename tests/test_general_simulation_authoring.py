@@ -169,11 +169,25 @@ def test_direct_general_edit_is_revisioned_idempotent_and_approvable(
 
 
 def test_general_proposal_schema_contains_no_executable_reference_field() -> None:
-    schema = json.dumps(GeneralSimulationProposalV1.model_json_schema())
+    raw_schema = GeneralSimulationProposalV1.model_json_schema()
+    schema = json.dumps(raw_schema)
 
     assert "implementation_ref" not in schema
     assert "template_id" not in schema
     assert "python" not in schema.lower()
+    assert "sensing_rules" in raw_schema["required"]
+    assert "resource_transformations" in raw_schema["required"]
+
+
+def test_pre_transition_contract_proposal_migrates_to_empty_contract_lists() -> None:
+    raw = json.loads((FIXTURES / "port_coordination.json").read_text(encoding="utf-8"))
+    raw.pop("sensing_rules", None)
+    raw.pop("resource_transformations", None)
+
+    parsed = GeneralSimulationProposalV1.model_validate(raw)
+
+    assert parsed.sensing_rules == []
+    assert parsed.resource_transformations == []
 
 
 def test_general_authoring_prompt_defaults_to_a_short_editable_run() -> None:

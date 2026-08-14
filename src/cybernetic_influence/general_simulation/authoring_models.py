@@ -191,14 +191,23 @@ class GeneralSimulationProposalV1(_StrictModel):
     resource_extension: ResourceExtensionV1 | None
     relationship_extension: RelationshipExtensionV1 | None
     schedule: list[ScheduledMomentProposalV1] = Field(min_length=1)
-    sensing_rules: list[SensingRuleProposalV1] = Field(default_factory=list)
-    resource_transformations: list[ResourceTransformationProposalV1] = Field(
-        default_factory=list
-    )
+    sensing_rules: list[SensingRuleProposalV1]
+    resource_transformations: list[ResourceTransformationProposalV1]
     fidelity_assumptions: list[str] = Field(min_length=1)
     declared_invariants: list[str]
     analysis_requests: list[str]
     unresolved_questions: list[str]
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_pre_transition_contract_proposals(cls, value: object) -> object:
+        """Keep retained pre-contract drafts readable without weakening provider schemas."""
+        if not isinstance(value, dict):
+            return value
+        migrated = dict(value)
+        migrated.setdefault("sensing_rules", [])
+        migrated.setdefault("resource_transformations", [])
+        return migrated
 
     @model_validator(mode="after")
     def unique_ids_and_references(self) -> "GeneralSimulationProposalV1":
