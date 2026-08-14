@@ -25,20 +25,24 @@ supersedes_in_part:
   the transition authority no longer emits objective assessment.
 - **29C complete at the service boundary:** completed V2 runs retain a
   theory-neutral evidence bundle and separately computed analysis results.
-- **29D partial:** the public review now separates World, Run, and optional
-  Analysis, but conversational authoring still writes a V1 draft before the
-  explicit V1-to-V2 approval adapter.
-- **29E partial:** the public execution consumer uses V2 and retained run
-  `run_2a06da476746` proves that path with 15 authentic calls, three
-  checkpoints, 25 evidence records, and separate post-run analysis. New-write
-  V2 authoring, after-run lens attachment/removal, the runtime-generated
-  isolation receipt, and retirement of the V1 writer/runner remain open.
+- **29D complete for the selected vertical:** new conversational drafts write
+  a native separated V2 bundle. Public draft `draft_2336c4427396` was authored
+  from the relief-port description with no research question and no selected
+  analysis. Its compiled graph contains 39 nodes, 73 edges, and no isolated
+  nodes; the public review separates World, Run, and optional Analysis.
+- **29E complete for public-path adoption, partial for retirement:** retained
+  native run `run_0047f43377f8` completed through V2 with 15 authentic Terra
+  calls, three causal moments, 26 evidence records, and zero analyses at
+  execution. Waltzman and exact-outcome lenses were attached after completion,
+  the exact lens was removed, and all three generated isolation receipts show
+  unchanged model-call count, world revision, and run-evidence digest. V1
+  historical readers and execution branches have not yet been retired.
 
 Luna certification refresh was attempted against the current shared-client
 revision and failed at the provider boundary because the Codex subscription
 usage limit is exhausted until 2026-08-20 11:00 local time. The retained
-public proof therefore used the currently advertised OpenRouter Terra route;
-do not describe it as a Luna execution.
+public native-V2 proof therefore used the currently advertised OpenRouter
+Terra route; do not describe either the authoring trace or run as Luna.
 
 ## Planning mode and target
 

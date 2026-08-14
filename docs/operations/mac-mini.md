@@ -117,6 +117,20 @@ trajectory, then reloads completed public runs after refresh. The public store
 currently adds a matched three-run custom triad. Its role-aligned comparison is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist>.
 
+Current separated-authoring deployment 2026-08-14: the public service runs
+commit `c3a19e13682f9bca8164d772215903d18c280507`. New drafts write native V2
+scenario and run contracts rather than passing through the V1 authoring
+proposal. Authentic Terra-authored draft `draft_2336c4427396` produced the
+relief-port configuration without an analyst question or preselected analysis;
+authentic retained run `run_0047f43377f8` completed with 15 model calls and 26
+theory-neutral evidence records. The completed-run UI can attach and remove
+Waltzman or exact-outcome analysis without rerunning people or changing the
+world. Three retained isolation receipts preserve 15 model calls, world
+revision 2, and evidence digest
+`ca2eaab362b661ea4f850d2295a297237ac5de694496f4a119c4035e752df59c`
+across attach/add/remove. Luna remained unavailable at its certified provider
+boundary, so neither artifact is a Luna execution.
+
 Current natural-language authoring, canonical walkthrough, and methodology
 deployment 2026-08-12: the public service now runs exact revision
 `11861ccfba8d9297b1dd2233cfc2c95040bd655b`. The direct authoring entry is
