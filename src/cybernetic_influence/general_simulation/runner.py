@@ -489,6 +489,11 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "preconditioned resource quantity changes and matching public inventory-record "
                     "changes. Quantities may never become negative. Do not merely record that an attempt "
                     "was requested when the supplied world state lets this authority adjudicate its result."
+                    " Apply only declared sensing_rules and resource_transformations. A sensing rule "
+                    "reveals only its named hidden keys when a permitted observer actually attempts it. "
+                    "A transformation may execute only when a permitted operator attempts it and every "
+                    "declared input quantity is available; apply at most maximum_batches and update the "
+                    "named public inventory record in the same transaction."
                 ),
                 user=json.dumps(
                     {
@@ -504,6 +509,14 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "configured_active_systems": [
                             item.model_dump(mode="json")
                             for item in self._proposal.active_systems
+                        ],
+                        "sensing_rules": [
+                            item.model_dump(mode="json")
+                            for item in self._proposal.sensing_rules
+                        ],
+                        "resource_transformations": [
+                            item.model_dump(mode="json")
+                            for item in self._proposal.resource_transformations
                         ],
                         "requirements": {
                             "authority_id": self._authority_id,

@@ -150,6 +150,31 @@ class ScheduledMomentProposalV1(_StrictModel):
     external_inject_representation_ids: list[str]
 
 
+class SensingRuleProposalV1(_StrictModel):
+    rule_id: str = Field(pattern=_ID)
+    subject_ref: str = Field(pattern=_ID)
+    observer_ids: list[str] = Field(min_length=1)
+    reveal_hidden_keys: list[str] = Field(min_length=1)
+    output_record_id: str = Field(pattern=_ID)
+    result_recipient_ids: list[str] = Field(min_length=1)
+
+
+class ResourceTransformationProposalV1(_StrictModel):
+    transformation_id: str = Field(pattern=_ID)
+    operator_ids: list[str] = Field(min_length=1)
+    input_resource_quantities: dict[str, float] = Field(min_length=1)
+    output_resource_id: str = Field(pattern=_ID)
+    output_quantity: float = Field(gt=0)
+    maximum_batches: int = Field(ge=1)
+    public_inventory_record_id: str = Field(pattern=_ID)
+
+    @model_validator(mode="after")
+    def positive_inputs(self) -> "ResourceTransformationProposalV1":
+        if any(quantity <= 0 for quantity in self.input_resource_quantities.values()):
+            raise ValueError("transformation input quantities must be positive")
+        return self
+
+
 class GeneralSimulationProposalV1(_StrictModel):
     schema_version: Literal[1]
     proposal_kind: Literal["general_world_v1"]
@@ -166,6 +191,10 @@ class GeneralSimulationProposalV1(_StrictModel):
     resource_extension: ResourceExtensionV1 | None
     relationship_extension: RelationshipExtensionV1 | None
     schedule: list[ScheduledMomentProposalV1] = Field(min_length=1)
+    sensing_rules: list[SensingRuleProposalV1] = Field(default_factory=list)
+    resource_transformations: list[ResourceTransformationProposalV1] = Field(
+        default_factory=list
+    )
     fidelity_assumptions: list[str] = Field(min_length=1)
     declared_invariants: list[str]
     analysis_requests: list[str]

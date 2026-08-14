@@ -112,6 +112,43 @@ def compile_general_simulation(
                     f"representation {representation.representation_id} names unknown recipients: "
                     + ", ".join(unknown)
                 )
+    for rule in proposal.sensing_rules:
+        if rule.subject_ref not in declared_refs:
+            raise GeneralCompilationError(
+                f"sensing rule {rule.rule_id} names unknown subject {rule.subject_ref}"
+            )
+        unknown_actors = sorted(
+            (set(rule.observer_ids) | set(rule.result_recipient_ids)) - actor_ids
+        )
+        if unknown_actors:
+            raise GeneralCompilationError(
+                f"sensing rule {rule.rule_id} names unknown actors: {', '.join(unknown_actors)}"
+            )
+    resource_ids = (
+        {item.resource_id for item in proposal.resource_extension.stocks}
+        if proposal.resource_extension else set()
+    )
+    for transformation in proposal.resource_transformations:
+        unknown_resources = sorted(
+            ({*transformation.input_resource_quantities, transformation.output_resource_id})
+            - resource_ids
+        )
+        if unknown_resources:
+            raise GeneralCompilationError(
+                f"transformation {transformation.transformation_id} names unknown resources: "
+                + ", ".join(unknown_resources)
+            )
+        unknown_operators = sorted(set(transformation.operator_ids) - actor_ids)
+        if unknown_operators:
+            raise GeneralCompilationError(
+                f"transformation {transformation.transformation_id} names unknown operators: "
+                + ", ".join(unknown_operators)
+            )
+        if transformation.public_inventory_record_id not in record_ids:
+            raise GeneralCompilationError(
+                f"transformation {transformation.transformation_id} names unknown inventory record "
+                f"{transformation.public_inventory_record_id}"
+            )
     for moment in proposal.schedule:
         unknown = sorted(
             set(moment.external_inject_representation_ids) - representation_ids
