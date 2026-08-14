@@ -1205,12 +1205,14 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-brief > header span { color: var(--accent); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .create-brief > header h3 { font-size: 1.45rem; margin: 6px 0 0; }
 .create-brief > header p { color: var(--muted); font-size: 0.82rem; line-height: 1.5; margin: 0; max-width: 50ch; }
-.create-brief-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
-.create-brief-grid article { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; min-height: 190px; padding: 18px; }
+.create-brief-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px; }
+.create-brief-grid article { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; min-height: 220px; padding: 18px; }
 .create-brief-grid article > span { color: var(--accent); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
 .create-brief-grid article > div { flex: 1; margin-top: 12px; }
+.create-brief-grid article > div + div { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; }
 .create-brief-grid article > div > strong { display: block; font-size: 1rem; line-height: 1.45; }
 .create-brief-grid p { color: var(--muted); font-size: 0.78rem; line-height: 1.5; margin: 7px 0 0; }
+.create-brief-grid .analysis-separation-note { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
 .create-brief-grid ol { list-style: none; margin: 0; padding: 0; }
 .create-brief-grid li + li { border-top: 1px solid var(--line); margin-top: 9px; padding-top: 9px; }
 .create-brief-grid li strong, .create-brief-grid li span { display: block; }

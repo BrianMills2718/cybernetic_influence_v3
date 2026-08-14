@@ -1721,7 +1721,7 @@ function renderAuthoringBrief(proposal) {
     const recipients = representations.reduce((total, item) => total + item.recipient_ids.length, 0)
     const plannedCalls = proposal.schedule.length * (proposal.people.length + 1)
     const maximumCalls = proposal.schedule.length * ((proposal.people.length * 2) + 2)
-    $('#create-brief-question').innerHTML = `<strong>${escapeHtml(proposal.question)}</strong>`
+    $('#create-brief-question').innerHTML = `<strong>Your question</strong><p>${escapeHtml(proposal.question)}</p>`
     $('#create-brief-people').innerHTML = `<strong>${proposal.people.length} simulated ${proposal.people.length === 1 ? 'person' : 'people'}</strong><p>${proposal.people.map((person) => escapeHtml(person.label)).join(' · ')}</p>`
     $('#create-brief-influences').innerHTML = representations.length
       ? `<strong>${representations.length} information ${representations.length === 1 ? 'item' : 'items'} · ${recipients} explicit deliveries</strong><ol>${representations.map((item) => `<li><strong>${escapeHtml(item.apparent_source)} → ${escapeHtml(item.recipient_ids.map((id) => peopleById.get(id) || id).join(', '))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')}</ol>`
@@ -1730,7 +1730,7 @@ function renderAuthoringBrief(proposal) {
     $('#create-brief-analysis-card').hidden = false
     $('#create-brief-analysis').innerHTML = proposal.analysis_spec
       ? `<strong>${escapeHtml(sentence(proposal.analysis_spec.profile))}</strong><p>${escapeHtml(proposal.analysis_spec.purpose)}</p>`
-      : '<strong>No analytical framework selected</strong><p>The simulation will retain world changes, observations, actions, and evidence without applying Waltzman or another theory lens.</p>'
+      : '<strong>No analytical framework selected</strong><p>You can inspect the retained world changes, observations, actions, and evidence without a theory-specific score.</p>'
     all('[data-create-edit]').forEach((button) => {
       button.onclick = () => {
         const target = $('#create-general-editor')
@@ -1741,14 +1741,15 @@ function renderAuthoringBrief(proposal) {
     return
   }
   const workflow = proposal.workflow || {}
-  $('#create-brief-analysis-card').hidden = true
+  $('#create-brief-analysis-card').hidden = false
   const people = proposal.people || []
   const peopleById = new Map(people.map((person) => [person.entity_id, person]))
   const objectsById = new Map((proposal.objects || []).map((item) => [item.entity_id, item]))
   const informationById = new Map((proposal.information || []).map((item) => [item.information_id, item]))
   const deliveries = workflow.deliveries || []
   const question = workflow.collective_question || workflow.collective_goal?.description || proposal.description
-  $('#create-brief-question').innerHTML = `<strong>${escapeHtml(question)}</strong>`
+  $('#create-brief-question').innerHTML = `<strong>Configured purpose</strong><p>${escapeHtml(question)}</p>`
+  $('#create-brief-analysis').innerHTML = '<strong>Built-in workflow assessment</strong><p>This earlier workflow evaluates its configured terminal decision rule.</p>'
   $('#create-brief-people').innerHTML = `<strong>${people.length} independent ${people.length === 1 ? 'person' : 'people'}</strong><p>${people.map((person) => escapeHtml(person.label)).join(' · ')}</p>`
   if (deliveries.length) {
     $('#create-brief-influences').innerHTML = `<ol>${deliveries.map((delivery) => {
@@ -1825,7 +1826,7 @@ function renderCreateSimulation() {
     ? 'Review and run this simulation.'
     : 'Design a simulation with the selected authoring model.'
   $('.create-hero > p').textContent = authoringDraft?.proposal
-    ? 'Check the objective, people, world state, information paths, timing, and execution coverage. Everything below is retained and editable before the selected model runs the simulation.'
+    ? 'Review the world, the run conditions, and any optional analysis separately. Everything below is retained and editable before the selected model runs the simulation.'
     : 'Describe a world in ordinary language. The authoring model can clarify it with you, or configure it immediately using disclosed assumptions.'
   $('#create-generate').disabled = !author || authoringBusy
   $('#create-configure-now').disabled = !author || authoringBusy

@@ -286,13 +286,11 @@
             </div>
           </section>
           <section class="create-brief" aria-labelledby="create-brief-title">
-            <header><div><span>Simulation brief</span><h3 id="create-brief-title">Check what the simulation will do</h3></div><p>These are the consequential choices. Edit them directly, ask the authoring model for a revision, or approve and run.</p></header>
+            <header><div><span>Before you run</span><h3 id="create-brief-title">Review three separate layers</h3></div><p>The world and run determine what can happen. Analysis reads the retained evidence afterward and cannot steer the simulation.</p></header>
             <div class="create-brief-grid">
-              <article><span>1 · Operational objective</span><div id="create-brief-question"></div><button type="button" data-create-edit="network">Edit objective and schedule</button></article>
-              <article><span>2 · Simulated people</span><div id="create-brief-people"></div><button type="button" data-create-edit="people">Edit a person</button></article>
-              <article><span>3 · Information paths</span><div id="create-brief-influences"></div><button type="button" data-create-edit="network">Edit messages and recipients</button></article>
-              <article><span>4 · Decision process</span><div id="create-brief-rule"></div><button type="button" data-create-edit="network">Edit rounds and decision rule</button></article>
-              <article id="create-brief-analysis-card"><span>5 · Analysis lens</span><div id="create-brief-analysis"></div><p>Change this by telling the authoring model what you want to evaluate.</p></article>
+              <article><span>1 · World</span><div id="create-brief-people"></div><div id="create-brief-influences"></div><button type="button" data-create-edit="people">Edit a person</button><button type="button" data-create-edit="network">Edit world and information</button></article>
+              <article><span>2 · Run</span><div id="create-brief-rule"></div><button type="button" data-create-edit="network">Edit timing and events</button></article>
+              <article id="create-brief-analysis-card"><span>3 · Analysis · optional</span><div id="create-brief-question"></div><div id="create-brief-analysis"></div><p class="analysis-separation-note">Applied only to retained evidence after the run.</p></article>
             </div>
           </section>
           <div class="create-actions"><div><strong id="create-action-heading">Ready for your decision</strong><span id="create-action-detail">Approve this exact configuration, then run it with the selected model.</span></div><button id="create-resolve-questions" class="primary-cta" type="button" hidden>Keep these choices inside the simulation</button><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation</button><button id="create-start-over" class="quiet-button" type="button">Change description</button></div>
@@ -306,7 +304,7 @@
             <summary>Edit consequential inputs directly</summary>
             <p class="create-editor-note">Each save creates a retained typed revision and recompiles it. No model call is made.</p>
             <div class="create-scenario-grid">
-              <label>Operational objective<textarea id="create-general-question" rows="3"></textarea></label>
+              <label>Your review question <small>Not shown to simulated people or the world adjudicator</small><textarea id="create-general-question" rows="3"></textarea></label>
               <label>Simulation description<textarea id="create-general-description" rows="3"></textarea></label>
               <label>Person<select id="create-general-person-select"></select></label>
               <label>Person’s position<textarea id="create-general-person-position" rows="2"></textarea></label>
