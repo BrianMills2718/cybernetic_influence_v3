@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -16,6 +18,10 @@ from cybernetic_influence.analysis.theory_analysis import (
 )
 from cybernetic_influence.general_simulation.authoring_models import (
     GeneralSimulationProposalV1,
+)
+from cybernetic_influence.general_simulation.analysis_service import (
+    analyze_run_evidence_v2,
+    build_run_evidence_bundle_v2,
 )
 from cybernetic_influence.general_simulation.compiler import (
     CompiledGeneralSimulationV2,
@@ -87,6 +93,25 @@ def test_retained_port_proposal_adapts_to_independent_v2_contracts() -> None:
     assert compiled.coverage.approvable
 
 
+def test_runtime_module_does_not_load_analysis_package() -> None:
+    probe = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; import cybernetic_influence.general_simulation.runner; "
+                "assert not any(name.startswith('cybernetic_influence.analysis') "
+                "for name in sys.modules), sorted(name for name in sys.modules "
+                "if name.startswith('cybernetic_influence.analysis'))"
+            ),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert probe.returncode == 0, probe.stderr
+
+
 def test_analysis_attachment_changes_neither_scenario_nor_run_identity() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         FIXTURE.read_text(encoding="utf-8")
@@ -129,7 +154,16 @@ def test_v2_evidence_bundle_requires_no_analysis_specification() -> None:
         "known_omissions": [],
     }
     bundle = RunEvidenceBundleV2(
-        **payload,
+        bundle_id="bundle_run_relief_port_v2",
+        run_id="run_relief_port_v2",
+        scenario_id=scenario.scenario_id,
+        scenario_digest=scenario.digest,
+        run_spec_digest=run_spec.digest,
+        initial_state_digest="0" * 64,
+        terminal_state_digest="1" * 64,
+        evidence_records=[evidence],
+        fidelity_assumptions=scenario.fidelity_assumptions,
+        known_omissions=[],
         record_digest=_digest(payload),
     )
 
@@ -201,6 +235,14 @@ def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
 
     assert result.scenario_digest == scenario.digest
     assert result.run_spec_digest == run_spec.digest
+    retained_result = result.model_dump(mode="json")
+    evidence_bundle = build_run_evidence_bundle_v2(compiled, result)
+    analysis = analyze_run_evidence_v2(evidence_bundle, _waltzman_spec())
+    assert analysis.coverage_status == "supported"
+    assert analysis.model_call_receipts == []
+    assert analysis.run_evidence_bundle_digest == evidence_bundle.record_digest
+    assert result.model_dump(mode="json") == retained_result
+    assert len(result.model_calls) == len(scenario.people) + 1
     assert all(
         item.transaction.objective_assessment is None
         for item in result.transition_evidence
@@ -211,3 +253,11 @@ def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
         assert "research_question" not in serialized
         assert "analysis_spec" not in serialized
         assert "analysis_requests" not in serialized
+
+    unsupported_spec = _waltzman_spec().model_copy(
+        update={"required_evidence_kinds": ["boundary_activity"]}
+    )
+    unsupported = analyze_run_evidence_v2(evidence_bundle, unsupported_spec)
+    assert unsupported.coverage_status == "unsupported"
+    assert unsupported.missing_evidence == ["boundary_activity"]
+    assert result.model_dump(mode="json") == retained_result
