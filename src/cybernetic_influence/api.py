@@ -789,6 +789,7 @@ def _simulation_replay(
     network_nodes: list[dict[str, object]],
     network_edges: list[dict[str, object]],
     raw_moments: object,
+    general_world: bool = False,
 ) -> dict[str, object]:
     """Build one small, evidence-backed walkthrough independent of page layout."""
 
@@ -856,7 +857,9 @@ def _simulation_replay(
                 for marker in ("decision", "outcome", "gate")
             )
         ][:1]
-    setup_ids = source_ids + person_ids + gate_ids
+    setup_ids = (
+        list(node_ids) if general_world else source_ids + person_ids + gate_ids
+    )
     decision_edge_ids = [
         edge_id
         for edge_id, edge in edge_by_id.items()
@@ -921,23 +924,34 @@ def _simulation_replay(
         kind="setup",
         scene_title="Who and what begin in the system",
         scene_summary=(
-            f"The retained simulation begins with {len(person_ids)} people and "
-            f"{len(source_ids)} configured information sources. Later messages "
-            "and decisions remain hidden until their replay step."
+            (
+                f"The retained simulation begins with {len(person_ids)} people and "
+                f"{len(node_ids) - len(person_ids)} other world components. Later "
+                "actions and world changes remain hidden until their replay step."
+            )
+            if general_world
+            else (
+                f"The retained simulation begins with {len(person_ids)} people and "
+                f"{len(source_ids)} configured information sources. Later messages "
+                "and decisions remain hidden until their replay step."
+            )
         ),
         visible_nodes=setup_ids,
         visible_edges=[],
         focus_nodes=source_ids + person_ids,
         facts=[
             ("People", str(len(person_ids))),
-            ("Information sources", str(len(source_ids))),
+            (
+                "Other world components" if general_world else "Information sources",
+                str(len(node_ids) - len(person_ids) if general_world else len(source_ids)),
+            ),
         ],
     )
 
     visible_nodes = list(setup_ids)
     visible_edges: list[str] = []
     decisions_have_entered = False
-    for round_item in rounds:
+    for round_item in ([] if general_world else rounds):
         round_index = round_item.get("round_index")
         if not isinstance(round_index, int) or isinstance(round_index, bool):
             continue
@@ -1005,7 +1019,7 @@ def _simulation_replay(
                 round_index=round_index,
             )
 
-    if not rounds and isinstance(raw_moments, list):
+    if (general_world or not rounds) and isinstance(raw_moments, list):
         visible_event_nodes = list(setup_ids)
         visible_event_edges: list[str] = []
         for index, moment in enumerate(raw_moments[:10], start=1):
@@ -1036,18 +1050,38 @@ def _simulation_replay(
             ]
             visible_event_nodes.extend(connected_node_ids or participants)
             visible_event_edges.extend(connected_edge_ids)
+            execution_parent = moment.get("execution_parent")
+            parent_revision = (
+                int(execution_parent.removeprefix("revision:"))
+                if isinstance(execution_parent, str)
+                and execution_parent.removeprefix("revision:").isdigit()
+                else None
+            )
+            resulting_revision = moment.get("resulting_revision")
+            transition_committed = (
+                isinstance(resulting_revision, int)
+                and not isinstance(resulting_revision, bool)
+                and isinstance(parent_revision, int)
+                and resulting_revision > parent_revision
+            )
             add_scene(
                 scene_id=f"event_{index}",
                 kind="event",
-                scene_title=f"What happened next · {index}",
+                scene_title=str(moment.get("event_id") or f"World moment {index}")
+                .replace("_", " ")
+                .capitalize(),
                 scene_summary=narrative,
                 visible_nodes=visible_event_nodes,
                 visible_edges=visible_event_edges,
                 focus_nodes=participants,
                 focus_edges=connected_edge_ids,
                 facts=[
-                    ("Retained event", str(index)),
-                    ("Active systems", str(len(participants))),
+                    ("Moment", str(index)),
+                    ("People acting", str(len(participants))),
+                    (
+                        "World transition",
+                        "Committed" if transition_committed else "No change committed",
+                    ),
                 ],
             )
 
@@ -1493,6 +1527,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         network_nodes=network_nodes,
         network_edges=network_edges,
         raw_moments=raw_moments,
+        general_world=document.get("profile") == "general_world_v1",
     )
     readout = coordination_measurement_readout(document).model_dump(mode="json")
     is_general_world = document.get("profile") == "general_world_v1"

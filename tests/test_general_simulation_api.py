@@ -241,6 +241,18 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     )
     assert summary_payload["simulation_replay"]["scenes"][0]["visible_node_ids"] == []
     assert summary_payload["simulation_replay"]["scenes"][0]["title"] == "The research question"
+    replay_scenes = summary_payload["simulation_replay"]["scenes"]
+    assert len([scene for scene in replay_scenes if scene["kind"] == "event"]) == 3
+    assert not any(scene["kind"] == "decisions" for scene in replay_scenes)
+    assert not any(
+        fact["label"] == "Positions"
+        for scene in replay_scenes
+        for fact in scene["facts"]
+    )
+    assert replay_scenes[1]["facts"] == [
+        {"label": "People", "value": "4"},
+        {"label": "Other world components", "value": "8"},
+    ]
     assert summary_payload["simulation_replay"]["scenes"][-1]["facts"][0]["label"] == "Outcome"
     assert len(summary_payload["theory_analysis"]["findings"]) == 5
     assert runtime_call.actor_counter == call_count
