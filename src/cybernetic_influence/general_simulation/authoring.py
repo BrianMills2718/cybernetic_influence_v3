@@ -53,6 +53,35 @@ GENERAL_AUTHORING_MODELS = {
 }
 
 
+def _is_terminal_provider_error(error: Exception) -> bool:
+    """Return whether retrying the same provider route cannot reasonably help."""
+
+    try:
+        from llm_client import (
+            LLMAuthError,
+            LLMBudgetExceededError,
+            LLMCapabilityError,
+            LLMConfigurationError,
+            LLMContentFilterError,
+            LLMModelNotFoundError,
+            LLMQuotaExhaustedError,
+        )
+    except ImportError:
+        return False
+    return isinstance(
+        error,
+        (
+            LLMAuthError,
+            LLMBudgetExceededError,
+            LLMCapabilityError,
+            LLMConfigurationError,
+            LLMContentFilterError,
+            LLMModelNotFoundError,
+            LLMQuotaExhaustedError,
+        ),
+    )
+
+
 def _structured_call() -> StructuredCall:
     try:
         from llm_client import call_llm_structured
@@ -423,7 +452,12 @@ class GeneralDraftAuthoringService:
                 attempts.append(
                     _attempt(attempt_number, trace_id, "provider_error", diagnostics[0]["message"], meta)
                 )
-                break
+                if _is_terminal_provider_error(exc):
+                    break
+                repair_feedback = (
+                    "The provider response could not be parsed. Return one complete, "
+                    "concise proposal envelope that validates against the supplied schema."
+                )
         if proposal is None and isinstance(candidate, dict):
             proposal = GeneralSimulationProposalV1.model_validate(candidate)
             compiled = compile_general_simulation(proposal)

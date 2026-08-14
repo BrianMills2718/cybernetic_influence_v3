@@ -60,6 +60,37 @@ def test_conversation_retains_general_proposal_coverage_and_trace(tmp_path: Path
     ]
 
 
+def test_transient_provider_failure_retries_general_authoring(tmp_path: Path) -> None:
+    store = AuthoringDraftStore(tmp_path)
+    created = store.create(now="2026-08-13T12:00:00Z", target_kind="general_world_v1")
+    calls = 0
+
+    def flaky_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        nonlocal calls
+        del args, kwargs
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("Provider response was not valid JSON")
+        return GeneralProposalEnvelopeV1(proposal=proposal()), SimpleNamespace(
+            provider="test", cost=0.0
+        )
+
+    service = GeneralDraftAuthoringService(store, call=flaky_call)
+    drafted = service.advance(
+        str(created["draft_id"]),
+        expected_revision=0,
+        message_id="retry_prompt",
+        message="Model relief cargo coordination after a bridge failure.",
+    )
+
+    assert calls == 2
+    assert drafted["status"] == "ready_for_review"
+    assert [attempt["status"] for attempt in drafted["attempts"]] == [
+        "provider_error",
+        "accepted",
+    ]
+
+
 def test_discussion_retains_chat_without_configuring(tmp_path: Path) -> None:
     store = AuthoringDraftStore(tmp_path)
     created = store.create(now="2026-08-13T12:00:00Z", target_kind="general_world_v1")
