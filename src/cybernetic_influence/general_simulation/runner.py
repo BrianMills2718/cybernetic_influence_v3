@@ -88,10 +88,22 @@ def _normalize_transaction_targets(
     world: CanonicalWorld,
     corrections: list[str],
 ) -> WorldTransaction:
-    operations = [
-        operation
-        if operation.operation == "create"
-        else operation.model_copy(
+    operations = []
+    for operation in transaction.operations:
+        if (
+            operation.operation == "create"
+            and operation.target.record_type == "record"
+            and isinstance(operation.value, dict)
+            and "evidence_refs" in operation.value
+        ):
+            value = dict(operation.value)
+            value.pop("evidence_refs", None)
+            corrections.append(
+                f"create-record evidence_refs retained at transaction level for {operation.target.record_id}"
+            )
+            operations.append(operation.model_copy(update={"value": value}))
+            continue
+        operations.append(operation if operation.operation == "create" else operation.model_copy(
             update={
                 "target": _normalize_existing_target(
                     operation.target,
@@ -100,9 +112,7 @@ def _normalize_transaction_targets(
                     corrections=corrections,
                 )
             }
-        )
-        for operation in transaction.operations
-    ]
+        ))
     preconditions = [
         precondition.model_copy(
             update={
@@ -471,7 +481,14 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "assess the research objective as achieved, partially_achieved, failed, or "
                     "unresolved. Base that assessment only on canonical state, collected intents, "
                     "and the transaction you propose; cite exact supplied evidence identifiers. "
-                    "Use unresolved when the evidence does not establish success or failure."
+                    "Use unresolved when the evidence does not establish success or failure. "
+                    "You may use canonical hidden state to adjudicate the result of a scoped sensing "
+                    "or inspection intent, but expose only the resulting public finding through a "
+                    "record-state operation; never quote unrelated hidden state. When canonical stocks "
+                    "and an actor intent support a bounded material transformation, express it through "
+                    "preconditioned resource quantity changes and matching public inventory-record "
+                    "changes. Quantities may never become negative. Do not merely record that an attempt "
+                    "was requested when the supplied world state lets this authority adjudicate its result."
                 ),
                 user=json.dumps(
                     {
@@ -480,6 +497,14 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "world": world.state.model_dump(mode="json"),
                         "intents": [item.model_dump(mode="json") for item in intents],
                         "authority": authority.model_dump(mode="json"),
+                        "configured_transition_requests": [
+                            item.model_dump(mode="json")
+                            for item in self._proposal.component_requests
+                        ],
+                        "configured_active_systems": [
+                            item.model_dump(mode="json")
+                            for item in self._proposal.active_systems
+                        ],
                         "requirements": {
                             "authority_id": self._authority_id,
                             "base_revision": world.state.revision,
