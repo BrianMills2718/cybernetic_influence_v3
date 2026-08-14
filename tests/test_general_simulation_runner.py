@@ -22,9 +22,11 @@ from cybernetic_influence.general_simulation.models import (
 )
 from cybernetic_influence.general_simulation.runner import (
     _memory_reference_is_grounded,
+    _normalize_transaction_targets,
     _normalized_memory,
     run_general_simulation,
 )
+from cybernetic_influence.general_simulation.world import CanonicalWorld
 from cybernetic_influence.general_simulation.analysis_projection import (
     project_waltzman_analysis,
 )
@@ -61,6 +63,53 @@ def test_memory_provenance_accepts_only_unambiguous_sentence_prefixes() -> None:
     assert not _memory_reference_is_grounded(
         "At minute 105, the outage remains active across multiple regions.", ambiguous
     )
+
+
+def test_existing_record_state_fields_are_normalized_before_validation() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    world = CanonicalWorld(compile_general_simulation(proposal).world_spec)
+    transaction = WorldTransaction(
+        transaction_id="normalize_record_state",
+        base_revision=0,
+        authority_id="general_semantic_adjudicator",
+        intent_ids=["intent_1"],
+        operations=[
+            PatchOperation(
+                operation="replace",
+                target=TypedTarget(
+                    record_type="record",
+                    record_id="relief_cargo",
+                    field="status",
+                ),
+                value="dispatched",
+            )
+        ],
+        preconditions=[
+            Precondition(
+                target=TypedTarget(
+                    record_type="record",
+                    record_id="relief_cargo",
+                    field="status",
+                ),
+                expected="awaiting_dispatch",
+            )
+        ],
+        consequences=[],
+        evidence_refs=["relief_cargo"],
+        stated_rationale="Exercise typed record-state normalization.",
+    )
+    corrections: list[str] = []
+
+    normalized = _normalize_transaction_targets(transaction, world, corrections)
+
+    assert normalized.operations[0].target.field == "state.status"
+    assert normalized.preconditions[0].target.field == "state.status"
+    assert corrections == [
+        "operation target relief_cargo field normalized from status to state.status",
+        "precondition target relief_cargo field normalized from status to state.status",
+    ]
 
 
 def test_actor_output_gets_one_bounded_validation_repair() -> None:

@@ -83,6 +83,47 @@ def _normalize_existing_target(
     return target.model_copy(update={"record_type": corrected_type})
 
 
+def _normalize_record_state_field(
+    target: TypedTarget,
+    world: CanonicalWorld,
+    *,
+    correction_context: str,
+    corrections: list[str],
+) -> TypedTarget:
+    if target.record_type != "record" or target.field.startswith(("state.", "hidden_state.")):
+        return target
+    record = world.state.records.get(target.record_id)
+    if record is None or target.field not in record.state:
+        return target
+    corrected_field = f"state.{target.field}"
+    corrections.append(
+        f"{correction_context} target {target.record_id} field normalized from "
+        f"{target.field} to {corrected_field}"
+    )
+    return target.model_copy(update={"field": corrected_field})
+
+
+def _normalize_target(
+    target: TypedTarget,
+    world: CanonicalWorld,
+    *,
+    correction_context: str,
+    corrections: list[str],
+) -> TypedTarget:
+    typed = _normalize_existing_target(
+        target,
+        world,
+        correction_context=correction_context,
+        corrections=corrections,
+    )
+    return _normalize_record_state_field(
+        typed,
+        world,
+        correction_context=correction_context,
+        corrections=corrections,
+    )
+
+
 def _normalize_transaction_targets(
     transaction: WorldTransaction,
     world: CanonicalWorld,
@@ -105,7 +146,7 @@ def _normalize_transaction_targets(
             continue
         operations.append(operation if operation.operation == "create" else operation.model_copy(
             update={
-                "target": _normalize_existing_target(
+                "target": _normalize_target(
                     operation.target,
                     world,
                     correction_context="operation",
@@ -116,7 +157,7 @@ def _normalize_transaction_targets(
     preconditions = [
         precondition.model_copy(
             update={
-                "target": _normalize_existing_target(
+                "target": _normalize_target(
                     precondition.target,
                     world,
                     correction_context="precondition",
