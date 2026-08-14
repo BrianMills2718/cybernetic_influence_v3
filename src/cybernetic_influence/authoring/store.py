@@ -38,6 +38,7 @@ class _DraftDocument(BaseModel):
     authoring_summary: str = "Describe a bounded situation to begin."
     proposal: dict[str, object] | None = None
     coverage: dict[str, object] | None = None
+    configuration_graph: dict[str, object] | None = None
     diagnostics: list[dict[str, str]] = Field(default_factory=list)
     approval: dict[str, object] | None = None
     created_at: str

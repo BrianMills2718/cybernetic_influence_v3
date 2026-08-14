@@ -212,6 +212,12 @@ class ResourceTransportProposalV1(_StrictModel):
     arrival_minute_key: str = Field(pattern=_ID)
 
 
+class AnalysisSpecV1(_StrictModel):
+    analysis_id: str = Field(pattern=_ID)
+    profile: Literal["waltzman_coordination_v1"]
+    purpose: str = Field(min_length=1)
+
+
 class GeneralSimulationProposalV1(_StrictModel):
     schema_version: Literal[1]
     proposal_kind: Literal["general_world_v1"]
@@ -234,6 +240,7 @@ class GeneralSimulationProposalV1(_StrictModel):
     fidelity_assumptions: list[str] = Field(min_length=1)
     declared_invariants: list[str]
     analysis_requests: list[str]
+    analysis_spec: AnalysisSpecV1 | None = None
     unresolved_questions: list[str]
 
     @model_validator(mode="before")

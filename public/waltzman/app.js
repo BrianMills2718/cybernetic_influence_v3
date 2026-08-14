@@ -1253,12 +1253,12 @@ function configureControls() {
   $('#create-save-general').onclick = saveGeneralProposal
   $('#create-draft-walkthrough-previous').onclick = () => {
     authoredDraftWalkthroughStep = Math.max(0, authoredDraftWalkthroughStep - 1)
-    renderGeneralDraftWalkthrough(authoringDraft.proposal)
+    renderGeneralDraftWalkthrough(authoringDraft.proposal, authoringDraft.configuration_graph)
   }
   $('#create-draft-walkthrough-next').onclick = () => {
     if (authoredDraftWalkthroughStep < 3) {
       authoredDraftWalkthroughStep += 1
-      renderGeneralDraftWalkthrough(authoringDraft.proposal)
+      renderGeneralDraftWalkthrough(authoringDraft.proposal, authoringDraft.configuration_graph)
       return
     }
     $('.create-actions').scrollIntoView({behavior:'smooth', block:'center'})
@@ -1411,38 +1411,40 @@ function setAuthoringBusy(busy) {
   }
 }
 
-function generalDraftProjection(proposal) {
-  const nodes = []
-  const edges = []
+function generalDraftProjection(proposal, compiledGraph = null) {
+  const nodes = (compiledGraph?.nodes || []).map((item) => ({...item, kind:item.type || item.kind, description:item.description || item.content || item.label, state:{configured:true}}))
+  const edges = (compiledGraph?.edges || []).map((item) => ({...item, description:item.description || item.label, enabled:true, routeIds:[item.id]}))
   const addNode = (id, kind, label, description) => {
     if (id && !nodes.some((item) => item.id === id)) nodes.push({id, kind, label, description, state:{configured:true}})
   }
   const addEdge = (id, kind, source, target, description) => {
     if (source && target && nodes.some((item) => item.id === source) && nodes.some((item) => item.id === target)) edges.push({id, kind, source, target, enabled:true, description, routeIds:[id]})
   }
-  for (const person of proposal.people || []) addNode(person.entity_id, 'person', person.label, `${person.position}. ${person.disposition}`)
-  for (const record of proposal.world_records || []) addNode(record.record_id, record.kind === 'fulfillment_outcome' ? 'decision_record' : 'thing', record.label, `Canonical ${sentence(record.kind)} record with public and access-controlled state.`)
-  for (const place of proposal.spatial_extension?.places || []) addNode(place.place_id, 'place', place.label, 'Configured place in the spatial extension.')
-  for (const system of proposal.active_systems || []) addNode(system.system_id, 'mechanism', sentence(system.system_id), `${system.behavior_summary} Representation: ${sentence(system.representation_strategy)}.`)
+  if (!compiledGraph) {
+    for (const person of proposal.people || []) addNode(person.entity_id, 'person', person.label, `${person.position}. ${person.disposition}`)
+    for (const record of proposal.world_records || []) addNode(record.record_id, record.kind === 'fulfillment_outcome' ? 'decision_record' : 'thing', record.label, `Canonical ${sentence(record.kind)} record with public and access-controlled state.`)
+    for (const place of proposal.spatial_extension?.places || []) addNode(place.place_id, 'place', place.label, 'Configured place in the spatial extension.')
+    for (const system of proposal.active_systems || []) addNode(system.system_id, 'mechanism', sentence(system.system_id), `${system.behavior_summary} Representation: ${sentence(system.representation_strategy)}.`)
+  }
   for (const moment of proposal.schedule || []) addNode(`moment:${moment.moment_id}`, 'process', `Minute ${moment.minute}`, moment.description)
-  for (const representation of proposal.information_extension?.representations || []) {
+  if (!compiledGraph) for (const representation of proposal.information_extension?.representations || []) {
     const sourceId = `source:${representation.apparent_source}`
     addNode(sourceId, 'information_source', representation.apparent_source, 'Apparent source named by this configured representation.')
     addNode(representation.representation_id, 'information', sentence(representation.representation_id), representation.content)
     addEdge(`issued:${representation.representation_id}`, 'issued_information', sourceId, representation.representation_id, 'Configured apparent source of this information representation.')
     for (const recipientId of representation.recipient_ids || []) addEdge(`delivery:${representation.representation_id}:${recipientId}`, 'delivered_to', representation.representation_id, recipientId, 'Configured delivery route; receipt during the run is retained separately.')
   }
-  for (const system of proposal.active_systems || []) {
+  if (!compiledGraph) for (const system of proposal.active_systems || []) {
     for (const subjectId of system.subject_refs || []) addEdge(`binding:${system.system_id}:${subjectId}`, 'mechanism_binding', subjectId, system.system_id, 'Configured subject within this transition authority’s causal responsibility.')
   }
-  for (const placement of proposal.spatial_extension?.placements || []) addEdge(`placement:${placement.record_id}`, 'spatial_link', placement.record_id, placement.place_id, 'Configured placement before the run begins.')
+  if (!compiledGraph) for (const placement of proposal.spatial_extension?.placements || []) addEdge(`placement:${placement.record_id}`, 'spatial_link', placement.record_id, placement.place_id, 'Configured placement before the run begins.')
   for (const moment of proposal.schedule || []) {
     for (const representationId of moment.external_inject_representation_ids || []) addEdge(`scheduled:${moment.moment_id}:${representationId}`, 'connection', representationId, `moment:${moment.moment_id}`, 'This representation is scheduled to enter at this moment.')
   }
   return {nodes, edges}
 }
 
-function renderGeneralDraftWalkthrough(proposal) {
+function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
   const section = $('#create-draft-walkthrough')
   if (!isGeneralProposal(proposal)) {
     section.hidden = true
@@ -1450,18 +1452,24 @@ function renderGeneralDraftWalkthrough(proposal) {
     return
   }
   section.hidden = false
-  const projection = generalDraftProjection(proposal)
+  const projection = generalDraftProjection(proposal, compiledGraph)
+  const idsByType = (types) => new Set(projection.nodes.filter((item) => types.includes(item.type || item.kind)).map((item) => item.id))
+  const expandedForEdges = (seed, kinds) => {
+    const result = new Set(seed)
+    for (const edge of projection.edges) if (kinds.has(edge.kind) && (result.has(edge.source) || result.has(edge.target))) { result.add(edge.source); result.add(edge.target) }
+    return result
+  }
   const ids = {
     people:new Set((proposal.people || []).map((item) => item.entity_id)),
     world:new Set((proposal.world_records || []).map((item) => item.record_id)),
-    information:new Set((proposal.information_extension?.representations || []).flatMap((item) => [`source:${item.apparent_source}`, item.representation_id, ...(item.recipient_ids || [])])),
-    systems:new Set((proposal.active_systems || []).flatMap((item) => [item.system_id, ...(item.subject_refs || [])])),
+    information:expandedForEdges(idsByType(['representation', 'external_source']), new Set(['apparent_source', 'information_delivery'])),
+    systems:expandedForEdges(idsByType(['active_system', 'mechanism']), new Set(['causal_responsibility', 'mechanism_read', 'mechanism_write', 'capability', 'result_recipient', 'resource_input', 'resource_output', 'permitted_route'])),
     schedule:new Set((proposal.schedule || []).flatMap((item) => [`moment:${item.moment_id}`, ...(item.external_inject_representation_ids || [])])),
   }
   const steps = [
-    {kind:'People and world', title:'What exists before the simulation begins?', summary:`Objective: ${proposal.question} ${proposal.people.length} modeled people act from their own configured context. ${proposal.world_records.length} canonical records hold consequential state; a record is not automatically an actor.`, nodeIds:new Set([...ids.people, ...ids.world]), edgeKinds:new Set()},
-    {kind:'Information paths', title:'Who can receive which representations?', summary:'These arrows are configured delivery routes. They do not mean the information is true, noticed, believed, or acted upon.', nodeIds:ids.information, edgeKinds:new Set(['issued_information', 'delivered_to'])},
-    {kind:'Transition authority', title:'What can actually change the world?', summary:`${proposal.active_systems.length} active transition systems may adjudicate bounded changes. Exact invariants still validate every committed patch.`, nodeIds:ids.systems, edgeKinds:new Set(['mechanism_binding'])},
+    {kind:'People and world', title:'What exists before the simulation begins?', summary:`Objective: ${proposal.question} ${proposal.people.length} modeled people act from their own configured context. Records, resources, places, routes, relationships, and custody are distinct configured elements.`, nodeIds:idsByType(['person', 'record', 'resource', 'place', 'route', 'relationship']), edgeKinds:new Set(['authorized_access', 'placement', 'route_origin', 'route_destination', 'custody', 'relationship_participant'])},
+    {kind:'Information paths', title:'Who can receive which representations?', summary:'These arrows are configured sources and delivery routes. They do not mean the information is true, noticed, believed, or acted upon.', nodeIds:ids.information, edgeKinds:new Set(['apparent_source', 'information_delivery', 'issued_information', 'delivered_to'])},
+    {kind:'Transition authority', title:'What can actually change the world?', summary:`${proposal.active_systems.length} active systems and ${proposal.sensing_rules.length + proposal.resource_transformations.length + proposal.resource_transports.length} exact transition contracts define causal coverage. Attempts still require actors and validation.`, nodeIds:ids.systems, edgeKinds:new Set(['causal_responsibility', 'mechanism_read', 'mechanism_write', 'capability', 'result_recipient', 'resource_input', 'resource_output', 'permitted_route', 'mechanism_binding'])},
     {kind:'Timeline', title:'When can information and action enter?', summary:`${proposal.schedule.length} configured moments provide opportunities for observations, attempts, and world transitions. They do not pre-author success.`, nodeIds:ids.schedule, edgeKinds:new Set(['connection'])},
   ]
   authoredDraftWalkthroughStep = Math.max(0, Math.min(authoredDraftWalkthroughStep, steps.length - 1))
@@ -1599,6 +1607,10 @@ function renderAuthoringBrief(proposal) {
       ? `<strong>${representations.length} information ${representations.length === 1 ? 'item' : 'items'} · ${recipients} explicit deliveries</strong><ol>${representations.map((item) => `<li><strong>${escapeHtml(item.apparent_source)} → ${escapeHtml(item.recipient_ids.map((id) => peopleById.get(id) || id).join(', '))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')}</ol>`
       : '<strong>No information paths are configured.</strong>'
     $('#create-brief-rule').innerHTML = `<strong>${proposal.schedule.length} scheduled ${proposal.schedule.length === 1 ? 'moment' : 'moments'} · ${plannedCalls} planned model calls</strong><p>Up to ${maximumCalls} calls if every typed output needs one repair.<br>${proposal.schedule.map((item) => `Minute ${escapeHtml(item.minute)} · ${escapeHtml(item.description)}`).join('<br>')}</p>`
+    $('#create-brief-analysis-card').hidden = false
+    $('#create-brief-analysis').innerHTML = proposal.analysis_spec
+      ? `<strong>${escapeHtml(sentence(proposal.analysis_spec.profile))}</strong><p>${escapeHtml(proposal.analysis_spec.purpose)}</p>`
+      : '<strong>No analytical framework selected</strong><p>The simulation will retain world changes, observations, actions, and evidence without applying Waltzman or another theory lens.</p>'
     all('[data-create-edit]').forEach((button) => {
       button.onclick = () => {
         const target = $('#create-general-editor')
@@ -1609,6 +1621,7 @@ function renderAuthoringBrief(proposal) {
     return
   }
   const workflow = proposal.workflow || {}
+  $('#create-brief-analysis-card').hidden = true
   const people = proposal.people || []
   const peopleById = new Map(people.map((person) => [person.entity_id, person]))
   const objectsById = new Map((proposal.objects || []).map((item) => [item.entity_id, item]))
@@ -1748,7 +1761,7 @@ function renderCreateSimulation() {
   renderCoordinationScenarioEditor(proposal)
   renderInfluenceNetworkEditor(proposal)
   renderGeneralEditor(proposal)
-  renderGeneralDraftWalkthrough(proposal)
+  renderGeneralDraftWalkthrough(proposal, authoringDraft.configuration_graph)
   $('.create-brief').hidden = false
   renderAuthoringBrief(proposal)
   $('#create-draft-title').textContent = proposal.title

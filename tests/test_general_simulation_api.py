@@ -227,6 +227,8 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
         },
     )
     assert generated.status_code == 200
+    assert generated.json()["configuration_graph"]["isolated_node_ids"] == []
+    assert generated.json()["configuration_graph"]["edges"]
     document = generated.json()
     assert document["status"] == "ready_for_review"
     assert document["coverage"]["blocking_request_ids"] == []
@@ -442,5 +444,5 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         {"label": "Committed transitions", "value": "3"},
         {"label": "Final world revision", "value": "3"},
     ]
-    assert len(summary_payload["theory_analysis"]["findings"]) == 5
+    assert summary_payload["theory_analysis"] is None
     assert runtime_call.actor_counter == call_count

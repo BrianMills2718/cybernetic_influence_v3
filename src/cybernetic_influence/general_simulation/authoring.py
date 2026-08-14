@@ -439,6 +439,9 @@ class GeneralDraftAuthoringService:
             coverage_payload: dict[str, object] | None = compiled.coverage.model_dump(
                 mode="json"
             )
+            configuration_graph_payload: dict[str, object] | None = (
+                compiled.configuration_graph
+            )
         elif isinstance(current.get("proposal"), dict) and attempts and all(
             item["status"] == "provider_error" for item in attempts
         ):
@@ -448,12 +451,16 @@ class GeneralDraftAuthoringService:
             coverage_payload = cast(
                 dict[str, object] | None, current.get("coverage")
             )
+            configuration_graph_payload = cast(
+                dict[str, object] | None, current.get("configuration_graph")
+            )
             diagnostics = cast(list[dict[str, str]], current.get("diagnostics", []))
         else:
             status = "needs_input"
             summary = "No valid general-world proposal was produced; revise the request using the diagnostics."
             proposal_payload = None
             coverage_payload = None
+            configuration_graph_payload = None
         assistant_summary = " ".join(
             [summary, *[item["message"] for item in diagnostics]]
         )
@@ -478,6 +485,7 @@ class GeneralDraftAuthoringService:
             "authoring_summary": summary,
             "proposal": proposal_payload,
             "coverage": coverage_payload,
+            "configuration_graph": configuration_graph_payload,
             "diagnostics": diagnostics,
             "approval": None,
             "updated_at": now_iso(),
@@ -536,6 +544,7 @@ class GeneralDraftAuthoringService:
                 "authoring_summary": summary,
                 "proposal": proposal.model_dump(mode="json"),
                 "coverage": compiled.coverage.model_dump(mode="json"),
+                "configuration_graph": compiled.configuration_graph,
                 "diagnostics": diagnostics,
                 "approval": None,
                 "updated_at": now_iso(),

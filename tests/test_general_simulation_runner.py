@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from cybernetic_influence.general_simulation.authoring_models import (
+    AnalysisSpecV1,
     GeneralSimulationProposalV1,
 )
 from cybernetic_influence.general_simulation.compiler import compile_general_simulation
@@ -301,6 +302,26 @@ def test_actor_output_gets_one_bounded_validation_repair() -> None:
     )
     assert len(projected["traces"]) == len(proposal.schedule) * len(proposal.people)
     assert all("/repair/1" in trace["trace_id"] or "/repair/" not in trace["trace_id"] for trace in projected["traces"])
+    assert projected["theory_analysis"] is None
+
+    proposal.analysis_spec = AnalysisSpecV1(
+        analysis_id="coordination_lens",
+        profile="waltzman_coordination_v1",
+        purpose="Inspect influence-to-coordination signals in this retained run.",
+    )
+    analyzed = project_general_run(
+        compile_general_simulation(proposal),
+        result,
+        run_id="run_actor_repair_fixture",
+        created_at="2026-08-13T00:00:00Z",
+        execution="live",
+    )
+    assert analyzed["theory_analysis"]["framework"] == (
+        "Waltzman-informed diagnostic projection"
+    )
+    assert analyzed["authoring"]["analysis_spec"]["profile"] == (
+        "waltzman_coordination_v1"
+    )
 
 
 def test_authored_person_memories_are_adopted_as_mutable_runtime_memory() -> None:

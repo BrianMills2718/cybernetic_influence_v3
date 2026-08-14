@@ -126,6 +126,12 @@ def project_general_run(
         ),
         None,
     )
+    theory_analysis = (
+        project_waltzman_analysis(compiled, result)
+        if proposal.analysis_spec is not None
+        and proposal.analysis_spec.profile == "waltzman_coordination_v1"
+        else None
+    )
     return {
         "run_id": run_id,
         "created_at": created_at,
@@ -173,6 +179,11 @@ def project_general_run(
                 for person in proposal.people
             ],
             "coverage": compiled.coverage.model_dump(mode="json"),
+            "analysis_spec": (
+                proposal.analysis_spec.model_dump(mode="json")
+                if proposal.analysis_spec is not None
+                else None
+            ),
         },
         "nodes": nodes,
         "edges": edges,
@@ -182,5 +193,5 @@ def project_general_run(
         "moments": events,
         "traces": traces,
         "general_simulation": result.model_dump(mode="json"),
-        "theory_analysis": project_waltzman_analysis(compiled, result),
+        "theory_analysis": theory_analysis,
     }
