@@ -250,9 +250,12 @@
         <nav class="create-flow" aria-label="Simulation workflow"><span class="active">1 · Describe</span><span>2 · Review</span><span>3 · Run</span><span>4 · Replay</span></nav>
 
         <section class="create-composer" aria-labelledby="create-prompt-title">
-          <label for="create-prompt"><strong id="create-prompt-title">What should happen in the simulation?</strong><textarea id="create-prompt" rows="5" placeholder="For example: Seven people must decide whether to issue a joint election warning. Everyone receives the same public audit bulletin; selected people also receive different technical, legal, and community claims before three decision rounds."></textarea></label>
-          <div><button id="create-generate" class="primary-cta" type="button">Generate editable simulation</button><button id="create-example-prompt" class="quiet-button" type="button">Use relief-port example</button><button id="create-service-example-prompt" class="quiet-button" type="button">Use service-outage example</button></div>
-          <p id="create-status" class="create-status" aria-live="polite">Describe the world and the question you want the simulation to explore.</p>
+          <header><span>Luna · medium thinking</span><h3 id="create-prompt-title">Design your simulation in conversation</h3><p>Luna will clarify material uncertainties without turning ordinary choices into a research protocol.</p></header>
+          <div id="create-chat" class="create-chat" aria-live="polite"><article class="assistant"><strong>Luna</strong><p>Describe the world or situation you want to simulate. We can refine it together, or you can configure it immediately and I will make explicit assumptions.</p></article></div>
+          <label for="create-prompt"><span>Your message</span><textarea id="create-prompt" rows="4" placeholder="For example: simulate a pencil production and logistics chain from raw materials through delivery to a school."></textarea></label>
+          <div class="create-chat-actions"><button id="create-generate" type="button">Send to Luna</button><button id="create-configure-now" class="primary-cta" type="button">Configure simulation now</button></div>
+          <div class="create-example-actions"><button id="create-example-prompt" class="quiet-button" type="button">Use relief-port example</button><button id="create-service-example-prompt" class="quiet-button" type="button">Use service-outage example</button></div>
+          <p id="create-status" class="create-status" aria-live="polite">Discuss first, or configure immediately.</p>
         </section>
 
         <section id="create-review" class="create-review" hidden>
@@ -279,7 +282,7 @@
           <section class="create-brief" aria-labelledby="create-brief-title">
             <header><div><span>Simulation brief</span><h3 id="create-brief-title">Check what the simulation will do</h3></div><p>These are the consequential choices. Edit them directly, ask the authoring model for a revision, or approve and run.</p></header>
             <div class="create-brief-grid">
-              <article><span>1 · Collective question</span><div id="create-brief-question"></div><button type="button" data-create-edit="network">Edit question and schedule</button></article>
+              <article><span>1 · Operational objective</span><div id="create-brief-question"></div><button type="button" data-create-edit="network">Edit objective and schedule</button></article>
               <article><span>2 · Simulated people</span><div id="create-brief-people"></div><button type="button" data-create-edit="people">Edit a person</button></article>
               <article><span>3 · Information paths</span><div id="create-brief-influences"></div><button type="button" data-create-edit="network">Edit messages and recipients</button></article>
               <article><span>4 · Decision process</span><div id="create-brief-rule"></div><button type="button" data-create-edit="network">Edit rounds and decision rule</button></article>
@@ -296,7 +299,7 @@
             <summary>Edit consequential inputs directly</summary>
             <p class="create-editor-note">Each save creates a retained typed revision and recompiles it. No model call is made.</p>
             <div class="create-scenario-grid">
-              <label>Research question<textarea id="create-general-question" rows="3"></textarea></label>
+              <label>Operational objective<textarea id="create-general-question" rows="3"></textarea></label>
               <label>Simulation description<textarea id="create-general-description" rows="3"></textarea></label>
               <label>Person<select id="create-general-person-select"></select></label>
               <label>Person’s position<textarea id="create-general-person-position" rows="2"></textarea></label>

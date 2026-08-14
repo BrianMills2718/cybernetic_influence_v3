@@ -229,3 +229,11 @@ class ExecutionCoverageReportV1(_StrictModel):
 
 class GeneralProposalEnvelopeV1(_StrictModel):
     proposal: GeneralSimulationProposalV1
+
+
+class GeneralAuthoringDiscussionV1(_StrictModel):
+    """One conversational response before configuration is requested."""
+
+    reply: str = Field(min_length=1)
+    understood_summary: str = Field(min_length=1)
+    material_questions: list[str]

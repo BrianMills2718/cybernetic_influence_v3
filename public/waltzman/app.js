@@ -1230,7 +1230,8 @@ function configureControls() {
   all('[data-build-step], [data-build-next]').forEach((button) => {
     button.onclick = () => renderBuildStep(button.dataset.buildStep || button.dataset.buildNext)
   })
-  $('#create-generate').onclick = generateAuthoringDraft
+  $('#create-generate').onclick = discussAuthoringDraft
+  $('#create-configure-now').onclick = configureAuthoringDraft
   $('#create-example-prompt').onclick = () => {
     $('#create-prompt').value = 'Model a storm-damaged relief port containing a dock, an inland depot, one truck, finite fuel, relief cargo, a damaged bridge, communications, and four people responsible for port operations, transport, bridge inspection, and aid allocation. A hidden bridge defect should be known initially only to the inspector. At the same scheduled moment, the port operator and transport coordinator should independently propose what to do with the truck. Let an LLM game master adjudicate open-ended actions while exact mechanisms enforce placement, conserved fuel, information access, and valid topology. Explore whether the group can move the cargo before sunset without using unsafe infrastructure.'
     $('#create-prompt').focus()
@@ -1404,7 +1405,7 @@ function authoringModel() {
 
 function setAuthoringBusy(busy) {
   authoringBusy = busy
-  for (const id of ['create-generate', 'create-revise', 'create-save-person', 'create-save-scenario', 'create-save-network', 'create-save-general', 'create-resolve-questions', 'create-approve', 'create-start-over']) {
+  for (const id of ['create-generate', 'create-configure-now', 'create-revise', 'create-save-person', 'create-save-scenario', 'create-save-network', 'create-save-general', 'create-resolve-questions', 'create-approve', 'create-start-over']) {
     const control = $(`#${id}`)
     if (control) control.disabled = busy
   }
@@ -1419,11 +1420,11 @@ function generalDraftProjection(proposal) {
   const addEdge = (id, kind, source, target, description) => {
     if (source && target && nodes.some((item) => item.id === source) && nodes.some((item) => item.id === target)) edges.push({id, kind, source, target, enabled:true, description, routeIds:[id]})
   }
-  addNode('configured_research_question', 'decision_record', 'Research question', proposal.question)
   for (const person of proposal.people || []) addNode(person.entity_id, 'person', person.label, `${person.position}. ${person.disposition}`)
   for (const record of proposal.world_records || []) addNode(record.record_id, record.kind === 'fulfillment_outcome' ? 'decision_record' : 'thing', record.label, `Canonical ${sentence(record.kind)} record with public and access-controlled state.`)
   for (const place of proposal.spatial_extension?.places || []) addNode(place.place_id, 'place', place.label, 'Configured place in the spatial extension.')
   for (const system of proposal.active_systems || []) addNode(system.system_id, 'mechanism', sentence(system.system_id), `${system.behavior_summary} Representation: ${sentence(system.representation_strategy)}.`)
+  for (const moment of proposal.schedule || []) addNode(`moment:${moment.moment_id}`, 'process', `Minute ${moment.minute}`, moment.description)
   for (const representation of proposal.information_extension?.representations || []) {
     const sourceId = `source:${representation.apparent_source}`
     addNode(sourceId, 'information_source', representation.apparent_source, 'Apparent source named by this configured representation.')
@@ -1435,6 +1436,9 @@ function generalDraftProjection(proposal) {
     for (const subjectId of system.subject_refs || []) addEdge(`binding:${system.system_id}:${subjectId}`, 'mechanism_binding', subjectId, system.system_id, 'Configured subject within this transition authority’s causal responsibility.')
   }
   for (const placement of proposal.spatial_extension?.placements || []) addEdge(`placement:${placement.record_id}`, 'spatial_link', placement.record_id, placement.place_id, 'Configured placement before the run begins.')
+  for (const moment of proposal.schedule || []) {
+    for (const representationId of moment.external_inject_representation_ids || []) addEdge(`scheduled:${moment.moment_id}:${representationId}`, 'connection', representationId, `moment:${moment.moment_id}`, 'This representation is scheduled to enter at this moment.')
+  }
   return {nodes, edges}
 }
 
@@ -1452,12 +1456,13 @@ function renderGeneralDraftWalkthrough(proposal) {
     world:new Set((proposal.world_records || []).map((item) => item.record_id)),
     information:new Set((proposal.information_extension?.representations || []).flatMap((item) => [`source:${item.apparent_source}`, item.representation_id, ...(item.recipient_ids || [])])),
     systems:new Set((proposal.active_systems || []).flatMap((item) => [item.system_id, ...(item.subject_refs || [])])),
+    schedule:new Set((proposal.schedule || []).flatMap((item) => [`moment:${item.moment_id}`, ...(item.external_inject_representation_ids || [])])),
   }
   const steps = [
-    {kind:'Question', title:'What is this simulation asking?', summary:proposal.question, nodeIds:new Set(['configured_research_question']), edgeKinds:new Set()},
-    {kind:'People and world', title:'Who exists, and what state can matter?', summary:`${proposal.people.length} modeled people act from their own configured context. ${proposal.world_records.length} canonical records hold the consequential world state; a record is not automatically an actor.`, nodeIds:new Set([...ids.people, ...ids.world]), edgeKinds:new Set()},
+    {kind:'People and world', title:'What exists before the simulation begins?', summary:`Objective: ${proposal.question} ${proposal.people.length} modeled people act from their own configured context. ${proposal.world_records.length} canonical records hold consequential state; a record is not automatically an actor.`, nodeIds:new Set([...ids.people, ...ids.world]), edgeKinds:new Set()},
     {kind:'Information paths', title:'Who can receive which representations?', summary:'These arrows are configured delivery routes. They do not mean the information is true, noticed, believed, or acted upon.', nodeIds:ids.information, edgeKinds:new Set(['issued_information', 'delivered_to'])},
     {kind:'Transition authority', title:'What can actually change the world?', summary:`${proposal.active_systems.length} active transition systems may adjudicate bounded changes. Exact invariants still validate every committed patch.`, nodeIds:ids.systems, edgeKinds:new Set(['mechanism_binding'])},
+    {kind:'Timeline', title:'When can information and action enter?', summary:`${proposal.schedule.length} configured moments provide opportunities for observations, attempts, and world transitions. They do not pre-author success.`, nodeIds:ids.schedule, edgeKinds:new Set(['connection'])},
   ]
   authoredDraftWalkthroughStep = Math.max(0, Math.min(authoredDraftWalkthroughStep, steps.length - 1))
   const step = steps[authoredDraftWalkthroughStep]
@@ -1683,13 +1688,15 @@ function renderCreateSimulation() {
   }
   const author = authoringModel()
   $('#create-view').classList.toggle('has-draft', Boolean(authoringDraft))
-  $('#create-title').textContent = authoringDraft
+  $('#create-title').textContent = authoringDraft?.proposal
     ? 'Review and run this simulation.'
-    : 'Describe a simulation.'
-  $('.create-hero > p').textContent = authoringDraft
-    ? 'Check the research question, people, world state, information paths, timing, and execution coverage. Everything below is retained and editable before Luna runs the simulation.'
-    : 'Describe a sociotechnical world, its people, consequential processes, information paths, and the question you want to explore. Luna will generate an editable simulation before anything runs.'
+    : 'Design a simulation with Luna.'
+  $('.create-hero > p').textContent = authoringDraft?.proposal
+    ? 'Check the objective, people, world state, information paths, timing, and execution coverage. Everything below is retained and editable before Luna runs the simulation.'
+    : 'Describe a world in ordinary language. Luna can clarify it with you, or configure it immediately using disclosed assumptions.'
   $('#create-generate').disabled = !author || authoringBusy
+  $('#create-configure-now').disabled = !author || authoringBusy
+  renderAuthoringChat()
   if (!authoringDraft) {
     if (authoredResult && document.body.classList.contains('authored-result')) {
       setCreateFlow('replay')
@@ -1714,8 +1721,10 @@ function renderCreateSimulation() {
     ? diagnostics.map((item) => `<p class="create-diagnostic ${escapeHtml(item.severity)}"><strong>${escapeHtml(sentence(item.severity))}</strong>${escapeHtml(item.message)}</p>`).join('')
     : '<p class="create-diagnostic ready"><strong>Compiler check passed</strong>The draft can be reviewed and approved.</p>'
   if (!proposal) {
+    $('.create-composer').hidden = false
+    $('#create-review').hidden = true
     $('.create-brief').hidden = true
-    setCreateFlow('review')
+    setCreateFlow('describe')
     $('#create-status').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
     $('#create-draft-title').textContent = 'Draft needs more information'
     $('#create-draft-description').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
@@ -1731,6 +1740,7 @@ function renderCreateSimulation() {
     $('#create-run').hidden = true
     return
   }
+  $('.create-composer').hidden = false
   const general = isGeneralProposal(proposal)
   const workflow = proposal.workflow || {}
   if (general) renderGeneralCoverage(authoringDraft)
@@ -1822,7 +1832,14 @@ async function keepQuestionsInsideSimulation() {
   }
 }
 
-async function advanceAuthoringDraft(message) {
+function renderAuthoringChat() {
+  const messages = authoringDraft?.messages || []
+  if (!messages.length) return
+  $('#create-chat').innerHTML = messages.map((item) => `<article class="user"><strong>You</strong><p>${escapeHtml(item.content)}</p></article><article class="assistant"><strong>Luna</strong><p>${escapeHtml(item.assistant_summary || 'I retained that context.')}</p></article>`).join('')
+  $('#create-chat').scrollTop = $('#create-chat').scrollHeight
+}
+
+async function advanceAuthoringDraft(message, mode = 'configure') {
   const author = authoringModel()
   if (!author) throw new Error('The structured authoring model is unavailable')
   if (!authoringDraft) authoringDraft = await apiRequest('api/authoring/drafts', {method:'POST'})
@@ -1836,6 +1853,7 @@ async function advanceAuthoringDraft(message) {
       message,
       model:preferredAuthoringModel,
       reasoning_effort:'medium',
+      mode,
     }),
   })
   if (response.status === 'generating' && response.job_id) {
@@ -1861,23 +1879,39 @@ function focusAuthoringReview() {
   window.requestAnimationFrame(() => $('#create-review').scrollIntoView({behavior:'smooth', block:'start'}))
 }
 
-async function generateAuthoringDraft() {
+async function discussAuthoringDraft() {
   const message = $('#create-prompt').value.trim()
   if (!message) {
-    $('#create-status').textContent = 'Describe the world before generating a configuration.'
+    $('#create-status').textContent = 'Write a message for Luna.'
     return
   }
   setAuthoringBusy(true)
-  $('#create-status').textContent = 'The authoring model is generating and validating a typed configuration…'
+  $('#create-status').textContent = 'Luna is considering what materially needs clarification…'
   try {
-    await advanceAuthoringDraft(message)
+    await advanceAuthoringDraft(message, 'discuss')
+    $('#create-prompt').value = ''
+    $('#create-prompt').focus()
+  } catch (error) {
+    $('#create-status').textContent = error.message
+  } finally {
+    setAuthoringBusy(false)
+    $('#create-generate').disabled = !authoringModel()
+  }
+}
+
+async function configureAuthoringDraft() {
+  const typed = $('#create-prompt').value.trim()
+  const message = typed || 'Configure the simulation now from our retained conversation. Make reasonable assumptions for every unanswered detail, disclose them in fidelity_assumptions, do not invent an analyst research question, and keep actor choices endogenous.'
+  setAuthoringBusy(true)
+  $('#create-status').textContent = 'Luna is making explicit assumptions and compiling the editable simulation…'
+  try {
+    await advanceAuthoringDraft(message, 'configure')
     $('#create-prompt').value = ''
     focusAuthoringReview()
   } catch (error) {
     $('#create-status').textContent = error.message
   } finally {
     setAuthoringBusy(false)
-    $('#create-generate').disabled = !authoringModel()
   }
 }
 
@@ -1942,7 +1976,7 @@ async function saveGeneralProposal() {
   try {
     proposal.question = $('#create-general-question').value.trim()
     proposal.description = $('#create-general-description').value.trim()
-    if (!proposal.question || !proposal.description) throw new Error('The research question and description cannot be empty.')
+    if (!proposal.question || !proposal.description) throw new Error('The operational objective and description cannot be empty.')
     if (person) {
       person.position = $('#create-general-person-position').value.trim()
       person.disposition = $('#create-general-person-disposition').value.trim()

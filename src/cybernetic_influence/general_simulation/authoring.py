@@ -26,7 +26,11 @@ from cybernetic_influence.llm_backend import (
 )
 from cybernetic_influence.run_store import now_iso
 
-from .authoring_models import GeneralProposalEnvelopeV1, GeneralSimulationProposalV1
+from .authoring_models import (
+    GeneralAuthoringDiscussionV1,
+    GeneralProposalEnvelopeV1,
+    GeneralSimulationProposalV1,
+)
 from .compiler import (
     CompiledGeneralSimulationV1,
     GeneralCompilationError,
@@ -77,6 +81,26 @@ def _prompt_source() -> str:
         resources.files("cybernetic_influence.general_simulation")
         .joinpath("prompts/general_world_draft.yaml")
         .read_text(encoding="utf-8")
+    )
+
+
+def _discussion_prompt_source() -> str:
+    return (
+        resources.files("cybernetic_influence.general_simulation")
+        .joinpath("prompts/general_world_discussion.yaml")
+        .read_text(encoding="utf-8")
+    )
+
+
+def _discussion_prompt(*, message: str, prior: dict[str, object]) -> tuple[str, str]:
+    template = yaml.safe_load(_discussion_prompt_source())
+    if not isinstance(template, dict):
+        raise ValueError("general discussion prompt must be a mapping")
+    environment = Environment(undefined=StrictUndefined, autoescape=False)
+    environment.filters["tojson"] = lambda value: json.dumps(value, sort_keys=True)
+    return (
+        environment.from_string(str(template["system"])).render(),
+        environment.from_string(str(template["user"])).render(message=message, prior=prior),
     )
 
 
@@ -178,6 +202,89 @@ class GeneralDraftAuthoringService:
         if not isinstance(raw, dict):
             raise GeneralCompilationError("draft has no valid general proposal")
         return compile_general_simulation(GeneralSimulationProposalV1.model_validate(raw))
+
+    def discuss(
+        self,
+        draft_id: str,
+        *,
+        expected_revision: int,
+        message_id: str,
+        message: str,
+        model: str = CODEX_LUNA_MODEL,
+        reasoning_effort: str = "medium",
+    ) -> dict[str, object]:
+        if model not in GENERAL_AUTHORING_MODELS:
+            raise ValueError("unsupported general authoring model")
+        current = self.store.get(draft_id)
+        if current.get("target_kind") != "general_world_v1":
+            raise ValueError("draft is not a general-world draft")
+        if current["revision"] != expected_revision:
+            raise DraftConflictError("draft revision has changed; reload before editing")
+        messages = cast(list[dict[str, object]], current["messages"])
+        existing = next((item for item in messages if item.get("message_id") == message_id), None)
+        if existing is not None:
+            if existing.get("content") != message:
+                raise DraftConflictError("message ID was reused with different content")
+            return current
+        trace_id = f"{draft_id}/general/discussion/{expected_revision + 1}"
+        system, user = _discussion_prompt(message=message, prior=_prior(current))
+        with structured_backend_options(model) as backend_options:
+            parsed, meta = _call_with_deadline(
+                self.call,
+                model,
+                [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                response_model=GeneralAuthoringDiscussionV1,
+                task="cybernetic_influence_v3_general_world_discussion",
+                trace_id=trace_id,
+                max_budget=GENERAL_AUTHORING_MAX_BUDGET,
+                max_tokens=1800,
+                model_justification="Clarify a simulation request before typed configuration.",
+                reasoning_effort=reasoning_effort,
+                timeout=120,
+                **backend_options,
+            )
+        discussion = GeneralAuthoringDiscussionV1.model_validate(
+            parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
+        )
+        assistant_text = discussion.reply
+        if discussion.material_questions:
+            assistant_text += "\n\n" + "\n".join(
+                f"{index}. {question}"
+                for index, question in enumerate(discussion.material_questions, start=1)
+            )
+        return self.store.replace(
+            draft_id,
+            expected_revision=expected_revision,
+            document={
+                **current,
+                "revision": expected_revision + 1,
+                "status": "draft",
+                "messages": [
+                    *messages,
+                    {
+                        "message_id": message_id,
+                        "content": message,
+                        "source": "conversation",
+                        "model": model,
+                        "reasoning_effort": reasoning_effort,
+                        "assistant_summary": assistant_text,
+                        "result_status": "discussion",
+                        "trace_ids": [trace_id],
+                    },
+                ],
+                "attempts": [
+                    *cast(list[dict[str, object]], current["attempts"]),
+                    _attempt(1, trace_id, "accepted", discussion.understood_summary, meta),
+                ],
+                "authoring_summary": assistant_text,
+                "diagnostics": [
+                    {"severity": "question", "code": "discussion", "message": item}
+                    for item in discussion.material_questions
+                ],
+                "approval": None,
+                "updated_at": now_iso(),
+            },
+        )
 
     def advance(
         self,

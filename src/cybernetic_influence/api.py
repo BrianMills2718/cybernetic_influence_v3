@@ -235,6 +235,7 @@ class DraftMessageRequest(BaseModel):
     message: str
     model: AuthoringModel = AUTHORING_MODEL
     reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT
+    mode: Literal["discuss", "configure"] = "configure"
 
 
 class DraftApprovalRequest(BaseModel):
@@ -2728,7 +2729,8 @@ def create_app(
 
             def execute_authoring_job() -> None:
                 try:
-                    document = authoring.advance(
+                    authoring_method = authoring.discuss if body.mode == "discuss" else authoring.advance
+                    document = authoring_method(
                         draft_id,
                         expected_revision=body.expected_revision,
                         message_id=body.message_id,
@@ -2759,7 +2761,8 @@ def create_app(
             return JSONResponse(status_code=202, content=job)
         with authoring_lock:
             try:
-                return authoring.advance(
+                authoring_method = authoring.discuss if body.mode == "discuss" else authoring.advance
+                return authoring_method(
                     draft_id,
                     expected_revision=body.expected_revision,
                     message_id=body.message_id,

@@ -500,6 +500,7 @@ class DraftAuthoringService:
             (item for item in AUTHORING_MODEL_OPTIONS if item["model"] == model),
             None,
         )
+
         if selected_model is None:
             raise ValueError("unsupported authoring model")
         supported_efforts = selected_model["reasoning_efforts"]
@@ -693,6 +694,23 @@ class DraftAuthoringService:
             "updated_at": now_iso(),
         }
         return self.store.replace(draft_id, expected_revision=expected_revision, document=updated)
+
+    def discuss(
+        self, draft_id: str, *, expected_revision: int, message_id: str, message: str,
+        model: AuthoringModel = AUTHORING_MODEL,
+        reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT,
+    ) -> dict[str, object]:
+        document = self.store.get(draft_id)
+        if document.get("target_kind") != "general_world_v1":
+            raise ValueError("conversational simulation design requires a general-world draft")
+        return self.general.discuss(
+            draft_id,
+            expected_revision=expected_revision,
+            message_id=message_id,
+            message=message,
+            model=model,
+            reasoning_effort=reasoning_effort,
+        )
 
     def edit_person(
         self,

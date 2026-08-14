@@ -12,6 +12,7 @@ from cybernetic_influence.authoring.store import AuthoringDraftStore, DraftConfl
 from cybernetic_influence.general_simulation.authoring import GeneralDraftAuthoringService
 from cybernetic_influence.general_simulation.authoring_models import (
     ComponentRequestV1,
+    GeneralAuthoringDiscussionV1,
     GeneralProposalEnvelopeV1,
     GeneralSimulationProposalV1,
 )
@@ -56,6 +57,38 @@ def test_conversation_retains_general_proposal_coverage_and_trace(tmp_path: Path
     assert drafted["coverage"]["blocking_request_ids"] == []  # type: ignore[index]
     assert drafted["messages"][0]["trace_ids"] == [  # type: ignore[index]
         f"{created['draft_id']}/general/revision/1/attempt/1"
+    ]
+
+
+def test_discussion_retains_chat_without_configuring(tmp_path: Path) -> None:
+    store = AuthoringDraftStore(tmp_path)
+    created = store.create(now="2026-08-13T12:00:00Z", target_kind="general_world_v1")
+
+    def discuss_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        del args, kwargs
+        return GeneralAuthoringDiscussionV1(
+            reply="Should transport disruption be endogenous or scheduled?",
+            understood_summary="A pencil production and delivery chain.",
+            material_questions=["Should disruption occur during every run?"],
+        ), SimpleNamespace(provider="test", cost=0.0)
+
+    service = GeneralDraftAuthoringService(store, call=discuss_call)
+    discussed = service.discuss(
+        str(created["draft_id"]),
+        expected_revision=0,
+        message_id="first_chat",
+        message="Simulate a pencil supply chain.",
+    )
+
+    assert discussed["status"] == "draft"
+    assert discussed["proposal"] is None
+    assert discussed["messages"][0]["assistant_summary"].startswith("Should transport")  # type: ignore[index]
+    assert discussed["diagnostics"] == [
+        {
+            "severity": "question",
+            "code": "discussion",
+            "message": "Should disruption occur during every run?",
+        }
     ]
 
 
