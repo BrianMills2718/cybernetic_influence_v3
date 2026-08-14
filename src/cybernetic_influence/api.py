@@ -909,7 +909,7 @@ def _simulation_replay(
     add_scene(
         scene_id="question",
         kind="question",
-        scene_title="The collective question",
+        scene_title=("The collective question" if gate_ids else "The research question"),
         scene_summary=question,
         visible_nodes=gate_ids,
         visible_edges=[],
@@ -1070,7 +1070,10 @@ def _simulation_replay(
         focus_nodes=gate_ids,
         focus_edges=decision_edge_ids,
         facts=[
-            ("Collective outcome", str(final_status or "completed").replace("_", " ")),
+            (
+                "Collective outcome" if gate_ids else "Outcome",
+                str(final_status or "completed").replace("_", " "),
+            ),
             *(([("Final positions", final_count_text)]) if final_count_text else []),
         ],
     )
