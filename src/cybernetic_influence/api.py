@@ -1733,6 +1733,9 @@ def create_app(
     drafts = AuthoringDraftStore(authoring_root or runs.root.parent / "authoring_drafts")
     authoring = DraftAuthoringService(drafts, call=authoring_call)
     authoring_lock = Lock()
+    authoring_job_lock = Lock()
+    authoring_jobs: dict[str, dict[str, object]] = {}
+    authoring_job_keys: dict[tuple[str, str], str] = {}
     live_lock = Lock()
     live_worker_context = local()
     authored_live_worker_context = local()
@@ -2538,10 +2541,10 @@ def create_app(
         except DraftNotFoundError as error:
             raise HTTPException(status_code=404, detail="authoring draft not found") from error
 
-    @app.post("/api/authoring/drafts/{draft_id}/messages")
+    @app.post("/api/authoring/drafts/{draft_id}/messages", response_model=None)
     def add_draft_message(
         draft_id: str, body: DraftMessageRequest, request: Request
-    ) -> dict[str, object]:
+    ) -> dict[str, object] | Response:
         _require_access(request)
         if (
             os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1"
@@ -2552,6 +2555,70 @@ def create_app(
                 status_code=422,
                 detail="authoring model route is not currently certified",
             )
+        if os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1":
+            try:
+                current = drafts.get(draft_id)
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+            except DraftNotFoundError as error:
+                raise HTTPException(
+                    status_code=404, detail="authoring draft not found"
+                ) from error
+            if current["revision"] != body.expected_revision:
+                raise HTTPException(
+                    status_code=409,
+                    detail="draft revision has changed; reload before editing",
+                )
+            key = (draft_id, body.message_id)
+            with authoring_job_lock:
+                existing_job_id = authoring_job_keys.get(key)
+                if existing_job_id is not None:
+                    return JSONResponse(
+                        status_code=202,
+                        content=deepcopy(authoring_jobs[existing_job_id]),
+                    )
+                job_id = f"authoring_job_{uuid4().hex[:12]}"
+                job: dict[str, object] = {
+                    "job_id": job_id,
+                    "draft_id": draft_id,
+                    "message_id": body.message_id,
+                    "status": "generating",
+                    "expected_revision": body.expected_revision,
+                }
+                authoring_jobs[job_id] = job
+                authoring_job_keys[key] = job_id
+
+            def execute_authoring_job() -> None:
+                try:
+                    document = authoring.advance(
+                        draft_id,
+                        expected_revision=body.expected_revision,
+                        message_id=body.message_id,
+                        message=body.message,
+                        model=body.model,
+                        reasoning_effort=body.reasoning_effort,
+                    )
+                except (DraftConflictError, DraftNotFoundError, ValueError) as error:
+                    result: dict[str, object] = {
+                        **job,
+                        "status": "failed",
+                        "error": str(error),
+                    }
+                except Exception:
+                    result = {
+                        **job,
+                        "status": "failed",
+                        "error": (
+                            "scenario drafting provider failed; the prior draft was preserved"
+                        ),
+                    }
+                else:
+                    result = {**job, "status": "completed", "draft": document}
+                with authoring_job_lock:
+                    authoring_jobs[job_id] = result
+
+            Thread(target=execute_authoring_job, daemon=True).start()
+            return JSONResponse(status_code=202, content=job)
         with authoring_lock:
             try:
                 return authoring.advance(
@@ -2573,6 +2640,17 @@ def create_app(
                     status_code=502,
                     detail="scenario drafting provider failed; the prior draft was preserved",
                 ) from error
+
+    @app.get("/api/authoring/jobs/{job_id}")
+    def get_authoring_job(job_id: str, request: Request) -> dict[str, object]:
+        _require_access(request)
+        if re.fullmatch(r"authoring_job_[0-9a-f]{12}", job_id) is None:
+            raise HTTPException(status_code=422, detail="invalid authoring job ID")
+        with authoring_job_lock:
+            job = authoring_jobs.get(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail="authoring job not found")
+            return deepcopy(job)
 
     @app.get("/api/authoring/drafts/{draft_id}/preview")
     def preview_draft(draft_id: str, request: Request) -> dict[str, object]:

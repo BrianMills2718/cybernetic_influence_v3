@@ -154,6 +154,58 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
     assert approved.json()["approval"]["registry_digest"]
 
 
+def test_live_general_authoring_runs_as_pollable_background_job(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    monkeypatch.setattr(
+        api_module,
+        "model_catalog",
+        lambda: [{"model": "codex/gpt-5.6-luna"}],
+    )
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+
+    def provider(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        del args, kwargs
+        return GeneralProposalEnvelopeV1(proposal=proposal), SimpleNamespace(
+            provider="test", cost=0.0
+        )
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=provider,
+        )
+    )
+    draft = api.post("/api/authoring/drafts").json()
+    started = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "background_generation",
+            "message": "Model relief cargo coordination after a bridge failure.",
+        },
+    )
+
+    assert started.status_code == 202
+    job = started.json()
+    assert job["status"] == "generating"
+    for _ in range(100):
+        polled = api.get(f"/api/authoring/jobs/{job['job_id']}")
+        assert polled.status_code == 200
+        job = polled.json()
+        if job["status"] != "generating":
+            break
+        time.sleep(0.01)
+    assert job["status"] == "completed"
+    assert job["draft"]["status"] == "ready_for_review"
+    assert job["draft"]["revision"] == 1
+
+
 def test_general_proposal_endpoint_rejects_invented_implementation_reference(
     tmp_path: Path,
 ) -> None:

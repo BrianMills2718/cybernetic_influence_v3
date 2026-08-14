@@ -1694,21 +1694,33 @@ async function advanceAuthoringDraft(message) {
   const author = authoringModel()
   if (!author) throw new Error('The structured authoring model is unavailable')
   if (!authoringDraft) authoringDraft = await apiRequest('api/authoring/drafts', {method:'POST'})
-  authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/messages`, {
+  const messageId = crypto.randomUUID()
+  const response = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/messages`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       expected_revision:authoringDraft.revision,
-      message_id:crypto.randomUUID(),
+      message_id:messageId,
       message,
       model:preferredAuthoringModel,
       reasoning_effort:'medium',
     }),
-    // The server retries a stalled provider call up to three times at 120s
-    // each before giving up gracefully; give it room to finish that cycle
-    // instead of timing out first and hiding its actual explanation.
-    timeoutMs:400000,
   })
+  if (response.status === 'generating' && response.job_id) {
+    const deadline = Date.now() + 400000
+    let job = response
+    while (job.status === 'generating' && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      job = await apiRequest(`api/authoring/jobs/${encodeURIComponent(response.job_id)}`)
+    }
+    if (job.status === 'failed') throw new Error(job.error || 'Simulation generation failed')
+    if (job.status !== 'completed' || !job.draft) {
+      throw new Error('Simulation generation is still running. Reload this draft shortly.')
+    }
+    authoringDraft = job.draft
+  } else {
+    authoringDraft = response
+  }
   renderCreateSimulation()
   syncUrl()
 }
