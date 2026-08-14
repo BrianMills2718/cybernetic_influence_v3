@@ -96,6 +96,15 @@ backups remain at
 
 Public URL: <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>
 
+Re-observed 2026-08-14: this public LaunchAgent runs from
+`/Users/b/code/cybernetic_influence_v3`, and
+`CYBERNETIC_INFLUENCE_PUBLIC_ROOT` points to that checkout's
+`public/waltzman/`. The separate
+`/Users/b/code/cybernetic_influence_v3-waltzman-demo` checkout is not the
+current public-service owner. Resolve the LaunchAgent's actual working
+directory before applying an update; do not infer it from the private-service
+deployment paragraph above.
+
 LaunchAgent `com.cybernetic-influence.waltzman-public` runs the typed FastAPI
 simulator and `public/waltzman/` UI on `127.0.0.1:8621`; Tailscale Funnel maps
 only `/waltzman` to that listener. The process has its own public run store at
