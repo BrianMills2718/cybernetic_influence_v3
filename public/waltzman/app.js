@@ -4,7 +4,6 @@ const decisionOrder = ['support', 'conditional', 'defer', 'oppose']
 const groupOrder = ['all', 'alba', 'borin', 'cyrenia', 'darsia', 'regional']
 const groupLabels = {all:'All roles', alba:'Alba', borin:'Borin', cyrenia:'Cyrenia', darsia:'Darsia', regional:'Regional'}
 const preferredModel = 'codex/gpt-5.6-luna'
-const preferredAuthoringModel = 'codex/gpt-5.6-luna'
 const caseNetworkRunId = 'run_5010214f2466'
 const guideRunId = 'run_ffe88e1c15d5'
 const personProfileFields = {
@@ -1418,7 +1417,11 @@ async function apiRequest(path, options = {}) {
 }
 
 function authoringModel() {
-  return runtimeConfig?.authoring?.models?.find((item) => item.model === preferredAuthoringModel) || null
+  return runtimeConfig?.authoring?.models?.[0] || null
+}
+
+function generalRunModel() {
+  return runtimeConfig?.model || runtimeConfig?.authoring?.models?.[0]?.model || null
 }
 
 function setAuthoringBusy(busy) {
@@ -1820,10 +1823,10 @@ function renderCreateSimulation() {
   $('#create-view').classList.toggle('has-draft', Boolean(authoringDraft))
   $('#create-title').textContent = authoringDraft?.proposal
     ? 'Review and run this simulation.'
-    : 'Design a simulation with Luna.'
+    : 'Design a simulation with the selected authoring model.'
   $('.create-hero > p').textContent = authoringDraft?.proposal
-    ? 'Check the objective, people, world state, information paths, timing, and execution coverage. Everything below is retained and editable before Luna runs the simulation.'
-    : 'Describe a world in ordinary language. Luna can clarify it with you, or configure it immediately using disclosed assumptions.'
+    ? 'Check the objective, people, world state, information paths, timing, and execution coverage. Everything below is retained and editable before the selected model runs the simulation.'
+    : 'Describe a world in ordinary language. The authoring model can clarify it with you, or configure it immediately using disclosed assumptions.'
   $('#create-generate').disabled = !author || authoringBusy
   $('#create-configure-now').disabled = !author || authoringBusy
   renderAuthoringChat()
@@ -1923,11 +1926,11 @@ function renderCreateSimulation() {
         ? 'Ready for your decision'
         : 'Resolve the items above before running'
   $('#create-action-detail').textContent = authoringDraft.status === 'approved'
-    ? 'Luna will now operate the modeled people and coarse transition authorities.'
+    ? 'The selected model will now operate the modeled people and coarse transition authorities.'
     : onlyOpenQuestions
       ? 'These questions can remain endogenous: the modeled people decide them during the run instead of you deciding them in advance.'
       : ready
-        ? 'Approve this exact retained configuration, then run it with Luna.'
+        ? 'Approve this exact retained configuration, then run it with the selected model.'
         : 'Unsupported material behavior or invalid configuration must be corrected before approval.'
   const showingResult = document.body.classList.contains('authored-result')
     && !$('#create-result').hidden
@@ -1965,7 +1968,7 @@ async function keepQuestionsInsideSimulation() {
 function renderAuthoringChat() {
   const messages = authoringDraft?.messages || []
   if (!messages.length) return
-  $('#create-chat').innerHTML = messages.map((item) => `<article class="user"><strong>You</strong><p>${escapeHtml(item.content)}</p></article><article class="assistant"><strong>Luna</strong><p>${escapeHtml(item.assistant_summary || 'I retained that context.')}</p></article>`).join('')
+  $('#create-chat').innerHTML = messages.map((item) => `<article class="user"><strong>You</strong><p>${escapeHtml(item.content)}</p></article><article class="assistant"><strong>Authoring model</strong><p>${escapeHtml(item.assistant_summary || 'I retained that context.')}</p></article>`).join('')
   $('#create-chat').scrollTop = $('#create-chat').scrollHeight
 }
 
@@ -1981,7 +1984,7 @@ async function advanceAuthoringDraft(message, mode = 'configure') {
       expected_revision:authoringDraft.revision,
       message_id:messageId,
       message,
-      model:preferredAuthoringModel,
+      model:authoringModel()?.model,
       reasoning_effort:'medium',
       mode,
     }),
@@ -2012,11 +2015,11 @@ function focusAuthoringReview() {
 async function discussAuthoringDraft() {
   const message = $('#create-prompt').value.trim()
   if (!message) {
-    $('#create-status').textContent = 'Write a message for Luna.'
+    $('#create-status').textContent = 'Write a message for the authoring model.'
     return
   }
   setAuthoringBusy(true)
-  $('#create-status').textContent = 'Luna is considering what materially needs clarification…'
+  $('#create-status').textContent = 'The authoring model is considering what materially needs clarification…'
   try {
     await advanceAuthoringDraft(message, 'discuss')
     $('#create-prompt').value = ''
@@ -2033,7 +2036,7 @@ async function configureAuthoringDraft() {
   const typed = $('#create-prompt').value.trim()
   const message = typed || 'Configure the simulation now from our retained conversation. Make reasonable assumptions for every unanswered detail, disclose them in fidelity_assumptions, do not invent an analyst research question, and keep actor choices endogenous.'
   setAuthoringBusy(true)
-  $('#create-status').textContent = 'Luna is making explicit assumptions and compiling the editable simulation…'
+  $('#create-status').textContent = 'The authoring model is making explicit assumptions and compiling the editable simulation…'
   try {
     await advanceAuthoringDraft(message, 'configure')
     $('#create-prompt').value = ''
@@ -2558,7 +2561,7 @@ function renderAuthoredResult(result) {
     generalWorldResult
       ? [String(Number(result.causal_moments || 0)), 'Causal moments']
       : [String((result.rounds || []).length || (result.simulation_replay?.scenes || []).filter((scene) => scene.kind === 'event').length), (result.rounds || []).length ? 'Decision rounds' : 'Retained events'],
-    [String(Number(result.participant_model_calls || 0)), generalWorldResult ? 'Retained model calls' : result.execution === 'live' ? 'Retained Luna decisions' : 'Retained reference decisions'],
+    [String(Number(result.participant_model_calls || 0)), generalWorldResult ? 'Retained model decisions' : result.execution === 'live' ? 'Retained model decisions' : 'Retained reference decisions'],
   ]
   $('#create-result-facts').innerHTML = resultFacts.map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
   $('#create-result-people').innerHTML = (result.participants || []).map((person) => {
@@ -2602,7 +2605,7 @@ async function pollAuthoredRun(runId) {
       return
     }
     $('#create-run-heading').textContent = `Simulation ${sentence(run.status)}`
-    $('#create-run-detail').textContent = `${Number(run.model_calls || 0)} Luna decisions retained. The world is still advancing.`
+    $('#create-run-detail').textContent = `${Number(run.model_calls || 0)} model decisions retained. The world is still advancing.`
     if (['failed', 'interrupted', 'stopped'].includes(run.status)) throw new Error(run.error || `simulation ${run.status}`)
     scheduleAuthoredRunPoll(runId)
   } catch (error) {
@@ -2638,7 +2641,7 @@ async function runAuthoredSimulation() {
   $('#create-run').disabled = true
   $('#create-run-status').hidden = false
   $('#create-run-heading').textContent = 'Starting the authored simulation…'
-  $('#create-run-detail').textContent = 'Validating the approved configuration and Luna route.'
+  $('#create-run-detail').textContent = 'Validating the approved configuration and selected model route.'
   $('#create-result').hidden = true
   authoredResult = null
   document.body.classList.remove('authored-result')
@@ -2647,7 +2650,7 @@ async function runAuthoredSimulation() {
   try {
     const run = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/runs`, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({execution:'live', narration:'deterministic', llm_options:{model:preferredModel, agent_reasoning_effort:'medium', max_total_cost:0.74}}),
+      body:JSON.stringify({execution:'live', narration:'deterministic', llm_options:{model:generalRunModel(), agent_reasoning_effort:'medium', max_total_cost:0.74}}),
     })
     authoredRunId = run.run_id
     rememberLocalSimulationId(run.run_id)
@@ -2697,7 +2700,7 @@ async function loadAuthoredRunFromUrl() {
       return
     }
     $('#create-stop').hidden = progress.status === 'failed'
-    $('#create-run-detail').textContent = `${Number(progress.model_calls || 0)} Luna decisions retained. The simulation is ${sentence(progress.status)}.`
+    $('#create-run-detail').textContent = `${Number(progress.model_calls || 0)} model decisions retained. The simulation is ${sentence(progress.status)}.`
     scheduleAuthoredRunPoll(runId, 300)
   } catch (error) {
     $('#create-run-heading').textContent = 'Retained simulation unavailable'
@@ -2714,7 +2717,7 @@ function showAuthoredConfiguration() {
   $('.create-composer').hidden = false
   $('.create-hero .case-label').textContent = 'Create a simulation'
   $('#create-title').textContent = 'Describe the coordination problem you want to explore.'
-  $('.create-hero > p').textContent = 'Describe the people, information sources, who receives which messages, and the collective decision. The authoring model turns that description into an editable influence network; Luna then drives each person independently from their own character, memory, and received information.'
+  $('.create-hero > p').textContent = 'Describe the people, information sources, who receives which messages, and the collective decision. The authoring model turns that description into an editable influence network; the selected model then drives each person independently from their own character, memory, and received information.'
   $('#create-edit-configuration').hidden = true
   setCreateFlow(authoringDraft?.status === 'approved' ? 'run' : 'review')
   $('#create-draft-title').scrollIntoView({behavior:'smooth', block:'start'})

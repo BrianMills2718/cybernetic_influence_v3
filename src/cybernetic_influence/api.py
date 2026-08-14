@@ -961,9 +961,26 @@ def _simulation_replay(
                 for marker in ("decision", "outcome", "gate")
             )
         ][:1]
-    setup_ids = (
-        list(node_ids) if general_world else source_ids + person_ids + gate_ids
-    )
+    if general_world:
+        resource_ids = [
+            str(node["id"])
+            for node in network_nodes
+            if node.get("kind") == "resource" and isinstance(node.get("id"), str)
+        ][:3]
+        orienting_mechanism_ids = [
+            str(node["id"])
+            for node in network_nodes
+            if node.get("kind") == "mechanism"
+            and isinstance(node.get("id"), str)
+            and str(node["id"]) not in gate_ids
+        ][:2]
+        setup_ids = list(
+            dict.fromkeys(
+                [*person_ids, *gate_ids, *resource_ids, *orienting_mechanism_ids]
+            )
+        )
+    else:
+        setup_ids = source_ids + person_ids + gate_ids
     decision_edge_ids = [
         edge_id
         for edge_id, edge in edge_by_id.items()
@@ -1044,9 +1061,9 @@ def _simulation_replay(
         scene_title="Who and what begin in the system",
         scene_summary=(
             (
-                f"The retained simulation begins with {len(person_ids)} people and "
-                f"{len(node_ids) - len(person_ids)} other world components. Later "
-                "actions and world changes remain hidden until their replay step."
+                f"The retained simulation begins with {len(person_ids)} people. "
+                "This opening view shows only the key decision, resources, and "
+                "mechanisms; other world components appear when they become relevant."
             )
             if general_world
             else (
@@ -1057,7 +1074,7 @@ def _simulation_replay(
         ),
         visible_nodes=setup_ids,
         visible_edges=[],
-        focus_nodes=source_ids + person_ids,
+        focus_nodes=setup_ids,
         facts=[
             ("People", str(len(person_ids))),
             (
@@ -1139,9 +1156,9 @@ def _simulation_replay(
                 round_index=round_index,
             )
 
+    visible_event_nodes = list(setup_ids)
+    visible_event_edges: list[str] = []
     if (general_world or not rounds) and isinstance(raw_moments, list):
-        visible_event_nodes = list(setup_ids)
-        visible_event_edges: list[str] = []
         for index, moment in enumerate(raw_moments[:10], start=1):
             if not isinstance(moment, dict):
                 continue
@@ -1154,22 +1171,6 @@ def _simulation_replay(
                 for item in raw_participants
                 if isinstance(item, str) and item in node_ids
             ] if isinstance(raw_participants, list) else []
-            connected_edge_ids = [
-                edge_id
-                for edge_id, edge in edge_by_id.items()
-                if edge.get("source") in participants or edge.get("target") in participants
-            ]
-            connected_node_ids = [
-                str(endpoint)
-                for edge_id in connected_edge_ids
-                for endpoint in (
-                    edge_by_id[edge_id].get("source"),
-                    edge_by_id[edge_id].get("target"),
-                )
-                if isinstance(endpoint, str) and endpoint in node_ids
-            ]
-            visible_event_nodes.extend(connected_node_ids or participants)
-            visible_event_edges.extend(connected_edge_ids)
             execution_parent = moment.get("execution_parent")
             parent_revision = (
                 int(execution_parent.removeprefix("revision:"))
@@ -1208,6 +1209,18 @@ def _simulation_replay(
                 and isinstance(transaction.get("stated_rationale"), str)
                 else None
             )
+            raw_attributions = (
+                transition.get("operation_attributions")
+                if isinstance(transition, dict)
+                else None
+            )
+            contract_node_ids = [
+                str(item["contract_id"])
+                for item in raw_attributions
+                if isinstance(item, dict)
+                and isinstance(item.get("contract_id"), str)
+                and str(item["contract_id"]) in node_ids
+            ] if isinstance(raw_attributions, list) else []
             change_facts: list[tuple[str, str]] = []
             changed_node_ids: list[str] = []
             changed_edge_ids: list[str] = []
@@ -1277,8 +1290,34 @@ def _simulation_replay(
                 transition_facts = [
                     ("World change", "No canonical fields changed in this committed moment.")
                 ]
-            visible_event_nodes.extend(changed_node_ids)
-            visible_event_edges.extend(changed_edge_ids)
+            raw_evidence_refs = (
+                transaction.get("evidence_refs")
+                if isinstance(transaction, dict)
+                else None
+            )
+            evidence_node_ids = [
+                str(item)
+                for item in raw_evidence_refs
+                if isinstance(item, str) and item in node_ids
+            ][:6] if isinstance(raw_evidence_refs, list) else []
+            moment_node_ids = list(
+                dict.fromkeys(
+                    [*participants, *contract_node_ids, *changed_node_ids, *evidence_node_ids]
+                )
+            )
+            visible_event_nodes.extend(moment_node_ids)
+            visible_event_node_set = set(visible_event_nodes)
+            induced_edge_ids = [
+                edge_id
+                for edge_id, edge in edge_by_id.items()
+                if edge.get("source") in visible_event_node_set
+                and edge.get("target") in visible_event_node_set
+                and (
+                    edge.get("source") in moment_node_ids
+                    or edge.get("target") in moment_node_ids
+                )
+            ]
+            visible_event_edges.extend([*induced_edge_ids, *changed_edge_ids])
             add_scene(
                 scene_id=f"event_{index}",
                 kind="event",
@@ -1326,8 +1365,8 @@ def _simulation_replay(
             or summary
             or "The run reached its retained terminal state."
         ),
-        visible_nodes=list(node_ids),
-        visible_edges=list(edge_by_id),
+        visible_nodes=(visible_event_nodes if general_world else list(node_ids)),
+        visible_edges=(visible_event_edges if general_world else list(edge_by_id)),
         focus_nodes=gate_ids,
         focus_edges=decision_edge_ids,
         facts=(

@@ -132,7 +132,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Institutional oughts—not personal commands" in page
     assert "Edit personal character and memory" in page
     assert "Describe a simulation." in page
-    assert "Generate editable simulation" in page
+    assert "Configure simulation now" in page
     assert "Coverage is explicit:" in page
     assert "Save and recompile" in page
     assert "1 · Describe" in page
@@ -163,12 +163,12 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "A simulator becomes an experimental instrument only through a declared comparison" in page
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
-        "assets/graph-canvas.css?v=cleanup1",
-        "assets/styles.css?v=authoring2",
+        "assets/graph-canvas.css?v=ontology1",
+        "assets/styles.css?v=authoring3",
     ]
     assert shape.scripts == [
-        "assets/graph-canvas.js?v=cleanup1",
-        "assets/app.js?v=authoring6",
+        "assets/graph-canvas.js?v=ontology1",
+        "assets/app.js?v=authoring8",
     ]
     assert {
         "overview-view",
@@ -427,7 +427,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "planned model calls" in script
     assert "if every typed output needs one repair" in script
     assert "Causal moments" in script
-    assert "Retained model calls" in script
+    assert "Retained model decisions" in script
     assert "function resetAuthoringWorkspace()" in script
     assert "if (button.dataset.view === 'create') resetAuthoringWorkspace()" in script
     assert "LOCAL_SIMULATION_IDS_KEY" in script

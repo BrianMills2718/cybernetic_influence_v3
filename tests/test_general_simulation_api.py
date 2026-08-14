@@ -435,6 +435,12 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         {"label": "People", "value": "4"},
         {"label": "Other world components", "value": "17"},
     ]
+    assert len(replay_scenes[1]["visible_node_ids"]) < len(
+        summary_payload["influence_network"]["nodes"]
+    )
+    assert len(replay_scenes[-1]["visible_node_ids"]) < len(
+        summary_payload["influence_network"]["nodes"]
+    )
     outcome_scene = replay_scenes[-1]
     assert outcome_scene["summary"] == (
         "The retained evidence does not establish completion of the objective."
