@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -19,6 +21,13 @@ from cybernetic_influence.general_simulation.compiler import (
     CompiledGeneralSimulationV2,
     compile_general_simulation_v2,
 )
+from cybernetic_influence.general_simulation.models import (
+    ActorDecision,
+    Assimilation,
+    SemanticActionIntent,
+    WorldTransactionProposal,
+)
+from cybernetic_influence.general_simulation.runner import run_general_simulation_v2
 from cybernetic_influence.general_simulation.contracts_v2 import (
     ScenarioSpecV2,
     adapt_general_proposal_v1,
@@ -134,3 +143,71 @@ def test_analysis_contract_rejects_execution_authority_fields() -> None:
 
     with pytest.raises(ValidationError, match="schedule"):
         AnalysisSpecV2.model_validate(payload)
+
+
+def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    scenario, run_spec = adapt_general_proposal_v1(
+        proposal,
+        run_id="run_relief_port_v2",
+    )
+    compiled = compile_general_simulation_v2(scenario, run_spec)
+
+    def isolated_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        user = json.loads(args[1][1]["content"])
+        if kwargs["response_model"] is ActorDecision:
+            context = user["actor_context"]
+            return ActorDecision(
+                assimilation=Assimilation(
+                    attended_observation_ids=[],
+                    memory_additions=[],
+                    memory_revisions=[],
+                    provenance_links=[],
+                    interpretation="Retain the authorized situation without adding facts.",
+                ),
+                intent=SemanticActionIntent(
+                    intent_id=(
+                        f"intent_{context['actor_id']}_{context['base_revision']}"
+                    ),
+                    actor_id=context["actor_id"],
+                    base_revision=context["base_revision"],
+                    action="Request a bounded coordination check.",
+                    target_refs=[],
+                    purpose="Address the current phase responsibilities.",
+                    expected_effect="Produce one reviewable attempt.",
+                    stated_rationale="Only authorized context is available.",
+                ),
+            ), SimpleNamespace(provider="fixture")
+        assert kwargs["response_model"] is WorldTransactionProposal
+        return WorldTransactionProposal(
+            transaction_id=f"transaction_{user['moment']['moment_id']}",
+            base_revision=user["requirements"]["base_revision"],
+            authority_id=user["requirements"]["authority_id"],
+            intent_ids=user["requirements"]["intent_ids"],
+            operations=[],
+            preconditions=[],
+            consequences=[],
+            evidence_refs=user["requirements"]["intent_ids"],
+            stated_rationale="The bounded intents do not require a world mutation.",
+        ), SimpleNamespace(provider="fixture")
+
+    result = run_general_simulation_v2(
+        compiled,
+        call=isolated_call,
+        max_additional_moments=1,
+    )
+
+    assert result.scenario_digest == scenario.digest
+    assert result.run_spec_digest == run_spec.digest
+    assert all(
+        item.transaction.objective_assessment is None
+        for item in result.transition_evidence
+    )
+    for receipt in result.model_calls:
+        supplied = json.loads(receipt.input_context)
+        serialized = json.dumps(supplied, sort_keys=True)
+        assert "research_question" not in serialized
+        assert "analysis_spec" not in serialized
+        assert "analysis_requests" not in serialized

@@ -23,6 +23,7 @@ from cybernetic_influence.general_simulation.models import (
     TypedTarget,
     WorldRecord,
     WorldTransaction,
+    WorldTransactionProposal,
 )
 from cybernetic_influence.general_simulation.runner import (
     _drop_unauthorized_representation_deliveries,
@@ -495,13 +496,13 @@ def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> Non
                     base_revision=context["base_revision"],
                     action="Propose a joint dispatch check.",
                     target_refs=["relief_cargo"],
-                    purpose="Answer the configured research question.",
+                    purpose="Address the configured phase responsibilities.",
                     expected_effect="A reviewable joint proposal.",
                     stated_rationale="The available evidence warrants a bounded attempt.",
                 ),
             ), SimpleNamespace(provider="fixture")
-        assert response_model is WorldTransaction
-        return WorldTransaction(
+        assert response_model is WorldTransactionProposal
+        return WorldTransactionProposal(
             transaction_id=f"transaction_{len(user['intents'])}_{user['moment']['moment_id']}",
             base_revision=user["requirements"]["base_revision"],
             authority_id=user["requirements"]["authority_id"],

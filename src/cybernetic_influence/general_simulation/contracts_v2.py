@@ -9,7 +9,6 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .authoring_models import (
-    ComponentRequestV1,
     GeneralActiveSystemProposalV1,
     GeneralPersonDraft,
     GeneralSimulationProposalV1,
@@ -40,18 +39,18 @@ def contract_digest(value: BaseModel | dict[str, object]) -> str:
     return hashlib.sha256(encoded.encode()).hexdigest()
 
 
-class ComponentRequestV2(ComponentRequestV1):
+class ComponentRequestV2(_StrictModel):
     """Execution coverage based on causal and fidelity materiality."""
 
-    material_to_question: bool | None = Field(default=None, exclude=True)
+    request_id: str = Field(pattern=_ID)
+    subject_refs: list[str] = Field(min_length=1)
+    behavior_description: str = Field(min_length=1)
+    required_reads: list[str]
+    desired_effects: list[str] = Field(min_length=1)
+    fidelity_need: Literal["exact", "bounded", "coarse", "descriptive"]
     causally_material: bool
     fidelity_material: bool
-
-    @model_validator(mode="after")
-    def reject_legacy_materiality(self) -> "ComponentRequestV2":
-        if self.material_to_question is not None:
-            raise ValueError("V2 component requests cannot use material_to_question")
-        return self
+    transition_contract_ids: list[str] = Field(default_factory=list)
 
     @property
     def blocks_if_unexecutable(self) -> bool:

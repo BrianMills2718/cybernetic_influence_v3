@@ -278,6 +278,28 @@ class ObjectiveAssessment(StrictModel):
     unresolved_requirements: list[str] = Field(default_factory=list)
 
 
+class WorldTransactionProposal(StrictModel):
+    """Execution-only transition proposal with no analytical output authority."""
+
+    transaction_id: str
+    base_revision: int
+    authority_id: str
+    intent_ids: list[str]
+    operations: list[PatchOperation]
+    preconditions: list[Precondition]
+    consequences: list[Consequence]
+    evidence_refs: list[str] = Field(
+        description=(
+            "Canonical record, place, route, representation, resource, or collected intent "
+            "identities supporting the proposed transition."
+        )
+    )
+    stated_rationale: str
+
+    def as_transaction(self) -> "WorldTransaction":
+        return WorldTransaction.model_validate(self.model_dump(mode="json"))
+
+
 class WorldTransaction(StrictModel):
     transaction_id: str
     base_revision: int
@@ -367,6 +389,21 @@ class GeneralGroupSimulationResult(StrictModel):
     title: str
     question: str
     proposal_digest: str
+    registry_digest: str
+    final_state: GeneralWorldState
+    transition_evidence: list[TransitionEvidence]
+    model_calls: list[ModelCallReceipt]
+    moments: list[GeneralMomentEvidence]
+    checkpoints: list[dict[str, Any]]
+    adoption: AdoptionReceipt
+
+
+class GeneralGroupSimulationResultV2(StrictModel):
+    run_id: str
+    scenario_id: str
+    title: str
+    scenario_digest: str
+    run_spec_digest: str
     registry_digest: str
     final_state: GeneralWorldState
     transition_evidence: list[TransitionEvidence]

@@ -13,7 +13,12 @@ from .authoring_models import (
     GeneralSimulationProposalV1,
     ScheduledMomentProposalV1,
 )
-from .contracts_v2 import RunSpecV2, ScenarioSpecV2, validate_run_against_scenario
+from .contracts_v2 import (
+    ComponentRequestV2,
+    RunSpecV2,
+    ScenarioSpecV2,
+    validate_run_against_scenario,
+)
 from .models import (
     ActiveSystemSpec,
     ActorAccessSpec,
@@ -449,6 +454,13 @@ def _compile_general_simulation(
         unknown_reads = sorted(set(request.required_reads) - declared_refs)
         entry, evidence = resolve_request(request, selected_registry, actor_ids=actor_ids)
         evidence = list(evidence)
+        classification: Literal[
+            "exact", "coarse_llm", "descriptive", "unsupported"
+        ]
+        component_ref: str | None
+        can_change: list[str]
+        cannot_change: list[str]
+        assumptions: list[str]
         if request.transition_contract_ids:
             classification = "exact"
             component_ref = "transition_contracts:" + ",".join(
@@ -467,13 +479,11 @@ def _compile_general_simulation(
         if unknown_reads:
             evidence.append(f"unknown required reads: {', '.join(unknown_reads)}")
         if unknown_subjects or unknown_reads:
-            classification: Literal["exact", "coarse_llm", "descriptive", "unsupported"] = (
-                "unsupported"
-            )
+            classification = "unsupported"
             component_ref = None
-            can_change: list[str] = []
+            can_change = []
             cannot_change = ["all requested material behavior"]
-            assumptions: list[str] = []
+            assumptions = []
         elif request.transition_contract_ids:
             pass
         elif entry is None:
@@ -492,7 +502,7 @@ def _compile_general_simulation(
                 resolved.append(entry)
         material = (
             request.blocks_if_unexecutable
-            if isinstance(proposal, ScenarioSpecV2)
+            if isinstance(request, ComponentRequestV2)
             else request.material_to_question
         )
         blocking = material and classification in {
@@ -709,11 +719,13 @@ def _compile_general_simulation(
                 representation_ids=sorted(visible_representations),
             )
         )
-    sensing_field_counts: dict[tuple[str, str], int] = {}
+    output_sensing_field_counts: dict[tuple[str, str], int] = {}
     for rule in proposal.sensing_rules:
         for hidden_key in rule.reveal_hidden_keys:
             key = (rule.output_record_id, hidden_key)
-            sensing_field_counts[key] = sensing_field_counts.get(key, 0) + 1
+            output_sensing_field_counts[key] = (
+                output_sensing_field_counts.get(key, 0) + 1
+            )
     sensing_contracts = [
         SensingTransitionContract(
             contract_id=rule.rule_id,
@@ -723,7 +735,7 @@ def _compile_general_simulation(
             hidden_to_output_fields={
                 hidden_key: (
                     f"{rule.subject_ref}_{hidden_key}"
-                    if sensing_field_counts[(rule.output_record_id, hidden_key)] > 1
+                    if output_sensing_field_counts[(rule.output_record_id, hidden_key)] > 1
                     else hidden_key
                 )
                 for hidden_key in rule.reveal_hidden_keys

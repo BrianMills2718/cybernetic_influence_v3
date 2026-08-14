@@ -5,11 +5,18 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from typing import Literal
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
-from .authoring_models import ComponentRequestV1
+
+
+class ComponentRequestContract(Protocol):
+    request_id: str
+    subject_refs: list[str]
+    behavior_description: str
+    required_reads: list[str]
+    desired_effects: list[str]
 
 
 class RegisteredComponentV1(BaseModel):
@@ -166,7 +173,7 @@ def registry_digest(registry: tuple[RegisteredComponentV1, ...]) -> str:
 
 
 def resolve_request(
-    request: ComponentRequestV1,
+    request: ComponentRequestContract,
     registry: tuple[RegisteredComponentV1, ...],
     *,
     actor_ids: set[str] | None = None,

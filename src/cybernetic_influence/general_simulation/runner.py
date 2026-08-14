@@ -21,8 +21,13 @@ from pydantic import TypeAdapter
 
 from cybernetic_influence.llm_backend import CODEX_LUNA_MODEL
 
-from .authoring_models import GeneralPersonDraft, GeneralSimulationProposalV1
-from .compiler import CompiledGeneralSimulationV1
+from .authoring_models import (
+    GeneralPersonDraft,
+    GeneralSimulationProposalV1,
+    ScheduledMomentProposalV1,
+)
+from .compiler import CompiledGeneralSimulationV1, CompiledGeneralSimulationV2
+from .contracts_v2 import ScenarioSpecV2
 from .concordia_runtime import (
     ACTOR_CONTEXT_COMPONENT,
     CONCORDIA_REVISION,
@@ -40,17 +45,34 @@ from .models import (
     ActorDecision,
     AdoptionReceipt,
     GeneralGroupSimulationResult,
+    GeneralGroupSimulationResultV2,
     GeneralMomentEvidence,
     ModelCallReceipt,
-    ObjectiveAssessment,
     SemanticActionIntent,
     TypedTarget,
     WorldTransaction,
+    WorldTransactionProposal,
 )
 from .world import CanonicalWorld
 
 
 ProgressObserver = Callable[[dict[str, Any], dict[str, Any]], None]
+CompiledGeneralSimulation = CompiledGeneralSimulationV1 | CompiledGeneralSimulationV2
+ScenarioContract = GeneralSimulationProposalV1 | ScenarioSpecV2
+
+
+def _compiled_scenario(compiled: CompiledGeneralSimulation) -> ScenarioContract:
+    return compiled.scenario if isinstance(compiled, CompiledGeneralSimulationV2) else compiled.proposal
+
+
+def _compiled_schedule(
+    compiled: CompiledGeneralSimulation,
+) -> list[ScheduledMomentProposalV1]:
+    return (
+        compiled.run_spec.scheduled_moments
+        if isinstance(compiled, CompiledGeneralSimulationV2)
+        else compiled.proposal.schedule
+    )
 
 
 def _normalize_existing_target(
@@ -269,7 +291,7 @@ def _checkpoint_hash(checkpoint: Mapping[str, Any]) -> str:
 
 def _strict_general_checkpoint(
     checkpoint: Mapping[str, Any],
-    compiled: CompiledGeneralSimulationV1,
+    compiled: CompiledGeneralSimulation,
 ) -> dict[str, Any]:
     """Validate a persisted Concordia checkpoint before loading it.
 
@@ -279,7 +301,9 @@ def _strict_general_checkpoint(
     """
     try:
         retained = json.loads(json.dumps(dict(checkpoint)))
-        expected_actors = {person.entity_id for person in compiled.proposal.people}
+        scenario = _compiled_scenario(compiled)
+        schedule = _compiled_schedule(compiled)
+        expected_actors = {person.entity_id for person in scenario.people}
         entities = retained["entities"]
         game_masters = retained["game_masters"]
         if set(entities) != expected_actors:
@@ -304,7 +328,7 @@ def _strict_general_checkpoint(
         restored_world = CanonicalWorld(compiled.world_spec)
         restored_world.set_state(world_state)
         completed = len(gm_components["act_component"]["moments"])
-        if completed > len(compiled.proposal.schedule):
+        if completed > len(schedule):
             raise ValueError("checkpoint contains more moments than the approved schedule")
     except (KeyError, TypeError, ValueError) as exc:
         raise ValueError("invalid or incomplete general-simulation checkpoint") from exc
@@ -317,14 +341,12 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
         call: StructuredCall,
         *,
         person: GeneralPersonDraft,
-        question: str,
         trace_prefix: str,
         model: str,
         reasoning_effort: str,
     ) -> None:
         self._call = call
         self._person = person.model_copy(deep=True)
-        self._question = question
         self._trace_prefix = trace_prefix
         self._model = model
         self._reasoning_effort = reasoning_effort
@@ -417,7 +439,6 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
         call_number = self.activation_count
         actor_user = json.dumps(
             {
-                "research_question": self._question,
                 "person": self._person.model_dump(mode="json"),
                 "actor_context": actor_context.model_dump(mode="json"),
             },
@@ -529,14 +550,16 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
         self,
         call: StructuredCall,
         *,
-        proposal: GeneralSimulationProposalV1,
+        scenario: ScenarioContract,
+        schedule: list[ScheduledMomentProposalV1],
         authority_id: str,
         trace_prefix: str,
         model: str,
         reasoning_effort: str,
     ) -> None:
         self._call = call
-        self._proposal = proposal.model_copy(deep=True)
+        self._scenario = scenario.model_copy(deep=True)
+        self._schedule = [item.model_copy(deep=True) for item in schedule]
         self._authority_id = authority_id
         self._trace_prefix = trace_prefix
         self._model = model
@@ -552,15 +575,15 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
         )
 
     def _moment(self) -> Any:
-        if len(self.moments) >= len(self._proposal.schedule):
-            return self._proposal.schedule[-1]
-        return self._proposal.schedule[len(self.moments)]
+        if len(self.moments) >= len(self._schedule):
+            return self._schedule[-1]
+        return self._schedule[len(self.moments)]
 
     def _delivered_representations(self) -> set[str]:
         current_minute = self._moment().minute
         return {
             representation_id
-            for moment in self._proposal.schedule
+            for moment in self._schedule
             if moment.minute <= current_minute
             for representation_id in moment.external_inject_representation_ids
         }
@@ -569,7 +592,7 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
         request_ids = set(self._moment().active_component_request_ids)
         return [
             item.model_dump(mode="json")
-            for item in self._proposal.component_requests
+            for item in self._scenario.component_requests
             if item.request_id in request_ids
         ]
 
@@ -577,15 +600,15 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
         """Return the exact contracts this moment may adjudicate by family."""
         active_ids = set(self._moment().active_transition_contract_ids)
         return (
-            {item.rule_id for item in self._proposal.sensing_rules if item.rule_id in active_ids},
+            {item.rule_id for item in self._scenario.sensing_rules if item.rule_id in active_ids},
             {
                 item.transformation_id
-                for item in self._proposal.resource_transformations
+                for item in self._scenario.resource_transformations
                 if item.transformation_id in active_ids
             },
             {
                 item.transport_id
-                for item in self._proposal.resource_transports
+                for item in self._scenario.resource_transports
                 if item.transport_id in active_ids
             },
         )
@@ -598,9 +621,9 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
         del context
         output_type = action_spec.output_type
         self.lifecycle_events.append(output_type.value)
-        actor_ids = [person.entity_id for person in self._proposal.people]
+        actor_ids = [person.entity_id for person in self._scenario.people]
         if output_type == entity_lib.OutputType.TERMINATE:
-            return "Yes" if len(self.moments) >= len(self._proposal.schedule) else "No"
+            return "Yes" if len(self.moments) >= len(self._schedule) else "No"
         if output_type == entity_lib.OutputType.NEXT_ACTING:
             selector = self.get_entity().get_component(
                 concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY,
@@ -620,7 +643,7 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             moment = self._moment()
             responsibilities = [
                 item.behavior_description
-                for item in self._proposal.component_requests
+                for item in self._scenario.component_requests
                 if item.request_id in moment.active_component_request_ids
                 and actor_id in item.subject_refs
             ]
@@ -676,24 +699,21 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 item for item in world.spec.authorities if item.authority_id == self._authority_id
             )
             moment = self._moment()
-            is_final_moment = len(self.moments) + 1 == len(self._proposal.schedule)
             active_sensing_rules, active_transformations, active_transports = (
                 self._active_transition_contracts()
             )
             parsed, receipt = _call_model(
                 self._call,
                 role="adjudicator",
-                response_model=WorldTransaction,
+                response_model=WorldTransactionProposal,
                 system=(
                     "You are a bounded joint transition authority in an exploratory simulation. "
                     "Reconcile the same-revision semantic intents into one transaction containing "
                     "only mutations allowed by the supplied patch grammar. You propose; canonical "
                     "validation determines whether the transaction commits. Do not put hidden world "
-                    "facts into actor-visible consequences. On the final scheduled moment, also "
-                    "assess the research objective as achieved, partially_achieved, failed, or "
-                    "unresolved. Base that assessment only on canonical state, collected intents, "
-                    "and the transaction you propose; cite exact supplied evidence identifiers. "
-                    "Use unresolved when the evidence does not establish success or failure. "
+                    "facts into actor-visible consequences. Do not assess an analyst objective or "
+                    "declare whether the simulation succeeded; this authority only adjudicates the "
+                    "supplied actor intents against canonical state. "
                     "You may use canonical hidden state to adjudicate the result of a scoped sensing "
                     "or inspection intent, but expose only the resulting public finding through a "
                     "record-state operation; never quote unrelated hidden state. When canonical stocks "
@@ -716,7 +736,6 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 ),
                 user=json.dumps(
                     {
-                        "research_question": self._proposal.question,
                         "moment": moment.model_dump(mode="json"),
                         "world": world.state.model_dump(mode="json"),
                         "intents": [item.model_dump(mode="json") for item in intents],
@@ -725,21 +744,21 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "active_transition_contract_ids": moment.active_transition_contract_ids,
                         "configured_active_systems": [
                             item.model_dump(mode="json")
-                            for item in self._proposal.active_systems
+                            for item in self._scenario.active_systems
                         ],
                         "sensing_rules": [
                             item.model_dump(mode="json")
-                            for item in self._proposal.sensing_rules
+                            for item in self._scenario.sensing_rules
                             if item.rule_id in active_sensing_rules
                         ],
                         "resource_transformations": [
                             item.model_dump(mode="json")
-                            for item in self._proposal.resource_transformations
+                            for item in self._scenario.resource_transformations
                             if item.transformation_id in active_transformations
                         ],
                         "resource_transports": [
                             item.model_dump(mode="json")
-                            for item in self._proposal.resource_transports
+                            for item in self._scenario.resource_transports
                             if item.transport_id in active_transports
                         ],
                         "requirements": {
@@ -747,8 +766,6 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                             "base_revision": world.state.revision,
                             "intent_ids": [item.intent_id for item in intents],
                             "actor_visible_consequences_may_name": actor_ids,
-                            "is_final_moment": is_final_moment,
-                            "objective_assessment_required": is_final_moment,
                             "evidence_refs_may_name": sorted(
                                 {
                                     *[item.intent_id for item in intents],
@@ -769,7 +786,9 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 model=self._model,
                 reasoning_effort=self._reasoning_effort,
             )
-            proposed_transaction = WorldTransaction.model_validate(parsed)
+            proposed_transaction = WorldTransactionProposal.model_validate(
+                parsed.model_dump(mode="json", exclude_none=True)
+            ).as_transaction()
             expected_intents = {item.intent_id for item in intents}
             corrections: list[str] = []
             if proposed_transaction.authority_id != self._authority_id:
@@ -785,25 +804,6 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "intent_ids": [item.intent_id for item in intents],
                 }
             )
-            if is_final_moment and transaction.objective_assessment is None:
-                corrections.append(
-                    "missing final objective assessment retained as unresolved"
-                )
-                transaction = transaction.model_copy(
-                    update={
-                        "objective_assessment": ObjectiveAssessment(
-                            status="unresolved",
-                            summary=(
-                                "The final transition authority output did not establish "
-                                "whether the configured objective was achieved or failed."
-                            ),
-                            evidence_refs=list(transaction.evidence_refs),
-                            unresolved_requirements=[
-                                "A grounded final objective assessment is still required."
-                            ],
-                        )
-                    }
-                )
             transaction = _normalize_transaction_targets(
                 transaction, world, corrections
             )
@@ -841,26 +841,6 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         ]
                     }
                 )
-            assessment = transaction.objective_assessment
-            if assessment is not None:
-                allowed_assessment_refs = allowed_evidence_refs | {transaction.transaction_id}
-                unknown_assessment_refs = set(assessment.evidence_refs) - allowed_assessment_refs
-                if unknown_assessment_refs:
-                    corrections.append(
-                        "unknown objective evidence references omitted: "
-                        + ", ".join(sorted(unknown_assessment_refs))
-                    )
-                    assessment = assessment.model_copy(
-                        update={
-                            "evidence_refs": [
-                                item for item in assessment.evidence_refs
-                                if item in allowed_assessment_refs
-                            ]
-                        }
-                    )
-                    transaction = transaction.model_copy(
-                        update={"objective_assessment": assessment}
-                    )
             unknown_recipients = {
                 item.recipient_id for item in transaction.consequences
             } - set(actor_ids)
@@ -886,7 +866,7 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 repaired, repair_receipt = _call_model(
                     self._call,
                     role="adjudicator",
-                    response_model=WorldTransaction,
+                    response_model=WorldTransactionProposal,
                     system=(
                         "Repair one rejected transition-authority output. Preserve the "
                         "substantive judgment, but use only operations and target record "
@@ -899,7 +879,6 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     user=json.dumps(
                         {
                             "original_input": {
-                                "research_question": self._proposal.question,
                                 "moment": moment.model_dump(mode="json"),
                                 "world": world.state.model_dump(mode="json"),
                                 "intents": [item.model_dump(mode="json") for item in intents],
@@ -924,30 +903,21 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     model=self._model,
                     reasoning_effort=self._reasoning_effort,
                 )
-                repaired_transaction = WorldTransaction.model_validate(repaired).model_copy(
+                repaired_transaction = WorldTransactionProposal.model_validate(
+                    repaired.model_dump(mode="json", exclude_none=True)
+                ).as_transaction().model_copy(
                     update={
                         "authority_id": self._authority_id,
                         "base_revision": world.state.revision,
                         "intent_ids": [item.intent_id for item in intents],
                     }
                 )
-                if is_final_moment and repaired_transaction.objective_assessment is None:
-                    repaired_transaction = repaired_transaction.model_copy(
-                        update={"objective_assessment": transaction.objective_assessment}
-                    )
                 repair_corrections: list[str] = []
                 repaired_transaction = _normalize_transaction_targets(
                     repaired_transaction, world, repair_corrections
                 )
                 if set(repaired_transaction.evidence_refs) - allowed_evidence_refs:
                     raise ValueError("repaired adjudicator output cited unknown canonical evidence")
-                repaired_assessment = repaired_transaction.objective_assessment
-                if repaired_assessment is not None and set(
-                    repaired_assessment.evidence_refs
-                ) - (allowed_evidence_refs | {repaired_transaction.transaction_id}):
-                    raise ValueError(
-                        "repaired objective assessment cited unknown canonical evidence"
-                    )
                 repaired_unknown_recipients = {
                     item.recipient_id for item in repaired_transaction.consequences
                 } - set(actor_ids)
@@ -1005,7 +975,6 @@ class GeneralPersonPrefab(prefab.Prefab):  # type: ignore[misc]
     description = "One bounded authored person in a general simulation."
     call: StructuredCall = field(default_factory=_structured_call)
     person: GeneralPersonDraft | None = None
-    question: str = ""
     trace_prefix: str = "general-simulation"
     model: str = CODEX_LUNA_MODEL
     reasoning_effort: str = "medium"
@@ -1023,7 +992,6 @@ class GeneralPersonPrefab(prefab.Prefab):  # type: ignore[misc]
             act_component=GeneralActorActingComponent(
                 self.call,
                 person=self.person,
-                question=self.question,
                 trace_prefix=self.trace_prefix,
                 model=self.model,
                 reasoning_effort=self.reasoning_effort,
@@ -1038,7 +1006,7 @@ class GeneralPersonPrefab(prefab.Prefab):  # type: ignore[misc]
 @dataclass
 class GeneralWorldPrefab(prefab.Prefab):  # type: ignore[misc]
     description = "Canonical world and joint transition authority."
-    compiled: CompiledGeneralSimulationV1 | None = None
+    compiled: CompiledGeneralSimulation | None = None
     call: StructuredCall = field(default_factory=_structured_call)
     trace_prefix: str = "general-simulation"
     model: str = CODEX_LUNA_MODEL
@@ -1057,14 +1025,17 @@ class GeneralWorldPrefab(prefab.Prefab):  # type: ignore[misc]
         ]
         if len(semantic_authorities) != 1:
             raise ValueError("this vertical requires exactly one joint LLM authority")
+        scenario = _compiled_scenario(self.compiled)
+        schedule = _compiled_schedule(self.compiled)
         world = CanonicalWorld(self.compiled.world_spec)
-        for person in self.compiled.proposal.people:
+        for person in scenario.people:
             world.retain_memory(person.entity_id, person.memories)
         return entity_agent.EntityAgent(
             agent_name="general_world_game_master",
             act_component=GeneralGameMasterActingComponent(
                 self.call,
-                proposal=self.compiled.proposal,
+                scenario=scenario,
+                schedule=schedule,
                 authority_id=semantic_authorities[0].authority_id,
                 trace_prefix=self.trace_prefix,
                 model=self.model,
@@ -1075,7 +1046,7 @@ class GeneralWorldPrefab(prefab.Prefab):  # type: ignore[misc]
                 INBOX_COMPONENT: InboxComponent(),
                 concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY: (
                     concordia_next_acting.NextActingAllEntities(
-                        [person.entity_id for person in self.compiled.proposal.people]
+                        [person.entity_id for person in scenario.people]
                     )
                 ),
             },
@@ -1083,22 +1054,23 @@ class GeneralWorldPrefab(prefab.Prefab):  # type: ignore[misc]
 
 
 def _build_simulation(
-    compiled: CompiledGeneralSimulationV1,
+    compiled: CompiledGeneralSimulation,
     call: StructuredCall,
     trace_prefix: str,
     model: str,
     reasoning_effort: str,
 ) -> generic.Simulation:
+    scenario = _compiled_scenario(compiled)
+    schedule = _compiled_schedule(compiled)
     prefabs: dict[str, prefab.Prefab] = {
         f"person_{person.entity_id}": GeneralPersonPrefab(
             call=call,
             person=person,
-            question=compiled.proposal.question,
             trace_prefix=trace_prefix,
             model=model,
             reasoning_effort=reasoning_effort,
         )
-        for person in compiled.proposal.people
+        for person in scenario.people
     }
     prefabs["world"] = GeneralWorldPrefab(
         compiled=compiled,
@@ -1113,7 +1085,7 @@ def _build_simulation(
             role=prefab.Role.ENTITY,
             params={"name": person.entity_id},
         )
-        for person in compiled.proposal.people
+        for person in scenario.people
     ]
     instances.append(
         prefab.InstanceConfig(
@@ -1126,7 +1098,7 @@ def _build_simulation(
         config=prefab.Config(
             prefabs=prefabs,
             instances=instances,
-            default_max_steps=len(compiled.proposal.schedule),
+            default_max_steps=len(schedule),
         ),
         model=no_language_model.NoLanguageModel(),
         embedder=lambda _: np.zeros(4),
@@ -1134,8 +1106,8 @@ def _build_simulation(
     )
 
 
-def run_general_simulation(
-    compiled: CompiledGeneralSimulationV1,
+def _run_compiled_general_simulation(
+    compiled: CompiledGeneralSimulation,
     *,
     run_id: str,
     call: StructuredCall | None = None,
@@ -1144,7 +1116,9 @@ def run_general_simulation(
     max_additional_moments: int | None = None,
     model: str = CODEX_LUNA_MODEL,
     reasoning_effort: str = "medium",
-) -> GeneralGroupSimulationResult:
+) -> GeneralGroupSimulationResult | GeneralGroupSimulationResultV2:
+    scenario = _compiled_scenario(compiled)
+    schedule = _compiled_schedule(compiled)
     selected_call = call or _structured_call()
     trace_prefix = f"{run_id}/general"
     simulation = _build_simulation(
@@ -1168,7 +1142,7 @@ def run_general_simulation(
                 {
                     "stage": "commit",
                     "completed_moments": len(checkpoints),
-                    "total_moments": len(compiled.proposal.schedule),
+                    "total_moments": len(schedule),
                 },
                 retained,
             )
@@ -1177,7 +1151,7 @@ def run_general_simulation(
     assert isinstance(game_master, entity_agent.EntityAgent)
     gm_act = cast(GeneralGameMasterActingComponent, game_master.get_act_component())
     completed_before = len(gm_act.moments)
-    remaining = len(compiled.proposal.schedule) - completed_before
+    remaining = len(schedule) - completed_before
     if max_additional_moments is not None:
         if max_additional_moments < 0:
             raise ValueError("max_additional_moments must be non-negative")
@@ -1201,6 +1175,33 @@ def run_general_simulation(
         gm_act.moments[completed_before + offset].checkpoint_hash = _checkpoint_hash(
             retained_checkpoint
         )
+    adoption = AdoptionReceipt(
+        simulation_class=f"{type(simulation).__module__}.{type(simulation).__name__}",
+        engine_class=f"{type(simulation._engine).__module__}.{type(simulation._engine).__name__}",
+        actor_selection_component=(
+            "concordia.components.game_master.next_acting.NextActingAllEntities"
+        ),
+        concordia_revision=CONCORDIA_REVISION,
+        actor_names=[item.name for item in simulation.get_entities()],
+        game_master_names=[item.name for item in simulation.get_game_masters()],
+        lifecycle_events=gm_act.lifecycle_events,
+        forbidden_runtime_imports=[],
+    )
+    if isinstance(compiled, CompiledGeneralSimulationV2):
+        return GeneralGroupSimulationResultV2(
+            run_id=compiled.run_spec.run_id,
+            scenario_id=compiled.scenario.scenario_id,
+            title=compiled.scenario.title,
+            scenario_digest=compiled.scenario_digest,
+            run_spec_digest=compiled.run_spec_digest,
+            registry_digest=compiled.registry_digest,
+            final_state=world.state,
+            transition_evidence=world.evidence,
+            model_calls=actor_receipts + gm_act.receipts,
+            moments=gm_act.moments,
+            checkpoints=checkpoints,
+            adoption=adoption,
+        )
     return GeneralGroupSimulationResult(
         simulation_id=compiled.proposal.simulation_id,
         title=compiled.proposal.title,
@@ -1212,16 +1213,57 @@ def run_general_simulation(
         model_calls=actor_receipts + gm_act.receipts,
         moments=gm_act.moments,
         checkpoints=checkpoints,
-        adoption=AdoptionReceipt(
-            simulation_class=f"{type(simulation).__module__}.{type(simulation).__name__}",
-            engine_class=f"{type(simulation._engine).__module__}.{type(simulation._engine).__name__}",
-            actor_selection_component=(
-                "concordia.components.game_master.next_acting.NextActingAllEntities"
-            ),
-            concordia_revision=CONCORDIA_REVISION,
-            actor_names=[item.name for item in simulation.get_entities()],
-            game_master_names=[item.name for item in simulation.get_game_masters()],
-            lifecycle_events=gm_act.lifecycle_events,
-            forbidden_runtime_imports=[],
-        ),
+        adoption=adoption,
     )
+
+
+def run_general_simulation(
+    compiled: CompiledGeneralSimulationV1,
+    *,
+    run_id: str,
+    call: StructuredCall | None = None,
+    progress_observer: ProgressObserver | None = None,
+    checkpoint: Mapping[str, Any] | None = None,
+    max_additional_moments: int | None = None,
+    model: str = CODEX_LUNA_MODEL,
+    reasoning_effort: str = "medium",
+) -> GeneralGroupSimulationResult:
+    result = _run_compiled_general_simulation(
+        compiled,
+        run_id=run_id,
+        call=call,
+        progress_observer=progress_observer,
+        checkpoint=checkpoint,
+        max_additional_moments=max_additional_moments,
+        model=model,
+        reasoning_effort=reasoning_effort,
+    )
+    if not isinstance(result, GeneralGroupSimulationResult):
+        raise AssertionError("legacy runner returned the wrong result contract")
+    return result
+
+
+def run_general_simulation_v2(
+    compiled: CompiledGeneralSimulationV2,
+    *,
+    call: StructuredCall | None = None,
+    progress_observer: ProgressObserver | None = None,
+    checkpoint: Mapping[str, Any] | None = None,
+    max_additional_moments: int | None = None,
+) -> GeneralGroupSimulationResultV2:
+    run_spec = compiled.run_spec
+    model = run_spec.model or CODEX_LUNA_MODEL
+    reasoning_effort = run_spec.reasoning_effort or "medium"
+    result = _run_compiled_general_simulation(
+        compiled,
+        run_id=run_spec.run_id,
+        call=call,
+        progress_observer=progress_observer,
+        checkpoint=checkpoint,
+        max_additional_moments=max_additional_moments,
+        model=model,
+        reasoning_effort=reasoning_effort,
+    )
+    if not isinstance(result, GeneralGroupSimulationResultV2):
+        raise AssertionError("V2 runner returned the wrong result contract")
+    return result
