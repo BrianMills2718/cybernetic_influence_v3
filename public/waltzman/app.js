@@ -1990,11 +1990,15 @@ async function advanceAuthoringDraft(message, mode = 'configure') {
     }),
   })
   if (response.status === 'generating' && response.job_id) {
-    const deadline = Date.now() + 400000
+    const startedAt = Date.now()
+    const deadline = startedAt + 900000
     let job = response
     while (job.status === 'generating' && Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 1000))
       job = await apiRequest(`api/authoring/jobs/${encodeURIComponent(response.job_id)}`)
+      if (job.status === 'generating' && Date.now() - startedAt > 120000) {
+        $('#create-status').textContent = 'Still compiling the typed world and checking its causal paths. Keep this tab open; the retained draft is safe to reload.'
+      }
     }
     if (job.status === 'failed') throw new Error(job.error || 'Simulation generation failed')
     if (job.status !== 'completed' || !job.draft) {
