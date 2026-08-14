@@ -54,6 +54,11 @@ from cybernetic_influence.general_simulation.authoring_models import (
 )
 from cybernetic_influence.general_simulation.compiler import (
     CompiledGeneralSimulationV1,
+    CompiledGeneralSimulationV2,
+)
+from cybernetic_influence.general_simulation.study_models import (
+    AuthoredSimulationBundleV2,
+    AuthoredSimulationProposalV2,
 )
 
 StructuredCall = Callable[..., tuple[Any, Any]]
@@ -487,7 +492,7 @@ class DraftAuthoringService:
         reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT,
     ) -> dict[str, object]:
         existing_document = self.store.get(draft_id)
-        if existing_document.get("target_kind") == "general_world_v1":
+        if existing_document.get("target_kind") in {"general_world_v1", "general_world_v2"}:
             return self.general.advance(
                 draft_id,
                 expected_revision=expected_revision,
@@ -701,7 +706,7 @@ class DraftAuthoringService:
         reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT,
     ) -> dict[str, object]:
         document = self.store.get(draft_id)
-        if document.get("target_kind") != "general_world_v1":
+        if document.get("target_kind") not in {"general_world_v1", "general_world_v2"}:
             raise ValueError("conversational simulation design requires a general-world draft")
         return self.general.discuss(
             draft_id,
@@ -1021,7 +1026,7 @@ class DraftAuthoringService:
 
     def compile_general(
         self, document: dict[str, object]
-    ) -> CompiledGeneralSimulationV1:
+    ) -> CompiledGeneralSimulationV1 | CompiledGeneralSimulationV2:
         return self.general.compile(document)
 
     def edit_general_proposal(
@@ -1030,7 +1035,11 @@ class DraftAuthoringService:
         *,
         expected_revision: int,
         edit_id: str,
-        proposal: GeneralSimulationProposalV1,
+        proposal: (
+            GeneralSimulationProposalV1
+            | AuthoredSimulationProposalV2
+            | AuthoredSimulationBundleV2
+        ),
     ) -> dict[str, object]:
         return self.general.edit_proposal(
             draft_id,
@@ -1041,7 +1050,7 @@ class DraftAuthoringService:
 
     def approve(self, draft_id: str, *, expected_revision: int) -> dict[str, object]:
         document = self.store.get(draft_id)
-        if document.get("target_kind") == "general_world_v1":
+        if document.get("target_kind") in {"general_world_v1", "general_world_v2"}:
             return self.general.approve(draft_id, expected_revision=expected_revision)
         if document["revision"] != expected_revision:
             raise DraftConflictError("draft revision has changed; reload before approving")
@@ -1067,7 +1076,7 @@ class DraftAuthoringService:
 
     def approved_compile(self, draft_id: str) -> CompiledScenario:
         document = self.store.get(draft_id)
-        if document.get("target_kind") == "general_world_v1":
+        if document.get("target_kind") in {"general_world_v1", "general_world_v2"}:
             raise AuthoringCompilationError(
                 "general-world execution is owned by the Concordia runner and is added in Slice 28E"
             )
@@ -1084,7 +1093,7 @@ class DraftAuthoringService:
 
     def approved_general_compile(
         self, draft_id: str
-    ) -> CompiledGeneralSimulationV1:
+    ) -> CompiledGeneralSimulationV1 | CompiledGeneralSimulationV2:
         return self.general.approved_compile(draft_id)
 
 

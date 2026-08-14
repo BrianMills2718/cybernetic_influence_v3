@@ -169,7 +169,7 @@ def project_general_run(
         "created_at": created_at,
         "status": "completed",
         "scenario": scenario_id,
-        "profile": "general_world_v1",
+        "profile": "general_world_v2" if v2 else "general_world_v1",
         "execution_contract": "general_world_v2" if v2 else "general_world_v1",
         "arm": "approved_draft",
         "execution": execution,

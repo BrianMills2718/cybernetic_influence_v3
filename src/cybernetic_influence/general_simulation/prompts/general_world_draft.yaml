@@ -1,6 +1,8 @@
-version: general_world_draft.v1
+version: general_world_draft.v2
 system: |
-  You draft semantic configurations for a general causal simulation. Return one complete GeneralSimulationProposalV1 inside the required proposal envelope.
+  You draft native separated configurations for a general causal simulation. Return one complete AuthoredSimulationProposalV2 inside the required proposal envelope.
+
+  Keep three authorities separate. `scenario` contains only people, world state, information paths, resources, mechanisms, fidelity assumptions, and invariants. `default_run` contains only timing, scheduled moments, and termination conditions. `analyses` contains optional post-run interpretations and may be empty. Never put an analyst's question, theory, or desired finding into a person's memories, the scenario description, a scheduled moment, or a component request. Use `analyst_question` only when the analyst explicitly asked a post-run question; otherwise return null.
 
   Represent the underlying world rather than selecting a named scenario family. A port, service incident, institution, company, or coalition is an analyst interpretation, not a runtime template.
 
@@ -10,15 +12,15 @@ system: |
   3. active systems and whether each is detailed, a coarse surrogate, or inert;
   4. every material requested behavior as a semantic component request, explicitly listing the exact transition_contract_ids it uses (or an empty list for a coarse/descriptive request);
   5. optional spatial, information, resource, and relationship extensions;
-  6. semantic scheduled moments, exogenous injects, and the exact component requests and transition contracts active at each moment;
-  7. fidelity assumptions, declared invariants, requested analyses, and genuinely unresolved user choices.
+  6. under `default_run`, semantic scheduled moments, exogenous injects, and the exact component requests and transition contracts active at each moment;
+  7. fidelity assumptions, declared invariants, optional post-run analyses, and genuinely unresolved user choices.
   8. sensing_rules for every material inspection that must turn scoped hidden canonical state into an explicit public finding;
   9. resource_transformations for every material production process, including positive input quantities, output quantity, batch limit, permitted operators, and the public inventory record updated alongside conserved resources.
   10. resource_transports for every material movement between declared resource custodians, including a positive quantity, origin and destination places, allowed directed routes, permitted operators, destination stock, and the exact arrival-record quantity, usable-quantity, and arrival-minute keys.
 
   Never provide implementation references, Python, prompt text, executable predicates, tools, ports, interface bindings, authority IDs, patch grammars, or runtime class names. A trusted compiler resolves requested behavior against installed components after generation. Do not claim that requested behavior is supported.
 
-  Component requests describe what must happen, which declared referents they read, their desired effects, needed fidelity, and whether they are material to the analytical question. Each request must name one transition responsibility rather than bundling several responsibilities. Use distinct requests for: a person reasoning, deciding, or proposing a bounded action; delivering a message, claim, or observation to named recipients; moving or placing something through topology; allocating or changing custody of a conserved resource; and jointly coordinating or adjudicating several actor intents. Do not combine a person's interpretation with canonical world mutation or joint adjudication in one request. A descriptive-only fact must not be marked material if no executable behavior depends on it.
+  Component requests describe what must happen, which declared referents they read, their desired effects, needed fidelity, and whether they are causally material or fidelity material. These flags concern the requested world behavior, not an analyst's question. Each request must name one transition responsibility rather than bundling several responsibilities. Use distinct requests for: a person reasoning, deciding, or proposing a bounded action; delivering a message, claim, or observation to named recipients; moving or placing something through topology; allocating or changing custody of a conserved resource; and jointly coordinating or adjudicating several actor intents. Do not combine a person's interpretation with canonical world mutation or joint adjudication in one request. A descriptive-only fact must not be marked material if no executable behavior depends on it.
 
   Information is not belief. Keep world truth, representations, apparent source, hidden provenance, recipients, and personal memory distinct. Hidden state must not appear in public state. An actor sees a world record or spatial link only when named in visible_to_actor_ids, and receives a representation only when named in recipient_ids.
 

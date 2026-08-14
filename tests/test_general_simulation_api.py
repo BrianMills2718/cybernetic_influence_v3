@@ -14,9 +14,16 @@ import cybernetic_influence.api as api_module
 from cybernetic_influence.api import create_app
 from cybernetic_influence.api import _general_world_node_overrides
 from cybernetic_influence.api import _simulation_replay
+from cybernetic_influence.analysis.theory_analysis import AnalysisSpecV2
 from cybernetic_influence.general_simulation.authoring_models import (
-    GeneralProposalEnvelopeV1,
+    AnalysisSpecV1,
     GeneralSimulationProposalV1,
+)
+from cybernetic_influence.general_simulation.study_models import (
+    AuthoredSimulationProposalEnvelopeV2,
+    AuthoredSimulationProposalV2,
+    AuthoringRunProposalV2,
+    adapt_authored_bundle_v1,
 )
 from cybernetic_influence.general_simulation.models import (
     ActorDecision,
@@ -28,6 +35,25 @@ from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 
 
 FIXTURE = Path("tests/fixtures/general_simulation/port_coordination.json")
+
+
+def _native_v2_proposal() -> AuthoredSimulationProposalV2:
+    legacy = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    bundle = adapt_authored_bundle_v1(legacy, run_id="draft_fixture_run")
+    return AuthoredSimulationProposalV2(
+        authored_study_id=bundle.authored_study_id,
+        scenario=bundle.scenario,
+        default_run=AuthoringRunProposalV2(
+            horizon_minutes=bundle.default_run.horizon_minutes,
+            scheduled_moments=bundle.default_run.scheduled_moments,
+            termination_conditions=bundle.default_run.termination_conditions,
+        ),
+        analyses=bundle.analyses,
+        unresolved_questions=bundle.unresolved_questions,
+        analyst_question=bundle.analyst_question,
+    )
 
 
 def test_general_world_replay_retains_state_by_revision() -> None:
@@ -186,13 +212,11 @@ class _GeneralRuntimeFake:
 def test_general_authoring_api_create_generate_preview_edit_and_approve(
     tmp_path: Path,
 ) -> None:
-    proposal = GeneralSimulationProposalV1.model_validate_json(
-        FIXTURE.read_text(encoding="utf-8")
-    )
+    proposal = _native_v2_proposal()
 
     def provider(*args: Any, **kwargs: Any) -> tuple[object, object]:
         del args, kwargs
-        return GeneralProposalEnvelopeV1(proposal=proposal), SimpleNamespace(
+        return AuthoredSimulationProposalEnvelopeV2(proposal=proposal), SimpleNamespace(
             provider="test", cost=0.0
         )
 
@@ -207,7 +231,7 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
     created = api.post("/api/authoring/drafts")
     assert created.status_code == 200
     draft = created.json()
-    assert draft["target_kind"] == "general_world_v1"
+    assert draft["target_kind"] == "general_world_v2"
 
     generated = api.post(
         f"/api/authoring/drafts/{draft['draft_id']}/messages",
@@ -227,12 +251,12 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
     preview = api.get(f"/api/authoring/drafts/{draft['draft_id']}/preview")
     assert preview.status_code == 200
     preview_payload = preview.json()
-    assert preview_payload["profile"] == "general_world_v1"
+    assert preview_payload["profile"] == "general_world_v2"
     assert preview_payload["world_spec"]["spec_id"] == "relief_port_coordination"
     assert preview_payload["composition_receipt"]["resolved_component_refs"]
 
     edited = deepcopy(document["proposal"])
-    edited["question"] = "Can the parties dispatch safely before sunset?"
+    edited["analyst_question"] = "Can the parties dispatch safely before sunset?"
     response = api.put(
         f"/api/authoring/drafts/{draft['draft_id']}/general-proposal",
         json={"expected_revision": 1, "edit_id": "question_edit", "proposal": edited},
@@ -263,13 +287,11 @@ def test_live_general_authoring_runs_as_pollable_background_job(
         "model_catalog",
         lambda: [{"model": "codex/gpt-5.6-luna"}],
     )
-    proposal = GeneralSimulationProposalV1.model_validate_json(
-        FIXTURE.read_text(encoding="utf-8")
-    )
+    proposal = _native_v2_proposal()
 
     def provider(*args: Any, **kwargs: Any) -> tuple[object, object]:
         del args, kwargs
-        return GeneralProposalEnvelopeV1(proposal=proposal), SimpleNamespace(
+        return AuthoredSimulationProposalEnvelopeV2(proposal=proposal), SimpleNamespace(
             provider="test", cost=0.0
         )
 
@@ -354,12 +376,17 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         )
     )
     draft = api.post("/api/authoring/drafts").json()
-    proposal = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    proposal["analysis_spec"] = {
-        "analysis_id": "waltzman_port_diagnostic",
-        "profile": "waltzman_coordination_v1",
-        "purpose": "Inspect influence-to-coordination signals in the retained run.",
-    }
+    legacy = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    legacy.analysis_spec = legacy.analysis_spec or AnalysisSpecV1(
+        analysis_id="waltzman_port_diagnostic",
+        profile="waltzman_coordination_v1",
+        purpose="Inspect influence-to-coordination signals in the retained run.",
+    )
+    proposal = adapt_authored_bundle_v1(
+        legacy, run_id=f"{draft['draft_id']}_run"
+    ).model_dump(mode="json")
     edited = api.put(
         f"/api/authoring/drafts/{draft['draft_id']}/general-proposal",
         json={"expected_revision": 0, "edit_id": "fixture", "proposal": proposal},
@@ -389,7 +416,7 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
             break
         time.sleep(0.01)
     assert reopened["status"] == "completed", reopened
-    assert reopened["profile"] == "general_world_v1"
+    assert reopened["profile"] == "general_world_v2"
     assert reopened["execution_contract"] == "general_world_v2"
     assert reopened["authoring"]["proposal_kind"] == "general_world_v2"
     assert reopened["authoring"]["scenario_digest"]
@@ -413,7 +440,7 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     summary = api.get(f"/api/runs/{run_id}/summary")
     assert summary.status_code == 200, summary.text
     summary_payload = summary.json()
-    assert summary_payload["profile"] == "general_world_v1"
+    assert summary_payload["profile"] == "general_world_v2"
     assert summary_payload["execution_contract"] == "general_world_v2"
     assert summary_payload["evidence_bundle"]["record_digest"]
     assert summary_payload["evidence_bundle"]["evidence_record_count"] > 0
@@ -447,6 +474,53 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         for scene in event_scenes
         for fact in scene["facts"]
     )
+
+    before_revision = reopened["general_simulation"]["final_state"]["revision"]
+    before_evidence = reopened["run_evidence_bundle"]["record_digest"]
+    before_calls = reopened["model_calls"]
+    exact_spec = AnalysisSpecV2(
+        analysis_id="exact_terminal_review",
+        profile="exact_outcome_v1",
+        purpose="Read the retained terminal outcome without changing the run.",
+        construct_definitions=["Terminal state is read from retained evidence."],
+        required_evidence_kinds=["configuration", "terminal_state"],
+        method_classes=["exact"],
+        aggregation="Report the retained terminal evidence.",
+        uncertainty="No inference beyond retained state.",
+        limitations=["This does not establish a counterfactual."],
+    )
+    attached = api.post(
+        f"/api/runs/{run_id}/analyses",
+        json={"analysis_spec": exact_spec.model_dump(mode="json")},
+    )
+    assert attached.status_code == 200, attached.text
+    assert len(attached.json()["analysis_results"]) == 2
+    assert attached.json()["analysis_isolation_receipts"][-1][
+        "simulation_unchanged"
+    ]
+    after_attachment = api.get(f"/api/runs/{run_id}").json()
+    assert after_attachment["model_calls"] == before_calls
+    assert after_attachment["general_simulation"]["final_state"]["revision"] == before_revision
+    assert after_attachment["run_evidence_bundle"]["record_digest"] == before_evidence
+
+    mutation_attempt = exact_spec.model_dump(mode="json")
+    mutation_attempt["world_patch"] = {"operations": [{"op": "remove", "target": "port"}]}
+    rejected = api.post(
+        f"/api/runs/{run_id}/analyses",
+        json={"analysis_spec": mutation_attempt},
+    )
+    assert rejected.status_code == 422
+    after_rejection = api.get(f"/api/runs/{run_id}").json()
+    assert after_rejection["model_calls"] == before_calls
+    assert after_rejection["general_simulation"]["final_state"]["revision"] == before_revision
+    assert after_rejection["run_evidence_bundle"]["record_digest"] == before_evidence
+
+    removed = api.delete(f"/api/runs/{run_id}/analyses/exact_terminal_review")
+    assert removed.status_code == 200, removed.text
+    assert len(removed.json()["analysis_results"]) == 1
+    assert removed.json()["analysis_isolation_receipts"][-1][
+        "simulation_unchanged"
+    ]
     assert replay_scenes[1]["facts"] == [
         {"label": "People", "value": "4"},
         {"label": "Other world components", "value": "17"},

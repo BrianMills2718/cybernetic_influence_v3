@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from cybernetic_influence.analysis.theory_analysis import AnalysisSpecV2
 
 from .authoring_models import GeneralSimulationProposalV1
+from .authoring_models import ScheduledMomentProposalV1
 from .contracts_v2 import (
     RunSpecV2,
     ScenarioSpecV2,
@@ -29,6 +30,7 @@ class AuthoredSimulationBundleV2(BaseModel):
     default_run: RunSpecV2
     analyses: list[AnalysisSpecV2] = Field(default_factory=list)
     unresolved_questions: list[str] = Field(default_factory=list)
+    analyst_question: str | None = None
     legacy_presentation_question: str | None = None
 
     @model_validator(mode="after")
@@ -42,6 +44,63 @@ class AuthoredSimulationBundleV2(BaseModel):
     @property
     def digest(self) -> str:
         return contract_digest(self)
+
+
+class AuthoringRunProposalV2(BaseModel):
+    """Model-authored run semantics before trusted identity/provider binding."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    horizon_minutes: int = Field(ge=1)
+    scheduled_moments: list[ScheduledMomentProposalV1] = Field(min_length=1)
+    termination_conditions: list[str] = Field(default_factory=list)
+
+
+class AuthoredSimulationProposalV2(BaseModel):
+    """Native separated authoring output; it grants no execution authority."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    proposal_kind: Literal["general_world_v2"] = "general_world_v2"
+    authored_study_id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
+    scenario: ScenarioSpecV2
+    default_run: AuthoringRunProposalV2
+    analyses: list[AnalysisSpecV2] = Field(default_factory=list)
+    unresolved_questions: list[str] = Field(default_factory=list)
+    analyst_question: str | None = None
+
+
+class AuthoredSimulationProposalEnvelopeV2(BaseModel):
+    """Provider-friendly envelope for one native V2 proposal."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    proposal: AuthoredSimulationProposalV2
+
+
+def materialize_authored_bundle_v2(
+    proposal: AuthoredSimulationProposalV2,
+    *,
+    run_id: str,
+) -> AuthoredSimulationBundleV2:
+    """Bind trusted identities while preserving the model-authored separation."""
+
+    run = RunSpecV2(
+        run_id=run_id,
+        scenario_digest=proposal.scenario.digest,
+        execution_mode="reference",
+        horizon_minutes=proposal.default_run.horizon_minutes,
+        scheduled_moments=proposal.default_run.scheduled_moments,
+        termination_conditions=proposal.default_run.termination_conditions,
+    )
+    return AuthoredSimulationBundleV2(
+        authored_study_id=proposal.authored_study_id,
+        scenario=proposal.scenario,
+        default_run=run,
+        analyses=proposal.analyses,
+        unresolved_questions=proposal.unresolved_questions,
+        analyst_question=proposal.analyst_question,
+    )
 
 
 def adapt_authored_bundle_v1(
@@ -86,5 +145,6 @@ def adapt_authored_bundle_v1(
         default_run=run_spec,
         analyses=analyses,
         unresolved_questions=proposal.unresolved_questions,
+        analyst_question=proposal.question,
         legacy_presentation_question=proposal.question,
     )

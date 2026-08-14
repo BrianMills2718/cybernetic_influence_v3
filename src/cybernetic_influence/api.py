@@ -53,15 +53,22 @@ from cybernetic_influence.general_simulation.analysis_service import (
     build_run_evidence_bundle_v2,
 )
 from cybernetic_influence.general_simulation.compiler import (
+    CompiledGeneralSimulationV1,
+    CompiledGeneralSimulationV2,
     GeneralCompilationError,
     compile_general_simulation_v2,
 )
 from cybernetic_influence.general_simulation.contracts_v2 import (
+    RunSpecV2,
     adapt_general_proposal_v1,
 )
 from cybernetic_influence.general_simulation.projection import project_general_run
 from cybernetic_influence.general_simulation.runner import run_general_simulation_v2
-from cybernetic_influence.general_simulation.study_models import adapt_authored_bundle_v1
+from cybernetic_influence.general_simulation.study_models import (
+    AuthoredSimulationBundleV2,
+    AuthoredSimulationProposalV2,
+    adapt_authored_bundle_v1,
+)
 
 from cybernetic_influence import __version__
 from cybernetic_influence.active_runtime import (
@@ -82,6 +89,10 @@ from cybernetic_influence.analysis.coordination import (
 )
 from cybernetic_influence.analysis.coordination_readout import (
     coordination_measurement_readout,
+)
+from cybernetic_influence.analysis.theory_analysis import (
+    AnalysisSpecV2,
+    RunEvidenceBundleV2,
 )
 from cybernetic_influence.analysis.composite_agency import (
     CompositeControlReadoutConsumer,
@@ -278,7 +289,11 @@ class DraftGeneralProposalEditRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     expected_revision: int
     edit_id: str
-    proposal: GeneralSimulationProposalV1
+    proposal: (
+        GeneralSimulationProposalV1
+        | AuthoredSimulationProposalV2
+        | AuthoredSimulationBundleV2
+    )
 
 
 class DraftCoordinationEditRequest(BaseModel):
@@ -304,6 +319,13 @@ class AuthoredRunRequest(BaseModel):
     execution: Literal["scripted", "live"] = "scripted"
     llm_options: RunLlmOptions | None = None
     narration: Literal["deterministic", "llm"] = "deterministic"
+
+
+class RunAnalysisAttachmentRequest(BaseModel):
+    """One execution-inert analysis lens attached to retained evidence."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    analysis_spec: AnalysisSpecV2
 
 
 class CompositeAssayRowResponse(BaseModel):
@@ -1645,7 +1667,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
             )
     raw_outcome = document.get("outcome")
     outcome = deepcopy(raw_outcome) if isinstance(raw_outcome, dict) else {}
-    if document.get("profile") == "general_world_v1":
+    if document.get("profile") in {"general_world_v1", "general_world_v2"}:
         general_simulation = document.get("general_simulation")
         transition_evidence = (
             general_simulation.get("transition_evidence")
@@ -1712,7 +1734,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         if isinstance(narrated_moments, list)
         else document.get("moments", [])
     )
-    if document.get("profile") == "general_world_v1" and isinstance(
+    if document.get("profile") in {"general_world_v1", "general_world_v2"} and isinstance(
         raw_moments, list
     ):
         general_simulation = document.get("general_simulation")
@@ -1889,7 +1911,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                 "routeIds": [edge_id],
             }
         )
-    if document.get("profile") == "general_world_v1" and nodes:
+    if document.get("profile") in {"general_world_v1", "general_world_v2"} and nodes:
         network_nodes, network_edges = _canonical_replay_network(nodes, edges)
     elif not influence_messages and nodes:
         network_nodes, network_edges = _canonical_replay_network(nodes, edges)
@@ -1903,7 +1925,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         network_nodes=network_nodes,
         network_edges=network_edges,
         raw_moments=raw_moments,
-        general_world=document.get("profile") == "general_world_v1",
+        general_world=document.get("profile") in {"general_world_v1", "general_world_v2"},
         question_is_analyst_framing=(
             document.get("execution_contract") == "general_world_v2"
         ),
@@ -1912,7 +1934,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         ),
     )
     readout = coordination_measurement_readout(document).model_dump(mode="json")
-    is_general_world = document.get("profile") == "general_world_v1"
+    is_general_world = document.get("profile") in {"general_world_v1", "general_world_v2"}
     return {
         "run_id": document.get("run_id"),
         "created_at": document.get("created_at"),
@@ -1945,7 +1967,11 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "simulation_replay": replay,
         "coordination_measurement_readout": readout,
         "theory_analysis": document.get("theory_analysis"),
+        "analysis_specs": document.get("analysis_specs", []),
         "analysis_results": analysis_results,
+        "analysis_isolation_receipts": document.get(
+            "analysis_isolation_receipts", []
+        ),
         "evidence_bundle": (
             {
                 "bundle_id": evidence_bundle.get("bundle_id"),
@@ -2845,7 +2871,7 @@ def create_app(
     @app.post("/api/authoring/drafts")
     def create_draft(request: Request) -> dict[str, object]:
         _require_access(request)
-        return drafts.create(now=now_iso(), target_kind="general_world_v1")
+        return drafts.create(now=now_iso(), target_kind="general_world_v2")
 
     @app.post("/api/authoring/legacy-drafts")
     def create_legacy_draft(request: Request) -> dict[str, object]:
@@ -3002,7 +3028,7 @@ def create_app(
         _require_access(request)
         try:
             document = drafts.get(draft_id)
-            if document.get("target_kind") == "general_world_v1":
+            if document.get("target_kind") in {"general_world_v1", "general_world_v2"}:
                 compiled_general = authoring.compile_general(document)
                 return {
                     "status": "ready",
@@ -3204,14 +3230,14 @@ def create_app(
             draft_document = drafts.get(draft_id)
         except DraftNotFoundError as error:
             raise HTTPException(status_code=404, detail="authoring draft not found") from error
-        if draft_document.get("target_kind") == "general_world_v1":
+        if draft_document.get("target_kind") in {"general_world_v1", "general_world_v2"}:
             if not live or effective_llm is None:
                 raise HTTPException(
                     status_code=422,
                     detail="general-world simulations require a selected live model route",
                 )
             try:
-                approved_v1 = authoring.approved_general_compile(draft_id)
+                approved_general = authoring.approved_general_compile(draft_id)
             except (ValueError, GeneralCompilationError) as error:
                 raise HTTPException(status_code=409, detail=str(error)) from error
             worker_execution = bool(getattr(authored_live_worker_context, "active", False))
@@ -3223,15 +3249,41 @@ def create_app(
                 if worker_execution
                 else f"run_{uuid4().hex[:12]}"
             )
-            scenario_v2, run_spec_v2 = adapt_general_proposal_v1(
-                approved_v1.proposal,
-                run_id=run_id,
-                execution_mode="live",
-                model=effective_llm.model,
-                reasoning_effort=effective_llm.agent_reasoning_effort,
-                per_call_budget=effective_llm.participant_per_call_ceiling,
-                per_run_budget=effective_llm.max_total_cost,
-            )
+            if isinstance(approved_general, CompiledGeneralSimulationV2):
+                authored_bundle = AuthoredSimulationBundleV2.model_validate(
+                    draft_document["proposal"]
+                )
+                scenario_v2 = authored_bundle.scenario
+                run_spec_v2 = RunSpecV2.model_validate(
+                    {
+                        **authored_bundle.default_run.model_dump(mode="json"),
+                        "run_id": run_id,
+                        "execution_mode": "live",
+                        "model": effective_llm.model,
+                        "reasoning_effort": effective_llm.agent_reasoning_effort,
+                        "per_call_budget": effective_llm.participant_per_call_ceiling,
+                        "per_run_budget": effective_llm.max_total_cost,
+                    }
+                )
+                presentation_question = authored_bundle.analyst_question
+                selected_analyses = authored_bundle.analyses
+                profile = "general_world_v2"
+            else:
+                scenario_v2, run_spec_v2 = adapt_general_proposal_v1(
+                    approved_general.proposal,
+                    run_id=run_id,
+                    execution_mode="live",
+                    model=effective_llm.model,
+                    reasoning_effort=effective_llm.agent_reasoning_effort,
+                    per_call_budget=effective_llm.participant_per_call_ceiling,
+                    per_run_budget=effective_llm.max_total_cost,
+                )
+                authored_bundle = adapt_authored_bundle_v1(
+                    approved_general.proposal, run_id=run_id
+                )
+                presentation_question = approved_general.proposal.question
+                selected_analyses = authored_bundle.analyses
+                profile = "general_world_v1"
             general_compiled = compile_general_simulation_v2(
                 scenario_v2, run_spec_v2
             )
@@ -3248,7 +3300,7 @@ def create_app(
                     "created_at": created_at,
                     "status": "running",
                     "scenario": scenario_v2.scenario_id,
-                    "profile": "general_world_v1",
+                    "profile": profile,
                     "arm": "approved_draft",
                     "execution": "live",
                     "model_calls": 0,
@@ -3263,7 +3315,7 @@ def create_app(
                         "registry_digest": general_compiled.registry_digest,
                         "title": scenario_v2.title,
                         "description": scenario_v2.description,
-                        "question": approved_v1.proposal.question,
+                        "question": presentation_question,
                         "people": [
                             {
                                 "entity_id": person.entity_id,
@@ -3340,13 +3392,12 @@ def create_app(
                     run_id=run_id,
                     created_at=created_at,
                     execution="live",
-                    presentation_question=approved_v1.proposal.question,
+                    presentation_question=(
+                        presentation_question or scenario_v2.description
+                    ),
                 )
                 evidence_bundle = build_run_evidence_bundle_v2(
                     general_compiled, general_result
-                )
-                authored_bundle = adapt_authored_bundle_v1(
-                    approved_v1.proposal, run_id=run_id
                 )
                 projected["run_evidence_bundle"] = evidence_bundle.model_dump(
                     mode="json"
@@ -3355,8 +3406,12 @@ def create_app(
                     analyze_run_evidence_v2(
                         evidence_bundle, analysis_spec
                     ).model_dump(mode="json")
-                    for analysis_spec in authored_bundle.analyses
+                    for analysis_spec in selected_analyses
                 ]
+                projected["analysis_specs"] = [
+                    item.model_dump(mode="json") for item in selected_analyses
+                ]
+                projected["analysis_isolation_receipts"] = []
                 projected["llm_configuration"] = initial["llm_configuration"]
                 retained = runs.get(run_id)
                 projected["live_progress"] = retained.get("live_progress", [])
@@ -3916,6 +3971,166 @@ def create_app(
                     else "retained narration evidence context is corrupt"
                 ),
             ) from error
+
+    def _analysis_isolation_state(document: dict[str, object]) -> dict[str, object]:
+        general = document.get("general_simulation")
+        final_revision = None
+        if isinstance(general, dict):
+            final_state = general.get("final_state")
+            if isinstance(final_state, dict):
+                final_revision = final_state.get("revision")
+        evidence = document.get("run_evidence_bundle")
+        evidence_digest = evidence.get("record_digest") if isinstance(evidence, dict) else None
+        return {
+            "model_calls": document.get("model_calls"),
+            "world_revision": final_revision,
+            "run_evidence_digest": evidence_digest,
+        }
+
+    def _analysis_attachment_payload(document: dict[str, object]) -> dict[str, object]:
+        return {
+            "run_id": document["run_id"],
+            "analysis_specs": document.get("analysis_specs", []),
+            "analysis_results": document.get("analysis_results", []),
+            "analysis_isolation_receipts": document.get(
+                "analysis_isolation_receipts", []
+            ),
+        }
+
+    def _dict_items(document: dict[str, object], key: str) -> list[dict[str, object]]:
+        value = document.get(key, [])
+        if not isinstance(value, list):
+            raise ValueError(f"retained run field {key!r} must be a list")
+        return [item for item in value if isinstance(item, dict)]
+
+    @app.post("/api/runs/{run_id}/analyses")
+    def attach_run_analysis(
+        run_id: str,
+        body: RunAnalysisAttachmentRequest,
+        request: Request,
+    ) -> dict[str, object]:
+        """Analyze retained evidence without invoking or mutating the simulation."""
+        _require_access(request)
+        try:
+            document = runs.get(run_id)
+            if document.get("status") != "completed":
+                raise HTTPException(status_code=409, detail="analysis requires a completed run")
+            raw_evidence = document.get("run_evidence_bundle")
+            if not isinstance(raw_evidence, dict):
+                raise HTTPException(status_code=422, detail="run has no V2 evidence bundle")
+            evidence = RunEvidenceBundleV2.model_validate(raw_evidence)
+            before = _analysis_isolation_state(document)
+            result = analyze_run_evidence_v2(evidence, body.analysis_spec)
+            retained_specs = _dict_items(document, "analysis_specs")
+            retained_results = _dict_items(document, "analysis_results")
+            existing_specs = [
+                item
+                for item in retained_specs
+                if item.get("analysis_id") == body.analysis_spec.analysis_id
+            ]
+            replaced_digests = {
+                AnalysisSpecV2.model_validate(item).digest for item in existing_specs
+            }
+            specs = [
+                item
+                for item in retained_specs
+                if item.get("analysis_id") != body.analysis_spec.analysis_id
+            ]
+            results = [
+                item
+                for item in retained_results
+                if item.get("analysis_spec_digest") not in replaced_digests
+            ]
+            updated = {
+                **document,
+                "analysis_specs": [
+                    *specs, body.analysis_spec.model_dump(mode="json")
+                ],
+                "analysis_results": [*results, result.model_dump(mode="json")],
+            }
+            after = _analysis_isolation_state(updated)
+            receipt = {
+                "receipt_id": f"analysis_attach_{uuid4().hex[:12]}",
+                "action": "attached",
+                "analysis_id": body.analysis_spec.analysis_id,
+                "before": before,
+                "after": after,
+                "simulation_unchanged": before == after,
+                "recorded_at": now_iso(),
+            }
+            updated["analysis_isolation_receipts"] = [
+                *[
+                    item
+                    for item in _dict_items(document, "analysis_isolation_receipts")
+                ],
+                receipt,
+            ]
+            retained = runs.save(updated)
+            return _analysis_attachment_payload(retained)
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except RunNotFoundError as error:
+            raise HTTPException(status_code=404, detail="run not found") from error
+        except (RunCorruptError, ValueError) as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+    @app.delete("/api/runs/{run_id}/analyses/{analysis_id}")
+    def remove_run_analysis(
+        run_id: str,
+        analysis_id: str,
+        request: Request,
+    ) -> dict[str, object]:
+        """Remove one interpretation while preserving the retained execution."""
+        _require_access(request)
+        try:
+            document = runs.get(run_id)
+            retained_specs = _dict_items(document, "analysis_specs")
+            retained_results = _dict_items(document, "analysis_results")
+            specs = [
+                item for item in retained_specs if item.get("analysis_id") == analysis_id
+            ]
+            if not specs:
+                raise HTTPException(status_code=404, detail="analysis attachment not found")
+            removed_digest = AnalysisSpecV2.model_validate(specs[0]).digest
+            before = _analysis_isolation_state(document)
+            updated = {
+                **document,
+                "analysis_specs": [
+                    item
+                    for item in retained_specs
+                    if item.get("analysis_id") != analysis_id
+                ],
+                "analysis_results": [
+                    item
+                    for item in retained_results
+                    if item.get("analysis_spec_digest") != removed_digest
+                ],
+            }
+            after = _analysis_isolation_state(updated)
+            receipt = {
+                "receipt_id": f"analysis_remove_{uuid4().hex[:12]}",
+                "action": "removed",
+                "analysis_id": analysis_id,
+                "before": before,
+                "after": after,
+                "simulation_unchanged": before == after,
+                "recorded_at": now_iso(),
+            }
+            updated["analysis_isolation_receipts"] = [
+                *[
+                    item
+                    for item in _dict_items(document, "analysis_isolation_receipts")
+                ],
+                receipt,
+            ]
+            retained = runs.save(updated)
+            return _analysis_attachment_payload(retained)
+        except InvalidRunIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except RunNotFoundError as error:
+            raise HTTPException(status_code=404, detail="run not found") from error
+        except (RunCorruptError, ValueError) as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
 
     @app.get("/api/runs/{run_id}/progress")
     def retained_progress(

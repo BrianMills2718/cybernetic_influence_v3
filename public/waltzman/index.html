@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology1">
-  <link rel="stylesheet" href="assets/styles.css?v=authoring3">
+  <link rel="stylesheet" href="assets/styles.css?v=authoring4">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -356,6 +356,13 @@
                   <h4 id="create-result-rounds-title">What changed each round</h4>
                   <div id="create-result-round-tabs" class="create-result-round-tabs"></div>
                   <div id="create-result-round" class="create-result-round"></div>
+                </section>
+                <section id="create-result-lenses" class="create-result-lenses" hidden>
+                  <h4>Analyze this retained run</h4>
+                  <p>Add or remove an interpretation without rerunning the people or changing the world.</p>
+                  <div id="create-result-lens-list"></div>
+                  <div class="create-result-lens-actions"><button id="create-add-waltzman-analysis" type="button">Add Waltzman lens</button><button id="create-add-outcome-analysis" class="quiet-button" type="button">Add exact outcome readout</button></div>
+                  <p id="create-result-lens-status" class="create-status" aria-live="polite"></p>
                 </section>
                 <details class="create-result-analysis"><summary>What this run does—and does not—show</summary><div id="create-result-analysis"></div></details>
                 <details><summary>All final person decisions</summary><div id="create-result-people" class="create-result-people"></div></details>
@@ -721,6 +728,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=ontology1" defer></script>
-  <script src="assets/app.js?v=authoring10" defer></script>
+  <script src="assets/app.js?v=authoring11" defer></script>
 </body>
 </html>

@@ -28,7 +28,9 @@ class _DraftDocument(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     draft_id: str = Field(pattern=r"^draft_[0-9a-f]{12}$")
-    target_kind: Literal["legacy_templates_v1", "general_world_v1"] = (
+    target_kind: Literal[
+        "legacy_templates_v1", "general_world_v1", "general_world_v2"
+    ] = (
         "legacy_templates_v1"
     )
     revision: int = Field(ge=0)
@@ -86,7 +88,9 @@ class AuthoringDraftStore:
         self,
         *,
         now: str,
-        target_kind: Literal["legacy_templates_v1", "general_world_v1"] = (
+        target_kind: Literal[
+            "legacy_templates_v1", "general_world_v1", "general_world_v2"
+        ] = (
             "legacy_templates_v1"
         ),
     ) -> dict[str, object]:

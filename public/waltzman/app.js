@@ -1396,6 +1396,70 @@ function projectLiveRun(raw) {
 
 const DEFAULT_API_TIMEOUT_MS = 20000
 
+function projectAuthoredBundleV2(bundle) {
+  const scenario = bundle?.scenario || {}
+  const run = bundle?.default_run || {}
+  const analyses = bundle?.analyses || []
+  return {
+    ...clone(scenario),
+    schema_version:2,
+    proposal_kind:'general_world_v2',
+    simulation_id:scenario.scenario_id,
+    question:bundle.analyst_question || scenario.description || '',
+    analyst_question:bundle.analyst_question || null,
+    schedule:clone(run.scheduled_moments || []),
+    horizon_minutes:run.horizon_minutes,
+    termination_conditions:clone(run.termination_conditions || []),
+    analyses:clone(analyses),
+    analysis_spec:analyses[0] || null,
+    analysis_requests:analyses.map((item) => item.purpose),
+    unresolved_questions:clone(bundle.unresolved_questions || []),
+  }
+}
+
+function normalizeAuthoringDocument(document) {
+  if (!document || typeof document !== 'object') return document
+  if (document.draft && typeof document.draft === 'object') {
+    document.draft = normalizeAuthoringDocument(document.draft)
+    return document
+  }
+  if (document.target_kind === 'general_world_v2' && document.proposal?.bundle_version === 2) {
+    document.native_bundle = clone(document.proposal)
+    document.proposal = projectAuthoredBundleV2(document.native_bundle)
+  }
+  return document
+}
+
+function generalProposalForSave(proposal) {
+  if (authoringDraft?.target_kind !== 'general_world_v2') return proposal
+  const source = authoringDraft.native_bundle
+  if (!source) throw new Error('The retained separated configuration is unavailable; reload this draft.')
+  const scenario = clone(source.scenario)
+  for (const key of [
+    'title', 'description', 'people', 'world_records', 'active_systems',
+    'component_requests', 'spatial_extension', 'information_extension',
+    'resource_extension', 'relationship_extension', 'sensing_rules',
+    'resource_transformations', 'resource_transports', 'fidelity_assumptions',
+    'declared_invariants',
+  ]) {
+    if (Object.hasOwn(proposal, key)) scenario[key] = clone(proposal[key])
+  }
+  const moments = clone(proposal.schedule || [])
+  return {
+    proposal_kind:'general_world_v2',
+    authored_study_id:source.authored_study_id,
+    scenario,
+    default_run:{
+      horizon_minutes:Math.max(Number(proposal.horizon_minutes || 0), ...moments.map((item) => Number(item.minute || 0)), 1),
+      scheduled_moments:moments,
+      termination_conditions:clone(proposal.termination_conditions || []),
+    },
+    analyses:clone(proposal.analyses || []),
+    unresolved_questions:clone(proposal.unresolved_questions || []),
+    analyst_question:proposal.analyst_question || null,
+  }
+}
+
 async function apiRequest(path, options = {}) {
   const {timeoutMs = DEFAULT_API_TIMEOUT_MS, ...fetchOptions} = options
   const controller = new AbortController()
@@ -1413,7 +1477,7 @@ async function apiRequest(path, options = {}) {
   }
   const body = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(body.detail || `${path} failed with ${response.status}`)
-  return body
+  return normalizeAuthoringDocument(body)
 }
 
 function authoringModel() {
@@ -1634,7 +1698,7 @@ function draftTemplateLabel(templateId) {
 }
 
 function isGeneralProposal(proposal) {
-  return proposal?.proposal_kind === 'general_world_v1'
+  return ['general_world_v1', 'general_world_v2'].includes(proposal?.proposal_kind)
 }
 
 function renderGeneralCoverage(draft) {
@@ -1660,7 +1724,7 @@ function renderGeneralEditor(proposal) {
     return
   }
   editor.hidden = false
-  $('#create-general-question').value = proposal.question
+  $('#create-general-question').value = proposal.analyst_question || ''
   $('#create-general-description').value = proposal.description
 
   if (!proposal.people.some((item) => item.entity_id === selectedGeneralPerson)) selectedGeneralPerson = proposal.people[0]?.entity_id
@@ -1721,7 +1785,9 @@ function renderAuthoringBrief(proposal) {
     const recipients = representations.reduce((total, item) => total + item.recipient_ids.length, 0)
     const plannedCalls = proposal.schedule.length * (proposal.people.length + 1)
     const maximumCalls = proposal.schedule.length * ((proposal.people.length * 2) + 2)
-    $('#create-brief-question').innerHTML = `<strong>Your question</strong><p>${escapeHtml(proposal.question)}</p>`
+    $('#create-brief-question').innerHTML = proposal.analyst_question
+      ? `<strong>Optional review question</strong><p>${escapeHtml(proposal.analyst_question)}</p>`
+      : `<strong>World to simulate</strong><p>${escapeHtml(proposal.description)}</p><small>No analytical question is required to run this world.</small>`
     $('#create-brief-people').innerHTML = `<strong>${proposal.people.length} simulated ${proposal.people.length === 1 ? 'person' : 'people'}</strong><p>${proposal.people.map((person) => escapeHtml(person.label)).join(' · ')}</p>`
     $('#create-brief-influences').innerHTML = representations.length
       ? `<strong>${representations.length} information ${representations.length === 1 ? 'item' : 'items'} · ${recipients} explicit deliveries</strong><ol>${representations.map((item) => `<li><strong>${escapeHtml(item.apparent_source)} → ${escapeHtml(item.recipient_ids.map((id) => peopleById.get(id) || id).join(', '))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')}</ol>`
@@ -1954,7 +2020,7 @@ async function keepQuestionsInsideSimulation() {
     authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/general-proposal`, {
       method:'PUT',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({expected_revision:authoringDraft.revision, edit_id:crypto.randomUUID(), proposal}),
+      body:JSON.stringify({expected_revision:authoringDraft.revision, edit_id:crypto.randomUUID(), proposal:generalProposalForSave(proposal)}),
     })
     renderCreateSimulation()
     $('.create-actions').scrollIntoView({behavior:'smooth', block:'center'})
@@ -2112,9 +2178,10 @@ async function saveGeneralProposal() {
   const stateEntry = generalStateEntries(record).find((item) => item.key === selectedGeneralState)
   const minute = Number($('#create-general-minute').value)
   try {
-    proposal.question = $('#create-general-question').value.trim()
+    proposal.analyst_question = $('#create-general-question').value.trim() || null
+    proposal.question = proposal.analyst_question || proposal.description
     proposal.description = $('#create-general-description').value.trim()
-    if (!proposal.question || !proposal.description) throw new Error('The operational objective and description cannot be empty.')
+    if (!proposal.description) throw new Error('The world description cannot be empty.')
     if (person) {
       person.position = $('#create-general-person-position').value.trim()
       person.disposition = $('#create-general-person-disposition').value.trim()
@@ -2140,7 +2207,7 @@ async function saveGeneralProposal() {
     authoringDraft = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/general-proposal`, {
       method:'PUT',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({expected_revision:authoringDraft.revision, edit_id:crypto.randomUUID(), proposal}),
+      body:JSON.stringify({expected_revision:authoringDraft.revision, edit_id:crypto.randomUUID(), proposal:generalProposalForSave(proposal)}),
     })
     renderCreateSimulation()
     syncUrl()
@@ -2540,6 +2607,87 @@ async function openSimulationReplay(runId) {
   }
 }
 
+function builtInAnalysisSpec(profile) {
+  if (profile === 'waltzman_coordination_v1') return {
+    analysis_spec_version:2,
+    analysis_id:'waltzman_coordination_review',
+    profile,
+    purpose:'Inspect information topology, dependencies, perceived risk, and coordination readiness in retained evidence.',
+    construct_definitions:['Waltzman-informed coordination constructs are derived from retained evidence after execution.'],
+    required_evidence_kinds:['configuration', 'terminal_state', 'causal_event', 'information_lineage', 'participant_activation'],
+    method_classes:['exact', 'calculated', 'llm_coded'],
+    aggregation:'Preserve per-person and per-moment variation before synthesis.',
+    uncertainty:'This interprets one synthetic AI-agent execution; it does not measure real institutions.',
+    limitations:['One execution does not establish an invariant.', 'Model outputs are audit records, not independent observations.'],
+    subject_refs:[],
+  }
+  return {
+    analysis_spec_version:2,
+    analysis_id:'exact_terminal_review',
+    profile:'exact_outcome_v1',
+    purpose:'Read the retained terminal outcome without changing the run.',
+    construct_definitions:['Terminal state is read directly from retained evidence.'],
+    required_evidence_kinds:['configuration', 'terminal_state'],
+    method_classes:['exact'],
+    aggregation:'Report the retained terminal evidence.',
+    uncertainty:'No inference beyond retained state.',
+    limitations:['This does not establish a counterfactual.'],
+    subject_refs:[],
+  }
+}
+
+function renderResultAnalysisLenses(result) {
+  const section = $('#create-result-lenses')
+  const supported = result.execution_contract === 'general_world_v2' && result.status === 'completed'
+  section.hidden = !supported
+  if (!supported) return
+  const specs = result.analysis_specs || []
+  const resultsByDigest = new Map((result.analysis_results || []).map((item) => [item.analysis_spec_digest, item]))
+  $('#create-result-lens-list').innerHTML = specs.length
+    ? specs.map((spec) => {
+      const analysis = [...resultsByDigest.values()].find((item) => item.result_id?.includes(spec.analysis_id))
+      const findings = analysis?.findings || []
+      return `<article><div><strong>${escapeHtml(sentence(spec.profile))}</strong><span>${escapeHtml(sentence(analysis?.coverage_status || 'attached'))}</span></div><p>${escapeHtml(spec.purpose)}</p>${findings.length ? `<ul>${findings.map((finding) => `<li><strong>${escapeHtml(sentence(finding.construct_id))}</strong><span>${escapeHtml(typeof finding.value === 'string' ? finding.value : JSON.stringify(finding.value))}</span></li>`).join('')}</ul>` : ''}<button class="quiet-button" type="button" data-remove-analysis="${escapeHtml(spec.analysis_id)}">Remove lens</button></article>`
+    }).join('')
+    : '<p><strong>No analysis attached.</strong> The retained execution is still available on its own.</p>'
+  const profiles = new Set(specs.map((item) => item.profile))
+  $('#create-add-waltzman-analysis').hidden = profiles.has('waltzman_coordination_v1')
+  $('#create-add-outcome-analysis').hidden = profiles.has('exact_outcome_v1')
+  $('#create-add-waltzman-analysis').onclick = () => attachResultAnalysis('waltzman_coordination_v1')
+  $('#create-add-outcome-analysis').onclick = () => attachResultAnalysis('exact_outcome_v1')
+  all('[data-remove-analysis]').forEach((button) => {
+    button.onclick = () => removeResultAnalysis(button.dataset.removeAnalysis)
+  })
+}
+
+async function attachResultAnalysis(profile) {
+  if (!authoredResult?.run_id) return
+  $('#create-result-lens-status').textContent = 'Analyzing retained evidence…'
+  try {
+    await apiRequest(`api/runs/${encodeURIComponent(authoredResult.run_id)}/analyses`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({analysis_spec:builtInAnalysisSpec(profile)}),
+    })
+    renderAuthoredResult(await apiRequest(`api/runs/${encodeURIComponent(authoredResult.run_id)}/summary`))
+    $('#create-result-lens-status').textContent = 'Analysis attached. No simulated person was called and the world revision is unchanged.'
+  } catch (error) {
+    $('#create-result-lens-status').textContent = error.message
+  }
+}
+
+async function removeResultAnalysis(analysisId) {
+  if (!authoredResult?.run_id) return
+  $('#create-result-lens-status').textContent = 'Removing the interpretation…'
+  try {
+    await apiRequest(`api/runs/${encodeURIComponent(authoredResult.run_id)}/analyses/${encodeURIComponent(analysisId)}`, {method:'DELETE'})
+    renderAuthoredResult(await apiRequest(`api/runs/${encodeURIComponent(authoredResult.run_id)}/summary`))
+    $('#create-result-lens-status').textContent = 'Analysis removed. The retained simulation is unchanged.'
+  } catch (error) {
+    $('#create-result-lens-status').textContent = error.message
+  }
+}
+
 function renderAuthoredResult(result) {
   authoredResult = result
   rememberCompletedSimulation(result)
@@ -2574,7 +2722,7 @@ function renderAuthoredResult(result) {
     ? `${questionLabel}: ${replayQuestion}`
     : 'Advance one retained step at a time.'
   const gateChecks = result.outcome?.gate_checks
-  const generalWorldResult = result.profile === 'general_world_v1'
+  const generalWorldResult = ['general_world_v1', 'general_world_v2'].includes(result.profile)
   const resultFacts = [
     [String((result.participants || []).length), 'Simulated people'],
     generalWorldResult
@@ -2594,6 +2742,7 @@ function renderAuthoredResult(result) {
     return `<li><strong>Round ${escapeHtml(step.round_index || '?')} · ${escapeHtml(step.person_label)}</strong><span>${escapeHtml(sentence(payload?.stance || 'no stated position'))}</span><p>${escapeHtml(payload?.reason || step.orientation || '')}</p></li>`
   }).join('')
   $('#create-result').hidden = false
+  renderResultAnalysisLenses(result)
   renderAuthoredResultRound()
   renderAuthoredReplay()
   const readout = result.coordination_measurement_readout

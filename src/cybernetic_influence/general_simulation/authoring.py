@@ -33,14 +33,22 @@ from .authoring_models import (
 )
 from .compiler import (
     CompiledGeneralSimulationV1,
+    CompiledGeneralSimulationV2,
     GeneralCompilationError,
     compile_general_simulation,
+    compile_general_simulation_v2,
+)
+from .study_models import (
+    AuthoredSimulationBundleV2,
+    AuthoredSimulationProposalEnvelopeV2,
+    AuthoredSimulationProposalV2,
+    materialize_authored_bundle_v2,
 )
 
 
 StructuredCall = Callable[..., tuple[Any, Any]]
 GENERAL_AUTHORING_TASK = "cybernetic_influence_v3_general_world_draft"
-GENERAL_AUTHORING_PROMPT_VERSION = "general_world_draft.v1"
+GENERAL_AUTHORING_PROMPT_VERSION = "general_world_draft.v2"
 GENERAL_AUTHORING_MAX_ATTEMPTS = 3
 GENERAL_AUTHORING_MAX_BUDGET = 0.10
 GENERAL_AUTHORING_MAX_TOKENS = 8000
@@ -214,7 +222,45 @@ def _diagnostics(
                 ),
             }
         )
-    for item in compiled.configuration_graph["diagnostics"]:
+    graph_diagnostics = compiled.configuration_graph.get("diagnostics", [])
+    assert isinstance(graph_diagnostics, list)
+    for item in graph_diagnostics:
+        assert isinstance(item, dict)
+        if item["severity"] == "error":
+            diagnostics.append(
+                {
+                    "severity": "error",
+                    "code": str(item["code"]),
+                    "message": str(item["message"]),
+                }
+            )
+    return diagnostics
+
+
+def _diagnostics_v2(
+    bundle: AuthoredSimulationBundleV2,
+    compiled: CompiledGeneralSimulationV2,
+) -> list[dict[str, str]]:
+    diagnostics = [
+        {"severity": "question", "code": "unresolved", "message": question}
+        for question in bundle.unresolved_questions
+    ]
+    for request_id in compiled.coverage.blocking_request_ids:
+        item = next(item for item in compiled.coverage.items if item.request_id == request_id)
+        diagnostics.append(
+            {
+                "severity": "error",
+                "code": "unsupported_behavior",
+                "message": (
+                    f"Material behavior {request_id!r} is {item.classification}; "
+                    + "; ".join(item.compiler_evidence)
+                ),
+            }
+        )
+    graph_diagnostics = compiled.configuration_graph.get("diagnostics", [])
+    assert isinstance(graph_diagnostics, list)
+    for item in graph_diagnostics:
+        assert isinstance(item, dict)
         if item["severity"] == "error":
             diagnostics.append(
                 {
@@ -233,12 +279,18 @@ class GeneralDraftAuthoringService:
         self.store = store
         self.call = call or _structured_call()
 
-    def compile(self, document: dict[str, object]) -> CompiledGeneralSimulationV1:
-        if document.get("target_kind") != "general_world_v1":
+    def compile(
+        self, document: dict[str, object]
+    ) -> CompiledGeneralSimulationV1 | CompiledGeneralSimulationV2:
+        target_kind = document.get("target_kind")
+        if target_kind not in {"general_world_v1", "general_world_v2"}:
             raise GeneralCompilationError("draft is not a general-world proposal")
         raw = document.get("proposal")
         if not isinstance(raw, dict):
             raise GeneralCompilationError("draft has no valid general proposal")
+        if target_kind == "general_world_v2":
+            bundle = AuthoredSimulationBundleV2.model_validate(raw)
+            return compile_general_simulation_v2(bundle.scenario, bundle.default_run)
         return compile_general_simulation(GeneralSimulationProposalV1.model_validate(raw))
 
     def discuss(
@@ -254,7 +306,7 @@ class GeneralDraftAuthoringService:
         if model not in GENERAL_AUTHORING_MODELS:
             raise ValueError("unsupported general authoring model")
         current = self.store.get(draft_id)
-        if current.get("target_kind") != "general_world_v1":
+        if current.get("target_kind") not in {"general_world_v1", "general_world_v2"}:
             raise ValueError("draft is not a general-world draft")
         if current["revision"] != expected_revision:
             raise DraftConflictError("draft revision has changed; reload before editing")
@@ -334,9 +386,19 @@ class GeneralDraftAuthoringService:
         model: str = CODEX_LUNA_MODEL,
         reasoning_effort: str = "medium",
     ) -> dict[str, object]:
+        current = self.store.get(draft_id)
+        if current.get("target_kind") == "general_world_v2":
+            return self._advance_v2(
+                draft_id,
+                current=current,
+                expected_revision=expected_revision,
+                message_id=message_id,
+                message=message,
+                model=model,
+                reasoning_effort=reasoning_effort,
+            )
         if model not in GENERAL_AUTHORING_MODELS:
             raise ValueError("unsupported general authoring model")
-        current = self.store.get(draft_id)
         if current.get("target_kind") != "general_world_v1":
             raise ValueError("draft is not a general-world draft")
         messages = current["messages"]
@@ -528,15 +590,217 @@ class GeneralDraftAuthoringService:
             draft_id, expected_revision=expected_revision, document=document
         )
 
+    def _advance_v2(
+        self,
+        draft_id: str,
+        *,
+        current: dict[str, object],
+        expected_revision: int,
+        message_id: str,
+        message: str,
+        model: str,
+        reasoning_effort: str,
+    ) -> dict[str, object]:
+        """Generate a native separated proposal and retain only its trusted bundle."""
+        if model not in GENERAL_AUTHORING_MODELS:
+            raise ValueError("unsupported general authoring model")
+        messages = cast(list[dict[str, object]], current["messages"])
+        existing = next((item for item in messages if item.get("message_id") == message_id), None)
+        if existing is not None:
+            if (
+                existing.get("content") != message
+                or existing.get("model") not in (None, model)
+                or existing.get("reasoning_effort") not in (None, reasoning_effort)
+            ):
+                raise DraftConflictError("message ID was reused with different content")
+            return current
+        if current["revision"] != expected_revision:
+            raise DraftConflictError("draft revision has changed; reload before editing")
+
+        proposal: AuthoredSimulationProposalV2 | None = None
+        bundle: AuthoredSimulationBundleV2 | None = None
+        compiled: CompiledGeneralSimulationV2 | None = None
+        candidate: object | None = None
+        repair_feedback: str | None = None
+        attempts: list[dict[str, object]] = []
+        diagnostics: list[dict[str, str]] = []
+        for attempt_number in range(1, GENERAL_AUTHORING_MAX_ATTEMPTS + 1):
+            trace_id = (
+                f"{draft_id}/general-v2/revision/{expected_revision + 1}/attempt/"
+                f"{attempt_number}"
+            )
+            system, user = _prompt(
+                message=message,
+                prior=_prior(current),
+                repair_feedback=repair_feedback,
+                candidate=candidate,
+            )
+            meta: object | None = None
+            try:
+                with structured_backend_options(model) as backend_options:
+                    parsed, meta = _call_with_deadline(
+                        self.call,
+                        model,
+                        [
+                            {"role": "system", "content": system},
+                            {"role": "user", "content": user},
+                        ],
+                        response_model=AuthoredSimulationProposalEnvelopeV2,
+                        task="cybernetic_influence_v3_general_world_v2_draft",
+                        trace_id=trace_id,
+                        max_budget=GENERAL_AUTHORING_MAX_BUDGET,
+                        max_tokens=GENERAL_AUTHORING_MAX_TOKENS,
+                        model_justification=(
+                            "Translate an analyst's situation into separated world, run, "
+                            "and optional analysis semantics."
+                        ),
+                        reasoning_effort=reasoning_effort,
+                        timeout=270,
+                        **backend_options,
+                    )
+                raw = parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
+                proposal = AuthoredSimulationProposalEnvelopeV2.model_validate(raw).proposal
+                candidate = proposal.model_dump(mode="json")
+                bundle = materialize_authored_bundle_v2(
+                    proposal, run_id=f"{draft_id}_run"
+                )
+                compiled = compile_general_simulation_v2(
+                    bundle.scenario, bundle.default_run
+                )
+                diagnostics = _diagnostics_v2(bundle, compiled)
+                if not diagnostics:
+                    attempts.append(
+                        _attempt(
+                            attempt_number,
+                            trace_id,
+                            "accepted",
+                            "The separated semantic proposal compiled with complete material coverage.",
+                            meta,
+                        )
+                    )
+                    break
+                if all(item["severity"] == "question" for item in diagnostics):
+                    attempts.append(
+                        _attempt(
+                            attempt_number,
+                            trace_id,
+                            "needs_input",
+                            "; ".join(item["message"] for item in diagnostics),
+                            meta,
+                        )
+                    )
+                    break
+                repair_feedback = "; ".join(item["message"] for item in diagnostics[:5])
+                attempts.append(_attempt(attempt_number, trace_id, "repair", repair_feedback, meta))
+                proposal = None
+                bundle = None
+                compiled = None
+            except (ValueError, GeneralCompilationError) as exc:
+                repair_feedback = str(exc)
+                diagnostics = [{"severity": "error", "code": "validation", "message": str(exc)}]
+                attempts.append(_attempt(attempt_number, trace_id, "repair", str(exc), meta))
+                proposal = None
+                bundle = None
+                compiled = None
+            except Exception as exc:
+                concise_error = f"{type(exc).__name__}: {str(exc)[:500]}"
+                diagnostics = [
+                    {
+                        "severity": "error",
+                        "code": "provider",
+                        "message": f"General authoring provider failed: {concise_error}",
+                    }
+                ]
+                attempts.append(_attempt(attempt_number, trace_id, "provider_error", diagnostics[0]["message"], meta))
+                if _is_terminal_provider_error(exc):
+                    break
+                repair_feedback = (
+                    "Return one complete native V2 proposal envelope matching the supplied schema."
+                )
+
+        if bundle is not None and compiled is not None:
+            status = "needs_input" if diagnostics else "ready_for_review"
+            summary = (
+                f"Generated {bundle.scenario.title}. Coverage resolved "
+                f"{len(compiled.coverage.items)} requested behaviors; "
+                f"{len(compiled.coverage.blocking_request_ids)} block approval."
+            )
+            proposal_payload: dict[str, object] | None = bundle.model_dump(mode="json")
+            coverage_payload: dict[str, object] | None = compiled.coverage.model_dump(mode="json")
+            graph_payload: dict[str, object] | None = compiled.configuration_graph
+        elif isinstance(current.get("proposal"), dict) and attempts and all(
+            item["status"] == "provider_error" for item in attempts
+        ):
+            status = str(current["status"])
+            summary = "The provider failed, so the prior retained proposal was preserved."
+            proposal_payload = cast(dict[str, object], current["proposal"])
+            coverage_payload = cast(dict[str, object] | None, current.get("coverage"))
+            graph_payload = cast(dict[str, object] | None, current.get("configuration_graph"))
+            diagnostics = cast(list[dict[str, str]], current.get("diagnostics", []))
+        else:
+            status = "needs_input"
+            summary = "No valid separated proposal was produced; revise the request using the diagnostics."
+            proposal_payload = None
+            coverage_payload = None
+            graph_payload = None
+        assistant_summary = " ".join([summary, *[item["message"] for item in diagnostics]])
+        return self.store.replace(
+            draft_id,
+            expected_revision=expected_revision,
+            document={
+                **current,
+                "revision": expected_revision + 1,
+                "status": status,
+                "messages": [
+                    *messages,
+                    {
+                        "message_id": message_id,
+                        "content": message,
+                        "source": "conversation",
+                        "model": model,
+                        "reasoning_effort": reasoning_effort,
+                        "assistant_summary": assistant_summary,
+                        "result_status": status,
+                        "trace_ids": [str(item["trace_id"]) for item in attempts],
+                    },
+                ],
+                "attempts": attempts,
+                "authoring_summary": summary,
+                "proposal": proposal_payload,
+                "coverage": coverage_payload,
+                "configuration_graph": graph_payload,
+                "diagnostics": diagnostics,
+                "approval": None,
+                "updated_at": now_iso(),
+            },
+        )
+
     def edit_proposal(
         self,
         draft_id: str,
         *,
         expected_revision: int,
         edit_id: str,
-        proposal: GeneralSimulationProposalV1,
+        proposal: (
+            GeneralSimulationProposalV1
+            | AuthoredSimulationProposalV2
+            | AuthoredSimulationBundleV2
+        ),
     ) -> dict[str, object]:
         current = self.store.get(draft_id)
+        target_kind = current.get("target_kind")
+        if isinstance(proposal, AuthoredSimulationProposalV2):
+            proposal = materialize_authored_bundle_v2(
+                proposal, run_id=f"{draft_id}_run"
+            )
+        if target_kind == "general_world_v2" and not isinstance(
+            proposal, AuthoredSimulationBundleV2
+        ):
+            raise ValueError("V2 drafts require a separated authored bundle")
+        if target_kind == "general_world_v1" and not isinstance(
+            proposal, GeneralSimulationProposalV1
+        ):
+            raise ValueError("historical V1 drafts require a V1 proposal")
         messages = current["messages"]
         assert isinstance(messages, list)
         digest = sha256(proposal.model_dump_json().encode()).hexdigest()
@@ -552,8 +816,18 @@ class GeneralDraftAuthoringService:
             return current
         if current["revision"] != expected_revision:
             raise DraftConflictError("draft revision has changed; reload before editing")
-        compiled = compile_general_simulation(proposal)
-        diagnostics = _diagnostics(proposal, compiled)
+        if isinstance(proposal, AuthoredSimulationBundleV2):
+            compiled_v2 = compile_general_simulation_v2(
+                proposal.scenario, proposal.default_run
+            )
+            diagnostics = _diagnostics_v2(proposal, compiled_v2)
+            coverage = compiled_v2.coverage
+            configuration_graph = compiled_v2.configuration_graph
+        else:
+            compiled_v1 = compile_general_simulation(proposal)
+            diagnostics = _diagnostics(proposal, compiled_v1)
+            coverage = compiled_v1.coverage
+            configuration_graph = compiled_v1.configuration_graph
         status = "needs_input" if diagnostics else "ready_for_review"
         summary = "Saved the typed general-world proposal without a model call."
         return self.store.replace(
@@ -577,8 +851,8 @@ class GeneralDraftAuthoringService:
                 ],
                 "authoring_summary": summary,
                 "proposal": proposal.model_dump(mode="json"),
-                "coverage": compiled.coverage.model_dump(mode="json"),
-                "configuration_graph": compiled.configuration_graph,
+                "coverage": coverage.model_dump(mode="json"),
+                "configuration_graph": configuration_graph,
                 "diagnostics": diagnostics,
                 "approval": None,
                 "updated_at": now_iso(),
@@ -590,19 +864,37 @@ class GeneralDraftAuthoringService:
         if current["revision"] != expected_revision:
             raise DraftConflictError("draft revision has changed; reload before approving")
         compiled = self.compile(current)
-        diagnostics = _diagnostics(compiled.proposal, compiled)
+        if isinstance(compiled, CompiledGeneralSimulationV2):
+            bundle = AuthoredSimulationBundleV2.model_validate(current["proposal"])
+            diagnostics = _diagnostics_v2(bundle, compiled)
+        else:
+            diagnostics = _diagnostics(compiled.proposal, compiled)
         if diagnostics or not compiled.coverage.approvable:
             raise GeneralCompilationError("general proposal has blocking diagnostics or coverage")
-        approval = {
-            "approved_from_revision": expected_revision,
-            "proposal_kind": "general_world_v1",
-            "proposal_digest": compiled.proposal_digest,
-            "registry_digest": compiled.registry_digest,
-            "world_spec_digest": sha256(
-                compiled.world_spec.model_dump_json().encode()
-            ).hexdigest(),
-            "approved_at": now_iso(),
-        }
+        if isinstance(compiled, CompiledGeneralSimulationV2):
+            approval = {
+                "approved_from_revision": expected_revision,
+                "proposal_kind": "general_world_v2",
+                "bundle_digest": bundle.digest,
+                "scenario_digest": compiled.scenario_digest,
+                "run_spec_digest": compiled.run_spec_digest,
+                "registry_digest": compiled.registry_digest,
+                "world_spec_digest": sha256(
+                    compiled.world_spec.model_dump_json().encode()
+                ).hexdigest(),
+                "approved_at": now_iso(),
+            }
+        else:
+            approval = {
+                "approved_from_revision": expected_revision,
+                "proposal_kind": "general_world_v1",
+                "proposal_digest": compiled.proposal_digest,
+                "registry_digest": compiled.registry_digest,
+                "world_spec_digest": sha256(
+                    compiled.world_spec.model_dump_json().encode()
+                ).hexdigest(),
+                "approved_at": now_iso(),
+            }
         return self.store.replace(
             draft_id,
             expected_revision=expected_revision,
@@ -616,13 +908,23 @@ class GeneralDraftAuthoringService:
             },
         )
 
-    def approved_compile(self, draft_id: str) -> CompiledGeneralSimulationV1:
+    def approved_compile(
+        self, draft_id: str
+    ) -> CompiledGeneralSimulationV1 | CompiledGeneralSimulationV2:
         current = self.store.get(draft_id)
         approval = current.get("approval")
         if current.get("status") != "approved" or not isinstance(approval, dict):
             raise GeneralCompilationError("draft must be approved before execution")
         compiled = self.compile(current)
-        if approval.get("proposal_digest") != compiled.proposal_digest:
+        if isinstance(compiled, CompiledGeneralSimulationV2):
+            bundle = AuthoredSimulationBundleV2.model_validate(current["proposal"])
+            if approval.get("bundle_digest") != bundle.digest:
+                raise GeneralCompilationError("approval no longer matches authored bundle")
+            if approval.get("scenario_digest") != compiled.scenario_digest:
+                raise GeneralCompilationError("approval no longer matches scenario")
+            if approval.get("run_spec_digest") != compiled.run_spec_digest:
+                raise GeneralCompilationError("approval no longer matches run")
+        elif approval.get("proposal_digest") != compiled.proposal_digest:
             raise GeneralCompilationError("approval no longer matches proposal")
         if approval.get("registry_digest") != compiled.registry_digest:
             raise GeneralCompilationError("approval no longer matches installed registry")

@@ -164,11 +164,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=ontology1",
-        "assets/styles.css?v=authoring3",
+        "assets/styles.css?v=authoring4",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology1",
-        "assets/app.js?v=authoring10",
+        "assets/app.js?v=authoring11",
     ]
     assert {
         "overview-view",
@@ -235,6 +235,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-result-round-tabs",
         "create-result-round",
         "create-result-network-graph",
+        "create-result-lenses",
+        "create-result-lens-list",
+        "create-add-waltzman-analysis",
+        "create-add-outcome-analysis",
+        "create-result-lens-status",
         "create-replay-progress",
         "create-replay-previous",
         "create-replay-next",
