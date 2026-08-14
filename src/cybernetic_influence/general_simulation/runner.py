@@ -572,6 +572,23 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             if item.request_id in request_ids
         ]
 
+    def _active_transition_contracts(self) -> tuple[set[str], set[str], set[str]]:
+        """Return the exact contracts this moment may adjudicate by family."""
+        active_ids = set(self._moment().active_transition_contract_ids)
+        return (
+            {item.rule_id for item in self._proposal.sensing_rules if item.rule_id in active_ids},
+            {
+                item.transformation_id
+                for item in self._proposal.resource_transformations
+                if item.transformation_id in active_ids
+            },
+            {
+                item.transport_id
+                for item in self._proposal.resource_transports
+                if item.transport_id in active_ids
+            },
+        )
+
     def get_action_attempt(
         self,
         context: entity_component.ComponentContextMapping,
@@ -651,6 +668,9 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             )
             moment = self._moment()
             is_final_moment = len(self.moments) + 1 == len(self._proposal.schedule)
+            active_sensing_rules, active_transformations, active_transports = (
+                self._active_transition_contracts()
+            )
             parsed, receipt = _call_model(
                 self._call,
                 role="adjudicator",
@@ -701,14 +721,17 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "sensing_rules": [
                             item.model_dump(mode="json")
                             for item in self._proposal.sensing_rules
+                            if item.rule_id in active_sensing_rules
                         ],
                         "resource_transformations": [
                             item.model_dump(mode="json")
                             for item in self._proposal.resource_transformations
+                            if item.transformation_id in active_transformations
                         ],
                         "resource_transports": [
                             item.model_dump(mode="json")
                             for item in self._proposal.resource_transports
+                            if item.transport_id in active_transports
                         ],
                         "requirements": {
                             "authority_id": self._authority_id,
