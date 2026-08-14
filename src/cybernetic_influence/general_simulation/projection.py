@@ -177,6 +177,15 @@ def project_general_run(
         1 for item in result.transition_evidence if item.validation.accepted
     )
     rejected = len(result.transition_evidence) - accepted
+    objective_assessment = next(
+        (
+            item.transaction.objective_assessment
+            for item in reversed(result.transition_evidence)
+            if item.validation.accepted
+            and item.transaction.objective_assessment is not None
+        ),
+        None,
+    )
     return {
         "run_id": run_id,
         "created_at": created_at,
@@ -202,6 +211,11 @@ def project_general_run(
             "accepted_transactions": accepted,
             "rejected_transactions": rejected,
             "final_revision": state.revision,
+            "objective_assessment": (
+                objective_assessment.model_dump(mode="json")
+                if objective_assessment is not None
+                else None
+            ),
         },
         "authoring": {
             "proposal_kind": proposal.proposal_kind,

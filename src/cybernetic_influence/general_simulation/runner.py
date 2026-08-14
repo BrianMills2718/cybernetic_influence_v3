@@ -40,6 +40,7 @@ from .models import (
     GeneralGroupSimulationResult,
     GeneralMomentEvidence,
     ModelCallReceipt,
+    ObjectiveAssessment,
     SemanticActionIntent,
     WorldTransaction,
 )
@@ -385,6 +386,7 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 item for item in world.spec.authorities if item.authority_id == self._authority_id
             )
             moment = self._moment()
+            is_final_moment = len(self.moments) + 1 == len(self._proposal.schedule)
             parsed, receipt = _call_model(
                 self._call,
                 role="adjudicator",
@@ -394,7 +396,11 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "Reconcile the same-revision semantic intents into one transaction containing "
                     "only mutations allowed by the supplied patch grammar. You propose; canonical "
                     "validation determines whether the transaction commits. Do not put hidden world "
-                    "facts into actor-visible consequences."
+                    "facts into actor-visible consequences. On the final scheduled moment, also "
+                    "assess the research objective as achieved, partially_achieved, failed, or "
+                    "unresolved. Base that assessment only on canonical state, collected intents, "
+                    "and the transaction you propose; cite exact supplied evidence identifiers. "
+                    "Use unresolved when the evidence does not establish success or failure."
                 ),
                 user=json.dumps(
                     {
@@ -408,6 +414,8 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                             "base_revision": world.state.revision,
                             "intent_ids": [item.intent_id for item in intents],
                             "actor_visible_consequences_may_name": actor_ids,
+                            "is_final_moment": is_final_moment,
+                            "objective_assessment_required": is_final_moment,
                         },
                     },
                     sort_keys=True,
@@ -431,6 +439,25 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "intent_ids": [item.intent_id for item in intents],
                 }
             )
+            if is_final_moment and transaction.objective_assessment is None:
+                corrections.append(
+                    "missing final objective assessment retained as unresolved"
+                )
+                transaction = transaction.model_copy(
+                    update={
+                        "objective_assessment": ObjectiveAssessment(
+                            status="unresolved",
+                            summary=(
+                                "The final transition authority output did not establish "
+                                "whether the configured objective was achieved or failed."
+                            ),
+                            evidence_refs=list(transaction.evidence_refs),
+                            unresolved_requirements=[
+                                "A grounded final objective assessment is still required."
+                            ],
+                        )
+                    }
+                )
             allowed_evidence_refs = (
                 expected_intents
                 | set(world.state.records)
@@ -452,6 +479,11 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             }
             if set(transaction.evidence_refs) - allowed_evidence_refs:
                 raise ValueError("adjudicator cited unknown canonical evidence")
+            assessment = transaction.objective_assessment
+            if assessment is not None and set(assessment.evidence_refs) - (
+                allowed_evidence_refs | {transaction.transaction_id}
+            ):
+                raise ValueError("objective assessment cited unknown canonical evidence")
             unknown_recipients = {
                 item.recipient_id for item in transaction.consequences
             } - set(actor_ids)
@@ -514,8 +546,19 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "intent_ids": [item.intent_id for item in intents],
                     }
                 )
+                if is_final_moment and repaired_transaction.objective_assessment is None:
+                    repaired_transaction = repaired_transaction.model_copy(
+                        update={"objective_assessment": transaction.objective_assessment}
+                    )
                 if set(repaired_transaction.evidence_refs) - allowed_evidence_refs:
                     raise ValueError("repaired adjudicator output cited unknown canonical evidence")
+                repaired_assessment = repaired_transaction.objective_assessment
+                if repaired_assessment is not None and set(
+                    repaired_assessment.evidence_refs
+                ) - (allowed_evidence_refs | {repaired_transaction.transaction_id}):
+                    raise ValueError(
+                        "repaired objective assessment cited unknown canonical evidence"
+                    )
                 repaired_unknown_recipients = {
                     item.recipient_id for item in repaired_transaction.consequences
                 } - set(actor_ids)

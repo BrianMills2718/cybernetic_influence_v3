@@ -909,6 +909,17 @@ def _simulation_replay(
             )
         scenes.append(scene)
 
+    objective_assessment = outcome.get("objective_assessment")
+    assessment_summary = (
+        objective_assessment.get("summary")
+        if isinstance(objective_assessment, dict)
+        else None
+    )
+    assessment_status = (
+        objective_assessment.get("status")
+        if isinstance(objective_assessment, dict)
+        else None
+    )
     add_scene(
         scene_id="question",
         kind="question",
@@ -1099,7 +1110,8 @@ def _simulation_replay(
         kind="outcome",
         scene_title=str(headline or "The retained outcome"),
         scene_summary=str(
-            outcome.get("terminal_summary")
+            assessment_summary
+            or outcome.get("terminal_summary")
             or summary
             or "The run reached its retained terminal state."
         ),
@@ -1109,6 +1121,11 @@ def _simulation_replay(
         focus_edges=decision_edge_ids,
         facts=(
             [
+                *((
+                    [("Objective assessment", str(assessment_status).replace("_", " "))]
+                    if assessment_status
+                    else []
+                )),
                 (
                     "Committed transitions",
                     str(outcome.get("accepted_transactions", 0)),

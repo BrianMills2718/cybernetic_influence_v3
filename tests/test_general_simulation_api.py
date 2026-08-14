@@ -19,6 +19,7 @@ from cybernetic_influence.general_simulation.authoring_models import (
 from cybernetic_influence.general_simulation.models import (
     ActorDecision,
     Assimilation,
+    ObjectiveAssessment,
     SemanticActionIntent,
     WorldTransaction,
 )
@@ -71,6 +72,16 @@ class _GeneralRuntimeFake:
             consequences=[],
             evidence_refs=user["requirements"]["intent_ids"],
             stated_rationale="Retain the world while recording joint review.",
+            objective_assessment=(
+                ObjectiveAssessment(
+                    status="unresolved",
+                    summary="The retained evidence does not establish completion of the objective.",
+                    evidence_refs=user["requirements"]["intent_ids"],
+                    unresolved_requirements=["A verified operational result is still required."],
+                )
+                if user["requirements"]["is_final_moment"]
+                else None
+            ),
         ), SimpleNamespace(provider="fixture")
 
 
@@ -254,8 +265,11 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         {"label": "Other world components", "value": "8"},
     ]
     outcome_scene = replay_scenes[-1]
-    assert outcome_scene["summary"] == "Retain the world while recording joint review."
+    assert outcome_scene["summary"] == (
+        "The retained evidence does not establish completion of the objective."
+    )
     assert outcome_scene["facts"] == [
+        {"label": "Objective assessment", "value": "unresolved"},
         {"label": "Committed transitions", "value": "3"},
         {"label": "Final world revision", "value": "3"},
     ]

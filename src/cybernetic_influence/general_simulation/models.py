@@ -216,6 +216,13 @@ class Precondition(StrictModel):
     expected: PatchValue
 
 
+class ObjectiveAssessment(StrictModel):
+    status: Literal["achieved", "partially_achieved", "failed", "unresolved"]
+    summary: str
+    evidence_refs: list[str]
+    unresolved_requirements: list[str] = Field(default_factory=list)
+
+
 class WorldTransaction(StrictModel):
     transaction_id: str
     base_revision: int
@@ -231,6 +238,7 @@ class WorldTransaction(StrictModel):
         )
     )
     stated_rationale: str
+    objective_assessment: ObjectiveAssessment | None = None
 
 
 class ValidationResult(StrictModel):
