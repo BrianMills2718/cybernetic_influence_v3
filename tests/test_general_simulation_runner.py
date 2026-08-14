@@ -130,6 +130,70 @@ def test_actor_output_gets_one_bounded_validation_repair() -> None:
     assert all("/repair/1" in trace["trace_id"] or "/repair/" not in trace["trace_id"] for trace in projected["traces"])
 
 
+def test_authored_person_memories_are_adopted_as_mutable_runtime_memory() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        SERVICE_FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    seen_initial_memories: dict[str, list[str]] = {}
+
+    def memory_revision_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        user = json.loads(args[1][1]["content"])
+        if kwargs["response_model"] is ActorDecision:
+            context = user["actor_context"]
+            actor_id = context["actor_id"]
+            memories = context["private_memory"]
+            seen_initial_memories.setdefault(actor_id, list(memories))
+            prior = memories[0]
+            return ActorDecision(
+                assimilation=Assimilation(
+                    attended_observation_ids=[],
+                    memory_additions=[],
+                    memory_revisions=[
+                        {
+                            "prior_memory": prior,
+                            "revised_memory": f"Reassessed: {prior}",
+                        }
+                    ],
+                    provenance_links=[],
+                    interpretation="Reassess one retained memory.",
+                ),
+                intent=SemanticActionIntent(
+                    intent_id=f"intent_{actor_id}_{context['base_revision']}",
+                    actor_id=actor_id,
+                    base_revision=context["base_revision"],
+                    action="Propose a bounded review.",
+                    target_refs=[],
+                    purpose="Exercise retained cognition.",
+                    expected_effect="One reviewable intent.",
+                    stated_rationale="The configured memory is part of actor state.",
+                ),
+            ), SimpleNamespace(provider="fixture")
+        return WorldTransaction(
+            transaction_id=f"transaction_{user['moment']['moment_id']}",
+            base_revision=user["requirements"]["base_revision"],
+            authority_id=user["requirements"]["authority_id"],
+            intent_ids=user["requirements"]["intent_ids"],
+            operations=[],
+            preconditions=[],
+            consequences=[],
+            evidence_refs=user["requirements"]["intent_ids"],
+            stated_rationale="Retain the current world.",
+        ), SimpleNamespace(provider="fixture")
+
+    result = run_general_simulation(
+        compiled,
+        run_id="run_person_memory_adoption_fixture",
+        call=memory_revision_call,
+        max_additional_moments=1,
+    )
+
+    assert seen_initial_memories == {
+        person.entity_id: person.memories for person in proposal.people
+    }
+    assert not any("/repair/" in item.trace_id for item in result.model_calls)
+
+
 def test_adjudicator_output_gets_one_authority_grammar_repair() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         SERVICE_FIXTURE.read_text(encoding="utf-8")

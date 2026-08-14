@@ -738,6 +738,9 @@ class GeneralWorldPrefab(prefab.Prefab):  # type: ignore[misc]
         ]
         if len(semantic_authorities) != 1:
             raise ValueError("this vertical requires exactly one joint LLM authority")
+        world = CanonicalWorld(self.compiled.world_spec)
+        for person in self.compiled.proposal.people:
+            world.retain_memory(person.entity_id, person.memories)
         return entity_agent.EntityAgent(
             agent_name="general_world_game_master",
             act_component=GeneralGameMasterActingComponent(
@@ -747,7 +750,7 @@ class GeneralWorldPrefab(prefab.Prefab):  # type: ignore[misc]
                 trace_prefix=self.trace_prefix,
             ),
             context_components={
-                WORLD_COMPONENT: CanonicalWorld(self.compiled.world_spec),
+                WORLD_COMPONENT: world,
                 INBOX_COMPONENT: InboxComponent(),
                 concordia_next_acting.DEFAULT_NEXT_ACTING_COMPONENT_KEY: (
                     concordia_next_acting.NextActingAllEntities(
