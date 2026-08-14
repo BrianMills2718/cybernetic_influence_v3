@@ -19,6 +19,7 @@ from cybernetic_influence.run_configuration import (
     _current_coordination_schema_digests,
     _current_schema_digests,
     coordination_live_model_ids,
+    live_options_contract,
     llm_client_revision,
     model_catalog,
     resolve_live_configuration,
@@ -329,3 +330,32 @@ def test_experimental_deepseek_effort_is_resolved_without_claiming_certification
 
     assert resolved.agent_reasoning_effort == "xhigh"
     assert resolved.narrator_reasoning_effort == "none"
+
+
+def test_server_default_prefers_luna_and_falls_back_when_unavailable(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    def choice(model: str, billing_mode: str) -> dict[str, object]:
+        return {
+            "model": model,
+            "agent_reasoning_efforts": ["medium"],
+            "default_agent_reasoning_effort": "medium",
+            "narrator_reasoning_effort": "medium",
+            "billing_mode": billing_mode,
+        }
+
+    luna = choice("codex/gpt-5.6-luna", "subscription_included")
+    terra = choice(MODEL, "usage_based")
+    monkeypatch.setattr(
+        "cybernetic_influence.run_configuration.model_catalog",
+        lambda: [terra, luna],
+    )
+    assert resolve_live_configuration(None).model == "codex/gpt-5.6-luna"
+    assert live_options_contract()["defaults"]["model"] == "codex/gpt-5.6-luna"  # type: ignore[index]
+
+    monkeypatch.setattr(
+        "cybernetic_influence.run_configuration.model_catalog",
+        lambda: [terra],
+    )
+    assert resolve_live_configuration(None).model == MODEL
+    assert live_options_contract()["defaults"]["model"] == MODEL  # type: ignore[index]

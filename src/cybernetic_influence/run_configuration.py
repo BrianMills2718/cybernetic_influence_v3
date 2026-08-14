@@ -26,6 +26,7 @@ from cybernetic_influence.scenarios.coordination_decision import (
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh"]
 DEFAULT_MODEL = OPENROUTER_TERRA_MODEL
+PREFERRED_MODEL = CODEX_LUNA_MODEL
 DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium"
 NARRATOR_REASONING_EFFORT: Literal["medium"] = "medium"
 PARTICIPANT_PER_CALL_CEILING = 0.05
@@ -49,6 +50,18 @@ class _RouteAdvertisement(TypedDict):
     narrator_reasoning_effort: ReasoningEffort
     agent_reasoning_efforts: NotRequired[tuple[ReasoningEffort, ...]]
     experimental_agent_reasoning_efforts: NotRequired[tuple[ReasoningEffort, ...]]
+
+
+def _preferred_catalog_choice(
+    catalog: list[dict[str, object]],
+) -> dict[str, object] | None:
+    """Prefer Luna when eligible, while retaining a visible usable fallback."""
+    by_model = {str(item["model"]): item for item in catalog}
+    return (
+        by_model.get(PREFERRED_MODEL)
+        or by_model.get(DEFAULT_MODEL)
+        or (catalog[0] if catalog else None)
+    )
 
 
 # This is a simulator-owned advertisement set, not a provider capability matrix.
@@ -228,7 +241,7 @@ def model_catalog() -> list[dict[str, object]]:
             {
                 "model": model,
                 "label": advertisement["label"],
-                "default": model == DEFAULT_MODEL,
+                "default": False,
                 "agent_reasoning_efforts": supported_efforts,
                 "experimental_agent_reasoning_efforts": [
                     effort
@@ -249,6 +262,9 @@ def model_catalog() -> list[dict[str, object]]:
                 "certification_basis": certification_basis,
             }
         )
+    default_choice = _preferred_catalog_choice(choices)
+    if default_choice is not None:
+        default_choice["default"] = True
     return choices
 
 
@@ -425,14 +441,24 @@ def resolve_live_configuration(
     options: RunLlmOptions | None,
 ) -> EffectiveRunLlmConfiguration:
     """Validate one request against the currently advertised catalog."""
-    selected = options or RunLlmOptions(
-        model=DEFAULT_MODEL,
-        agent_reasoning_effort=DEFAULT_REASONING_EFFORT,
-        max_total_cost=DEFAULT_MAX_TOTAL_COST,
-    )
+    catalog = model_catalog()
+    default_choice = _preferred_catalog_choice(catalog)
+    if options is None:
+        if default_choice is None:
+            raise ValueError("no model is currently advertised for simulator execution")
+        selected = RunLlmOptions(
+            model=str(default_choice["model"]),
+            agent_reasoning_effort=cast(
+                ReasoningEffort,
+                default_choice["default_agent_reasoning_effort"],
+            ),
+            max_total_cost=DEFAULT_MAX_TOTAL_COST,
+        )
+    else:
+        selected = options
     advertised = {
         str(choice["model"]): choice
-        for choice in model_catalog()
+        for choice in catalog
     }
     choice = advertised.get(selected.model)
     if choice is None:
@@ -473,11 +499,19 @@ def llm_client_revision() -> str:
 
 def live_options_contract() -> dict[str, object]:
     """Return UI-safe defaults, limits, call ceilings, and help."""
+    catalog = model_catalog()
+    default_choice = _preferred_catalog_choice(catalog)
     return {
-        "models": model_catalog(),
+        "models": catalog,
         "defaults": {
-            "model": DEFAULT_MODEL,
-            "agent_reasoning_effort": DEFAULT_REASONING_EFFORT,
+            "model": (
+                default_choice["model"] if default_choice is not None else DEFAULT_MODEL
+            ),
+            "agent_reasoning_effort": (
+                default_choice["default_agent_reasoning_effort"]
+                if default_choice is not None
+                else DEFAULT_REASONING_EFFORT
+            ),
             "max_total_cost": DEFAULT_MAX_TOTAL_COST,
         },
         "limits": {

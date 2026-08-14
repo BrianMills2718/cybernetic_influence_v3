@@ -138,7 +138,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert config.status_code == 200
     assert config.json()["version"] == "0.13.0"
     assert config.json()["build_commit"] == "development"
-    assert config.json()["model"] == "openrouter/openai/gpt-5.6-terra"
+    assert config.json()["model"] == "codex/gpt-5.6-luna"
     assert config.json()["reasoning_effort"] == "medium"
     assert config.json()["profiles"] == ["position_context", "procedural_control"]
     assert set(config.json()["scenarios"]) == {
@@ -159,7 +159,6 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "codex/gpt-5.6-terra",
         "codex/gpt-5.6-luna",
         "openrouter/openai/gpt-5.6-terra",
-        "openrouter/deepseek/deepseek-v4-flash",
     ]
     assert {item["id"] for item in coordination["arms"]} == {
         "baseline",
@@ -190,7 +189,6 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "codex/gpt-5.6-terra",
         "codex/gpt-5.6-luna",
         "openrouter/openai/gpt-5.6-terra",
-        "openrouter/deepseek/deepseek-v4-flash",
     ]
     terra = config.json()["live_options"]["models"][0]
     assert terra["agent_reasoning_efforts"] == ["medium"]
@@ -198,9 +196,6 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     luna = config.json()["live_options"]["models"][1]
     assert luna["agent_reasoning_efforts"] == ["medium"]
     assert luna["billing_mode"] == "subscription_included"
-    deepseek = config.json()["live_options"]["models"][3]
-    assert deepseek["agent_reasoning_efforts"] == ["none", "high", "xhigh"]
-    assert deepseek["experimental_agent_reasoning_efforts"] == ["high", "xhigh"]
     assert config.json()["scenarios"]["service_desk"]["assumptions"]
     assert config.json()["scenarios"]["service_desk"]["known_omissions"]
     assert config.json()["scenarios"]["service_desk"]["fidelity_questions"]
