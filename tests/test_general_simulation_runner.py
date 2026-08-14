@@ -15,6 +15,7 @@ from cybernetic_influence.general_simulation.models import (
     ActorDecision,
     Assimilation,
     PatchOperation,
+    Precondition,
     SemanticActionIntent,
     TypedTarget,
     WorldTransaction,
@@ -248,7 +249,16 @@ def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> Non
             authority_id=user["requirements"]["authority_id"],
             intent_ids=user["requirements"]["intent_ids"],
             operations=[],
-            preconditions=[],
+            preconditions=[
+                Precondition(
+                    target=TypedTarget(
+                        record_type="record",
+                        record_id="temporary_route",
+                        field="public_state",
+                    ),
+                    expected={"capacity": "limited"},
+                )
+            ],
             consequences=[],
             evidence_refs=user["requirements"]["intent_ids"],
             stated_rationale="Retain the current world while recording joint review.",
@@ -264,6 +274,10 @@ def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> Non
     assert len(result.model_calls) == 15
     assert [item.frozen_revision for item in result.moments] == [0, 1, 2]
     assert all(len(item.intent_ids) == 4 for item in result.moments)
+    assert result.transition_evidence[0].transaction.preconditions[0].target.record_type == "route"
+    assert result.transition_evidence[0].envelope_corrections == [
+        "precondition target temporary_route normalized from record to route"
+    ]
     assert result.adoption.engine_class.endswith("simultaneous.Simultaneous")
     assert result.adoption.actor_selection_component.endswith(
         "next_acting.NextActingAllEntities"

@@ -42,12 +42,83 @@ from .models import (
     ModelCallReceipt,
     ObjectiveAssessment,
     SemanticActionIntent,
+    TypedTarget,
     WorldTransaction,
 )
 from .world import CanonicalWorld
 
 
 ProgressObserver = Callable[[dict[str, Any], dict[str, Any]], None]
+
+
+def _normalize_existing_target(
+    target: TypedTarget,
+    world: CanonicalWorld,
+    *,
+    correction_context: str,
+    corrections: list[str],
+) -> TypedTarget:
+    containers: dict[str, Mapping[str, object]] = {
+        "record": world.state.records,
+        "place": world.state.places,
+        "placement": world.state.placements,
+        "route": world.state.routes,
+        "representation": world.state.representations,
+        "resource": world.state.resources,
+    }
+    if target.record_id in containers[target.record_type]:
+        return target
+    matching_types = [
+        record_type
+        for record_type, records in containers.items()
+        if target.record_id in records
+    ]
+    if len(matching_types) != 1:
+        return target
+    corrected_type = matching_types[0]
+    corrections.append(
+        f"{correction_context} target {target.record_id} normalized from "
+        f"{target.record_type} to {corrected_type}"
+    )
+    return target.model_copy(update={"record_type": corrected_type})
+
+
+def _normalize_transaction_targets(
+    transaction: WorldTransaction,
+    world: CanonicalWorld,
+    corrections: list[str],
+) -> WorldTransaction:
+    operations = [
+        operation
+        if operation.operation == "create"
+        else operation.model_copy(
+            update={
+                "target": _normalize_existing_target(
+                    operation.target,
+                    world,
+                    correction_context="operation",
+                    corrections=corrections,
+                )
+            }
+        )
+        for operation in transaction.operations
+    ]
+    preconditions = [
+        precondition.model_copy(
+            update={
+                "target": _normalize_existing_target(
+                    precondition.target,
+                    world,
+                    correction_context="precondition",
+                    corrections=corrections,
+                )
+            }
+        )
+        for precondition in transaction.preconditions
+    ]
+    return transaction.model_copy(
+        update={"operations": operations, "preconditions": preconditions}
+    )
 
 
 def _normalized_memory(value: str) -> str:
@@ -458,6 +529,9 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         )
                     }
                 )
+            transaction = _normalize_transaction_targets(
+                transaction, world, corrections
+            )
             allowed_evidence_refs = (
                 expected_intents
                 | set(world.state.records)
@@ -550,6 +624,10 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     repaired_transaction = repaired_transaction.model_copy(
                         update={"objective_assessment": transaction.objective_assessment}
                     )
+                repair_corrections: list[str] = []
+                repaired_transaction = _normalize_transaction_targets(
+                    repaired_transaction, world, repair_corrections
+                )
                 if set(repaired_transaction.evidence_refs) - allowed_evidence_refs:
                     raise ValueError("repaired adjudicator output cited unknown canonical evidence")
                 repaired_assessment = repaired_transaction.objective_assessment
@@ -567,7 +645,8 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 validation = world.validate_and_commit(
                     repaired_transaction,
                     envelope_corrections=[
-                        "one bounded repair followed an authority-grammar rejection"
+                        "one bounded repair followed an authority-grammar rejection",
+                        *repair_corrections,
                     ],
                 )
                 transaction = repaired_transaction
