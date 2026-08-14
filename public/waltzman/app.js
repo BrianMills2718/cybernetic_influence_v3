@@ -2069,7 +2069,7 @@ function renderAuthoredResultNetwork(result, scene = null) {
     },
   })
   $('#create-result-network-status').textContent = scene
-    ? `${visibleNodes.length} visible items · ${visibleEdges.length} visible arrows · future evidence remains hidden`
+    ? `${visibleNodes.length} visible items · ${visibleEdges.length} visible arrows · ${(scene.focus_node_ids || []).length + (scene.focus_edge_ids || []).length} changed items highlighted · future evidence remains hidden`
     : `${projection.nodes.length} visible items · ${projection.edges.length} retained arrows`
 }
 

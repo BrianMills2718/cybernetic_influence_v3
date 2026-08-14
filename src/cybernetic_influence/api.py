@@ -1119,6 +1119,8 @@ def _simulation_replay(
                 else None
             )
             change_facts: list[tuple[str, str]] = []
+            changed_node_ids: list[str] = []
+            changed_edge_ids: list[str] = []
             for operation in operations[:5]:
                 if not isinstance(operation, dict):
                     continue
@@ -1128,6 +1130,15 @@ def _simulation_replay(
                 ):
                     continue
                 target_id = str(target["record_id"])
+                target_type = target.get("record_type")
+                if target_type == "route" and target_id in edge_by_id:
+                    changed_edge_ids.append(target_id)
+                elif target_type == "placement":
+                    placement_edge_id = f"placement:{target_id}"
+                    if placement_edge_id in edge_by_id:
+                        changed_edge_ids.append(placement_edge_id)
+                elif target_id in node_ids:
+                    changed_node_ids.append(target_id)
                 target_label = node_label_by_id.get(
                     target_id, target_id.replace("_", " ").title()
                 )
@@ -1166,11 +1177,18 @@ def _simulation_replay(
                 communication_facts.append(
                     ("Communication", f"{source} → {recipient_label}: {compact_content}")
                 )
+                representation_id = consequence.get("representation_id")
+                if isinstance(representation_id, str):
+                    delivery_edge_id = f"delivery:{representation_id}:{recipient}"
+                    if delivery_edge_id in edge_by_id:
+                        changed_edge_ids.append(delivery_edge_id)
             transition_facts = [*change_facts, *communication_facts]
             if transition_committed and not transition_facts:
                 transition_facts = [
                     ("World change", "No canonical fields changed in this committed moment.")
                 ]
+            visible_event_nodes.extend(changed_node_ids)
+            visible_event_edges.extend(changed_edge_ids)
             add_scene(
                 scene_id=f"event_{index}",
                 kind="event",
@@ -1180,8 +1198,8 @@ def _simulation_replay(
                 scene_summary=(rationale.strip() if rationale and rationale.strip() else narrative),
                 visible_nodes=visible_event_nodes,
                 visible_edges=visible_event_edges,
-                focus_nodes=participants,
-                focus_edges=connected_edge_ids,
+                focus_nodes=(changed_node_ids or participants),
+                focus_edges=changed_edge_ids,
                 facts=[
                     ("Moment", str(index)),
                     ("People acting", str(len(participants))),

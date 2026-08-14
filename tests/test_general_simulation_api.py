@@ -12,6 +12,7 @@ from pytest import MonkeyPatch
 
 import cybernetic_influence.api as api_module
 from cybernetic_influence.api import create_app
+from cybernetic_influence.api import _simulation_replay
 from cybernetic_influence.general_simulation.authoring_models import (
     GeneralProposalEnvelopeV1,
     GeneralSimulationProposalV1,
@@ -27,6 +28,71 @@ from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 
 
 FIXTURE = Path("tests/fixtures/general_simulation/port_coordination.json")
+
+
+def test_general_replay_focuses_changed_nodes_and_edges() -> None:
+    replay = _simulation_replay(
+        title="Route test",
+        headline="Route test",
+        summary="One retained transition.",
+        outcome={"accepted_transactions": 1, "final_revision": 1},
+        rounds=[],
+        network_nodes=[
+            {"id": "operator", "kind": "person", "label": "Operator"},
+            {"id": "floor", "kind": "thing", "label": "Floor"},
+            {"id": "storage", "kind": "place", "label": "Storage"},
+            {"id": "loading", "kind": "place", "label": "Loading"},
+        ],
+        network_edges=[
+            {
+                "id": "storage_route",
+                "kind": "route",
+                "source": "storage",
+                "target": "loading",
+            }
+        ],
+        raw_moments=[
+            {
+                "event_id": "inspect_and_open",
+                "narrative": "Inspect the floor and open the route.",
+                "participants": ["operator"],
+                "execution_parent": "revision:0",
+                "resulting_revision": 1,
+                "transition": {
+                    "transaction": {
+                        "operations": [
+                            {
+                                "operation": "replace",
+                                "target": {
+                                    "record_type": "record",
+                                    "record_id": "floor",
+                                    "field": "state.safety_status",
+                                },
+                                "value": "safe",
+                            },
+                            {
+                                "operation": "replace",
+                                "target": {
+                                    "record_type": "route",
+                                    "record_id": "storage_route",
+                                    "field": "operational",
+                                },
+                                "value": True,
+                            },
+                        ],
+                        "consequences": [],
+                        "stated_rationale": "Inspection established a usable route.",
+                    }
+                },
+            }
+        ],
+        general_world=True,
+    )
+
+    event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
+    assert event["focus_node_ids"] == ["floor"]
+    assert event["focus_edge_ids"] == ["storage_route"]
+    assert "storage_route" in event["visible_edge_ids"]
 
 
 class _GeneralRuntimeFake:
