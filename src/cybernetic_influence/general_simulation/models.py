@@ -213,6 +213,8 @@ class ActorContext(StrictModel):
     available_transition_contracts: list[AvailableTransitionContract] = Field(
         default_factory=list
     )
+    phase_description: str | None = None
+    phase_responsibilities: list[str] = Field(default_factory=list)
 
 
 class MemoryRevision(StrictModel):

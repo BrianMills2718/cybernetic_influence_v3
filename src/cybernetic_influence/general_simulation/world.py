@@ -64,6 +64,8 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
         current_minute: int = 0,
         delivered_representation_ids: set[str] | None = None,
         active_transition_contract_ids: set[str] | None = None,
+        phase_description: str | None = None,
+        phase_responsibilities: list[str] | None = None,
     ) -> ActorContext:
         access = next(
             (item for item in self._spec.actor_access if item.actor_id == actor_id), None
@@ -180,6 +182,8 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             accessible_routes=safe_routes,
             private_memory=copy.deepcopy(self._private_memory.get(actor_id, [])),
             available_transition_contracts=available_contracts,
+            phase_description=phase_description,
+            phase_responsibilities=phase_responsibilities or [],
         )
 
     def retain_memory(self, actor_id: str, memories: list[str]) -> None:

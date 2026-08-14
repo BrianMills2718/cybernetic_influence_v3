@@ -431,12 +431,13 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 "You are one synthetic person in an exploratory causal simulation. "
                 "Use only the supplied authorized observations, accessible world records, "
                 "private memory, and character. Delivery is not truth and an attempted action "
-                "is not guaranteed to succeed. Return an assimilation record and one bounded, "
-                "open-ended semantic action intent against the supplied world revision. When "
-                "you explicitly attempt one of the supplied available_transition_contracts, "
-                "copy its exact contract_id into transition_contract_ids. Otherwise return an "
-                "empty list. Selecting a contract permits only an attempt; it does not guarantee "
-                "authorization or success."
+                "is not guaranteed to succeed. Return an assimilation record and one coherent, "
+                "bounded open-ended semantic action intent against the supplied world revision. "
+                "The phase responsibilities describe the requested work, not a dictated outcome. "
+                "When several supplied transition contracts are jointly necessary and you are "
+                "authorized to attempt them, one coherent intent may select all of their exact "
+                "contract IDs. Otherwise select only the contracts you actually attempt. Selecting "
+                "a contract permits only an attempt; it does not guarantee authorization or success."
             ),
             user=actor_user,
             trace_id=f"{self._trace_prefix}/moment/{call_number}/actor/{self._person.entity_id}",
@@ -607,7 +608,7 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             )
             return str(selector.pre_act(action_spec))
         if output_type == entity_lib.OutputType.NEXT_ACTION_SPEC:
-            return "prompt: Propose one bounded action from your authorized context.;;type: free"
+            return "prompt: Propose one coherent bounded action plan from your authorized context.;;type: free"
         if output_type == entity_lib.OutputType.MAKE_OBSERVATION:
             actor_id = next(
                 (candidate for candidate in actor_ids if candidate in action_spec.call_to_action),
@@ -617,6 +618,12 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 raise ValueError("Concordia observation request did not name a configured actor")
             self._world().drain_outbox(actor_id)
             moment = self._moment()
+            responsibilities = [
+                item.behavior_description
+                for item in self._proposal.component_requests
+                if item.request_id in moment.active_component_request_ids
+                and actor_id in item.subject_refs
+            ]
             return self._world().actor_context(
                 actor_id,
                 current_minute=moment.minute,
@@ -624,6 +631,8 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 active_transition_contract_ids=set(
                     moment.active_transition_contract_ids
                 ),
+                phase_description=moment.description,
+                phase_responsibilities=responsibilities,
             ).model_dump_json()
         if output_type == entity_lib.OutputType.RESOLVE:
             inbox = self.get_entity().get_component(INBOX_COMPONENT, type_=InboxComponent)
