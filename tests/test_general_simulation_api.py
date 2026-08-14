@@ -12,6 +12,7 @@ from pytest import MonkeyPatch
 
 import cybernetic_influence.api as api_module
 from cybernetic_influence.api import create_app
+from cybernetic_influence.api import _general_world_node_overrides
 from cybernetic_influence.api import _simulation_replay
 from cybernetic_influence.general_simulation.authoring_models import (
     GeneralProposalEnvelopeV1,
@@ -28,6 +29,46 @@ from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 
 
 FIXTURE = Path("tests/fixtures/general_simulation/port_coordination.json")
+
+
+def test_general_world_replay_retains_state_by_revision() -> None:
+    def state(revision: int, quantity: int) -> dict[str, object]:
+        return {
+            "revision": revision,
+            "records": {
+                "inventory": {"state": {"quantity": quantity}},
+            },
+            "resources": {
+                "cargo": {"quantity": quantity, "custodian_id": "operator"},
+            },
+        }
+
+    def checkpoint(revision: int, quantity: int) -> dict[str, object]:
+        return {
+            "game_masters": {
+                "general_world_game_master": {
+                    "components": {
+                        "context_components": {
+                            "canonical_world": {
+                                "spec": {"initial_state": state(0, 0)},
+                                "state": state(revision, quantity),
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    revisions = _general_world_node_overrides(
+        {"checkpoints": [checkpoint(1, 0), checkpoint(2, 500)]}
+    )
+
+    initial = {item["node_id"]: item["description"] for item in revisions[0]}
+    final = {item["node_id"]: item["description"] for item in revisions[2]}
+    assert initial["inventory"] == '{"quantity": 0}'
+    assert final["inventory"] == '{"quantity": 500}'
+    assert initial["cargo"] == "quantity: 0; custodian: operator"
+    assert final["cargo"] == "quantity: 500; custodian: operator"
 
 
 def test_general_replay_focuses_changed_nodes_and_edges() -> None:

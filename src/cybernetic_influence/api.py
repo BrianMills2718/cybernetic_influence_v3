@@ -338,6 +338,15 @@ class SimulationReplayFact(BaseModel):
     value: str
 
 
+class SimulationReplayNodeOverride(BaseModel):
+    """Scene-specific retained state for one otherwise stable graph node."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    node_id: str
+    description: str
+
+
 class SimulationReplayScene(BaseModel):
     """One evidence-backed step in a progressively disclosed run replay."""
 
@@ -353,6 +362,7 @@ class SimulationReplayScene(BaseModel):
     visible_edge_ids: list[str]
     focus_node_ids: list[str]
     focus_edge_ids: list[str]
+    node_overrides: list[SimulationReplayNodeOverride]
     facts: list[SimulationReplayFact]
 
 
@@ -780,6 +790,79 @@ def _canonical_replay_network(
     return projected_nodes, projected_edges
 
 
+def _general_world_node_overrides(
+    raw_general_simulation: object,
+) -> dict[int, list[dict[str, str]]]:
+    """Project the retained canonical state at each committed revision."""
+
+    if not isinstance(raw_general_simulation, dict):
+        return {}
+    raw_checkpoints = raw_general_simulation.get("checkpoints")
+    checkpoints = raw_checkpoints if isinstance(raw_checkpoints, list) else []
+
+    def canonical_component(checkpoint: object) -> dict[str, object] | None:
+        if not isinstance(checkpoint, dict):
+            return None
+        try:
+            component = checkpoint["game_masters"]["general_world_game_master"][
+                "components"
+            ]["context_components"]["canonical_world"]
+        except (KeyError, TypeError):
+            return None
+        return component if isinstance(component, dict) else None
+
+    def descriptions(state: object) -> list[dict[str, str]]:
+        if not isinstance(state, dict):
+            return []
+        projected: list[dict[str, str]] = []
+        raw_records = state.get("records")
+        if isinstance(raw_records, dict):
+            for record_id, record in raw_records.items():
+                if not isinstance(record_id, str) or not isinstance(record, dict):
+                    continue
+                record_state = record.get("state")
+                projected.append(
+                    {
+                        "node_id": record_id,
+                        "description": json.dumps(
+                            record_state if isinstance(record_state, dict) else {},
+                            sort_keys=True,
+                        ),
+                    }
+                )
+        raw_resources = state.get("resources")
+        if isinstance(raw_resources, dict):
+            for resource_id, resource in raw_resources.items():
+                if not isinstance(resource_id, str) or not isinstance(resource, dict):
+                    continue
+                projected.append(
+                    {
+                        "node_id": resource_id,
+                        "description": (
+                            f"quantity: {resource.get('quantity', 0)}; "
+                            f"custodian: {str(resource.get('custodian_id') or 'unassigned').replace('_', ' ')}"
+                        ),
+                    }
+                )
+        return projected
+
+    revisions: dict[int, list[dict[str, str]]] = {}
+    first_component = canonical_component(checkpoints[0]) if checkpoints else None
+    if first_component is not None:
+        spec = first_component.get("spec")
+        initial_state = spec.get("initial_state") if isinstance(spec, dict) else None
+        revisions[0] = descriptions(initial_state)
+    for checkpoint in checkpoints:
+        component = canonical_component(checkpoint)
+        state = component.get("state") if component is not None else None
+        if not isinstance(state, dict):
+            continue
+        revision = state.get("revision")
+        if isinstance(revision, int) and not isinstance(revision, bool):
+            revisions[revision] = descriptions(state)
+    return revisions
+
+
 def _simulation_replay(
     *,
     title: object,
@@ -791,6 +874,7 @@ def _simulation_replay(
     network_edges: list[dict[str, object]],
     raw_moments: object,
     general_world: bool = False,
+    node_overrides_by_revision: dict[int, list[dict[str, str]]] | None = None,
 ) -> dict[str, object]:
     """Build one small, evidence-backed walkthrough independent of page layout."""
 
@@ -903,6 +987,7 @@ def _simulation_replay(
         focus_edges: list[str] | None = None,
         facts: list[tuple[str, str]] | None = None,
         round_index: int | None = None,
+        state_revision: int | None = None,
     ) -> None:
         scene = SimulationReplayScene(
             scene_id=scene_id,
@@ -915,6 +1000,9 @@ def _simulation_replay(
             visible_edge_ids=list(dict.fromkeys(visible_edges)),
             focus_node_ids=list(dict.fromkeys(focus_nodes or [])),
             focus_edge_ids=list(dict.fromkeys(focus_edges or [])),
+            node_overrides=(node_overrides_by_revision or {}).get(
+                state_revision if state_revision is not None else -1, []
+            ),
             facts=[
                 SimulationReplayFact(label=label, value=value)
                 for label, value in (facts or [])
@@ -977,6 +1065,7 @@ def _simulation_replay(
                 str(len(node_ids) - len(person_ids) if general_world else len(source_ids)),
             ),
         ],
+        state_revision=0 if general_world else None,
     )
 
     visible_nodes = list(setup_ids)
@@ -1210,6 +1299,12 @@ def _simulation_replay(
                         else [("World change", "No change committed.")]
                     ),
                 ],
+                state_revision=(
+                    resulting_revision
+                    if isinstance(resulting_revision, int)
+                    and not isinstance(resulting_revision, bool)
+                    else None
+                ),
             )
 
     final_status = outcome.get("final_status")
@@ -1256,6 +1351,9 @@ def _simulation_replay(
                 ),
                 *(([("Final positions", final_count_text)]) if final_count_text else []),
             ]
+        ),
+        state_revision=(
+            int(outcome.get("final_revision", 0)) if general_world else None
         ),
     )
     return SimulationReplay(question=question, scenes=scenes).model_dump(mode="json")
@@ -1717,6 +1815,9 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         network_edges=network_edges,
         raw_moments=raw_moments,
         general_world=document.get("profile") == "general_world_v1",
+        node_overrides_by_revision=_general_world_node_overrides(
+            document.get("general_simulation")
+        ),
     )
     readout = coordination_measurement_readout(document).model_dump(mode="json")
     is_general_world = document.get("profile") == "general_world_v1"

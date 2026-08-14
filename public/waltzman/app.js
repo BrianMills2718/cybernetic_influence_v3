@@ -2189,11 +2189,12 @@ function renderAuthoredResultRound() {
 
 function renderAuthoredResultNetwork(result, scene = null) {
   const projection = result.influence_network || {nodes:[], edges:[]}
+  const nodeOverrides = new Map((scene?.node_overrides || []).map((item) => [item.node_id, item]))
   const visibleNodeIds = scene ? new Set(scene.visible_node_ids || []) : null
   const visibleEdgeIds = scene ? new Set(scene.visible_edge_ids || []) : null
   const visibleNodes = visibleNodeIds
-    ? projection.nodes.filter((item) => visibleNodeIds.has(item.id))
-    : projection.nodes
+    ? projection.nodes.filter((item) => visibleNodeIds.has(item.id)).map((item) => ({...item, ...(nodeOverrides.get(item.id) || {})}))
+    : projection.nodes.map((item) => ({...item, ...(nodeOverrides.get(item.id) || {})}))
   const visibleNodeSet = new Set(visibleNodes.map((item) => item.id))
   const visibleEdges = (visibleEdgeIds
     ? projection.edges.filter((item) => visibleEdgeIds.has(item.id))
@@ -2227,7 +2228,7 @@ function renderAuthoredResultNetwork(result, scene = null) {
     showLegend:true,
     selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
-      const item = projection.nodes.find((candidate) => candidate.id === nodeId)
+      const item = visibleNodes.find((candidate) => candidate.id === nodeId)
       if (item) $('#create-result-network-inspector').innerHTML = `<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span>`
     },
     onSelectEdge:(item) => {
