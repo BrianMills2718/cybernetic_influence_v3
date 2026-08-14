@@ -23,7 +23,7 @@
       <button type="button" data-view="case">Case study</button>
       <button type="button" data-view="create">New simulation</button>
       <span class="view-tabs-divider" aria-hidden="true"></span>
-      <button type="button" data-view="simulations">All simulations</button>
+      <button type="button" data-view="simulations">Your simulations</button>
       <button type="button" class="view-tab-secondary" data-view="method">Methodology</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
@@ -218,9 +218,9 @@
 
       <section id="simulations-view" class="workspace-view simulation-library" aria-labelledby="simulations-title" hidden>
         <header class="simulation-library-hero">
-          <span class="case-label">Complete retained run history</span>
-          <h2 id="simulations-title">Choose a run. Follow it one step at a time.</h2>
-          <p>This is every retained run, including exploratory scenarios created while building this tool—it is not a curated set. Every completed simulation automatically becomes the same guided replay: setup, retained events or information, autonomous decisions, and outcome.</p>
+          <span class="case-label">Saved simulation workspace</span>
+          <h2 id="simulations-title">Review simulations created in this browser.</h2>
+          <p>Each simulation you run here remains retained on the server and appears in this browser’s workspace. Direct links remain shareable. Historical development runs stay out of this list; the selected Waltzman demonstration remains in the Case study tab.</p>
           <div>
             <button class="primary-cta" type="button" data-view="case">Open the flagship case study</button>
             <button class="quiet-button" type="button" data-view="create">Create a new simulation</button>
@@ -695,6 +695,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=cleanup1" defer></script>
-  <script src="assets/app.js?v=authoring5" defer></script>
+  <script src="assets/app.js?v=authoring6" defer></script>
 </body>
 </html>

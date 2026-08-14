@@ -235,5 +235,10 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     assert summary_payload["causal_moments"] == 3
     assert summary_payload["participant_model_calls"] == 15
     assert summary_payload["simulation_replay"]["scenes"]
+    assert not any(
+        node["id"] == "collective_decision"
+        for node in summary_payload["influence_network"]["nodes"]
+    )
+    assert summary_payload["simulation_replay"]["scenes"][0]["visible_node_ids"] == []
     assert len(summary_payload["theory_analysis"]["findings"]) == 5
     assert runtime_call.actor_counter == call_count

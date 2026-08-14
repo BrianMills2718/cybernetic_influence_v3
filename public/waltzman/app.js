@@ -69,6 +69,7 @@ let retainedRunHistoryLoad = null
 let retainedLiveRunsLoad = null
 let retainedLiveRunsLoaded = false
 let simulationLoadingRunId = null
+const LOCAL_SIMULATION_IDS_KEY = 'coordination-environment-lab.simulation-ids.v1'
 
 const state = {
   view:'overview',
@@ -2102,7 +2103,27 @@ function renderAuthoredReplay() {
 }
 
 function completedSimulationHistory() {
-  return retainedRunHistory.filter((run) => run.status === 'completed')
+  const localIds = localSimulationIds()
+  return retainedRunHistory.filter((run) => run.status === 'completed' && localIds.has(run.run_id))
+}
+
+function localSimulationIds() {
+  try {
+    const retained = JSON.parse(window.localStorage.getItem(LOCAL_SIMULATION_IDS_KEY) || '[]')
+    return new Set(Array.isArray(retained) ? retained.filter((item) => typeof item === 'string') : [])
+  } catch (_error) {
+    return new Set()
+  }
+}
+
+function rememberLocalSimulationId(runId) {
+  try {
+    const retained = localSimulationIds()
+    retained.add(runId)
+    window.localStorage.setItem(LOCAL_SIMULATION_IDS_KEY, JSON.stringify([...retained]))
+  } catch (error) {
+    console.warn(`browser simulation index unavailable: ${error.message}`)
+  }
 }
 
 function simulationHistoryTitle(run) {
@@ -2133,14 +2154,13 @@ function renderSimulationList() {
     return
   }
   if (!completed.length) {
-    list.innerHTML = '<p>No completed simulations are retained yet.</p>'
+    list.innerHTML = '<p>No simulations have been completed in this browser yet. Create one here, or open the curated case study.</p>'
     return
   }
   list.innerHTML = completed.map((run) => {
     const created = run.created_at ? new Date(run.created_at).toLocaleString([], {dateStyle:'medium', timeStyle:'short'}) : 'Retained run'
     const context = [sentence(run.scenario), sentence(run.arm)].filter(Boolean).join(' · ')
-    const tag = run.scenario === 'regional_outbreak' ? 'Flagship example' : 'Build-test scenario'
-    return `<button type="button" data-simulation-run="${escapeHtml(run.run_id)}" class="${run.run_id === authoredRunId ? 'active' : ''}" aria-pressed="${run.run_id === authoredRunId}"><span><b>${escapeHtml(tag)}</b> · ${escapeHtml(context || 'Completed simulation')}</span><strong>${escapeHtml(simulationHistoryTitle(run))}</strong><small>${escapeHtml(created)}</small></button>`
+    return `<button type="button" data-simulation-run="${escapeHtml(run.run_id)}" class="${run.run_id === authoredRunId ? 'active' : ''}" aria-pressed="${run.run_id === authoredRunId}"><span><b>Created in this browser</b> · ${escapeHtml(context || 'Completed simulation')}</span><strong>${escapeHtml(simulationHistoryTitle(run))}</strong><small>${escapeHtml(created)}</small></button>`
   }).join('')
   all('[data-simulation-run]').forEach((button) => {
     button.onclick = () => { void openSimulationReplay(button.dataset.simulationRun) }
@@ -2321,6 +2341,7 @@ async function runAuthoredSimulation() {
       body:JSON.stringify({execution:'live', narration:'deterministic', llm_options:{model:preferredModel, agent_reasoning_effort:'medium', max_total_cost:0.74}}),
     })
     authoredRunId = run.run_id
+    rememberLocalSimulationId(run.run_id)
     authoredRunProgressSequence = 0
     authoredRunPollFailures = 0
     $('#create-run-heading').textContent = 'Simulation running'

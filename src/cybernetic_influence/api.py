@@ -1476,7 +1476,9 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                 "routeIds": [edge_id],
             }
         )
-    if not influence_messages and nodes:
+    if document.get("profile") == "general_world_v1" and nodes:
+        network_nodes, network_edges = _canonical_replay_network(nodes, edges)
+    elif not influence_messages and nodes:
         network_nodes, network_edges = _canonical_replay_network(nodes, edges)
     ordered_rounds = [rounds[index] for index in sorted(rounds)]
     replay = _simulation_replay(

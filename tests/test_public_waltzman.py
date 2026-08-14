@@ -76,9 +76,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Understand the purpose" in page
     assert "Read a simulation" in page
     assert "Create your own" in page
-    assert "All simulations" in page
+    assert "Your simulations" in page
     assert "Methodology" in page
-    assert "Every completed simulation automatically becomes the same guided replay" in page
+    assert "Each simulation you run here remains retained on the server" in page
+    assert "Historical development runs stay out of this list" in page
     assert "Open the flagship case study" in page
     assert "Lab workspace" in page
     assert "Choose, configure, run" in page
@@ -155,7 +156,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=cleanup1",
-        "assets/app.js?v=authoring5",
+        "assets/app.js?v=authoring6",
     ]
     assert {
         "overview-view",
@@ -417,6 +418,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "Retained model calls" in script
     assert "function resetAuthoringWorkspace()" in script
     assert "if (button.dataset.view === 'create') resetAuthoringWorkspace()" in script
+    assert "LOCAL_SIMULATION_IDS_KEY" in script
+    assert "rememberLocalSimulationId(run.run_id)" in script
 
     for capability in (
         "renderRunSetup",
