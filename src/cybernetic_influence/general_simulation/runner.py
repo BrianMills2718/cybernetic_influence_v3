@@ -19,6 +19,8 @@ from concordia.typing import entity as entity_lib
 from concordia.typing import entity_component, prefab
 from pydantic import TypeAdapter
 
+from cybernetic_influence.llm_backend import CODEX_LUNA_MODEL
+
 from .authoring_models import GeneralPersonDraft, GeneralSimulationProposalV1
 from .compiler import CompiledGeneralSimulationV1
 from .concordia_runtime import (
@@ -317,11 +319,15 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
         person: GeneralPersonDraft,
         question: str,
         trace_prefix: str,
+        model: str,
+        reasoning_effort: str,
     ) -> None:
         self._call = call
         self._person = person.model_copy(deep=True)
         self._question = question
         self._trace_prefix = trace_prefix
+        self._model = model
+        self._reasoning_effort = reasoning_effort
         self.receipts: list[ModelCallReceipt] = []
         self.activation_count = 0
 
@@ -400,7 +406,7 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                     "private memory"
                 )
 
-    def get_action_attempt(
+    def _produce_action_attempt(
         self,
         context: entity_component.ComponentContextMapping,
         action_spec: entity_lib.ActionSpec,
@@ -434,6 +440,8 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             ),
             user=actor_user,
             trace_id=f"{self._trace_prefix}/moment/{call_number}/actor/{self._person.entity_id}",
+            model=self._model,
+            reasoning_effort=self._reasoning_effort,
         )
         decision = ActorDecision.model_validate(parsed)
         try:
@@ -463,6 +471,8 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                     f"{self._trace_prefix}/moment/{call_number}/actor/"
                     f"{self._person.entity_id}/repair/1"
                 ),
+                model=self._model,
+                reasoning_effort=self._reasoning_effort,
             )
             decision = ActorDecision.model_validate(repaired)
             receipt = repair_receipt
@@ -481,6 +491,26 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             )
         self.receipts.append(receipt)
         return decision.intent.model_dump_json()
+
+    def get_action_attempt(
+        self,
+        context: entity_component.ComponentContextMapping,
+        action_spec: entity_lib.ActionSpec,
+    ) -> str:
+        """Return a parseable failure envelope instead of letting Concordia hide it.
+
+        Stock Concordia logs and suppresses exceptions from concurrent actor
+        activations.  A failed actor must therefore travel through the same
+        simultaneous batch to the game master, which can fail the run loudly
+        with the actual cause rather than a misleading missing-intents error.
+        """
+        try:
+            return self._produce_action_attempt(context, action_spec)
+        except Exception as exc:
+            return (
+                f"{self._person.entity_id}: __actor_failure__ "
+                f"{type(exc).__name__}: {exc}"
+            )
 
     def get_state(self) -> entity_component.ComponentState:
         return {
@@ -501,11 +531,15 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
         proposal: GeneralSimulationProposalV1,
         authority_id: str,
         trace_prefix: str,
+        model: str,
+        reasoning_effort: str,
     ) -> None:
         self._call = call
         self._proposal = proposal.model_copy(deep=True)
         self._authority_id = authority_id
         self._trace_prefix = trace_prefix
+        self._model = model
+        self._reasoning_effort = reasoning_effort
         self.receipts: list[ModelCallReceipt] = []
         self.moments: list[GeneralMomentEvidence] = []
         self.lifecycle_events: list[str] = []
@@ -568,14 +602,35 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             if inbox.putative_event is None:
                 raise RuntimeError("joint resolution requested without actor intents")
             intents: list[SemanticActionIntent] = []
+            actor_failures: list[str] = []
             for line in inbox.putative_event.splitlines():
                 raw = line.removeprefix("[putative_event]").strip()
                 actor_id, separator, payload = raw.partition(":")
                 if not separator or actor_id.strip() not in actor_ids:
                     continue
+                if payload.strip().startswith("__actor_failure__"):
+                    actor_failures.append(
+                        f"{actor_id.strip()}: {payload.strip().removeprefix('__actor_failure__').strip()}"
+                    )
+                    continue
                 intents.append(SemanticActionIntent.model_validate_json(payload.strip()))
+            if actor_failures:
+                raise RuntimeError(
+                    "one or more same-moment actors failed before joint resolution: "
+                    + "; ".join(actor_failures)
+                )
             if {item.actor_id for item in intents} != set(actor_ids):
-                raise ValueError("joint resolution did not receive one intent from every actor")
+                received = {item.actor_id for item in intents}
+                missing = sorted(set(actor_ids) - received)
+                duplicate = sorted(
+                    item.actor_id
+                    for item in intents
+                    if sum(other.actor_id == item.actor_id for other in intents) > 1
+                )
+                raise ValueError(
+                    "joint resolution did not receive one intent from every actor; "
+                    f"missing={missing}; duplicate={sorted(set(duplicate))}"
+                )
             frozen_revisions = {item.base_revision for item in intents}
             world = self._world()
             if frozen_revisions != {world.state.revision}:
@@ -669,6 +724,8 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 ),
                 trace_id=f"{self._trace_prefix}/moment/{len(self.moments) + 1}/adjudicator",
                 timeout_s=180,
+                model=self._model,
+                reasoning_effort=self._reasoning_effort,
             )
             proposed_transaction = WorldTransaction.model_validate(parsed)
             expected_intents = {item.intent_id for item in intents}
@@ -822,6 +879,8 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "adjudicator/repair/1"
                     ),
                     timeout_s=180,
+                    model=self._model,
+                    reasoning_effort=self._reasoning_effort,
                 )
                 repaired_transaction = WorldTransaction.model_validate(repaired).model_copy(
                     update={
@@ -906,6 +965,8 @@ class GeneralPersonPrefab(prefab.Prefab):  # type: ignore[misc]
     person: GeneralPersonDraft | None = None
     question: str = ""
     trace_prefix: str = "general-simulation"
+    model: str = CODEX_LUNA_MODEL
+    reasoning_effort: str = "medium"
 
     def build(
         self,
@@ -922,6 +983,8 @@ class GeneralPersonPrefab(prefab.Prefab):  # type: ignore[misc]
                 person=self.person,
                 question=self.question,
                 trace_prefix=self.trace_prefix,
+                model=self.model,
+                reasoning_effort=self.reasoning_effort,
             ),
             context_components={
                 ACTOR_CONTEXT_COMPONENT: ActorContextComponent(),
@@ -936,6 +999,8 @@ class GeneralWorldPrefab(prefab.Prefab):  # type: ignore[misc]
     compiled: CompiledGeneralSimulationV1 | None = None
     call: StructuredCall = field(default_factory=_structured_call)
     trace_prefix: str = "general-simulation"
+    model: str = CODEX_LUNA_MODEL
+    reasoning_effort: str = "medium"
 
     def build(
         self,
@@ -960,6 +1025,8 @@ class GeneralWorldPrefab(prefab.Prefab):  # type: ignore[misc]
                 proposal=self.compiled.proposal,
                 authority_id=semantic_authorities[0].authority_id,
                 trace_prefix=self.trace_prefix,
+                model=self.model,
+                reasoning_effort=self.reasoning_effort,
             ),
             context_components={
                 WORLD_COMPONENT: world,
@@ -977,6 +1044,8 @@ def _build_simulation(
     compiled: CompiledGeneralSimulationV1,
     call: StructuredCall,
     trace_prefix: str,
+    model: str,
+    reasoning_effort: str,
 ) -> generic.Simulation:
     prefabs: dict[str, prefab.Prefab] = {
         f"person_{person.entity_id}": GeneralPersonPrefab(
@@ -984,6 +1053,8 @@ def _build_simulation(
             person=person,
             question=compiled.proposal.question,
             trace_prefix=trace_prefix,
+            model=model,
+            reasoning_effort=reasoning_effort,
         )
         for person in compiled.proposal.people
     }
@@ -991,6 +1062,8 @@ def _build_simulation(
         compiled=compiled,
         call=call,
         trace_prefix=trace_prefix,
+        model=model,
+        reasoning_effort=reasoning_effort,
     )
     instances = [
         prefab.InstanceConfig(
@@ -1027,10 +1100,18 @@ def run_general_simulation(
     progress_observer: ProgressObserver | None = None,
     checkpoint: Mapping[str, Any] | None = None,
     max_additional_moments: int | None = None,
+    model: str = CODEX_LUNA_MODEL,
+    reasoning_effort: str = "medium",
 ) -> GeneralGroupSimulationResult:
     selected_call = call or _structured_call()
     trace_prefix = f"{run_id}/general"
-    simulation = _build_simulation(compiled, selected_call, trace_prefix)
+    simulation = _build_simulation(
+        compiled,
+        selected_call,
+        trace_prefix,
+        model=model,
+        reasoning_effort=reasoning_effort,
+    )
     restored_checkpoint: dict[str, Any] | None = None
     if checkpoint is not None:
         restored_checkpoint = _strict_general_checkpoint(checkpoint, compiled)

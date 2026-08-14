@@ -97,10 +97,12 @@ def _call_model(
     user: str,
     trace_id: str,
     timeout_s: int = 100,
+    model: str = CODEX_LUNA_MODEL,
+    reasoning_effort: str = "medium",
 ) -> tuple[Any, ModelCallReceipt]:
-    with structured_backend_options(CODEX_LUNA_MODEL) as backend_options:
+    with structured_backend_options(model) as backend_options:
         parsed, meta = call(
-            CODEX_LUNA_MODEL,
+            model,
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             response_model=response_model,
             task=f"cybernetic_influence_general_simulation_{role}",
@@ -111,7 +113,7 @@ def _call_model(
                 "Generate one bounded semantic action or one structured world transaction "
                 "inside an analyst-authored causal simulation."
             ),
-            reasoning_effort="medium",
+            reasoning_effort=reasoning_effort,
             timeout=timeout_s,
             **backend_options,
         )
@@ -119,11 +121,11 @@ def _call_model(
     return parsed, ModelCallReceipt(
         role=cast(Any, role),
         provider=provider,
-        model=CODEX_LUNA_MODEL,
+        model=model,
         trace_id=trace_id,
         input_context=user,
         structured_output=parsed.model_dump(mode="json"),
-        decoding={"reasoning_effort": "medium", "max_tokens": 4000},
+        decoding={"reasoning_effort": reasoning_effort, "max_tokens": 4000},
         exact_replay_possible=False,
     )
 

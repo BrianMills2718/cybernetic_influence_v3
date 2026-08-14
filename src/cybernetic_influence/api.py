@@ -3105,7 +3105,7 @@ def create_app(
             if not live or effective_llm is None:
                 raise HTTPException(
                     status_code=422,
-                    detail="general-world simulations require live Luna execution",
+                    detail="general-world simulations require a selected live model route",
                 )
             try:
                 general_compiled = authoring.approved_general_compile(draft_id)
@@ -3217,6 +3217,8 @@ def create_app(
                     run_id=run_id,
                     call=general_simulation_call,
                     progress_observer=retain_general_progress,
+                    model=effective_llm.model,
+                    reasoning_effort=effective_llm.agent_reasoning_effort,
                 )
                 projected = project_general_run(
                     general_compiled,

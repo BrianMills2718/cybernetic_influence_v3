@@ -649,6 +649,113 @@ def test_second_domain_uses_the_same_compiler_runner_and_receipt() -> None:
     assert any("expired_replication_credential" in item for item in adjudicator_inputs)
 
 
+def test_general_runner_uses_the_operator_selected_model_and_effort() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        SERVICE_FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    observed_calls: list[tuple[str, str]] = []
+
+    def selected_model_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        observed_calls.append((str(args[0]), str(kwargs["reasoning_effort"])))
+        user = json.loads(args[1][1]["content"])
+        if kwargs["response_model"] is ActorDecision:
+            context = user["actor_context"]
+            return ActorDecision(
+                assimilation=Assimilation(
+                    attended_observation_ids=[],
+                    memory_additions=[],
+                    memory_revisions=[],
+                    provenance_links=[],
+                    interpretation="Retain the authorized context.",
+                ),
+                intent=SemanticActionIntent(
+                    intent_id=f"selected_model_{context['actor_id']}",
+                    actor_id=context["actor_id"],
+                    base_revision=context["base_revision"],
+                    action="Propose a bounded review.",
+                    target_refs=[],
+                    purpose="Exercise runtime model routing.",
+                    expected_effect="One reviewable intent.",
+                    stated_rationale="The context is bounded.",
+                ),
+            ), SimpleNamespace(provider="fixture")
+        return WorldTransaction(
+            transaction_id="selected_model_transaction",
+            base_revision=user["requirements"]["base_revision"],
+            authority_id=user["requirements"]["authority_id"],
+            intent_ids=user["requirements"]["intent_ids"],
+            operations=[],
+            preconditions=[],
+            consequences=[],
+            evidence_refs=user["requirements"]["intent_ids"],
+            stated_rationale="Retain the world.",
+        ), SimpleNamespace(provider="fixture")
+
+    result = run_general_simulation(
+        compiled,
+        run_id="run_selected_model_fixture",
+        call=selected_model_call,
+        max_additional_moments=1,
+        model="openrouter/openai/gpt-5.6-terra",
+        reasoning_effort="low",
+    )
+
+    assert len(result.moments) == 1
+    assert observed_calls == [
+        ("openrouter/openai/gpt-5.6-terra", "low")
+    ] * (len(proposal.people) + 1)
+
+
+def test_actor_activation_failures_are_not_silently_recast_as_missing_intents() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        SERVICE_FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    failing_actor = proposal.people[0].entity_id
+
+    def actor_failure_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        user = json.loads(args[1][1]["content"])
+        if kwargs["response_model"] is ActorDecision:
+            context = user["actor_context"]
+            if context["actor_id"] == failing_actor:
+                raise RuntimeError("provider rejected this actor activation")
+            return ActorDecision(
+                assimilation=Assimilation(
+                    attended_observation_ids=[],
+                    memory_additions=[],
+                    memory_revisions=[],
+                    provenance_links=[],
+                    interpretation="Retain the authorized context.",
+                ),
+                intent=SemanticActionIntent(
+                    intent_id=f"actor_failure_{context['actor_id']}",
+                    actor_id=context["actor_id"],
+                    base_revision=context["base_revision"],
+                    action="Propose a bounded review.",
+                    target_refs=[],
+                    purpose="Exercise failure reporting.",
+                    expected_effect="One reviewable intent.",
+                    stated_rationale="The context is bounded.",
+                ),
+            ), SimpleNamespace(provider="fixture")
+        raise AssertionError("joint adjudication must not run after an actor failure")
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "one or more same-moment actors failed before joint resolution: "
+            f"{failing_actor}: RuntimeError: provider rejected this actor activation"
+        ),
+    ):
+        run_general_simulation(
+            compiled,
+            run_id="run_actor_failure_fixture",
+            call=actor_failure_call,
+            max_additional_moments=1,
+        )
+
+
 def test_general_run_restores_checkpoint_into_fresh_simulation() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         FIXTURE.read_text(encoding="utf-8")

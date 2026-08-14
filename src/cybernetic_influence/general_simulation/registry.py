@@ -107,7 +107,7 @@ def default_registry() -> tuple[RegisteredComponentV1, ...]:
             patch_operations=[],
             patch_record_types=[],
             fidelity="coarse_llm",
-            assumptions=["Luna role behavior is synthetic and not a calibrated human model"],
+            assumptions=["LLM role behavior is synthetic and not a calibrated human model"],
             invalid_questions=["prediction of a named real person"],
             causal_responsibility_tags=["interpretation", "choice", "intent"],
             semantic_triggers=[
@@ -134,7 +134,7 @@ def default_registry() -> tuple[RegisteredComponentV1, ...]:
             patch_operations=["create", "remove", "replace", "rebind"],
             patch_record_types=["record", "placement", "route", "resource"],
             fidelity="coarse_llm",
-            assumptions=["one bounded Luna authority adjudicates the same-moment intent batch"],
+            assumptions=["one bounded LLM authority adjudicates the same-moment intent batch"],
             invalid_questions=["stable transition probabilities", "unregistered exact physics"],
             causal_responsibility_tags=["joint_resolution", "adjudication", "coordination"],
             semantic_triggers=[
