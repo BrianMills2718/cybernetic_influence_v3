@@ -1371,6 +1371,10 @@ tbody tr:last-child td { border-bottom: 0; }
 #create-result-lens-list article { display:grid; gap:8px; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
 #create-result-lens-list article > div,.create-result-lens-actions { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; }
 #create-result-lens-list article p,#create-result-lens-list article ul { margin:0; }
+.analysis-finding-values { display:grid; gap:4px; margin:6px 0 0; }
+.analysis-finding-values div { display:flex; flex-wrap:wrap; gap:4px 12px; justify-content:space-between; }
+.analysis-finding-values dt { color:var(--muted); }
+.analysis-finding-values dd { color:var(--accent-bright); margin:0; overflow-wrap:anywhere; }
 .create-result-analysis summary, .create-result > details > summary { cursor: pointer; font-weight: 750; }
 .create-result-analysis p, .create-result-analysis li { color: var(--muted); line-height: 1.55; }
 .create-result-complete { border-top: 1px solid var(--line); margin-top: 34px; padding-top: 18px; }

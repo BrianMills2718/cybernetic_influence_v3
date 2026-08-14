@@ -2636,6 +2636,13 @@ function builtInAnalysisSpec(profile) {
   }
 }
 
+function renderAnalysisValue(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return `<dl class="analysis-finding-values">${Object.entries(value).map(([label, item]) => `<div><dt>${escapeHtml(sentence(label))}</dt><dd>${escapeHtml(Array.isArray(item) ? item.join(' · ') : String(item))}</dd></div>`).join('')}</dl>`
+  }
+  return `<span>${escapeHtml(Array.isArray(value) ? value.join(' · ') : String(value))}</span>`
+}
+
 function renderResultAnalysisLenses(result) {
   const section = $('#create-result-lenses')
   const supported = result.execution_contract === 'general_world_v2' && result.status === 'completed'
@@ -2647,7 +2654,7 @@ function renderResultAnalysisLenses(result) {
     ? specs.map((spec) => {
       const analysis = [...resultsByDigest.values()].find((item) => item.result_id?.includes(spec.analysis_id))
       const findings = analysis?.findings || []
-      return `<article><div><strong>${escapeHtml(sentence(spec.profile))}</strong><span>${escapeHtml(sentence(analysis?.coverage_status || 'attached'))}</span></div><p>${escapeHtml(spec.purpose)}</p>${findings.length ? `<ul>${findings.map((finding) => `<li><strong>${escapeHtml(sentence(finding.construct_id))}</strong><span>${escapeHtml(typeof finding.value === 'string' ? finding.value : JSON.stringify(finding.value))}</span></li>`).join('')}</ul>` : ''}<button class="quiet-button" type="button" data-remove-analysis="${escapeHtml(spec.analysis_id)}">Remove lens</button></article>`
+      return `<article><div><strong>${escapeHtml(sentence(spec.profile))}</strong><span>${escapeHtml(sentence(analysis?.coverage_status || 'attached'))}</span></div><p>${escapeHtml(spec.purpose)}</p>${findings.length ? `<ul>${findings.map((finding) => `<li><strong>${escapeHtml(sentence(finding.construct_id))}</strong>${renderAnalysisValue(finding.value)}</li>`).join('')}</ul>` : ''}<button class="quiet-button" type="button" data-remove-analysis="${escapeHtml(spec.analysis_id)}">Remove lens</button></article>`
     }).join('')
     : '<p><strong>No analysis attached.</strong> The retained execution is still available on its own.</p>'
   const profiles = new Set(specs.map((item) => item.profile))
