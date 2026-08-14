@@ -30,6 +30,7 @@ from .models import (
     WorldRecord,
 )
 from .registry import RegisteredComponentV1, default_registry, registry_digest, resolve_request
+from .composition_graph import project_configuration_graph
 
 
 class GeneralCompilationError(ValueError):
@@ -44,6 +45,7 @@ class CompiledGeneralSimulationV1:
     world_spec: GeneralWorldSpec
     registry_digest: str
     resolved_components: tuple[RegisteredComponentV1, ...]
+    configuration_graph: dict[str, object]
 
     def preview(self) -> dict[str, object]:
         return {
@@ -55,6 +57,7 @@ class CompiledGeneralSimulationV1:
                 "registry_digest": self.registry_digest,
                 "resolved_component_refs": [item.ref for item in self.resolved_components],
             },
+            "configuration_graph": self.configuration_graph,
         }
 
 
@@ -621,6 +624,7 @@ def compile_general_simulation(
         resource_transport_contracts=transport_contracts,
     )
     proposal_payload = proposal.model_dump(mode="json")
+    configuration_graph = project_configuration_graph(proposal)
     return CompiledGeneralSimulationV1(
         proposal=proposal,
         proposal_digest=_digest(proposal_payload),
@@ -628,4 +632,5 @@ def compile_general_simulation(
         world_spec=world_spec,
         registry_digest=digest,
         resolved_components=tuple(resolved),
+        configuration_graph=configuration_graph,
     )

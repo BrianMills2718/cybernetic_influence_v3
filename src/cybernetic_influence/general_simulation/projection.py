@@ -20,77 +20,17 @@ def project_general_run(
 ) -> dict[str, object]:
     proposal = compiled.proposal
     state = result.final_state
-    person_labels = {person.entity_id: person.label for person in proposal.people}
-    nodes: list[dict[str, object]] = []
-    for record in state.records.values():
-        nodes.append(
-            {
-                "id": record.record_id,
-                "type": "person" if record.record_id in person_labels else "thing",
-                "kind": "person" if record.record_id in person_labels else record.kind,
-                "label": person_labels.get(record.record_id, record.label),
-                "description": json.dumps(record.state, sort_keys=True),
-                "state": record.state,
-            }
-        )
-    for place in state.places.values():
-        nodes.append({"id": place.place_id, "type": "place", "kind": "place", "label": place.label})
-    for representation in state.representations.values():
-        nodes.append(
-            {
-                "id": representation.representation_id,
-                "type": "representation",
-                "kind": "information",
-                "label": representation.apparent_source,
-                "content": representation.content,
-            }
-        )
-    for resource in state.resources.values():
-        nodes.append(
-            {
-                "id": resource.resource_id,
-                "type": "resource",
-                "kind": "resource",
-                "label": resource.resource_id.replace("_", " ").title(),
-                "quantity": resource.quantity,
-            }
-        )
-    edges: list[dict[str, object]] = []
-    for route in state.routes.values():
-        edges.append(
-            {
-                "id": route.route_id,
-                "type": "route",
-                "kind": "route",
-                "source": route.origin_id,
-                "target": route.destination_id,
-                "label": "operational route" if route.operational else "unavailable route",
-                "operational": route.operational,
-            }
-        )
-    for placement in state.placements.values():
-        edges.append(
-            {
-                "id": f"placement:{placement.record_id}",
-                "type": "placement",
-                "kind": "placement",
-                "source": placement.record_id,
-                "target": placement.place_id,
-                "label": "located at",
-            }
-        )
-    for representation in state.representations.values():
-        for recipient in representation.recipient_ids:
-            edges.append(
-                {
-                    "id": f"delivery:{representation.representation_id}:{recipient}",
-                    "type": "information_delivery",
-                    "kind": "information_delivery",
-                    "source": representation.representation_id,
-                    "target": recipient,
-                    "label": "delivered to",
-                }
-            )
+    nodes = [dict(item) for item in compiled.configuration_graph["nodes"]]
+    for item in nodes:
+        node_id = str(item["id"])
+        if node_id in state.records:
+            item["state"] = state.records[node_id].state
+            item["description"] = json.dumps(state.records[node_id].state, sort_keys=True)
+        elif node_id in state.resources:
+            item["quantity"] = state.resources[node_id].quantity
+        elif node_id in state.routes:
+            item["operational"] = state.routes[node_id].operational
+    edges = [dict(item) for item in compiled.configuration_graph["edges"]]
     traces: list[dict[str, object]] = []
     repaired_actor_trace_ids = {
         receipt.trace_id.removesuffix("/repair/1")
@@ -236,6 +176,7 @@ def project_general_run(
         },
         "nodes": nodes,
         "edges": edges,
+        "configuration_graph": compiled.configuration_graph,
         "timeline": events,
         "events": events,
         "moments": events,

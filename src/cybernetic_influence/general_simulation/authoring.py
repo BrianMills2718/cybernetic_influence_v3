@@ -185,6 +185,15 @@ def _diagnostics(
                 ),
             }
         )
+    for item in compiled.configuration_graph["diagnostics"]:
+        if item["severity"] == "error":
+            diagnostics.append(
+                {
+                    "severity": "error",
+                    "code": str(item["code"]),
+                    "message": str(item["message"]),
+                }
+            )
     return diagnostics
 
 

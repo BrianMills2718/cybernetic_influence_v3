@@ -9,9 +9,11 @@ from pydantic import ValidationError
 from cybernetic_influence.general_simulation.authoring_models import (
     ComponentRequestV1,
     GeneralSimulationProposalV1,
+    GeneralWorldRecordProposalV1,
     ResourceStockProposalV1,
     ResourceTransportProposalV1,
 )
+from cybernetic_influence.general_simulation.authoring import _diagnostics
 from cybernetic_influence.general_simulation.compiler import (
     GeneralCompilationError,
     compile_general_simulation,
@@ -51,6 +53,27 @@ def test_materially_different_domains_compile_through_same_registry(
         "exact",
         "coarse_llm",
     }
+    assert compiled.configuration_graph["isolated_node_ids"] == []
+
+
+def test_isolated_configured_record_blocks_authoring_approval() -> None:
+    proposal = load_proposal("service_incident.json")
+    proposal.world_records.append(
+        GeneralWorldRecordProposalV1(
+            record_id="unused_dashboard",
+            kind="dashboard",
+            label="Unused dashboard",
+            public_state=[],
+            hidden_state=[],
+            visible_to_actor_ids=[],
+        )
+    )
+
+    compiled = compile_general_simulation(proposal)
+    diagnostics = _diagnostics(proposal, compiled)
+
+    assert compiled.configuration_graph["isolated_node_ids"] == ["unused_dashboard"]
+    assert any(item["code"] == "isolated_configured_node" for item in diagnostics)
 
 
 def test_unknown_material_behavior_remains_visibly_unapprovable() -> None:

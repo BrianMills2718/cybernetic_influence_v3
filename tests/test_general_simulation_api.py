@@ -431,7 +431,7 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     )
     assert replay_scenes[1]["facts"] == [
         {"label": "People", "value": "4"},
-        {"label": "Other world components", "value": "8"},
+        {"label": "Other world components", "value": "17"},
     ]
     outcome_scene = replay_scenes[-1]
     assert outcome_scene["summary"] == (
