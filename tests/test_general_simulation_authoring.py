@@ -156,5 +156,9 @@ def test_general_authoring_prompt_defaults_to_a_short_editable_run() -> None:
     assert "include a moment in which someone can attempt to sense" in prompt
     assert "do not pre-author success" in prompt
     assert "every moment advances the causal path" in prompt
+    assert "Make the configured world causally contestable" in prompt
+    assert "one plausible but non-guaranteed path to the objective" in prompt
+    assert "denying every actor and active system any means" in prompt
+    assert "sensing, permission, and action success must remain separate" in prompt
     assert "Each request must name one transition responsibility" in prompt
     assert "Do not combine a person's interpretation" in prompt
