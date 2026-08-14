@@ -253,6 +253,11 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         {"label": "People", "value": "4"},
         {"label": "Other world components", "value": "8"},
     ]
-    assert summary_payload["simulation_replay"]["scenes"][-1]["facts"][0]["label"] == "Outcome"
+    outcome_scene = replay_scenes[-1]
+    assert outcome_scene["summary"] == "Retain the world while recording joint review."
+    assert outcome_scene["facts"] == [
+        {"label": "Committed transitions", "value": "3"},
+        {"label": "Final world revision", "value": "3"},
+    ]
     assert len(summary_payload["theory_analysis"]["findings"]) == 5
     assert runtime_call.actor_counter == call_count

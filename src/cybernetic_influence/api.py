@@ -1098,18 +1098,32 @@ def _simulation_replay(
         scene_id="outcome",
         kind="outcome",
         scene_title=str(headline or "The retained outcome"),
-        scene_summary=str(summary or "The run reached its retained terminal state."),
+        scene_summary=str(
+            outcome.get("terminal_summary")
+            or summary
+            or "The run reached its retained terminal state."
+        ),
         visible_nodes=list(node_ids),
         visible_edges=list(edge_by_id),
         focus_nodes=gate_ids,
         focus_edges=decision_edge_ids,
-        facts=[
-            (
-                "Collective outcome" if gate_ids else "Outcome",
-                str(final_status or "completed").replace("_", " "),
-            ),
-            *(([("Final positions", final_count_text)]) if final_count_text else []),
-        ],
+        facts=(
+            [
+                (
+                    "Committed transitions",
+                    str(outcome.get("accepted_transactions", 0)),
+                ),
+                ("Final world revision", str(outcome.get("final_revision", 0))),
+            ]
+            if general_world
+            else [
+                (
+                    "Collective outcome" if gate_ids else "Outcome",
+                    str(final_status or "completed").replace("_", " "),
+                ),
+                *(([("Final positions", final_count_text)]) if final_count_text else []),
+            ]
+        ),
     )
     return SimulationReplay(question=question, scenes=scenes).model_dump(mode="json")
 
@@ -1309,9 +1323,28 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                     "model_call_count": raw_trace.get("model_call_count", 0),
                 }
             )
-    outcome = document.get("outcome")
-    if not isinstance(outcome, dict):
-        outcome = {}
+    raw_outcome = document.get("outcome")
+    outcome = deepcopy(raw_outcome) if isinstance(raw_outcome, dict) else {}
+    if document.get("profile") == "general_world_v1":
+        general_simulation = document.get("general_simulation")
+        transition_evidence = (
+            general_simulation.get("transition_evidence")
+            if isinstance(general_simulation, dict)
+            else None
+        )
+        accepted_evidence = [
+            item
+            for item in transition_evidence
+            if isinstance(item, dict)
+            and isinstance(item.get("validation"), dict)
+            and item["validation"].get("accepted") is True
+            and isinstance(item.get("transaction"), dict)
+        ] if isinstance(transition_evidence, list) else []
+        if accepted_evidence:
+            terminal_transaction = accepted_evidence[-1]["transaction"]
+            terminal_summary = terminal_transaction.get("stated_rationale")
+            if isinstance(terminal_summary, str) and terminal_summary.strip():
+                outcome["terminal_summary"] = terminal_summary.strip()
     completion = document.get("completion")
     if not isinstance(completion, dict):
         completion = {}
