@@ -303,8 +303,22 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 "representation": Representation,
                 "resource": ResourceStock,
             }
+            identity_fields = {
+                "record": "record_id",
+                "place": "place_id",
+                "placement": "record_id",
+                "route": "route_id",
+                "representation": "representation_id",
+                "resource": "resource_id",
+            }
             model_class = cast(Any, classes[operation.target.record_type])
-            container[record_id] = model_class.model_validate(operation.value)
+            create_value = operation.value
+            if isinstance(create_value, dict):
+                create_value = dict(create_value)
+                create_value.setdefault(
+                    identity_fields[operation.target.record_type], record_id
+                )
+            container[record_id] = model_class.model_validate(create_value)
             return
         if record_id not in container:
             raise KeyError(f"unknown {operation.target.record_type} {record_id}")

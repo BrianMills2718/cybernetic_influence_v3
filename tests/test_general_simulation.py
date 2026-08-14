@@ -169,6 +169,43 @@ def test_world_supports_typed_nested_state_fields() -> None:
     assert world.state.records["fuel_truck"].state["status"] == "assigned"
 
 
+def test_create_operation_derives_redundant_identity_from_typed_target() -> None:
+    spec = bridge_port_spec()
+    authority = next(
+        item for item in spec.authorities if item.authority_id == "port_semantic_adjudicator"
+    )
+    authority.patch_grammar.allowed_operations.append("create")
+    authority.patch_grammar.allowed_record_types.append("record")
+    world = CanonicalWorld(spec)
+
+    result = world.validate_and_commit(
+        WorldTransaction(
+            transaction_id="create-derived-identity",
+            base_revision=0,
+            authority_id=authority.authority_id,
+            intent_ids=["fixture"],
+            operations=[
+                PatchOperation(
+                    operation="create",
+                    target=TypedTarget(record_type="record", record_id="inspection_order"),
+                    value={
+                        "kind": "operational_instruction",
+                        "label": "Inspect the alternate route",
+                        "state": {"status": "pending"},
+                    },
+                )
+            ],
+            preconditions=[],
+            consequences=[],
+            evidence_refs=["fixture"],
+            stated_rationale="The typed target owns canonical identity.",
+        )
+    )
+
+    assert result.accepted
+    assert world.state.records["inspection_order"].record_id == "inspection_order"
+
+
 def test_strict_checkpoint_rejects_missing_canonical_world() -> None:
     simulation = _simulation(bridge_port_spec(), structured_stub)
     checkpoint = simulation.make_checkpoint_data()
