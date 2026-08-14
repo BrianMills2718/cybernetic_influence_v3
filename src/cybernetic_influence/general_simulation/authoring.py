@@ -44,7 +44,7 @@ GENERAL_AUTHORING_PROMPT_VERSION = "general_world_draft.v1"
 GENERAL_AUTHORING_MAX_ATTEMPTS = 3
 GENERAL_AUTHORING_MAX_BUDGET = 0.10
 GENERAL_AUTHORING_MAX_TOKENS = 8000
-GENERAL_AUTHORING_CALL_TIMEOUT_S = 150
+GENERAL_AUTHORING_CALL_TIMEOUT_S = 300
 GENERAL_AUTHORING_MODELS = {
     CODEX_LUNA_MODEL,
     CODEX_TERRA_MODEL,
@@ -353,7 +353,7 @@ class GeneralDraftAuthoringService:
                             "semantic general-world proposal without executable references."
                         ),
                         reasoning_effort=reasoning_effort,
-                        timeout=120,
+                        timeout=270,
                         **backend_options,
                     )
                 raw = parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
