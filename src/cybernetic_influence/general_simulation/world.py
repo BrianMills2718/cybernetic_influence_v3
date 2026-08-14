@@ -12,14 +12,17 @@ from concordia.typing import entity_component
 from pydantic import JsonValue, TypeAdapter, ValidationError
 
 from .models import (
+    AvailableTransitionContract,
     ActorContext,
     Consequence,
     GeneralWorldSpec,
     GeneralWorldState,
     Observation,
+    OperationAttribution,
     PatchOperation,
     Precondition,
     Route,
+    SemanticActionIntent,
     TransitionEvidence,
     TypedTarget,
     ValidationResult,
@@ -102,6 +105,55 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
         observations = representation_observations + copy.deepcopy(
             self._observations.get(actor_id, [])
         )
+        available_contracts = [
+            AvailableTransitionContract(
+                contract_id=item.contract_id,
+                contract_kind="sensing",
+                summary=(
+                    f"Observe {item.subject_id} and publish only its declared scoped "
+                    f"finding in {item.output_record_id}."
+                ),
+                target_refs=[item.subject_id, item.output_record_id],
+            )
+            for item in self._spec.sensing_contracts
+            if actor_id in item.observer_ids
+        ]
+        available_contracts.extend(
+            AvailableTransitionContract(
+                contract_id=item.contract_id,
+                contract_kind="resource_transformation",
+                summary=(
+                    f"Transform declared inputs into at most {item.maximum_batches} "
+                    f"batch(es) of {item.output_resource_id}."
+                ),
+                target_refs=[
+                    *item.input_resource_quantities,
+                    item.output_resource_id,
+                    item.public_inventory_record_id,
+                ],
+            )
+            for item in self._spec.resource_transformation_contracts
+            if actor_id in item.operator_ids
+        )
+        available_contracts.extend(
+            AvailableTransitionContract(
+                contract_id=item.contract_id,
+                contract_kind="resource_transport",
+                summary=(
+                    f"Attempt movement of up to {item.quantity:g} units from "
+                    f"{item.origin_place_id} to {item.destination_place_id} over one "
+                    "declared route."
+                ),
+                target_refs=[
+                    item.source_resource_id,
+                    item.destination_resource_id,
+                    item.arrival_record_id,
+                    *item.allowed_route_ids,
+                ],
+            )
+            for item in self._spec.resource_transport_contracts
+            if actor_id in item.operator_ids
+        )
         return ActorContext(
             actor_id=actor_id,
             base_revision=self._state.revision,
@@ -114,6 +166,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             ],
             accessible_routes=safe_routes,
             private_memory=copy.deepcopy(self._private_memory.get(actor_id, [])),
+            available_transition_contracts=available_contracts,
         )
 
     def retain_memory(self, actor_id: str, memories: list[str]) -> None:
@@ -141,6 +194,8 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
         transaction: WorldTransaction,
         *,
         envelope_corrections: list[str] | None = None,
+        intents: list[SemanticActionIntent] | None = None,
+        current_minute: int | None = None,
     ) -> ValidationResult:
         retained_corrections = list(envelope_corrections or [])
         errors: list[str] = []
@@ -162,10 +217,43 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     errors.append(
                         f"target type {operation.target.record_type} is outside authority grammar"
                     )
+        supplied_intents = list(intents or [])
+        if supplied_intents and set(transaction.intent_ids) != {
+            item.intent_id for item in supplied_intents
+        }:
+            errors.append("transaction intent ids differ from supplied actor intents")
+        for consequence in transaction.consequences:
+            if consequence.representation_id is None:
+                continue
+            representation = self._state.representations.get(
+                consequence.representation_id
+            )
+            if representation is None:
+                errors.append(
+                    f"consequence {consequence.consequence_id} names unknown representation "
+                    f"{consequence.representation_id}"
+                )
+            elif consequence.recipient_id not in representation.recipient_ids:
+                errors.append(
+                    f"consequence {consequence.consequence_id} would deliver representation "
+                    f"{consequence.representation_id} to unauthorized recipient "
+                    f"{consequence.recipient_id}"
+                )
         for precondition in transaction.preconditions:
             try:
                 actual = self._read_target(self._state, precondition.target)
-            except (AttributeError, KeyError, TypeError, ValueError) as exc:
+            except KeyError as exc:
+                if (
+                    precondition.expected is None
+                    and self._missing_final_mapping_key(
+                        self._state, precondition.target
+                    )
+                ):
+                    actual = None
+                else:
+                    errors.append(f"invalid precondition target: {exc}")
+                    continue
+            except (AttributeError, TypeError, ValueError) as exc:
                 errors.append(f"invalid precondition target: {exc}")
                 continue
             if actual != precondition.expected:
@@ -173,6 +261,12 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     f"precondition failed for {precondition.target.model_dump()}: "
                     f"expected {precondition.expected!r}, got {actual!r}"
                 )
+        operation_attributions, contract_errors = self._attribute_operations(
+            transaction,
+            intents=supplied_intents,
+            current_minute=current_minute,
+        )
+        errors.extend(contract_errors)
         candidate = self._state.model_copy(deep=True)
         if not errors:
             for operation in transaction.operations:
@@ -243,6 +337,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     envelope_corrections=retained_corrections,
                     validation=result,
                     resulting_state_hash=state_hash(self._state),
+                    operation_attributions=operation_attributions,
                 )
             )
             return result
@@ -259,9 +354,353 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 envelope_corrections=retained_corrections,
                 validation=result,
                 resulting_state_hash=state_hash(candidate),
+                operation_attributions=operation_attributions,
             )
         )
         return result
+
+    @staticmethod
+    def _numeric_delta(before: object, after: object) -> float | None:
+        if isinstance(before, (int, float)) and isinstance(after, (int, float)):
+            return float(after) - float(before)
+        return None
+
+    @staticmethod
+    def _close(left: float, right: float) -> bool:
+        return abs(left - right) <= 1e-9
+
+    @staticmethod
+    def _targets(
+        operation: PatchOperation,
+        record_type: str,
+        record_id: str,
+        field: str,
+    ) -> bool:
+        return (
+            operation.operation == "replace"
+            and operation.target.record_type == record_type
+            and operation.target.record_id == record_id
+            and operation.target.field == field
+        )
+
+    def _attribute_operations(
+        self,
+        transaction: WorldTransaction,
+        *,
+        intents: list[SemanticActionIntent],
+        current_minute: int | None,
+    ) -> tuple[list[OperationAttribution], list[str]]:
+        """Bind contract-owned state changes to a selected executable contract."""
+        if not transaction.operations:
+            return [], []
+        scratch = self._state.model_copy(deep=True)
+        snapshots: list[tuple[object, object]] = []
+        for operation in transaction.operations:
+            try:
+                before = self._read_target(scratch, operation.target)
+            except (AttributeError, KeyError, TypeError, ValueError):
+                before = None
+            try:
+                self._apply(scratch, operation)
+                after = self._read_target(scratch, operation.target)
+            except (AttributeError, KeyError, TypeError, ValueError, ValidationError):
+                after = object()
+            snapshots.append((before, after))
+
+        claimed: dict[int, OperationAttribution] = {}
+        for index, (before, after) in enumerate(snapshots):
+            if before == after:
+                claimed[index] = OperationAttribution(
+                    operation_index=index,
+                    authority_id=transaction.authority_id,
+                    classification="no_op",
+                    intent_ids=list(transaction.intent_ids),
+                )
+
+        intents_by_contract: dict[str, list[SemanticActionIntent]] = {}
+        for intent in intents:
+            for contract_id in intent.transition_contract_ids:
+                intents_by_contract.setdefault(contract_id, []).append(intent)
+
+        for contract in self._spec.sensing_contracts:
+            selected = [
+                intent
+                for intent in intents_by_contract.get(contract.contract_id, [])
+                if intent.actor_id in contract.observer_ids
+            ]
+            if not selected:
+                continue
+            subject = (
+                self._state.routes[contract.subject_id]
+                if contract.subject_type == "route"
+                else self._state.records[contract.subject_id]
+            )
+            for hidden_key, output_field in contract.hidden_to_output_fields.items():
+                for index, operation in enumerate(transaction.operations):
+                    if index in claimed:
+                        continue
+                    if (
+                        self._targets(
+                            operation,
+                            "record",
+                            contract.output_record_id,
+                            f"state.{output_field}",
+                        )
+                        and operation.value == subject.hidden_state[hidden_key]
+                    ):
+                        claimed[index] = OperationAttribution(
+                            operation_index=index,
+                            authority_id=transaction.authority_id,
+                            classification="exact_contract",
+                            contract_id=contract.contract_id,
+                            intent_ids=[item.intent_id for item in selected],
+                        )
+                        break
+
+        for contract in self._spec.resource_transformation_contracts:
+            selected = [
+                intent
+                for intent in intents_by_contract.get(contract.contract_id, [])
+                if intent.actor_id in contract.operator_ids
+            ]
+            if not selected:
+                continue
+            output_index: int | None = None
+            batches = 0
+            for index, operation in enumerate(transaction.operations):
+                if index in claimed or not self._targets(
+                    operation,
+                    "resource",
+                    contract.output_resource_id,
+                    "quantity",
+                ):
+                    continue
+                delta = self._numeric_delta(*snapshots[index])
+                if delta is None or delta <= 0:
+                    continue
+                candidate_batches = round(delta / contract.output_quantity)
+                if (
+                    1 <= candidate_batches <= contract.maximum_batches
+                    and self._close(
+                        delta, candidate_batches * contract.output_quantity
+                    )
+                ):
+                    output_index = index
+                    batches = candidate_batches
+                    break
+            if output_index is None:
+                continue
+            input_indices: list[int] = []
+            for resource_id, quantity in contract.input_resource_quantities.items():
+                match: int | None = None
+                for index, operation in enumerate(transaction.operations):
+                    delta = self._numeric_delta(*snapshots[index])
+                    if (
+                        index not in claimed
+                        and self._targets(operation, "resource", resource_id, "quantity")
+                        and delta is not None
+                        and self._close(delta, -(quantity * batches))
+                    ):
+                        match = index
+                        break
+                if match is None:
+                    input_indices = []
+                    break
+                input_indices.append(match)
+            if not input_indices:
+                continue
+            attribution = OperationAttribution(
+                operation_index=0,
+                authority_id=transaction.authority_id,
+                classification="exact_contract",
+                contract_id=contract.contract_id,
+                intent_ids=[item.intent_id for item in selected],
+            )
+            for index in [*input_indices, output_index]:
+                claimed[index] = attribution.model_copy(update={"operation_index": index})
+            produced_quantity = snapshots[output_index][1]
+            for index, operation in enumerate(transaction.operations):
+                if index in claimed:
+                    continue
+                if (
+                    operation.target.record_type == "record"
+                    and operation.target.record_id == contract.public_inventory_record_id
+                    and operation.target.field is not None
+                    and operation.target.field.startswith("state.")
+                ):
+                    if operation.target.field == "state.quantity" and (
+                        not isinstance(operation.value, (int, float))
+                        or not isinstance(produced_quantity, (int, float))
+                        or not self._close(
+                            float(operation.value), float(produced_quantity)
+                        )
+                    ):
+                        continue
+                    claimed[index] = attribution.model_copy(
+                        update={"operation_index": index}
+                    )
+
+        for contract in self._spec.resource_transport_contracts:
+            selected = [
+                intent
+                for intent in intents_by_contract.get(contract.contract_id, [])
+                if intent.actor_id in contract.operator_ids
+            ]
+            if not selected:
+                continue
+            source_index: int | None = None
+            destination_index: int | None = None
+            for index, operation in enumerate(transaction.operations):
+                delta = self._numeric_delta(*snapshots[index])
+                if index in claimed or delta is None:
+                    continue
+                if self._targets(
+                    operation, "resource", contract.source_resource_id, "quantity"
+                ) and self._close(delta, -contract.quantity):
+                    source_index = index
+                if self._targets(
+                    operation,
+                    "resource",
+                    contract.destination_resource_id,
+                    "quantity",
+                ) and self._close(delta, contract.quantity):
+                    destination_index = index
+            selected_routes = list(
+                dict.fromkeys(
+                    precondition.target.record_id
+                    for precondition in transaction.preconditions
+                    if precondition.target.record_type == "route"
+                    and precondition.target.record_id in contract.allowed_route_ids
+                    and precondition.target.field == "operational"
+                    and precondition.expected is True
+                )
+            )
+            if (
+                source_index is None
+                or destination_index is None
+                or len(selected_routes) != 1
+                or current_minute is None
+            ):
+                continue
+            route = self._state.routes[selected_routes[0]]
+            travel_time = route.public_state.get("travel_time_minutes")
+            if (
+                not route.operational
+                or (route.origin_id, route.destination_id)
+                != (contract.origin_place_id, contract.destination_place_id)
+                or not isinstance(travel_time, (int, float))
+            ):
+                continue
+            required_arrivals = {
+                contract.arrival_quantity_key: contract.quantity,
+                contract.arrival_minute_key: current_minute + travel_time,
+            }
+            arrival_indices: list[int] = []
+            for field_key, expected in required_arrivals.items():
+                match = next(
+                    (
+                        index
+                        for index, operation in enumerate(transaction.operations)
+                        if index not in claimed
+                        and self._targets(
+                            operation,
+                            "record",
+                            contract.arrival_record_id,
+                            f"state.{field_key}",
+                        )
+                        and operation.value == expected
+                    ),
+                    None,
+                )
+                if match is None:
+                    arrival_indices = []
+                    break
+                arrival_indices.append(match)
+            usable_index = next(
+                (
+                    index
+                    for index, operation in enumerate(transaction.operations)
+                    if index not in claimed
+                    and self._targets(
+                        operation,
+                        "record",
+                        contract.arrival_record_id,
+                        f"state.{contract.usable_quantity_key}",
+                    )
+                    and isinstance(operation.value, (int, float))
+                    and 0 <= float(operation.value) <= contract.quantity
+                ),
+                None,
+            )
+            if not arrival_indices or usable_index is None:
+                continue
+            attribution = OperationAttribution(
+                operation_index=0,
+                authority_id=transaction.authority_id,
+                classification="exact_contract",
+                contract_id=contract.contract_id,
+                intent_ids=[item.intent_id for item in selected],
+            )
+            for index in [
+                source_index,
+                destination_index,
+                *arrival_indices,
+                usable_index,
+            ]:
+                claimed[index] = attribution.model_copy(update={"operation_index": index})
+
+        controlled_record_ids = {
+            *[item.output_record_id for item in self._spec.sensing_contracts],
+            *[
+                item.public_inventory_record_id
+                for item in self._spec.resource_transformation_contracts
+            ],
+            *[item.arrival_record_id for item in self._spec.resource_transport_contracts],
+        }
+        controlled_resource_ids = {
+            *[
+                resource_id
+                for item in self._spec.resource_transformation_contracts
+                for resource_id in item.input_resource_quantities
+            ],
+            *[
+                item.output_resource_id
+                for item in self._spec.resource_transformation_contracts
+            ],
+            *[
+                resource_id
+                for item in self._spec.resource_transport_contracts
+                for resource_id in (
+                    item.source_resource_id,
+                    item.destination_resource_id,
+                )
+            ],
+        }
+        errors: list[str] = []
+        for index, operation in enumerate(transaction.operations):
+            if index in claimed:
+                continue
+            controlled = (
+                operation.target.record_type == "record"
+                and operation.target.record_id in controlled_record_ids
+            ) or (
+                operation.target.record_type == "resource"
+                and operation.target.record_id in controlled_resource_ids
+            )
+            if controlled:
+                errors.append(
+                    f"operation {index} on {operation.target.record_type} "
+                    f"{operation.target.record_id} is not licensed by a complete declared "
+                    "transition contract"
+                )
+            else:
+                claimed[index] = OperationAttribution(
+                    operation_index=index,
+                    authority_id=transaction.authority_id,
+                    classification="coarse_authority",
+                    intent_ids=list(transaction.intent_ids),
+                )
+        return [claimed[index] for index in sorted(claimed)], errors
 
     def _container(self, state: GeneralWorldState, target: TypedTarget) -> dict[str, Any]:
         return cast(dict[str, Any], getattr(state, f"{target.record_type}s"))
@@ -280,6 +719,31 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 raise ValueError(f"{target.field} does not identify nested state")
             value = value[segment]
         return cast(JsonValue, value)
+
+    def _missing_final_mapping_key(
+        self, state: GeneralWorldState, target: TypedTarget
+    ) -> bool:
+        """Recognize an explicit null guard on a not-yet-created state field."""
+
+        if target.field is None:
+            return False
+        item = self._container(state, target).get(target.record_id)
+        if item is None:
+            return False
+        segments = target.field.split(".")
+        try:
+            value: Any = getattr(item, segments[0])
+            for segment in segments[1:-1]:
+                if not isinstance(value, dict) or segment not in value:
+                    return False
+                value = value[segment]
+        except (AttributeError, TypeError):
+            return False
+        return (
+            len(segments) > 1
+            and isinstance(value, dict)
+            and segments[-1] not in value
+        )
 
     def _apply(self, state: GeneralWorldState, operation: PatchOperation) -> None:
         container = self._container(state, operation.target)

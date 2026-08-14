@@ -14,13 +14,17 @@ from cybernetic_influence.general_simulation.compiler import compile_general_sim
 from cybernetic_influence.general_simulation.models import (
     ActorDecision,
     Assimilation,
+    Consequence,
     PatchOperation,
     Precondition,
     SemanticActionIntent,
+    SensingTransitionContract,
     TypedTarget,
+    WorldRecord,
     WorldTransaction,
 )
 from cybernetic_influence.general_simulation.runner import (
+    _drop_unauthorized_representation_deliveries,
     _memory_reference_is_grounded,
     _normalize_transaction_targets,
     _normalized_memory,
@@ -110,6 +114,123 @@ def test_existing_record_state_fields_are_normalized_before_validation() -> None
         "operation target relief_cargo field normalized from status to state.status",
         "precondition target relief_cargo field normalized from status to state.status",
     ]
+
+
+def test_whole_record_targets_do_not_require_state_field_normalization() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    world = CanonicalWorld(compile_general_simulation(proposal).world_spec)
+    transaction = WorldTransaction(
+        transaction_id="whole_record_target",
+        base_revision=0,
+        authority_id="general_semantic_adjudicator",
+        intent_ids=["intent_1"],
+        operations=[
+            PatchOperation(
+                operation="remove",
+                target=TypedTarget(
+                    record_type="record", record_id="relief_cargo", field=None
+                ),
+            )
+        ],
+        preconditions=[],
+        consequences=[],
+        evidence_refs=["relief_cargo"],
+        stated_rationale="Exercise a whole-record target.",
+    )
+    corrections: list[str] = []
+
+    normalized = _normalize_transaction_targets(transaction, world, corrections)
+
+    assert normalized.operations[0].target.field is None
+    assert corrections == []
+
+
+def test_whole_sensing_state_is_expanded_and_unauthorized_delivery_is_omitted() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    spec = compile_general_simulation(proposal).world_spec
+    spec.initial_state.records["relief_cargo"].hidden_state["inspection"] = "ready"
+    spec.initial_state.records["cargo_finding"] = WorldRecord(
+        record_id="cargo_finding", kind="finding", label="Cargo finding"
+    )
+    spec.sensing_contracts = [
+        SensingTransitionContract(
+            contract_id="inspect_cargo",
+            subject_type="record",
+            subject_id="relief_cargo",
+            observer_ids=["customs_officer"],
+            hidden_to_output_fields={"inspection": "inspection"},
+            output_record_id="cargo_finding",
+            result_recipient_ids=["customs_officer"],
+        )
+    ]
+    world = CanonicalWorld(spec)
+    sensing_contract = world.spec.sensing_contracts[0]
+    output_record = world.state.records[sensing_contract.output_record_id]
+    values = {
+        output_field: (
+            world.state.records[sensing_contract.subject_id].hidden_state[hidden_key]
+            if sensing_contract.subject_type == "record"
+            else world.state.routes[sensing_contract.subject_id].hidden_state[hidden_key]
+        )
+        for hidden_key, output_field in sensing_contract.hidden_to_output_fields.items()
+    }
+    representation = next(
+        item
+        for item in world.state.representations.values()
+        if len(item.recipient_ids) < 4
+    )
+    unauthorized_actor = next(
+        actor_id
+        for actor_id in world.state.records
+        if world.state.records[actor_id].kind == "person"
+        and actor_id not in representation.recipient_ids
+    )
+    transaction = WorldTransaction(
+        transaction_id="normalize_sensing_state",
+        base_revision=0,
+        authority_id="general_semantic_adjudicator",
+        intent_ids=["intent_1"],
+        operations=[
+            PatchOperation(
+                operation="replace",
+                target=TypedTarget(
+                    record_type="record",
+                    record_id=output_record.record_id,
+                    field="state",
+                ),
+                value=values,
+            )
+        ],
+        preconditions=[],
+        consequences=[
+            Consequence(
+                consequence_id="bad_delivery",
+                recipient_id=unauthorized_actor,
+                content="Do not deliver this representation here.",
+                apparent_source="fixture",
+                representation_id=representation.representation_id,
+            )
+        ],
+        evidence_refs=[output_record.record_id],
+        stated_rationale="Exercise bounded envelope normalization.",
+    )
+    corrections: list[str] = []
+
+    normalized = _normalize_transaction_targets(transaction, world, corrections)
+    normalized = _drop_unauthorized_representation_deliveries(
+        normalized, world, corrections
+    )
+
+    assert {item.target.field for item in normalized.operations} == {
+        f"state.{field}" for field in values
+    }
+    assert normalized.consequences == []
+    assert any("expanded into typed fields" in item for item in corrections)
+    assert any("unauthorized representation delivery omitted" in item for item in corrections)
 
 
 def test_actor_output_gets_one_bounded_validation_repair() -> None:

@@ -130,6 +130,48 @@ class ActorAccessSpec(StrictModel):
     representation_ids: list[str]
 
 
+class AvailableTransitionContract(StrictModel):
+    contract_id: str
+    contract_kind: Literal["sensing", "resource_transformation", "resource_transport"]
+    summary: str
+    target_refs: list[str]
+
+
+class SensingTransitionContract(StrictModel):
+    contract_id: str
+    subject_type: Literal["record", "route"]
+    subject_id: str
+    observer_ids: list[str]
+    hidden_to_output_fields: dict[str, str]
+    output_record_id: str
+    result_recipient_ids: list[str]
+
+
+class ResourceTransformationContract(StrictModel):
+    contract_id: str
+    operator_ids: list[str]
+    input_resource_quantities: dict[str, float]
+    output_resource_id: str
+    output_quantity: float
+    maximum_batches: int
+    public_inventory_record_id: str
+
+
+class ResourceTransportContract(StrictModel):
+    contract_id: str
+    operator_ids: list[str]
+    source_resource_id: str
+    destination_resource_id: str
+    quantity: float
+    origin_place_id: str
+    destination_place_id: str
+    allowed_route_ids: list[str]
+    arrival_record_id: str
+    arrival_quantity_key: str
+    usable_quantity_key: str
+    arrival_minute_key: str
+
+
 class GeneralWorldSpec(StrictModel):
     spec_id: str
     initial_state: GeneralWorldState
@@ -139,6 +181,13 @@ class GeneralWorldSpec(StrictModel):
     fidelity_assumptions: list[str]
     timing: dict[str, int] = Field(default_factory=dict)
     actor_access: list[ActorAccessSpec] = Field(default_factory=list)
+    sensing_contracts: list[SensingTransitionContract] = Field(default_factory=list)
+    resource_transformation_contracts: list[ResourceTransformationContract] = Field(
+        default_factory=list
+    )
+    resource_transport_contracts: list[ResourceTransportContract] = Field(
+        default_factory=list
+    )
 
     @model_validator(mode="after")
     def references_registered_authorities(self) -> "GeneralWorldSpec":
@@ -161,6 +210,9 @@ class ActorContext(StrictModel):
     accessible_records: list[WorldRecord]
     accessible_routes: list[Route]
     private_memory: list[str]
+    available_transition_contracts: list[AvailableTransitionContract] = Field(
+        default_factory=list
+    )
 
 
 class MemoryRevision(StrictModel):
@@ -190,6 +242,7 @@ class SemanticActionIntent(StrictModel):
     purpose: str
     expected_effect: str
     stated_rationale: str
+    transition_contract_ids: list[str] = Field(default_factory=list)
 
 
 class ActorDecision(StrictModel):
@@ -253,6 +306,15 @@ class TransitionEvidence(StrictModel):
     envelope_corrections: list[str]
     validation: ValidationResult
     resulting_state_hash: str
+    operation_attributions: list["OperationAttribution"] = Field(default_factory=list)
+
+
+class OperationAttribution(StrictModel):
+    operation_index: int
+    authority_id: str
+    classification: Literal["exact_contract", "coarse_authority", "no_op"]
+    contract_id: str | None = None
+    intent_ids: list[str] = Field(default_factory=list)
 
 
 class ModelCallReceipt(StrictModel):

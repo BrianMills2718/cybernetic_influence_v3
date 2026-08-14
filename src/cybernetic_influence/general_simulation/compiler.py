@@ -21,8 +21,11 @@ from .models import (
     Place,
     Placement,
     Representation,
+    ResourceTransformationContract,
+    ResourceTransportContract,
     ResourceStock,
     Route,
+    SensingTransitionContract,
     TransitionAuthoritySpec,
     WorldRecord,
 )
@@ -123,6 +126,40 @@ def compile_general_simulation(
         if unknown_actors:
             raise GeneralCompilationError(
                 f"sensing rule {rule.rule_id} names unknown actors: {', '.join(unknown_actors)}"
+            )
+        if rule.output_record_id not in record_ids:
+            raise GeneralCompilationError(
+                f"sensing rule {rule.rule_id} names unknown output record "
+                f"{rule.output_record_id}"
+            )
+        world_record_subject = next(
+            (
+                item
+                for item in proposal.world_records
+                if item.record_id == rule.subject_ref
+            ),
+            None,
+        )
+        if world_record_subject is not None:
+            hidden_keys = {item.key for item in world_record_subject.hidden_state}
+        elif rule.subject_ref in actor_ids:
+            hidden_keys = {"disposition", "behavioral_profile"}
+        elif proposal.spatial_extension and rule.subject_ref in {
+            item.link_id for item in proposal.spatial_extension.links
+        }:
+            subject = next(
+                item
+                for item in proposal.spatial_extension.links
+                if item.link_id == rule.subject_ref
+            )
+            hidden_keys = {item.key for item in subject.hidden_state}
+        else:
+            hidden_keys = set()
+        unknown_hidden_keys = sorted(set(rule.reveal_hidden_keys) - hidden_keys)
+        if unknown_hidden_keys:
+            raise GeneralCompilationError(
+                f"sensing rule {rule.rule_id} names unavailable hidden keys: "
+                + ", ".join(unknown_hidden_keys)
             )
     resource_ids = (
         {item.resource_id for item in proposal.resource_extension.stocks}
@@ -507,6 +544,62 @@ def compile_general_simulation(
                 representation_ids=sorted(visible_representations),
             )
         )
+    sensing_field_counts: dict[tuple[str, str], int] = {}
+    for rule in proposal.sensing_rules:
+        for hidden_key in rule.reveal_hidden_keys:
+            key = (rule.output_record_id, hidden_key)
+            sensing_field_counts[key] = sensing_field_counts.get(key, 0) + 1
+    sensing_contracts = [
+        SensingTransitionContract(
+            contract_id=rule.rule_id,
+            subject_type=("route" if rule.subject_ref in route_ids else "record"),
+            subject_id=rule.subject_ref,
+            observer_ids=rule.observer_ids,
+            hidden_to_output_fields={
+                hidden_key: (
+                    f"{rule.subject_ref}_{hidden_key}"
+                    if sensing_field_counts[(rule.output_record_id, hidden_key)] > 1
+                    else hidden_key
+                )
+                for hidden_key in rule.reveal_hidden_keys
+            },
+            output_record_id=rule.output_record_id,
+            result_recipient_ids=rule.result_recipient_ids,
+        )
+        for rule in proposal.sensing_rules
+    ]
+    transformation_contracts = [
+        ResourceTransformationContract(
+            contract_id=item.transformation_id,
+            operator_ids=item.operator_ids,
+            input_resource_quantities={
+                requirement.resource_id: requirement.quantity
+                for requirement in item.input_resource_quantities
+            },
+            output_resource_id=item.output_resource_id,
+            output_quantity=item.output_quantity,
+            maximum_batches=item.maximum_batches,
+            public_inventory_record_id=item.public_inventory_record_id,
+        )
+        for item in proposal.resource_transformations
+    ]
+    transport_contracts = [
+        ResourceTransportContract(
+            contract_id=item.transport_id,
+            operator_ids=item.operator_ids,
+            source_resource_id=item.source_resource_id,
+            destination_resource_id=item.destination_resource_id,
+            quantity=item.quantity,
+            origin_place_id=item.origin_place_id,
+            destination_place_id=item.destination_place_id,
+            allowed_route_ids=item.allowed_route_ids,
+            arrival_record_id=item.arrival_record_id,
+            arrival_quantity_key=item.arrival_quantity_key,
+            usable_quantity_key=item.usable_quantity_key,
+            arrival_minute_key=item.arrival_minute_key,
+        )
+        for item in proposal.resource_transports
+    ]
     world_spec = GeneralWorldSpec(
         spec_id=proposal.simulation_id,
         initial_state=GeneralWorldState(
@@ -523,6 +616,9 @@ def compile_general_simulation(
         fidelity_assumptions=proposal.fidelity_assumptions,
         timing={item.moment_id: item.minute for item in proposal.schedule},
         actor_access=actor_access,
+        sensing_contracts=sensing_contracts,
+        resource_transformation_contracts=transformation_contracts,
+        resource_transport_contracts=transport_contracts,
     )
     proposal_payload = proposal.model_dump(mode="json")
     return CompiledGeneralSimulationV1(

@@ -90,7 +90,11 @@ def _normalize_record_state_field(
     correction_context: str,
     corrections: list[str],
 ) -> TypedTarget:
-    if target.record_type != "record" or target.field.startswith(("state.", "hidden_state.")):
+    if (
+        target.record_type != "record"
+        or target.field is None
+        or target.field.startswith(("state.", "hidden_state."))
+    ):
         return target
     record = world.state.records.get(target.record_id)
     if record is None or target.field not in record.state:
@@ -144,7 +148,7 @@ def _normalize_transaction_targets(
             )
             operations.append(operation.model_copy(update={"value": value}))
             continue
-        operations.append(operation if operation.operation == "create" else operation.model_copy(
+        normalized = operation if operation.operation == "create" else operation.model_copy(
             update={
                 "target": _normalize_target(
                     operation.target,
@@ -153,7 +157,37 @@ def _normalize_transaction_targets(
                     corrections=corrections,
                 )
             }
-        ))
+        )
+        if (
+            normalized.operation == "replace"
+            and normalized.target.record_type == "record"
+            and normalized.target.field == "state"
+            and isinstance(normalized.value, dict)
+        ):
+            record = world.state.records.get(normalized.target.record_id)
+            proposed_fields = set(normalized.value)
+            if (
+                record is not None
+                and proposed_fields
+                and set(record.state) <= proposed_fields
+            ):
+                corrections.append(
+                    "whole record-state replacement expanded into typed fields "
+                    f"for {normalized.target.record_id}"
+                )
+                operations.extend(
+                    normalized.model_copy(
+                        update={
+                            "target": normalized.target.model_copy(
+                                update={"field": f"state.{field}"}
+                            ),
+                            "value": value,
+                        }
+                    )
+                    for field, value in normalized.value.items()
+                )
+                continue
+        operations.append(normalized)
     preconditions = [
         precondition.model_copy(
             update={
@@ -170,6 +204,32 @@ def _normalize_transaction_targets(
     return transaction.model_copy(
         update={"operations": operations, "preconditions": preconditions}
     )
+
+
+def _drop_unauthorized_representation_deliveries(
+    transaction: WorldTransaction,
+    world: CanonicalWorld,
+    corrections: list[str],
+) -> WorldTransaction:
+    retained = []
+    for consequence in transaction.consequences:
+        if consequence.representation_id is None:
+            retained.append(consequence)
+            continue
+        representation = world.state.representations.get(
+            consequence.representation_id
+        )
+        if (
+            representation is not None
+            and consequence.recipient_id in representation.recipient_ids
+        ):
+            retained.append(consequence)
+            continue
+        corrections.append(
+            "unauthorized representation delivery omitted: "
+            f"{consequence.consequence_id}"
+        )
+    return transaction.model_copy(update={"consequences": retained})
 
 
 def _normalized_memory(value: str) -> str:
@@ -278,6 +338,18 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 f"base_revision must be {actor_context.base_revision}; received "
                 f"{decision.intent.base_revision}"
             )
+        available_contract_ids = {
+            item.contract_id for item in actor_context.available_transition_contracts
+        }
+        unknown_contract_ids = (
+            set(decision.intent.transition_contract_ids) - available_contract_ids
+        )
+        if unknown_contract_ids:
+            raise ValueError(
+                "transition_contract_ids contained unavailable contracts "
+                f"{sorted(unknown_contract_ids)}; allowed IDs are "
+                f"{sorted(available_contract_ids)}"
+            )
         available_observations = {
             item.observation_id for item in actor_context.observations
         }
@@ -354,7 +426,11 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 "Use only the supplied authorized observations, accessible world records, "
                 "private memory, and character. Delivery is not truth and an attempted action "
                 "is not guaranteed to succeed. Return an assimilation record and one bounded, "
-                "open-ended semantic action intent against the supplied world revision."
+                "open-ended semantic action intent against the supplied world revision. When "
+                "you explicitly attempt one of the supplied available_transition_contracts, "
+                "copy its exact contract_id into transition_contract_ids. Otherwise return an "
+                "empty list. Selecting a contract permits only an attempt; it does not guarantee "
+                "authorization or success."
             ),
             user=actor_user,
             trace_id=f"{self._trace_prefix}/moment/{call_number}/actor/{self._person.entity_id}",
@@ -691,9 +767,15 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             } - set(actor_ids)
             if unknown_recipients:
                 raise ValueError("adjudicator consequence named an unknown actor")
+            transaction = _drop_unauthorized_representation_deliveries(
+                transaction, world, corrections
+            )
             frozen_revision = world.state.revision
             validation = world.validate_and_commit(
-                transaction, envelope_corrections=corrections
+                transaction,
+                envelope_corrections=corrections,
+                intents=intents,
+                current_minute=moment.minute,
             )
             grammar_errors = [
                 error
@@ -776,6 +858,8 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "one bounded repair followed an authority-grammar rejection",
                         *repair_corrections,
                     ],
+                    intents=intents,
+                    current_minute=moment.minute,
                 )
                 transaction = repaired_transaction
                 receipt = repair_receipt

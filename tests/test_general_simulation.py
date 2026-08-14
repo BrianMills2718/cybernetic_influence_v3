@@ -19,11 +19,16 @@ from cybernetic_influence.general_simulation.models import (
     ActorDecision,
     Assimilation,
     Consequence,
+    ResourceStock,
+    ResourceTransformationContract,
+    ResourceTransportContract,
+    SensingTransitionContract,
     PatchOperation,
     Precondition,
     SemanticActionIntent,
     TypedTarget,
     WorldTransaction,
+    WorldRecord,
 )
 from cybernetic_influence.general_simulation.world import CanonicalWorld, state_hash
 
@@ -121,6 +126,212 @@ def test_actor_context_never_contains_hidden_sabotage_cause() -> None:
     _prepare_world(world)
 
     assert "sabotage" not in world.actor_context("worker").model_dump_json().lower()
+
+
+def _contract_world() -> CanonicalWorld:
+    spec = bridge_port_spec()
+    authority = next(
+        item for item in spec.authorities if item.authority_id == "port_semantic_adjudicator"
+    )
+    authority.patch_grammar.allowed_record_types = ["record", "resource"]
+    spec.initial_state.routes["main_bridge"].operational = True
+    spec.initial_state.routes["main_bridge"].public_state["travel_time_minutes"] = 75
+    spec.initial_state.records["material_truth"] = WorldRecord(
+        record_id="material_truth",
+        kind="material",
+        label="Material truth",
+        hidden_state={"quality": "usable"},
+    )
+    spec.initial_state.records["quality_finding"] = WorldRecord(
+        record_id="quality_finding", kind="finding", label="Quality finding"
+    )
+    spec.initial_state.records["finished_inventory"] = WorldRecord(
+        record_id="finished_inventory",
+        kind="inventory",
+        label="Finished inventory",
+        state={"quantity": 0},
+    )
+    spec.initial_state.records["arrival"] = WorldRecord(
+        record_id="arrival",
+        kind="arrival",
+        label="Arrival",
+        state={"quantity": 0, "usable_quantity": 0, "arrival_minute": None},
+    )
+    spec.initial_state.resources = {
+        "raw_a": ResourceStock(resource_id="raw_a", quantity=600, custodian_id="worker"),
+        "raw_b": ResourceStock(resource_id="raw_b", quantity=600, custodian_id="worker"),
+        "finished": ResourceStock(resource_id="finished", quantity=0, custodian_id="worker"),
+        "delivered": ResourceStock(resource_id="delivered", quantity=0, custodian_id="worker"),
+    }
+    spec.sensing_contracts = [
+        SensingTransitionContract(
+            contract_id="inspect_quality",
+            subject_type="record",
+            subject_id="material_truth",
+            observer_ids=["worker"],
+            hidden_to_output_fields={"quality": "quality"},
+            output_record_id="quality_finding",
+            result_recipient_ids=["worker"],
+        )
+    ]
+    spec.resource_transformation_contracts = [
+        ResourceTransformationContract(
+            contract_id="produce",
+            operator_ids=["worker"],
+            input_resource_quantities={"raw_a": 500, "raw_b": 500},
+            output_resource_id="finished",
+            output_quantity=500,
+            maximum_batches=1,
+            public_inventory_record_id="finished_inventory",
+        )
+    ]
+    spec.resource_transport_contracts = [
+        ResourceTransportContract(
+            contract_id="deliver",
+            operator_ids=["worker"],
+            source_resource_id="finished",
+            destination_resource_id="delivered",
+            quantity=500,
+            origin_place_id="outside_port",
+            destination_place_id="port",
+            allowed_route_ids=["main_bridge"],
+            arrival_record_id="arrival",
+            arrival_quantity_key="quantity",
+            usable_quantity_key="usable_quantity",
+            arrival_minute_key="arrival_minute",
+        )
+    ]
+    return CanonicalWorld(spec)
+
+
+def _contract_intent(*contract_ids: str) -> SemanticActionIntent:
+    return SemanticActionIntent(
+        intent_id="bounded_attempt",
+        actor_id="worker",
+        base_revision=0,
+        action="Inspect, produce, and deliver one bounded batch.",
+        target_refs=["quality_finding", "finished_inventory", "arrival"],
+        purpose="Exercise declared mechanics.",
+        expected_effect="A bounded delivery may occur.",
+        stated_rationale="The attempt uses only configured contracts.",
+        transition_contract_ids=list(contract_ids),
+    )
+
+
+def _contract_transaction(*, delivered_quantity: int = 500) -> WorldTransaction:
+    return WorldTransaction(
+        transaction_id="contract_transition",
+        base_revision=0,
+        authority_id="port_semantic_adjudicator",
+        intent_ids=["bounded_attempt"],
+        operations=[
+            PatchOperation(operation="replace", target=TypedTarget(record_type="record", record_id="quality_finding", field="state.quality"), value="usable"),
+            PatchOperation(operation="replace", target=TypedTarget(record_type="resource", record_id="raw_a", field="quantity"), value=100),
+            PatchOperation(operation="replace", target=TypedTarget(record_type="resource", record_id="raw_b", field="quantity"), value=100),
+            PatchOperation(operation="replace", target=TypedTarget(record_type="resource", record_id="finished", field="quantity"), value=500),
+            PatchOperation(operation="replace", target=TypedTarget(record_type="record", record_id="finished_inventory", field="state.quantity"), value=500),
+            PatchOperation(operation="replace", target=TypedTarget(record_type="resource", record_id="finished", field="quantity"), value=0),
+            PatchOperation(operation="replace", target=TypedTarget(record_type="resource", record_id="delivered", field="quantity"), value=delivered_quantity),
+            PatchOperation(operation="replace", target=TypedTarget(record_type="record", record_id="arrival", field="state.quantity"), value=500),
+            PatchOperation(operation="replace", target=TypedTarget(record_type="record", record_id="arrival", field="state.usable_quantity"), value=500),
+            PatchOperation(operation="replace", target=TypedTarget(record_type="record", record_id="arrival", field="state.arrival_minute"), value=135),
+        ],
+        preconditions=[
+            Precondition(target=TypedTarget(record_type="route", record_id="main_bridge", field="operational"), expected=True)
+        ],
+        consequences=[],
+        evidence_refs=["bounded_attempt", "main_bridge"],
+        stated_rationale="Every material mutation is covered by a selected contract.",
+    )
+
+
+def test_declared_contracts_license_complete_transition_and_retain_attribution() -> None:
+    world = _contract_world()
+    intent = _contract_intent("inspect_quality", "produce", "deliver")
+
+    result = world.validate_and_commit(
+        _contract_transaction(), intents=[intent], current_minute=60
+    )
+
+    assert result.accepted
+    evidence = world.evidence[-1]
+    assert {item.contract_id for item in evidence.operation_attributions} == {
+        "inspect_quality",
+        "produce",
+        "deliver",
+    }
+    assert all(
+        item.classification == "exact_contract"
+        for item in evidence.operation_attributions
+    )
+
+
+def test_sensing_contract_can_guard_not_yet_created_finding_with_null_precondition() -> None:
+    world = _contract_world()
+    intent = _contract_intent("inspect_quality")
+    transaction = WorldTransaction(
+        transaction_id="inspect_once",
+        base_revision=0,
+        authority_id="port_semantic_adjudicator",
+        intent_ids=[intent.intent_id],
+        operations=[
+            PatchOperation(
+                operation="replace",
+                target=TypedTarget(
+                    record_type="record",
+                    record_id="quality_finding",
+                    field="state.quality",
+                ),
+                value="usable",
+            )
+        ],
+        preconditions=[
+            Precondition(
+                target=TypedTarget(
+                    record_type="record",
+                    record_id="quality_finding",
+                    field="state.quality",
+                ),
+                expected=None,
+            )
+        ],
+        consequences=[],
+        evidence_refs=[intent.intent_id],
+        stated_rationale="The finding has not already been recorded.",
+    )
+
+    result = world.validate_and_commit(
+        transaction, intents=[intent], current_minute=60
+    )
+
+    assert result.accepted
+    assert world.state.records["quality_finding"].state["quality"] == "usable"
+
+
+def test_contract_owned_quantity_change_fails_without_complete_declared_transport() -> None:
+    world = _contract_world()
+    intent = _contract_intent("inspect_quality", "produce", "deliver")
+
+    result = world.validate_and_commit(
+        _contract_transaction(delivered_quantity=501),
+        intents=[intent],
+        current_minute=60,
+    )
+
+    assert not result.accepted
+    assert any("not licensed by a complete declared transition contract" in error for error in result.errors)
+
+
+def test_contract_owned_change_fails_when_actor_did_not_select_contract() -> None:
+    world = _contract_world()
+    intent = _contract_intent("inspect_quality", "produce")
+
+    result = world.validate_and_commit(
+        _contract_transaction(), intents=[intent], current_minute=60
+    )
+
+    assert not result.accepted
+    assert any("not licensed by a complete declared transition contract" in error for error in result.errors)
 
 
 def test_world_supports_typed_nested_state_fields() -> None:
