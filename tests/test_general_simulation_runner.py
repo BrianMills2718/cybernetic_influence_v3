@@ -27,6 +27,7 @@ from cybernetic_influence.general_simulation.runner import (
 from cybernetic_influence.general_simulation.analysis_projection import (
     project_waltzman_analysis,
 )
+from cybernetic_influence.general_simulation.projection import project_general_run
 
 
 FIXTURE = Path("tests/fixtures/general_simulation/port_coordination.json")
@@ -117,6 +118,15 @@ def test_actor_output_gets_one_bounded_validation_repair() -> None:
     assert len(result.moments) == 2
     assert len(result.model_calls) == 7
     assert any(item.trace_id.endswith("/repair/1") for item in result.model_calls)
+    projected = project_general_run(
+        compiled,
+        result,
+        run_id="run_actor_repair_fixture",
+        created_at="2026-08-13T00:00:00Z",
+        execution="live",
+    )
+    assert len(projected["traces"]) == len(proposal.schedule) * len(proposal.people)
+    assert all("/repair/1" in trace["trace_id"] or "/repair/" not in trace["trace_id"] for trace in projected["traces"])
 
 
 def test_adjudicator_output_gets_one_authority_grammar_repair() -> None:

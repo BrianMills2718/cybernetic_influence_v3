@@ -92,9 +92,18 @@ def project_general_run(
                 }
             )
     traces: list[dict[str, object]] = []
+    repaired_actor_trace_ids = {
+        receipt.trace_id.removesuffix("/repair/1")
+        for receipt in result.model_calls
+        if receipt.role == "actor" and receipt.trace_id.endswith("/repair/1")
+    }
     for receipt in result.model_calls:
         if receipt.role == "actor":
+            if receipt.trace_id in repaired_actor_trace_ids:
+                continue
             supplied = json.loads(receipt.input_context)
+            if receipt.trace_id.endswith("/repair/1"):
+                supplied = supplied["original_input"]
             context = supplied["actor_context"]
             output = receipt.structured_output
             observations = [
