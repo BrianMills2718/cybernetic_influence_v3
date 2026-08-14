@@ -6,8 +6,8 @@
   <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/graph-canvas.css?v=cleanup1">
-  <link rel="stylesheet" href="assets/styles.css?v=authoring2">
+  <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology1">
+  <link rel="stylesheet" href="assets/styles.css?v=authoring3">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -134,13 +134,18 @@
           <p>A novel respiratory outbreak is spreading through Alba, Borin, Cyrenia, and Darsia. A proposed compact would share evidence, laboratory capacity, investigation teams, supplies, and transport—but those capabilities remain distributed across national and regional networks.</p>
         </header>
 
-        <section class="case-network" aria-labelledby="case-network-title">
+        <nav class="case-walkthrough-controls" aria-label="Case study walkthrough">
+          <div><span id="case-walkthrough-kind">The world</span><strong id="case-walkthrough-progress">Step 1 of 6</strong></div>
+          <div><button id="case-walkthrough-previous" type="button">Previous</button><button id="case-walkthrough-next" class="primary-cta" type="button">Next →</button></div>
+        </nav>
+
+        <section class="case-network" data-case-chapter="0" aria-labelledby="case-network-title">
           <header><div><span>The simulated network</span><h3 id="case-network-title">How local pressure can become a collective decision problem</h3><p>The first view groups exact people and mechanisms so the system is legible. Switch to the complete network to inspect every retained entity and route.</p></div><div class="case-network-tabs" aria-label="Network projection"><button type="button" class="active" data-case-graph="system" aria-pressed="true">System map</button><button type="button" data-case-graph="exact" aria-pressed="false">Complete network</button></div></header>
           <div id="case-network-graph" class="case-network-graph" aria-label="Interactive sociotechnical network graph"><p>Loading the retained network…</p></div>
           <div class="case-network-footer"><p id="case-network-status">Loading exact entities and routes from the retained simulation.</p><aside id="case-network-inspector"><strong>Select a node or connection</strong><span>Inspect what it represents and how it participates in the simulated world.</span></aside></div>
         </section>
 
-        <section class="case-organizations" aria-labelledby="case-organizations-title">
+        <section class="case-organizations" data-case-chapter="1" aria-labelledby="case-organizations-title">
           <div class="case-section-heading"><span>The sociotechnical world</span><h3 id="case-organizations-title">People participate through five interdependent response networks</h3></div>
           <div class="national-network-grid">
             <article><strong>Alba</strong><p>Earliest cluster and strongest laboratories. National authorities protect patient-record custody and domestic confirmation capacity.</p><small>Epidemiology · policy · operations · community · supply</small></article>
@@ -151,29 +156,29 @@
           </div>
         </section>
 
-        <section class="case-coordination-situation" aria-labelledby="case-situation-title">
+        <section class="case-coordination-situation" data-case-chapter="1" aria-labelledby="case-situation-title">
           <div><span>Coordination situation</span><h3 id="case-situation-title">Should these networks activate one joint outbreak response?</h3><p>Activation requires comparable evidence, lawful data access, staff, laboratories, supplies, transport, funding, and credible local safeguards. No single person or organization controls all of them.</p></div>
           <div class="dependency-list"><span>What must fit together</span><strong>Evidence</strong><strong>Authority</strong><strong>Operational capacity</strong><strong>Public legitimacy</strong></div>
         </section>
 
-        <section class="case-influence-context" aria-labelledby="case-influence-title">
+        <section class="case-influence-context" data-case-chapter="2" aria-labelledby="case-influence-title">
           <span>Influence environment</span><h3 id="case-influence-title">Different parts of the network encounter different pressures</h3>
           <p>Laboratory failures, staffing demands, supply constraints, legal challenges, and community concerns enter through locally relevant channels. The messages do not repeat one narrative, but together they can change whether the compact remains executable.</p>
         </section>
 
-        <section class="case-experiment-intro" aria-labelledby="case-experiment-title">
+        <section class="case-experiment-intro" data-case-chapter="2" aria-labelledby="case-experiment-title">
           <span>One controlled question inside the completed simulation</span>
           <h3 id="case-experiment-title">After those pressures stall coordination, does fixing the resource shortage make the networks ready to act?</h3>
           <p>We saved the exact simulation after two rounds and continued it four ways. Every person, memory, prior message, model, prompt, world state, and approval rule remained identical. Only the resource package changed.</p>
         </section>
 
-        <section class="case-answer" aria-labelledby="case-answer-title">
+        <section class="case-answer" data-case-chapter="3" aria-labelledby="case-answer-title">
           <span>Result</span>
           <h3 id="case-answer-title">Real resources removed most capacity objections—but they did not resolve the network’s legal and scientific blockers.</h3>
           <p>Fake resource claims were caught by the simulated audit and produced the same practical result as providing nothing.</p>
         </section>
 
-        <section class="case-story" aria-labelledby="case-story-title">
+        <section class="case-story" data-case-chapter="2" aria-labelledby="case-story-title">
           <h3 id="case-story-title">The experiment in three steps</h3>
           <ol>
             <li><b>1</b><div><strong>The group comes under pressure</strong><p>Different agents receive locally relevant problems: laboratory failures, staffing shortages, supply constraints, legal demands, and conflicting evidence.</p></div></li>
@@ -182,38 +187,39 @@
           </ol>
         </section>
 
-        <section class="case-results" aria-labelledby="case-results-title">
+        <section class="case-results" data-case-chapter="3" aria-labelledby="case-results-title">
           <div class="case-section-heading"><span>Four continuations of the same moment</span><h3 id="case-results-title">Choose one to see what changed</h3></div>
           <p class="case-decision-key"><strong>Conditional</strong> means an agent is willing to proceed only after named requirements are met. <strong>Defer</strong> means the agent is not ready to decide.</p>
           <div id="research-case-runs" class="research-case-runs"></div>
         </section>
 
-        <section class="case-interpretation" aria-labelledby="case-interpretation-title">
+        <section class="case-interpretation" data-case-chapter="3" aria-labelledby="case-interpretation-title">
           <div><span>Selected continuation</span><h3 id="case-interpretation-title">Why did the group respond this way?</h3></div>
           <div id="case-branch-detail"></div>
         </section>
 
-        <section class="case-evidence" aria-labelledby="case-evidence-title">
+        <section class="case-evidence" data-case-chapter="4" aria-labelledby="case-evidence-title">
           <div><span>Remaining blockers</span><h3 id="case-evidence-title">What the resource package did not solve</h3></div>
           <div id="case-evidence-records"></div>
         </section>
 
-        <section class="case-waltzman">
+        <section class="case-waltzman" data-case-chapter="5">
           <span>Connection to From Minds to Coordination</span>
           <h3>Shared intent is not enough for collective action.</h3>
           <p>The agents still want an outbreak response. What changes is whether their local requirements can fit together in one executable plan. The case tests how distributed pressures reshape coordination readiness—and whether a credible change to the decision environment removes the blockage.</p>
+          <p><strong>Analysis boundary:</strong> this Waltzman-informed interpretation reads retained evidence after execution. It did not govern the agents, choose their decisions, or change the simulated world.</p>
         </section>
 
-        <details class="case-method">
+        <details class="case-method" data-case-chapter="5">
           <summary>Why this is a controlled comparison</summary>
           <p>The agents, their memories, all prior messages, the world state, the AI model, the prompts, and the approval rule are identical when the four continuations begin. Only the resource package changes. The retained execution contains 26 agents, four exact continuations, and 160 model calls.</p>
         </details>
 
-        <section class="case-boundary">
+        <section class="case-boundary" data-case-chapter="5">
           <strong>What this does not establish</strong><p>This is one controlled AI-agent simulation. It demonstrates a possible coordination mechanism; it does not predict how people or real institutions would behave.</p>
         </section>
 
-        <div class="case-actions"><button id="case-open-comparison" class="primary-cta" type="button">Open retained evidence</button><button class="secondary-cta" type="button" data-view="create">Create your own simulation</button></div>
+        <div class="case-actions" data-case-chapter="5"><button id="case-open-comparison" class="primary-cta" type="button">Open retained evidence</button><button class="secondary-cta" type="button" data-view="create">Create your own simulation</button></div>
       </section>
 
       <section id="simulations-view" class="workspace-view simulation-library" aria-labelledby="simulations-title" hidden>
@@ -716,7 +722,7 @@
     </section>
   </main>
 
-  <script src="assets/graph-canvas.js?v=cleanup1" defer></script>
-  <script src="assets/app.js?v=authoring6" defer></script>
+  <script src="assets/graph-canvas.js?v=ontology1" defer></script>
+  <script src="assets/app.js?v=authoring7" defer></script>
 </body>
 </html>

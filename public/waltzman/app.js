@@ -41,6 +41,7 @@ let guideRun = null
 let guideRunLoad = null
 let guideRunError = null
 let caseGraphMode = 'system'
+let caseStudyStep = 0
 let defaultConfiguration = null
 let editableConfiguration = null
 let selectedConfigurationPerson = 'alba_epidemiologist'
@@ -65,6 +66,7 @@ let authoredResult = null
 let authoredResultRoundIndex = 0
 let authoredReplaySceneIndex = 0
 let authoredDraftWalkthroughStep = 0
+let authoredDraftWalkthroughStepCount = 0
 let retainedRunHistory = []
 let retainedRunHistoryLoad = null
 let retainedLiveRunsLoad = null
@@ -939,44 +941,30 @@ function advanceGuide(direction) {
 
 function caseSystemProjection(raw) {
   const indexed = new Map((raw.nodes || []).map((node) => [node.id, node]))
-  const sourceIds = [
-    'technical_pressure_source',
-    'legal_pressure_source',
-    'logistics_pressure_source',
-    'community_pressure_source',
-  ]
   const exactNodes = [
-    ...sourceIds.map((id) => indexed.get(id)).filter(Boolean),
     indexed.get('outbreak_source_delivery'),
     indexed.get('outbreak_stance_recorder'),
     indexed.get('outbreak_decision'),
     indexed.get('regional_allocation_authority'),
-    indexed.get('cso_intervention_recorder'),
   ].filter(Boolean)
   const groups = [
-    ['alba_network', 'Alba response network', 'Five people working through Alba’s evidence, policy, operations, community, and supply relationships.'],
-    ['borin_network', 'Borin response network', 'Five people working through Borin’s evidence, policy, operations, community, and supply relationships.'],
-    ['cyrenia_network', 'Cyrenia response network', 'Five people working through Cyrenia’s evidence, policy, operations, community, and supply relationships.'],
-    ['darsia_network', 'Darsia response network', 'Five people working through Darsia’s evidence, policy, operations, community, and supply relationships.'],
+    ['pressure_sources', 'Four local pressure sources', 'Technical, legal, logistics, and community sources emit bounded exogenous signals. This node is an analytical grouping over four exact source agents.'],
+    ['national_networks', 'Four national response networks', 'Twenty people participate through Alba, Borin, Cyrenia, and Darsia. This node groups their exact local information and stance routes.'],
     ['regional_network', 'Regional coordination network', 'Six people coordinating science, logistics, law, finance, public legitimacy, and the shared decision.'],
-    ['cso_network', 'Defensive coordination cell', 'Three observer roles can detect, diagnose, and select a bounded intervention; they cannot choose participant stances.'],
   ].map(([id, label, description]) => ({id, label, description, kind:'analytical_boundary', state:{projection:'analytical_group'}}))
   const edges = []
   const addEdge = (source, target, description) => edges.push({
     id:`case_${source}_to_${target}`,
     kind:'connection', source, target, enabled:true, description, routeIds:[],
   })
-  sourceIds.forEach((source) => addEdge(source, 'outbreak_source_delivery', 'A retained external source contributes a bounded signal; it cannot choose a participant stance.'))
-  const participantGroups = ['alba_network', 'borin_network', 'cyrenia_network', 'darsia_network', 'regional_network']
+  addEdge('pressure_sources', 'outbreak_source_delivery', 'Four exact external sources contribute bounded signals; none can choose a participant stance.')
+  const participantGroups = ['national_networks', 'regional_network']
   participantGroups.forEach((group) => {
     addEdge('outbreak_source_delivery', group, 'Analytical aggregation of exact observation routes carrying locally relevant signals to people in this network.')
+    addEdge('regional_allocation_authority', group, 'Verified resource-package facts enter through exact observation routes; the authority cannot choose participant stances.')
     addEdge(group, 'outbreak_stance_recorder', 'Analytical aggregation of the network members’ exact autonomous stance routes.')
   })
   addEdge('outbreak_stance_recorder', 'outbreak_decision', 'The exact decision mechanism evaluates the retained participant stances against the fixed gate.')
-  addEdge('outbreak_decision', 'cso_network', 'The defensive cell observes retained decision-environment evidence; it cannot edit participant decisions.')
-  addEdge('cso_network', 'cso_intervention_recorder', 'The defensive planner may select one bounded response class from its authorized catalogue.')
-  addEdge('regional_allocation_authority', 'cso_intervention_recorder', 'External resource facts require independent custody, release authority, and verification.')
-  participantGroups.forEach((group) => addEdge('cso_intervention_recorder', group, 'Intervention facts enter the world; people in the network reassess them autonomously.'))
   return {nodes:[...exactNodes, ...groups], edges}
 }
 
@@ -1063,7 +1051,29 @@ async function ensureCaseNetwork() {
   return caseNetworkLoad
 }
 
+function renderCaseChapter() {
+  const chapters = [
+    {kind:'The world', title:'Inspect the simulated response network.'},
+    {kind:'The coordination problem', title:'See who depends on whom.'},
+    {kind:'Pressure and experiment', title:'See what changed and what stayed fixed.'},
+    {kind:'Result', title:'Compare four continuations of one saved moment.'},
+    {kind:'Agent reasoning', title:'Inspect why the remaining agents deferred.'},
+    {kind:'Waltzman analysis', title:'Connect retained behavior to the coordination theory.'},
+  ]
+  caseStudyStep = Math.max(0, Math.min(caseStudyStep, chapters.length - 1))
+  const chapter = chapters[caseStudyStep]
+  all('[data-case-chapter]').forEach((section) => { section.hidden = Number(section.dataset.caseChapter) !== caseStudyStep })
+  $('#case-walkthrough-kind').textContent = chapter.kind
+  $('#case-walkthrough-progress').textContent = `Step ${caseStudyStep + 1} of ${chapters.length} · ${chapter.title}`
+  $('#case-walkthrough-previous').disabled = caseStudyStep === 0
+  $('#case-walkthrough-next').hidden = caseStudyStep === chapters.length - 1
+  $('#case-walkthrough-next').textContent = 'Next →'
+  if (caseStudyStep === 0) window.requestAnimationFrame(() => renderCaseNetworkGraph())
+  window.scrollTo({top:Math.max(0, $('#case-view').offsetTop - 70), behavior:'smooth'})
+}
+
 function renderResearchCase() {
+  renderCaseChapter()
   if (!resourceFork?.branches?.length) {
     $('#research-case-runs').innerHTML = '<p class="case-data-error"><strong>Research case unavailable.</strong> The exact checkpoint evidence could not be loaded.</p>'
     $('#case-open-comparison').disabled = true
@@ -1115,7 +1125,6 @@ function renderResearchCase() {
   </button>`).join('')
   all('[data-case-branch]').forEach((button) => { button.onclick = () => { state.caseBranch = button.dataset.caseBranch; renderBranch() } })
   renderBranch()
-  renderCaseNetworkGraph()
 
   $('#case-open-comparison').onclick = () => {
     window.open('assets/resource-fork.json', '_blank', 'noopener')
@@ -1213,6 +1222,7 @@ function configureControls() {
   all('[data-view]').forEach((button) => {
     button.onclick = () => {
       if (button.dataset.view === 'create') resetAuthoringWorkspace()
+      if (button.dataset.view === 'case') caseStudyStep = 0
       state.view = button.dataset.view
       renderView()
       syncUrl()
@@ -1221,6 +1231,14 @@ function configureControls() {
   all('[data-case-graph]').forEach((button) => {
     button.onclick = () => { caseGraphMode = button.dataset.caseGraph; renderCaseNetworkGraph() }
   })
+  $('#case-walkthrough-previous').onclick = () => {
+    caseStudyStep = Math.max(0, caseStudyStep - 1)
+    renderCaseChapter()
+  }
+  $('#case-walkthrough-next').onclick = () => {
+    caseStudyStep = Math.min(5, caseStudyStep + 1)
+    renderCaseChapter()
+  }
   $('#guide-previous').onclick = () => advanceGuide(-1)
   $('#guide-next').onclick = () => advanceGuide(1)
   all('[data-open-lab]').forEach((button) => { button.onclick = () => navigateLab('run') })
@@ -1256,7 +1274,7 @@ function configureControls() {
     renderGeneralDraftWalkthrough(authoringDraft.proposal, authoringDraft.configuration_graph)
   }
   $('#create-draft-walkthrough-next').onclick = () => {
-    if (authoredDraftWalkthroughStep < 3) {
+    if (authoredDraftWalkthroughStep < authoredDraftWalkthroughStepCount - 1) {
       authoredDraftWalkthroughStep += 1
       renderGeneralDraftWalkthrough(authoringDraft.proposal, authoringDraft.configuration_graph)
       return
@@ -1441,6 +1459,12 @@ function generalDraftProjection(proposal, compiledGraph = null) {
   for (const moment of proposal.schedule || []) {
     for (const representationId of moment.external_inject_representation_ids || []) addEdge(`scheduled:${moment.moment_id}:${representationId}`, 'connection', representationId, `moment:${moment.moment_id}`, 'This representation is scheduled to enter at this moment.')
   }
+  const orderedMoments = [...(proposal.schedule || [])].sort((left, right) => left.minute - right.minute || left.moment_id.localeCompare(right.moment_id))
+  for (let index = 1; index < orderedMoments.length; index += 1) {
+    const previous = orderedMoments[index - 1]
+    const current = orderedMoments[index]
+    addEdge(`schedule-sequence:${previous.moment_id}:${current.moment_id}`, 'scheduled_after', `moment:${previous.moment_id}`, `moment:${current.moment_id}`, `Minute ${current.minute} is scheduled after minute ${previous.minute}. This orders opportunities, not outcomes.`)
+  }
   return {nodes, edges}
 }
 
@@ -1454,24 +1478,100 @@ function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
   section.hidden = false
   const projection = generalDraftProjection(proposal, compiledGraph)
   const idsByType = (types) => new Set(projection.nodes.filter((item) => types.includes(item.type || item.kind)).map((item) => item.id))
-  const expandedForEdges = (seed, kinds) => {
-    const result = new Set(seed)
-    for (const edge of projection.edges) if (kinds.has(edge.kind) && (result.has(edge.source) || result.has(edge.target))) { result.add(edge.source); result.add(edge.target) }
-    return result
+  const scene = ({kind, title, summary, seeds, edgeKinds, includeNeighbors = true}) => {
+    const seedIds = new Set(seeds)
+    const nodeIds = new Set(seedIds)
+    if (includeNeighbors) {
+      for (const edge of projection.edges) {
+        if (!edgeKinds.has(edge.kind) || (!seedIds.has(edge.source) && !seedIds.has(edge.target))) continue
+        nodeIds.add(edge.source)
+        nodeIds.add(edge.target)
+      }
+    }
+    return {kind, title, summary, nodeIds, edgeKinds}
   }
-  const ids = {
-    people:new Set((proposal.people || []).map((item) => item.entity_id)),
-    world:new Set((proposal.world_records || []).map((item) => item.record_id)),
-    information:expandedForEdges(idsByType(['representation', 'external_source']), new Set(['apparent_source', 'information_delivery'])),
-    systems:expandedForEdges(idsByType(['active_system', 'mechanism']), new Set(['causal_responsibility', 'mechanism_read', 'mechanism_write', 'capability', 'result_recipient', 'resource_input', 'resource_output', 'permitted_route'])),
-    schedule:new Set((proposal.schedule || []).flatMap((item) => [`moment:${item.moment_id}`, ...(item.external_inject_representation_ids || [])])),
+  const scenesForNodes = ({nodes, kind, title, summary, edgeKinds}) => nodes.map((node, index) => scene({
+    kind,
+    title:title(node, index),
+    summary:summary(node, index),
+    seeds:[node.id],
+    edgeKinds,
+  }))
+  const chunkedScenes = ({nodes, size, kind, title, summary, edgeKinds}) => {
+    const chunks = []
+    for (let index = 0; index < nodes.length; index += size) chunks.push(nodes.slice(index, index + size))
+    return chunks.map((chunk, index) => scene({
+      kind,
+      title:title(chunk, index),
+      summary:summary(chunk, index),
+      seeds:chunk.map((item) => item.id),
+      edgeKinds,
+    }))
   }
+  const nodesByType = (types) => projection.nodes.filter((item) => types.includes(item.type || item.kind))
+  const people = nodesByType(['person'])
+  const representations = nodesByType(['representation', 'information'])
+  const activeSystems = nodesByType(['active_system'])
+  const mechanisms = nodesByType(['mechanism'])
+  const placesAndRoutes = idsByType(['place', 'route'])
+  const scheduleIds = new Set((proposal.schedule || []).flatMap((item) => [`moment:${item.moment_id}`, ...(item.external_inject_representation_ids || [])]))
   const steps = [
-    {kind:'People and world', title:'What exists before the simulation begins?', summary:`Objective: ${proposal.question} ${proposal.people.length} modeled people act from their own configured context. Records, resources, places, routes, relationships, and custody are distinct configured elements.`, nodeIds:idsByType(['person', 'record', 'resource', 'place', 'route', 'relationship']), edgeKinds:new Set(['authorized_access', 'placement', 'route_origin', 'route_destination', 'custody', 'relationship_participant'])},
-    {kind:'Information paths', title:'Who can receive which representations?', summary:'These arrows are configured sources and delivery routes. They do not mean the information is true, noticed, believed, or acted upon.', nodeIds:ids.information, edgeKinds:new Set(['apparent_source', 'information_delivery', 'issued_information', 'delivered_to'])},
-    {kind:'Transition authority', title:'What can actually change the world?', summary:`${proposal.active_systems.length} active systems and ${proposal.sensing_rules.length + proposal.resource_transformations.length + proposal.resource_transports.length} exact transition contracts define causal coverage. Attempts still require actors and validation.`, nodeIds:ids.systems, edgeKinds:new Set(['causal_responsibility', 'mechanism_read', 'mechanism_write', 'capability', 'result_recipient', 'resource_input', 'resource_output', 'permitted_route', 'mechanism_binding'])},
-    {kind:'Timeline', title:'When can information and action enter?', summary:`${proposal.schedule.length} configured moments provide opportunities for observations, attempts, and world transitions. They do not pre-author success.`, nodeIds:ids.schedule, edgeKinds:new Set(['connection'])},
-  ]
+    scene({
+      kind:'Actors and relationships',
+      title:'Who can perceive, decide, and attempt actions?',
+      summary:`${people.length} modeled people act from their own configured memories, position, disposition, capabilities, and limitations. Relationship records describe relevant connections; they do not dictate anyone's behavior.`,
+      seeds:people.map((item) => item.id),
+      edgeKinds:new Set(['relationship_participant']),
+    }),
+    scene({
+      kind:'Spatial topology',
+      title:'Which places and routes exist?',
+      summary:'Directed route arrows show configured topology. They indicate where movement may be attempted—not that anything has moved or that a route will work.',
+      seeds:placesAndRoutes,
+      edgeKinds:new Set(['route_origin', 'route_destination']),
+      includeNeighbors:false,
+    }),
+    ...scenesForNodes({
+      nodes:representations,
+      kind:'Information path',
+      title:(node) => `How can “${node.label}” enter the simulation?`,
+      summary:() => 'The apparent source and authorized recipients are explicit. Delivery does not establish truth, attention, belief, or action.',
+      edgeKinds:new Set(['apparent_source', 'information_delivery', 'issued_information', 'delivered_to']),
+    }),
+    ...scenesForNodes({
+      nodes:activeSystems,
+      kind:'Coarse transition system',
+      title:(node) => `What is ${node.label} responsible for?`,
+      summary:(node) => `${node.description} The system owns only the displayed causal subjects; it does not schedule actors or control unrelated state.`,
+      edgeKinds:new Set(['causal_responsibility']),
+    }),
+    ...chunkedScenes({
+      nodes:mechanisms,
+      size:2,
+      kind:'Exact transition contracts',
+      title:(chunk) => chunk.length === 1 ? 'How does this exact contract constrain change?' : `How do these ${chunk.length} exact contracts constrain change?`,
+      summary:(chunk) => `This scene shows ${chunk.map((item) => item.label).join(' and ')}. The arrows state who may attempt them, what they may read or consume, what they may write or produce, and which routes are permitted. Validation—not the actor's prose—determines whether an attempted change commits.`,
+      edgeKinds:new Set(['mechanism_read', 'mechanism_write', 'capability', 'result_recipient', 'resource_input', 'resource_output', 'permitted_route']),
+    }),
+    {
+      kind:'Timeline',
+      title:'When can information and action enter?',
+      summary:`${proposal.schedule.length} configured moments provide opportunities for observation, attempts, and world transitions. Sequence is scheduled; success is not.`,
+      nodeIds:scheduleIds,
+      edgeKinds:new Set(['connection', 'scheduled_after']),
+    },
+    {
+      kind:'Evaluation',
+      title:proposal.analysis_spec ? 'How will the completed run be analyzed?' : 'Is a theory-specific evaluation attached?',
+      summary:proposal.analysis_spec
+        ? `${proposal.analysis_spec.purpose} The ${sentence(proposal.analysis_spec.profile)} lens reads retained evidence after execution; it cannot change the world or any actor's decision.`
+        : 'No analytical framework is selected. The run will retain world changes, observations, action attempts, and evidence without applying Waltzman or another theory-specific lens.',
+      nodeIds:new Set(),
+      edgeKinds:new Set(),
+      informational:true,
+    },
+  ].filter((step) => step.informational || step.nodeIds.size > 0)
+  authoredDraftWalkthroughStepCount = steps.length
   authoredDraftWalkthroughStep = Math.max(0, Math.min(authoredDraftWalkthroughStep, steps.length - 1))
   const step = steps[authoredDraftWalkthroughStep]
   const visibleNodes = projection.nodes.filter((item) => step.nodeIds.has(item.id))
@@ -1483,8 +1583,25 @@ function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
   $('#create-draft-walkthrough-summary').textContent = step.summary
   $('#create-draft-walkthrough-previous').disabled = authoredDraftWalkthroughStep === 0
   $('#create-draft-walkthrough-next').textContent = authoredDraftWalkthroughStep === steps.length - 1 ? 'Review and approve ↓' : 'Next →'
+  $('#create-draft-walkthrough-selection').textContent = step.informational
+    ? 'Analysis is a read-only projection over retained evidence.'
+    : 'Select a visible item or path to inspect its configured meaning.'
   $('#create-draft-network-status').textContent = `${visibleNodes.length} configured items · ${visibleEdges.length} configured paths · no runtime event is implied`
   const graph = $('#create-draft-network-graph')
+  if (step.informational) {
+    window.CyberneticGraph?.clear?.(graph)
+    graph.innerHTML = `<div class="analysis-boundary-diagram">
+      <article><span>1</span><strong>Simulation executes</strong><small>Actors and transition authorities may change canonical world state.</small></article>
+      <i aria-hidden="true">→</i>
+      <article><span>2</span><strong>Evidence is retained</strong><small>Observations, attempts, validations, commits, and outcomes remain auditable.</small></article>
+      <i aria-hidden="true">→</i>
+      <article><span>3</span><strong>${escapeHtml(proposal.analysis_spec ? sentence(proposal.analysis_spec.profile) : 'No selected lens')}</strong><small>${escapeHtml(proposal.analysis_spec ? 'Reads evidence after the run. Cannot write world state.' : 'Raw evidence remains available without a theory-specific score.')}</small></article>
+    </div>`
+    $('#create-draft-network-status').textContent = proposal.analysis_spec
+      ? 'Selected analysis reads retained evidence after execution · it has no transition authority'
+      : 'No theory-specific analysis is attached · execution evidence is still retained'
+    return
+  }
   if (!visibleNodes.length || !window.CyberneticGraph) {
     graph.innerHTML = '<p class="create-result-no-graph">No configured graph items are available for this step.</p>'
     return

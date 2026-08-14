@@ -59,6 +59,18 @@ class _PageShape(HTMLParser):
             self.scripts.append(attributes.get("src") or "")
 
 
+def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> None:
+    page = PAGE.read_text(encoding="utf-8")
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    assert 'id="case-walkthrough-next"' in page
+    assert all(f'data-case-chapter="{index}"' in page for index in range(6))
+    assert "authoredDraftWalkthroughStepCount - 1" in script
+    assert "How can “${node.label}” enter the simulation?" in script
+    assert "No theory-specific analysis is attached" in script
+    assert "analysis-boundary-diagram" in script
+
+
 def _dataset() -> dict[str, object]:
     return json.loads(DATA.read_text(encoding="utf-8"))
 
