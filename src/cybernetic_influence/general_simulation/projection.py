@@ -3,24 +3,59 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
-from .compiler import CompiledGeneralSimulationV1
 from .analysis_projection import project_waltzman_analysis
-from .models import GeneralGroupSimulationResult
+from .authoring_models import GeneralSimulationProposalV1
+from .compiler import CompiledGeneralSimulationV1, CompiledGeneralSimulationV2
+from .contracts_v2 import ScenarioSpecV2
+from .models import GeneralGroupSimulationResult, GeneralGroupSimulationResultV2
 
 
 def project_general_run(
-    compiled: CompiledGeneralSimulationV1,
-    result: GeneralGroupSimulationResult,
+    compiled: CompiledGeneralSimulationV1 | CompiledGeneralSimulationV2,
+    result: GeneralGroupSimulationResult | GeneralGroupSimulationResultV2,
     *,
     run_id: str,
     created_at: str,
     execution: str,
+    presentation_question: str | None = None,
 ) -> dict[str, object]:
-    proposal = compiled.proposal
+    proposal: GeneralSimulationProposalV1 | ScenarioSpecV2
+    if isinstance(compiled, CompiledGeneralSimulationV2):
+        if not isinstance(result, GeneralGroupSimulationResultV2):
+            raise TypeError("V2 compilation requires a V2 run result")
+        v2 = True
+        proposal = compiled.scenario
+        question = presentation_question or compiled.scenario.description
+        scenario_id = compiled.scenario.scenario_id
+        proposal_kind = "general_world_v2"
+        analysis_spec: dict[str, object] | None = None
+        theory_analysis: dict[str, object] | None = None
+    else:
+        if not isinstance(result, GeneralGroupSimulationResult):
+            raise TypeError("V1 compilation requires a V1 run result")
+        v2 = False
+        proposal = compiled.proposal
+        question = compiled.proposal.question
+        scenario_id = compiled.proposal.simulation_id
+        proposal_kind = compiled.proposal.proposal_kind
+        analysis_spec = (
+            compiled.proposal.analysis_spec.model_dump(mode="json")
+            if compiled.proposal.analysis_spec is not None
+            else None
+        )
+        theory_analysis = (
+            project_waltzman_analysis(compiled, result)
+            if compiled.proposal.analysis_spec is not None
+            and compiled.proposal.analysis_spec.profile == "waltzman_coordination_v1"
+            else None
+        )
     state = result.final_state
-    nodes = [dict(item) for item in compiled.configuration_graph["nodes"]]
+    nodes = [
+        dict(item)
+        for item in cast(list[dict[str, object]], compiled.configuration_graph["nodes"])
+    ]
     for item in nodes:
         node_id = str(item["id"])
         if node_id in state.records:
@@ -30,7 +65,10 @@ def project_general_run(
             item["quantity"] = state.resources[node_id].quantity
         elif node_id in state.routes:
             item["operational"] = state.routes[node_id].operational
-    edges = [dict(item) for item in compiled.configuration_graph["edges"]]
+    edges = [
+        dict(item)
+        for item in cast(list[dict[str, object]], compiled.configuration_graph["edges"])
+    ]
     traces: list[dict[str, object]] = []
     repaired_actor_trace_ids = {
         receipt.trace_id.removesuffix("/repair/1")
@@ -67,7 +105,7 @@ def project_general_run(
                         {
                             "document_kind": "decision_round_snapshot",
                             "round_index": context["base_revision"] + 1,
-                            "collective_question": proposal.question,
+                            "collective_question": question,
                             "round_feedback": "retained semantic intents and committed world evidence",
                         }
                     ),
@@ -126,18 +164,13 @@ def project_general_run(
         ),
         None,
     )
-    theory_analysis = (
-        project_waltzman_analysis(compiled, result)
-        if proposal.analysis_spec is not None
-        and proposal.analysis_spec.profile == "waltzman_coordination_v1"
-        else None
-    )
     return {
         "run_id": run_id,
         "created_at": created_at,
         "status": "completed",
-        "scenario": proposal.simulation_id,
+        "scenario": scenario_id,
         "profile": "general_world_v1",
+        "execution_contract": "general_world_v2" if v2 else "general_world_v1",
         "arm": "approved_draft",
         "execution": execution,
         "model_calls": len(result.model_calls),
@@ -148,7 +181,7 @@ def project_general_run(
             f"scheduled moments; {accepted} joint transactions committed and {rejected} were rejected."
         ),
         "story": {
-            "question": proposal.question,
+            "question": question,
             "headline": proposal.title,
             "summary": proposal.description,
         },
@@ -164,12 +197,26 @@ def project_general_run(
             ),
         },
         "authoring": {
-            "proposal_kind": proposal.proposal_kind,
-            "proposal_digest": result.proposal_digest,
+            "proposal_kind": proposal_kind,
+            "proposal_digest": (
+                result.scenario_digest
+                if isinstance(result, GeneralGroupSimulationResultV2)
+                else result.proposal_digest
+            ),
+            "scenario_digest": (
+                result.scenario_digest
+                if isinstance(result, GeneralGroupSimulationResultV2)
+                else result.proposal_digest
+            ),
+            "run_spec_digest": (
+                result.run_spec_digest
+                if isinstance(result, GeneralGroupSimulationResultV2)
+                else None
+            ),
             "registry_digest": result.registry_digest,
             "title": proposal.title,
             "description": proposal.description,
-            "question": proposal.question,
+            "question": question,
             "people": [
                 {
                     "entity_id": person.entity_id,
@@ -179,11 +226,7 @@ def project_general_run(
                 for person in proposal.people
             ],
             "coverage": compiled.coverage.model_dump(mode="json"),
-            "analysis_spec": (
-                proposal.analysis_spec.model_dump(mode="json")
-                if proposal.analysis_spec is not None
-                else None
-            ),
+            "analysis_spec": analysis_spec,
         },
         "nodes": nodes,
         "edges": edges,

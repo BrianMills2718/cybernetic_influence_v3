@@ -48,9 +48,20 @@ from cybernetic_influence.authoring.store import (
 from cybernetic_influence.general_simulation.authoring_models import (
     GeneralSimulationProposalV1,
 )
-from cybernetic_influence.general_simulation.compiler import GeneralCompilationError
+from cybernetic_influence.general_simulation.analysis_service import (
+    analyze_run_evidence_v2,
+    build_run_evidence_bundle_v2,
+)
+from cybernetic_influence.general_simulation.compiler import (
+    GeneralCompilationError,
+    compile_general_simulation_v2,
+)
+from cybernetic_influence.general_simulation.contracts_v2 import (
+    adapt_general_proposal_v1,
+)
 from cybernetic_influence.general_simulation.projection import project_general_run
-from cybernetic_influence.general_simulation.runner import run_general_simulation
+from cybernetic_influence.general_simulation.runner import run_general_simulation_v2
+from cybernetic_influence.general_simulation.study_models import adapt_authored_bundle_v1
 
 from cybernetic_influence import __version__
 from cybernetic_influence.active_runtime import (
@@ -1427,6 +1438,18 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
     authoring = document.get("authoring")
     if not isinstance(authoring, dict):
         authoring = {}
+    raw_evidence_bundle = document.get("run_evidence_bundle")
+    evidence_bundle = (
+        raw_evidence_bundle if isinstance(raw_evidence_bundle, dict) else {}
+    )
+    raw_evidence_records = evidence_bundle.get("evidence_records")
+    evidence_records = (
+        raw_evidence_records if isinstance(raw_evidence_records, list) else []
+    )
+    raw_analysis_results = document.get("analysis_results")
+    analysis_results = (
+        raw_analysis_results if isinstance(raw_analysis_results, list) else []
+    )
     raw_authored_people = authoring.get("people")
     authored_people = (
         raw_authored_people if isinstance(raw_authored_people, list) else []
@@ -1888,6 +1911,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "arm": document.get("arm"),
         "execution": document.get("execution"),
         "profile": document.get("profile"),
+        "execution_contract": document.get("execution_contract"),
         "title": authoring.get("title"),
         "description": authoring.get("description"),
         "template_id": authoring.get("template_id"),
@@ -1911,6 +1935,16 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "simulation_replay": replay,
         "coordination_measurement_readout": readout,
         "theory_analysis": document.get("theory_analysis"),
+        "analysis_results": analysis_results,
+        "evidence_bundle": (
+            {
+                "bundle_id": evidence_bundle.get("bundle_id"),
+                "record_digest": evidence_bundle.get("record_digest"),
+                "evidence_record_count": len(evidence_records),
+            }
+            if evidence_bundle
+            else None
+        ),
         "evidence_counts": {
             "events": len(raw_events)
             if isinstance(raw_events, list)
@@ -3167,7 +3201,7 @@ def create_app(
                     detail="general-world simulations require a selected live model route",
                 )
             try:
-                general_compiled = authoring.approved_general_compile(draft_id)
+                approved_v1 = authoring.approved_general_compile(draft_id)
             except (ValueError, GeneralCompilationError) as error:
                 raise HTTPException(status_code=409, detail=str(error)) from error
             worker_execution = bool(getattr(authored_live_worker_context, "active", False))
@@ -3178,6 +3212,18 @@ def create_app(
                 str(authored_live_worker_context.run_id)
                 if worker_execution
                 else f"run_{uuid4().hex[:12]}"
+            )
+            scenario_v2, run_spec_v2 = adapt_general_proposal_v1(
+                approved_v1.proposal,
+                run_id=run_id,
+                execution_mode="live",
+                model=effective_llm.model,
+                reasoning_effort=effective_llm.agent_reasoning_effort,
+                per_call_budget=effective_llm.participant_per_call_ceiling,
+                per_run_budget=effective_llm.max_total_cost,
+            )
+            general_compiled = compile_general_simulation_v2(
+                scenario_v2, run_spec_v2
             )
             if worker_execution:
                 try:
@@ -3191,7 +3237,7 @@ def create_app(
                     "run_id": run_id,
                     "created_at": created_at,
                     "status": "running",
-                    "scenario": general_compiled.proposal.simulation_id,
+                    "scenario": scenario_v2.scenario_id,
                     "profile": "general_world_v1",
                     "arm": "approved_draft",
                     "execution": "live",
@@ -3200,19 +3246,21 @@ def create_app(
                     "llm_configuration": effective_llm.model_dump(mode="json"),
                     "authoring": {
                         "draft_id": draft_id,
-                        "proposal_kind": "general_world_v1",
-                        "proposal_digest": general_compiled.proposal_digest,
+                        "proposal_kind": "general_world_v2",
+                        "proposal_digest": general_compiled.scenario_digest,
+                        "scenario_digest": general_compiled.scenario_digest,
+                        "run_spec_digest": general_compiled.run_spec_digest,
                         "registry_digest": general_compiled.registry_digest,
-                        "title": general_compiled.proposal.title,
-                        "description": general_compiled.proposal.description,
-                        "question": general_compiled.proposal.question,
+                        "title": scenario_v2.title,
+                        "description": scenario_v2.description,
+                        "question": approved_v1.proposal.question,
                         "people": [
                             {
                                 "entity_id": person.entity_id,
                                 "label": person.label,
                                 "position": person.position,
                             }
-                            for person in general_compiled.proposal.people
+                            for person in scenario_v2.people
                         ],
                         "coverage": general_compiled.coverage.model_dump(mode="json"),
                     },
@@ -3265,19 +3313,16 @@ def create_app(
                         "live_progress": [*retained_history, {**update, "sequence": sequence}],
                         "progress_sequence": sequence,
                         "model_calls": completed_moment_count
-                        * (len(general_compiled.proposal.people) + 1),
+                        * (len(scenario_v2.people) + 1),
                         "general_checkpoint": checkpoint,
                     }
                 )
 
             try:
-                general_result = run_general_simulation(
+                general_result = run_general_simulation_v2(
                     general_compiled,
-                    run_id=run_id,
                     call=general_simulation_call,
                     progress_observer=retain_general_progress,
-                    model=effective_llm.model,
-                    reasoning_effort=effective_llm.agent_reasoning_effort,
                 )
                 projected = project_general_run(
                     general_compiled,
@@ -3285,7 +3330,23 @@ def create_app(
                     run_id=run_id,
                     created_at=created_at,
                     execution="live",
+                    presentation_question=approved_v1.proposal.question,
                 )
+                evidence_bundle = build_run_evidence_bundle_v2(
+                    general_compiled, general_result
+                )
+                authored_bundle = adapt_authored_bundle_v1(
+                    approved_v1.proposal, run_id=run_id
+                )
+                projected["run_evidence_bundle"] = evidence_bundle.model_dump(
+                    mode="json"
+                )
+                projected["analysis_results"] = [
+                    analyze_run_evidence_v2(
+                        evidence_bundle, analysis_spec
+                    ).model_dump(mode="json")
+                    for analysis_spec in authored_bundle.analyses
+                ]
                 projected["llm_configuration"] = initial["llm_configuration"]
                 retained = runs.get(run_id)
                 projected["live_progress"] = retained.get("live_progress", [])

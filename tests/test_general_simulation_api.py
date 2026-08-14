@@ -21,9 +21,8 @@ from cybernetic_influence.general_simulation.authoring_models import (
 from cybernetic_influence.general_simulation.models import (
     ActorDecision,
     Assimilation,
-    ObjectiveAssessment,
     SemanticActionIntent,
-    WorldTransaction,
+    WorldTransactionProposal,
 )
 from cybernetic_influence.run_configuration import EffectiveRunLlmConfiguration
 
@@ -139,10 +138,12 @@ def test_general_replay_focuses_changed_nodes_and_edges() -> None:
 class _GeneralRuntimeFake:
     def __init__(self) -> None:
         self.actor_counter = 0
+        self.supplied_inputs: list[dict[str, object]] = []
 
     def __call__(self, *args: Any, **kwargs: Any) -> tuple[object, object]:
         response_model = kwargs["response_model"]
         user = json.loads(args[1][1]["content"])
+        self.supplied_inputs.append(user)
         if response_model is ActorDecision:
             self.actor_counter += 1
             context = user["actor_context"]
@@ -169,7 +170,7 @@ class _GeneralRuntimeFake:
                     stated_rationale="Available evidence supports a bounded attempt.",
                 ),
             ), SimpleNamespace(provider="fixture")
-        return WorldTransaction(
+        return WorldTransactionProposal(
             transaction_id=f"transaction_{user['moment']['moment_id']}",
             base_revision=user["requirements"]["base_revision"],
             authority_id=user["requirements"]["authority_id"],
@@ -179,16 +180,6 @@ class _GeneralRuntimeFake:
             consequences=[],
             evidence_refs=user["requirements"]["intent_ids"],
             stated_rationale="Retain the world while recording joint review.",
-            objective_assessment=(
-                ObjectiveAssessment(
-                    status="unresolved",
-                    summary="The retained evidence does not establish completion of the objective.",
-                    evidence_refs=user["requirements"]["intent_ids"],
-                    unresolved_requirements=["A verified operational result is still required."],
-                )
-                if user["requirements"]["is_final_moment"]
-                else None
-            ),
         ), SimpleNamespace(provider="fixture")
 
 
@@ -399,7 +390,21 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         time.sleep(0.01)
     assert reopened["status"] == "completed", reopened
     assert reopened["profile"] == "general_world_v1"
+    assert reopened["execution_contract"] == "general_world_v2"
+    assert reopened["authoring"]["proposal_kind"] == "general_world_v2"
+    assert reopened["authoring"]["scenario_digest"]
+    assert reopened["authoring"]["run_spec_digest"]
     assert reopened["model_calls"] == 15
+    assert reopened["general_simulation"]["run_id"] == run_id
+    assert "question" not in reopened["general_simulation"]
+    assert reopened["run_evidence_bundle"]["run_id"] == run_id
+    assert len(reopened["analysis_results"]) == 1
+    assert reopened["analysis_results"][0]["coverage_status"] == "supported"
+    assert all(
+        "research_question" not in supplied
+        for supplied in runtime_call.supplied_inputs
+    )
+    assert all("analysis_spec" not in supplied for supplied in runtime_call.supplied_inputs)
     assert reopened["general_simulation"]["adoption"]["engine_class"].endswith(
         "simultaneous.Simultaneous"
     )
@@ -409,6 +414,10 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     assert summary.status_code == 200, summary.text
     summary_payload = summary.json()
     assert summary_payload["profile"] == "general_world_v1"
+    assert summary_payload["execution_contract"] == "general_world_v2"
+    assert summary_payload["evidence_bundle"]["record_digest"]
+    assert summary_payload["evidence_bundle"]["evidence_record_count"] > 0
+    assert len(summary_payload["analysis_results"]) == 1
     assert summary_payload["causal_moments"] == 3
     assert summary_payload["participant_model_calls"] == 15
     assert summary_payload["simulation_replay"]["scenes"]
@@ -451,16 +460,10 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     outcome_scene = replay_scenes[-1]
     assert len(outcome_scene["visible_node_ids"]) <= 12
     assert len(outcome_scene["visible_edge_ids"]) <= 18
-    assert outcome_scene["summary"] == (
-        "The retained evidence does not establish completion of the objective."
-    )
+    assert outcome_scene["summary"] == "Retain the world while recording joint review."
     assert outcome_scene["facts"] == [
-        {"label": "Objective assessment", "value": "unresolved"},
         {"label": "Committed transitions", "value": "3"},
         {"label": "Final world revision", "value": "3"},
     ]
-    assert summary_payload["theory_analysis"]["framework"] == (
-        "Waltzman-informed diagnostic projection"
-    )
-    assert len(summary_payload["theory_analysis"]["findings"]) == 5
+    assert summary_payload["theory_analysis"] is None
     assert runtime_call.actor_counter == call_count
