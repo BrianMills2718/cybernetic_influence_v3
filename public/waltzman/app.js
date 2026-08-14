@@ -2561,14 +2561,17 @@ function renderAuthoredResult(result) {
   $('.create-hero .case-label').textContent = 'Completed simulation'
   $('#create-title').textContent = result.title || 'Simulation result'
   const replayQuestion = result.simulation_replay?.question
+  const questionLabel = result.execution_contract === 'general_world_v2'
+    ? 'Your review question'
+    : 'Collective question'
   $('.create-hero > p').textContent = replayQuestion
-    ? `Collective question: ${replayQuestion} Advance through the retained run one step at a time.`
+    ? `${questionLabel}: ${replayQuestion} Advance through the retained run one step at a time.`
     : 'Advance through this retained simulation one step at a time.'
   $('#create-run-heading').textContent = 'Simulation complete'
   $('#create-run-detail').textContent = 'Replay the retained information, decisions, and collective outcome below.'
   $('#create-result-title').textContent = 'Follow what entered the system and how people responded.'
   $('#create-result-summary').textContent = replayQuestion
-    ? `Collective question: ${replayQuestion}`
+    ? `${questionLabel}: ${replayQuestion}`
     : 'Advance one retained step at a time.'
   const gateChecks = result.outcome?.gate_checks
   const generalWorldResult = result.profile === 'general_world_v1'

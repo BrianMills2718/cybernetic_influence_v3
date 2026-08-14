@@ -885,6 +885,7 @@ def _simulation_replay(
     network_edges: list[dict[str, object]],
     raw_moments: object,
     general_world: bool = False,
+    question_is_analyst_framing: bool = False,
     node_overrides_by_revision: dict[int, list[dict[str, str]]] | None = None,
 ) -> dict[str, object]:
     """Build one small, evidence-backed walkthrough independent of page layout."""
@@ -1059,7 +1060,13 @@ def _simulation_replay(
     add_scene(
         scene_id="question",
         kind="question",
-        scene_title=("The collective question" if gate_ids else "The operational objective"),
+        scene_title=(
+            "Your review question"
+            if question_is_analyst_framing
+            else "The collective question"
+            if gate_ids
+            else "The operational objective"
+        ),
         scene_summary=question,
         visible_nodes=gate_ids,
         visible_edges=[],
@@ -1897,6 +1904,9 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         network_edges=network_edges,
         raw_moments=raw_moments,
         general_world=document.get("profile") == "general_world_v1",
+        question_is_analyst_framing=(
+            document.get("execution_contract") == "general_world_v2"
+        ),
         node_overrides_by_revision=_general_world_node_overrides(
             document.get("general_simulation")
         ),
