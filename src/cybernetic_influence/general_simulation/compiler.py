@@ -152,6 +152,81 @@ def compile_general_simulation(
                 f"transformation {transformation.transformation_id} names unknown inventory record "
                 f"{transformation.public_inventory_record_id}"
             )
+    resource_custodians = (
+        {item.resource_id: item.custodian_id for item in proposal.resource_extension.stocks}
+        if proposal.resource_extension else {}
+    )
+    place_ids = (
+        {item.place_id for item in proposal.spatial_extension.places}
+        if proposal.spatial_extension else set()
+    )
+    route_ids = (
+        {item.link_id for item in proposal.spatial_extension.links}
+        if proposal.spatial_extension else set()
+    )
+    route_endpoints = (
+        {
+            item.link_id: (item.origin_place_id, item.destination_place_id)
+            for item in proposal.spatial_extension.links
+        }
+        if proposal.spatial_extension else {}
+    )
+    for transport in proposal.resource_transports:
+        unknown_resources = sorted(
+            {transport.source_resource_id, transport.destination_resource_id}
+            - resource_ids
+        )
+        if unknown_resources:
+            raise GeneralCompilationError(
+                f"transport {transport.transport_id} names unknown resources: "
+                + ", ".join(unknown_resources)
+            )
+        unknown_operators = sorted(set(transport.operator_ids) - actor_ids)
+        if unknown_operators:
+            raise GeneralCompilationError(
+                f"transport {transport.transport_id} names unknown operators: "
+                + ", ".join(unknown_operators)
+            )
+        if resource_custodians.get(transport.source_resource_id) != transport.source_custodian_id:
+            raise GeneralCompilationError(
+                f"transport {transport.transport_id} source custodian does not match "
+                f"resource {transport.source_resource_id}"
+            )
+        if resource_custodians.get(transport.destination_resource_id) != transport.destination_custodian_id:
+            raise GeneralCompilationError(
+                f"transport {transport.transport_id} destination custodian does not match "
+                f"resource {transport.destination_resource_id}"
+            )
+        unknown_places = sorted(
+            {transport.origin_place_id, transport.destination_place_id} - place_ids
+        )
+        if unknown_places:
+            raise GeneralCompilationError(
+                f"transport {transport.transport_id} names unknown places: "
+                + ", ".join(unknown_places)
+            )
+        unknown_routes = sorted(set(transport.allowed_route_ids) - route_ids)
+        if unknown_routes:
+            raise GeneralCompilationError(
+                f"transport {transport.transport_id} names unknown routes: "
+                + ", ".join(unknown_routes)
+            )
+        mismatched_routes = sorted(
+            route_id
+            for route_id in transport.allowed_route_ids
+            if route_endpoints.get(route_id)
+            != (transport.origin_place_id, transport.destination_place_id)
+        )
+        if mismatched_routes:
+            raise GeneralCompilationError(
+                f"transport {transport.transport_id} allowed routes do not match its "
+                "directed endpoints: " + ", ".join(mismatched_routes)
+            )
+        if transport.arrival_record_id not in record_ids:
+            raise GeneralCompilationError(
+                f"transport {transport.transport_id} names unknown arrival record "
+                f"{transport.arrival_record_id}"
+            )
     for moment in proposal.schedule:
         unknown = sorted(
             set(moment.external_inject_representation_ids) - representation_ids

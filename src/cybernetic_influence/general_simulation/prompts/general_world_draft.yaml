@@ -14,6 +14,7 @@ system: |
   7. fidelity assumptions, declared invariants, requested analyses, and genuinely unresolved user choices.
   8. sensing_rules for every material inspection that must turn scoped hidden canonical state into an explicit public finding;
   9. resource_transformations for every material production process, including positive input quantities, output quantity, batch limit, permitted operators, and the public inventory record updated alongside conserved resources.
+  10. resource_transports for every material movement between declared resource custodians, including a positive quantity, origin and destination places, allowed directed routes, permitted operators, destination stock, and the exact arrival-record quantity, usable-quantity, and arrival-minute keys.
 
   Never provide implementation references, Python, prompt text, executable predicates, tools, ports, interface bindings, authority IDs, patch grammars, or runtime class names. A trusted compiler resolves requested behavior against installed components after generation. Do not claim that requested behavior is supported.
 

@@ -195,6 +195,23 @@ class ResourceTransformationProposalV1(_StrictModel):
         return self
 
 
+class ResourceTransportProposalV1(_StrictModel):
+    transport_id: str = Field(pattern=_ID)
+    operator_ids: list[str] = Field(min_length=1)
+    source_resource_id: str = Field(pattern=_ID)
+    destination_resource_id: str = Field(pattern=_ID)
+    source_custodian_id: str = Field(pattern=_ID)
+    destination_custodian_id: str = Field(pattern=_ID)
+    quantity: float = Field(gt=0)
+    origin_place_id: str = Field(pattern=_ID)
+    destination_place_id: str = Field(pattern=_ID)
+    allowed_route_ids: list[str] = Field(min_length=1)
+    arrival_record_id: str = Field(pattern=_ID)
+    arrival_quantity_key: str = Field(pattern=_ID)
+    usable_quantity_key: str = Field(pattern=_ID)
+    arrival_minute_key: str = Field(pattern=_ID)
+
+
 class GeneralSimulationProposalV1(_StrictModel):
     schema_version: Literal[1]
     proposal_kind: Literal["general_world_v1"]
@@ -213,6 +230,7 @@ class GeneralSimulationProposalV1(_StrictModel):
     schedule: list[ScheduledMomentProposalV1] = Field(min_length=1)
     sensing_rules: list[SensingRuleProposalV1]
     resource_transformations: list[ResourceTransformationProposalV1]
+    resource_transports: list[ResourceTransportProposalV1]
     fidelity_assumptions: list[str] = Field(min_length=1)
     declared_invariants: list[str]
     analysis_requests: list[str]
@@ -227,6 +245,7 @@ class GeneralSimulationProposalV1(_StrictModel):
         migrated = dict(value)
         migrated.setdefault("sensing_rules", [])
         migrated.setdefault("resource_transformations", [])
+        migrated.setdefault("resource_transports", [])
         return migrated
 
     @model_validator(mode="after")

@@ -489,11 +489,17 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "preconditioned resource quantity changes and matching public inventory-record "
                     "changes. Quantities may never become negative. Do not merely record that an attempt "
                     "was requested when the supplied world state lets this authority adjudicate its result."
-                    " Apply only declared sensing_rules and resource_transformations. A sensing rule "
+                    " Apply only declared sensing_rules, resource_transformations, and resource_transports. A sensing rule "
                     "reveals only its named hidden keys when a permitted observer actually attempts it. "
                     "A transformation may execute only when a permitted operator attempts it and every "
                     "declared input quantity is available; apply at most maximum_batches and update the "
-                    "named public inventory record in the same transaction."
+                    "named public inventory record in the same transaction. A resource transport may "
+                    "execute only when a permitted operator attempts it, the source quantity is available, "
+                    "and one allowed directed route connects the declared origin and destination and is "
+                    "operational. Move no more than the declared quantity by decrementing the source resource "
+                    "and incrementing the destination resource in one transaction. Derive arrival minute from "
+                    "the current moment plus the selected route's public travel_time_minutes, and update only "
+                    "the three declared arrival-record keys. A transport attempt is not permission or success."
                 ),
                 user=json.dumps(
                     {
@@ -517,6 +523,10 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "resource_transformations": [
                             item.model_dump(mode="json")
                             for item in self._proposal.resource_transformations
+                        ],
+                        "resource_transports": [
+                            item.model_dump(mode="json")
+                            for item in self._proposal.resource_transports
                         ],
                         "requirements": {
                             "authority_id": self._authority_id,

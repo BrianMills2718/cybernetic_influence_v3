@@ -9,6 +9,8 @@ from pydantic import ValidationError
 from cybernetic_influence.general_simulation.authoring_models import (
     ComponentRequestV1,
     GeneralSimulationProposalV1,
+    ResourceStockProposalV1,
+    ResourceTransportProposalV1,
 )
 from cybernetic_influence.general_simulation.compiler import (
     GeneralCompilationError,
@@ -73,6 +75,44 @@ def test_unknown_material_behavior_remains_visibly_unapprovable() -> None:
     assert item.classification == "unsupported"
     assert item.blocking
     assert compiled.coverage.blocking_request_ids == ["quantum_prediction"]
+
+
+def test_resource_transport_requires_declared_directed_route_and_custody() -> None:
+    proposal = load_proposal("port_coordination.json")
+    assert proposal.resource_extension is not None
+    proposal.resource_extension.stocks.append(
+        ResourceStockProposalV1(
+            resource_id="received_fuel",
+            quantity=0,
+            custodian_id="port_coordinator",
+            conserved=True,
+        )
+    )
+    transport = ResourceTransportProposalV1(
+        transport_id="move_dispatch_fuel",
+        operator_ids=["trucking_dispatcher"],
+        source_resource_id="dispatch_fuel",
+        destination_resource_id="received_fuel",
+        source_custodian_id="trucking_dispatcher",
+        destination_custodian_id="port_coordinator",
+        quantity=10,
+        origin_place_id="outside_port",
+        destination_place_id="port",
+        allowed_route_ids=["main_bridge"],
+        arrival_record_id="relief_cargo",
+        arrival_quantity_key="received_fuel_quantity",
+        usable_quantity_key="usable_fuel_quantity",
+        arrival_minute_key="fuel_arrival_minute",
+    )
+    proposal.resource_transports.append(transport)
+
+    compile_general_simulation(proposal)
+
+    proposal.resource_transports[0] = transport.model_copy(
+        update={"origin_place_id": "port", "destination_place_id": "outside_port"}
+    )
+    with pytest.raises(GeneralCompilationError, match="directed endpoints"):
+        compile_general_simulation(proposal)
 
 
 @pytest.mark.parametrize(

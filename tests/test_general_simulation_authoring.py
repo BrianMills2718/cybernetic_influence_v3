@@ -177,17 +177,20 @@ def test_general_proposal_schema_contains_no_executable_reference_field() -> Non
     assert "python" not in schema.lower()
     assert "sensing_rules" in raw_schema["required"]
     assert "resource_transformations" in raw_schema["required"]
+    assert "resource_transports" in raw_schema["required"]
 
 
 def test_pre_transition_contract_proposal_migrates_to_empty_contract_lists() -> None:
     raw = json.loads((FIXTURES / "port_coordination.json").read_text(encoding="utf-8"))
     raw.pop("sensing_rules", None)
     raw.pop("resource_transformations", None)
+    raw.pop("resource_transports", None)
 
     parsed = GeneralSimulationProposalV1.model_validate(raw)
 
     assert parsed.sensing_rules == []
     assert parsed.resource_transformations == []
+    assert parsed.resource_transports == []
 
 
 def test_general_proposal_schema_has_no_open_object_maps() -> None:
