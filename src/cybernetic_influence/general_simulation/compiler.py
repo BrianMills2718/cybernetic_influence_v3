@@ -315,6 +315,32 @@ def compile_general_simulation(
             "transition contracts have no scheduled execution moment: "
             + ", ".join(missing_contracts)
         )
+    request_contracts = {
+        request.request_id: set(request.transition_contract_ids)
+        for request in proposal.component_requests
+    }
+    unclaimed_contracts = sorted(
+        contract_ids - set().union(*request_contracts.values())
+        if request_contracts
+        else contract_ids
+    )
+    if unclaimed_contracts:
+        raise GeneralCompilationError(
+            "transition contracts are not bound to a component request: "
+            + ", ".join(unclaimed_contracts)
+        )
+    for moment in proposal.schedule:
+        for request_id in moment.active_component_request_ids:
+            inactive_contracts = sorted(
+                request_contracts[request_id]
+                - set(moment.active_transition_contract_ids)
+            )
+            if inactive_contracts:
+                raise GeneralCompilationError(
+                    f"moment {moment.moment_id} activates component request {request_id} "
+                    "without its transition contracts: "
+                    + ", ".join(inactive_contracts)
+                )
     sensing_field_counts: dict[tuple[str, str], int] = {}
     for rule in proposal.sensing_rules:
         for hidden_key in rule.reveal_hidden_keys:
@@ -390,15 +416,26 @@ def compile_general_simulation(
     for request in proposal.component_requests:
         unknown_subjects = sorted(set(request.subject_refs) - declared_refs)
         unknown_reads = sorted(set(request.required_reads) - declared_refs)
-        entry, evidence = resolve_request(
-            request, selected_registry, actor_ids=actor_ids
-        )
+        entry, evidence = resolve_request(request, selected_registry, actor_ids=actor_ids)
         evidence = list(evidence)
+        if request.transition_contract_ids:
+            classification = "exact"
+            component_ref = "transition_contracts:" + ",".join(
+                request.transition_contract_ids
+            )
+            can_change = ["only the state changes declared by its exact transition contracts"]
+            cannot_change = ["state outside its exact transition-contract grammar"]
+            assumptions = ["the actor must still select the contract and pass validation"]
+            evidence.append(
+                "bound exact transition contracts: "
+                + ", ".join(request.transition_contract_ids)
+            )
+            entry = None
         if unknown_subjects:
             evidence.append(f"unknown subject refs: {', '.join(unknown_subjects)}")
         if unknown_reads:
             evidence.append(f"unknown required reads: {', '.join(unknown_reads)}")
-        if entry is None or unknown_subjects or unknown_reads:
+        if unknown_subjects or unknown_reads:
             classification: Literal["exact", "coarse_llm", "descriptive", "unsupported"] = (
                 "unsupported"
             )
@@ -406,6 +443,14 @@ def compile_general_simulation(
             can_change: list[str] = []
             cannot_change = ["all requested material behavior"]
             assumptions: list[str] = []
+        elif request.transition_contract_ids:
+            pass
+        elif entry is None:
+            classification = "unsupported"
+            component_ref = None
+            can_change = []
+            cannot_change = ["all requested material behavior"]
+            assumptions = []
         else:
             classification = entry.fidelity
             component_ref = entry.ref

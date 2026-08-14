@@ -147,6 +147,14 @@ def test_resource_transport_requires_declared_directed_route_and_custody() -> No
     proposal.schedule[1] = proposal.schedule[1].model_copy(
         update={"active_transition_contract_ids": ["move_dispatch_fuel"]}
     )
+    fuel_request_index = next(
+        index
+        for index, item in enumerate(proposal.component_requests)
+        if item.request_id == "fuel_accounting"
+    )
+    proposal.component_requests[fuel_request_index] = proposal.component_requests[
+        fuel_request_index
+    ].model_copy(update={"transition_contract_ids": ["move_dispatch_fuel"]})
 
     compile_general_simulation(proposal)
 
@@ -154,6 +162,36 @@ def test_resource_transport_requires_declared_directed_route_and_custody() -> No
         update={"origin_place_id": "port", "destination_place_id": "outside_port"}
     )
     with pytest.raises(GeneralCompilationError, match="directed endpoints"):
+        compile_general_simulation(proposal)
+
+
+def test_exact_contract_must_belong_to_its_active_component_request() -> None:
+    proposal = load_proposal("port_coordination.json")
+    transport = ResourceTransportProposalV1(
+        transport_id="unbound_transport",
+        operator_ids=["trucking_dispatcher"],
+        source_resource_id="dispatch_fuel",
+        destination_resource_id="dispatch_fuel",
+        source_custodian_id="trucking_dispatcher",
+        destination_custodian_id="trucking_dispatcher",
+        quantity=1,
+        origin_place_id="outside_port",
+        destination_place_id="port",
+        allowed_route_ids=["main_bridge"],
+        arrival_record_id="relief_cargo",
+        arrival_quantity_key="received_fuel_quantity",
+        usable_quantity_key="usable_fuel_quantity",
+        arrival_minute_key="fuel_arrival_minute",
+    )
+    proposal.resource_transports.append(transport)
+    assert proposal.spatial_extension is not None
+    bridge = next(item for item in proposal.spatial_extension.links if item.link_id == "main_bridge")
+    bridge.public_state.append(StateEntryV1(key="travel_time_minutes", value=12))
+    proposal.schedule[1] = proposal.schedule[1].model_copy(
+        update={"active_transition_contract_ids": ["unbound_transport"]}
+    )
+
+    with pytest.raises(GeneralCompilationError, match="not bound to a component request"):
         compile_general_simulation(proposal)
 
 

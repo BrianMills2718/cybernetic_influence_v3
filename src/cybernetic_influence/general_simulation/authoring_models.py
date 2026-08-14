@@ -80,6 +80,7 @@ class ComponentRequestV1(_StrictModel):
     desired_effects: list[str] = Field(min_length=1)
     fidelity_need: Literal["exact", "bounded", "coarse", "descriptive"]
     material_to_question: bool
+    transition_contract_ids: list[str] = Field(default_factory=list)
 
 
 class GeneralPlaceProposalV1(_StrictModel):
@@ -297,6 +298,27 @@ class GeneralSimulationProposalV1(_StrictModel):
         }
         scheduled_requests: set[str] = set()
         scheduled_contracts: set[str] = set()
+        request_contracts = {
+            request.request_id: set(request.transition_contract_ids)
+            for request in self.component_requests
+        }
+        for request_id, contract_ids in request_contracts.items():
+            if len(contract_ids) != len(
+                next(
+                    item.transition_contract_ids
+                    for item in self.component_requests
+                    if item.request_id == request_id
+                )
+            ):
+                raise ValueError(
+                    f"component request {request_id} repeats transition contracts"
+                )
+            unknown_contracts = sorted(contract_ids - transition_contract_ids)
+            if unknown_contracts:
+                raise ValueError(
+                    f"component request {request_id} names unknown transition contracts: "
+                    + ", ".join(unknown_contracts)
+                )
         for moment in self.schedule:
             if len(moment.active_component_request_ids) != len(
                 set(moment.active_component_request_ids)
@@ -328,6 +350,17 @@ class GeneralSimulationProposalV1(_StrictModel):
                 )
             scheduled_requests.update(moment.active_component_request_ids)
             scheduled_contracts.update(moment.active_transition_contract_ids)
+            for request_id in moment.active_component_request_ids:
+                inactive_contracts = sorted(
+                    request_contracts[request_id]
+                    - set(moment.active_transition_contract_ids)
+                )
+                if inactive_contracts:
+                    raise ValueError(
+                        f"moment {moment.moment_id} activates component request "
+                        f"{request_id} without its transition contracts: "
+                        + ", ".join(inactive_contracts)
+                    )
         missing_requests = sorted(request_ids - scheduled_requests)
         if missing_requests:
             raise ValueError(
@@ -339,6 +372,17 @@ class GeneralSimulationProposalV1(_StrictModel):
             raise ValueError(
                 "every transition contract must have a scheduled execution moment: "
                 + ", ".join(missing_contracts)
+            )
+        unclaimed_contracts = sorted(
+            transition_contract_ids
+            - set().union(*request_contracts.values())
+            if request_contracts
+            else transition_contract_ids
+        )
+        if unclaimed_contracts:
+            raise ValueError(
+                "every transition contract must belong to a component request: "
+                + ", ".join(unclaimed_contracts)
             )
         return self
 
