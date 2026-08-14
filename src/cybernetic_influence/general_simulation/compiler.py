@@ -11,7 +11,9 @@ from .authoring_models import (
     CoverageItemV1,
     ExecutionCoverageReportV1,
     GeneralSimulationProposalV1,
+    ScheduledMomentProposalV1,
 )
+from .contracts_v2 import RunSpecV2, ScenarioSpecV2, validate_run_against_scenario
 from .models import (
     ActiveSystemSpec,
     ActorAccessSpec,
@@ -61,6 +63,33 @@ class CompiledGeneralSimulationV1:
         }
 
 
+@dataclass(frozen=True)
+class CompiledGeneralSimulationV2:
+    scenario: ScenarioSpecV2
+    run_spec: RunSpecV2
+    scenario_digest: str
+    run_spec_digest: str
+    coverage: ExecutionCoverageReportV1
+    world_spec: GeneralWorldSpec
+    registry_digest: str
+    resolved_components: tuple[RegisteredComponentV1, ...]
+    configuration_graph: dict[str, object]
+
+    def preview(self) -> dict[str, object]:
+        return {
+            "profile": "general_world_v2",
+            "scenario_digest": self.scenario_digest,
+            "run_spec_digest": self.run_spec_digest,
+            "coverage": self.coverage.model_dump(mode="json"),
+            "world_spec": self.world_spec.model_dump(mode="json"),
+            "composition_receipt": {
+                "registry_digest": self.registry_digest,
+                "resolved_component_refs": [item.ref for item in self.resolved_components],
+            },
+            "configuration_graph": self.configuration_graph,
+        }
+
+
 def _digest(value: object) -> str:
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
@@ -74,11 +103,13 @@ def _state_dict(entries: list[Any]) -> dict[str, Any]:
     return values
 
 
-def compile_general_simulation(
-    proposal: GeneralSimulationProposalV1,
+def _compile_general_simulation(
+    proposal: GeneralSimulationProposalV1 | ScenarioSpecV2,
     *,
+    schedule: list[ScheduledMomentProposalV1],
+    run_spec: RunSpecV2 | None = None,
     registry: tuple[RegisteredComponentV1, ...] | None = None,
-) -> CompiledGeneralSimulationV1:
+) -> CompiledGeneralSimulationV1 | CompiledGeneralSimulationV2:
     selected_registry = registry or default_registry()
     digest = registry_digest(selected_registry)
     declared_refs = {
@@ -267,7 +298,7 @@ def compile_general_simulation(
                 f"transport {transport.transport_id} names unknown arrival record "
                 f"{transport.arrival_record_id}"
             )
-    for moment in proposal.schedule:
+    for moment in schedule:
         unknown = sorted(
             set(moment.external_inject_representation_ids) - representation_ids
         )
@@ -284,7 +315,7 @@ def compile_general_simulation(
     }
     scheduled_request_ids: set[str] = set()
     scheduled_contract_ids: set[str] = set()
-    for moment in proposal.schedule:
+    for moment in schedule:
         unknown_requests = sorted(
             set(moment.active_component_request_ids) - request_ids
         )
@@ -329,7 +360,7 @@ def compile_general_simulation(
             "transition contracts are not bound to a component request: "
             + ", ".join(unclaimed_contracts)
         )
-    for moment in proposal.schedule:
+    for moment in schedule:
         for request_id in moment.active_component_request_ids:
             inactive_contracts = sorted(
                 request_contracts[request_id]
@@ -459,7 +490,12 @@ def compile_general_simulation(
             assumptions = entry.assumptions
             if entry not in resolved:
                 resolved.append(entry)
-        blocking = request.material_to_question and classification in {
+        material = (
+            request.blocks_if_unexecutable
+            if isinstance(proposal, ScenarioSpecV2)
+            else request.material_to_question
+        )
+        blocking = material and classification in {
             "unsupported",
             "descriptive",
         }
@@ -730,7 +766,11 @@ def compile_general_simulation(
         for item in proposal.resource_transports
     ]
     world_spec = GeneralWorldSpec(
-        spec_id=proposal.simulation_id,
+        spec_id=(
+            proposal.scenario_id
+            if isinstance(proposal, ScenarioSpecV2)
+            else proposal.simulation_id
+        ),
         initial_state=GeneralWorldState(
             records=records,
             places=places,
@@ -743,7 +783,7 @@ def compile_general_simulation(
         authorities=authorities,
         invariants=proposal.declared_invariants,
         fidelity_assumptions=proposal.fidelity_assumptions,
-        timing={item.moment_id: item.minute for item in proposal.schedule},
+        timing={item.moment_id: item.minute for item in schedule},
         actor_access=actor_access,
         sensing_contracts=sensing_contracts,
         resource_transformation_contracts=transformation_contracts,
@@ -751,6 +791,20 @@ def compile_general_simulation(
     )
     proposal_payload = proposal.model_dump(mode="json")
     configuration_graph = project_configuration_graph(proposal)
+    if isinstance(proposal, ScenarioSpecV2):
+        if run_spec is None:
+            raise GeneralCompilationError("V2 compilation requires a RunSpec")
+        return CompiledGeneralSimulationV2(
+            scenario=proposal,
+            run_spec=run_spec,
+            scenario_digest=_digest(proposal_payload),
+            run_spec_digest=_digest(run_spec.model_dump(mode="json")),
+            coverage=coverage,
+            world_spec=world_spec,
+            registry_digest=digest,
+            resolved_components=tuple(resolved),
+            configuration_graph=configuration_graph,
+        )
     return CompiledGeneralSimulationV1(
         proposal=proposal,
         proposal_digest=_digest(proposal_payload),
@@ -760,3 +814,36 @@ def compile_general_simulation(
         resolved_components=tuple(resolved),
         configuration_graph=configuration_graph,
     )
+
+
+def compile_general_simulation(
+    proposal: GeneralSimulationProposalV1,
+    *,
+    registry: tuple[RegisteredComponentV1, ...] | None = None,
+) -> CompiledGeneralSimulationV1:
+    compiled = _compile_general_simulation(
+        proposal,
+        schedule=proposal.schedule,
+        registry=registry,
+    )
+    if not isinstance(compiled, CompiledGeneralSimulationV1):
+        raise AssertionError("legacy compiler returned the wrong contract")
+    return compiled
+
+
+def compile_general_simulation_v2(
+    scenario: ScenarioSpecV2,
+    run_spec: RunSpecV2,
+    *,
+    registry: tuple[RegisteredComponentV1, ...] | None = None,
+) -> CompiledGeneralSimulationV2:
+    validate_run_against_scenario(scenario, run_spec)
+    compiled = _compile_general_simulation(
+        scenario,
+        schedule=run_spec.scheduled_moments,
+        run_spec=run_spec,
+        registry=registry,
+    )
+    if not isinstance(compiled, CompiledGeneralSimulationV2):
+        raise AssertionError("V2 compiler returned the wrong contract")
+    return compiled

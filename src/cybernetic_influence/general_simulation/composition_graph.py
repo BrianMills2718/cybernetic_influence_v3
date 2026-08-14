@@ -5,10 +5,11 @@ from __future__ import annotations
 from collections import deque
 
 from .authoring_models import GeneralSimulationProposalV1
+from .contracts_v2 import ScenarioSpecV2
 
 
 def project_configuration_graph(
-    proposal: GeneralSimulationProposalV1,
+    proposal: GeneralSimulationProposalV1 | ScenarioSpecV2,
 ) -> dict[str, object]:
     nodes: dict[str, dict[str, object]] = {}
     edges: list[dict[str, object]] = []

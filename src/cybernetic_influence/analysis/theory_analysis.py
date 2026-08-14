@@ -246,6 +246,110 @@ class RunEvidenceBundleConsumerV1(_ConsumerModel):
         return self
 
 
+class AnalysisSpecV2(_ProducedModel):
+    """Execution-inert analysis request over retained run evidence."""
+
+    analysis_spec_version: Literal[2] = 2
+    analysis_id: str = Field(pattern=_ID_PATTERN)
+    profile: Literal["waltzman_coordination_v1", "exact_outcome_v1"]
+    purpose: str = Field(min_length=1)
+    construct_definitions: list[str] = Field(min_length=1)
+    required_evidence_kinds: list[EvidenceKind] = Field(min_length=1)
+    method_classes: list[MethodClass] = Field(min_length=1)
+    aggregation: str = Field(min_length=1)
+    uncertainty: str = Field(min_length=1)
+    limitations: list[str] = Field(min_length=1)
+    subject_refs: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_unique_analysis_fields(self) -> "AnalysisSpecV2":
+        for label, values in (
+            ("required evidence kinds", self.required_evidence_kinds),
+            ("method classes", self.method_classes),
+            ("subject references", self.subject_refs),
+        ):
+            if len(values) != len(set(values)):
+                raise ValueError(f"{label} must be unique")
+        return self
+
+    @property
+    def digest(self) -> str:
+        return _digest(self.model_dump(mode="json"))
+
+
+class RunEvidenceBundleV2(_ProducedModel):
+    """Immutable theory-neutral evidence for a separated scenario and run."""
+
+    bundle_version: Literal[2] = 2
+    bundle_id: str = Field(pattern=_ID_PATTERN)
+    run_id: str = Field(pattern=_ID_PATTERN)
+    scenario_id: str = Field(pattern=_ID_PATTERN)
+    scenario_digest: str = Field(pattern=_DIGEST_PATTERN)
+    run_spec_digest: str = Field(pattern=_DIGEST_PATTERN)
+    initial_state_digest: str = Field(pattern=_DIGEST_PATTERN)
+    terminal_state_digest: str = Field(pattern=_DIGEST_PATTERN)
+    evidence_records: list[EvidenceRecordV1] = Field(min_length=1)
+    fidelity_assumptions: list[str] = Field(min_length=1)
+    known_omissions: list[str] = Field(default_factory=list)
+    record_digest: str = Field(pattern=_DIGEST_PATTERN)
+
+    @model_validator(mode="after")
+    def validate_bundle_integrity(self) -> "RunEvidenceBundleV2":
+        if self.bundle_id != f"bundle_{self.run_id}":
+            raise ValueError("bundle identity does not match run")
+        records = {item.evidence_ref: item for item in self.evidence_records}
+        if len(records) != len(self.evidence_records):
+            raise ValueError("evidence record identities must be unique")
+        for record in self.evidence_records:
+            unknown = set(record.source_refs) - set(records)
+            if unknown:
+                raise ValueError(
+                    f"evidence {record.evidence_ref!r} has unknown sources "
+                    f"{sorted(unknown)!r}"
+                )
+        expected = _digest(
+            self.model_dump(mode="json", exclude={"record_digest"})
+        )
+        if self.record_digest != expected:
+            raise ValueError("run evidence bundle digest mismatch")
+        return self
+
+
+class AnalysisFindingV2(_ProducedModel):
+    finding_id: str = Field(pattern=_ID_PATTERN)
+    construct_id: str = Field(pattern=_ID_PATTERN)
+    method_class: MethodClass
+    value: JsonValue
+    evidence_refs: list[EvidenceRef] = Field(min_length=1)
+    uncertainty: str = Field(min_length=1)
+    limitations: list[str] = Field(default_factory=list)
+
+
+class AnalysisResultV2(_ProducedModel):
+    """One separately identified result that cannot mutate its source run."""
+
+    analysis_result_version: Literal[2] = 2
+    result_id: str = Field(pattern=_ID_PATTERN)
+    run_evidence_bundle_digest: str = Field(pattern=_DIGEST_PATTERN)
+    analysis_spec_digest: str = Field(pattern=_DIGEST_PATTERN)
+    findings: list[AnalysisFindingV2] = Field(default_factory=list)
+    coverage_status: Literal["supported", "degraded", "unsupported"]
+    missing_evidence: list[EvidenceKind] = Field(default_factory=list)
+    model_call_receipts: list[dict[str, JsonValue]] = Field(default_factory=list)
+    result_digest: str = Field(pattern=_DIGEST_PATTERN)
+
+    @model_validator(mode="after")
+    def validate_result_integrity(self) -> "AnalysisResultV2":
+        if self.coverage_status == "supported" and self.missing_evidence:
+            raise ValueError("supported analysis cannot declare missing evidence")
+        expected = _digest(
+            self.model_dump(mode="json", exclude={"result_digest"})
+        )
+        if self.result_digest != expected:
+            raise ValueError("analysis result digest mismatch")
+        return self
+
+
 class FrameworkFindingV1(_ProducedModel):
     """One method-labelled finding linked only to bundle evidence."""
 
