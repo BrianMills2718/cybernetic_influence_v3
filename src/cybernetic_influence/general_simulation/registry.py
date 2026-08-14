@@ -83,7 +83,18 @@ def default_registry() -> tuple[RegisteredComponentV1, ...]:
             assumptions=["declared stock quantities are the complete conserved boundary"],
             invalid_questions=["undeclared resource substitution"],
             causal_responsibility_tags=["resource", "custody", "conservation"],
-            semantic_triggers=["resource", "stock", "fuel", "allocate", "conserve", "custody"],
+            semantic_triggers=[
+                "resource",
+                "stock",
+                "fuel",
+                "battery",
+                "charge",
+                "consume",
+                "consumption",
+                "allocate",
+                "conserve",
+                "custody",
+            ],
             what_can_change=["resource quantity", "resource custody"],
             what_cannot_change=["undeclared resources"],
         ),
@@ -160,19 +171,35 @@ def resolve_request(
     *,
     actor_ids: set[str] | None = None,
 ) -> tuple[RegisteredComponentV1 | None, list[str]]:
-    text = " ".join(
-        [request.behavior_description, *request.required_reads, *request.desired_effects]
-    ).lower()
-    tokens = set(re.findall(r"[a-z0-9_]+", text))
+    description = request.behavior_description.lower()
+    effects = " ".join(request.desired_effects).lower()
+    description_tokens = set(re.findall(r"[a-z0-9_]+", description))
+    effect_tokens = set(re.findall(r"[a-z0-9_]+", effects))
     scored: list[tuple[int, RegisteredComponentV1, list[str]]] = []
     for entry in registry:
-        matches = [
-            trigger
-            for trigger in entry.semantic_triggers
-            if trigger in text or trigger.replace("-", "_") in tokens
-        ]
+        matches = []
+        score = 0
+        description_positions: list[int] = []
+        for trigger in entry.semantic_triggers:
+            normalized = trigger.replace("-", "_")
+            in_description = trigger in description or normalized in description_tokens
+            in_effects = trigger in effects or normalized in effect_tokens
+            if not in_description and not in_effects:
+                continue
+            matches.append(trigger)
+            score += 3 if in_description else 1
+            if in_description:
+                positions = [
+                    position
+                    for candidate in (trigger, normalized)
+                    if (position := description.find(candidate)) >= 0
+                ]
+                if positions:
+                    description_positions.append(min(positions))
         if matches:
-            scored.append((len(matches), entry, matches))
+            if description_positions:
+                score += max(0, 6 - min(description_positions) // 12)
+            scored.append((score, entry, matches))
     if not scored:
         return None, ["no registered semantic trigger matched the requested behavior"]
     scored.sort(key=lambda item: (-item[0], item[1].ref))

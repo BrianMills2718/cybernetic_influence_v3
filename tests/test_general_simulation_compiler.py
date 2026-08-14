@@ -96,6 +96,24 @@ def test_unknown_material_behavior_remains_visibly_unapprovable() -> None:
             ["Record one coordinated decision and its rationale."],
             "joint_semantic_adjudication@1",
         ),
+        (
+            "route_report",
+            "Deliver recipient-specific radio reports containing a route blockage.",
+            ["Preserve the apparent source and named recipients."],
+            "information_delivery@1",
+        ),
+        (
+            "floor_inspection",
+            "The structural inspector attempts to inspect a damaged floor segment.",
+            ["Retain the inspection result as canonical state."],
+            "joint_semantic_adjudication@1",
+        ),
+        (
+            "battery_consumption",
+            "Account for finite forklift battery charge consumed by movement.",
+            ["Decrease the conserved battery charge without going below zero."],
+            "conserved_resources@1",
+        ),
     ],
 )
 def test_registry_resolves_authentic_general_action_language(
@@ -109,7 +127,11 @@ def test_registry_resolves_authentic_general_action_language(
         subject_refs=(
             ["incident_commander", "api_service"]
             if request_id == "assess_outcome"
-            else ["api_service"]
+            else (
+                ["incident_commander", "api_service"]
+                if request_id == "floor_inspection"
+                else ["api_service"]
+            )
         ),
         behavior_description=description,
         required_reads=["api_service"],
