@@ -534,6 +534,7 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             )
             allowed_evidence_refs = (
                 expected_intents
+                | {moment.moment_id}
                 | set(world.state.records)
                 | set(world.state.places)
                 | set(world.state.routes)

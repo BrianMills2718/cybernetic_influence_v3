@@ -106,7 +106,10 @@ def test_actor_output_gets_one_bounded_validation_repair() -> None:
             operations=[],
             preconditions=[],
             consequences=[],
-            evidence_refs=user["requirements"]["intent_ids"],
+            evidence_refs=[
+                *user["requirements"]["intent_ids"],
+                user["moment"]["moment_id"],
+            ],
             stated_rationale="Retain the current world.",
         ), SimpleNamespace(provider="fixture")
 
