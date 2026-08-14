@@ -487,6 +487,17 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                             "actor_visible_consequences_may_name": actor_ids,
                             "is_final_moment": is_final_moment,
                             "objective_assessment_required": is_final_moment,
+                            "evidence_refs_may_name": sorted(
+                                {
+                                    *[item.intent_id for item in intents],
+                                    moment.moment_id,
+                                    *world.state.records,
+                                    *world.state.places,
+                                    *world.state.routes,
+                                    *world.state.representations,
+                                    *world.state.resources,
+                                }
+                            ),
                         },
                     },
                     sort_keys=True,
@@ -552,13 +563,40 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 )
                 for record_id in record_ids
             }
-            if set(transaction.evidence_refs) - allowed_evidence_refs:
-                raise ValueError("adjudicator cited unknown canonical evidence")
+            unknown_evidence_refs = set(transaction.evidence_refs) - allowed_evidence_refs
+            if unknown_evidence_refs:
+                corrections.append(
+                    "unknown stated evidence references omitted: "
+                    + ", ".join(sorted(unknown_evidence_refs))
+                )
+                transaction = transaction.model_copy(
+                    update={
+                        "evidence_refs": [
+                            item for item in transaction.evidence_refs
+                            if item in allowed_evidence_refs
+                        ]
+                    }
+                )
             assessment = transaction.objective_assessment
-            if assessment is not None and set(assessment.evidence_refs) - (
-                allowed_evidence_refs | {transaction.transaction_id}
-            ):
-                raise ValueError("objective assessment cited unknown canonical evidence")
+            if assessment is not None:
+                allowed_assessment_refs = allowed_evidence_refs | {transaction.transaction_id}
+                unknown_assessment_refs = set(assessment.evidence_refs) - allowed_assessment_refs
+                if unknown_assessment_refs:
+                    corrections.append(
+                        "unknown objective evidence references omitted: "
+                        + ", ".join(sorted(unknown_assessment_refs))
+                    )
+                    assessment = assessment.model_copy(
+                        update={
+                            "evidence_refs": [
+                                item for item in assessment.evidence_refs
+                                if item in allowed_assessment_refs
+                            ]
+                        }
+                    )
+                    transaction = transaction.model_copy(
+                        update={"objective_assessment": assessment}
+                    )
             unknown_recipients = {
                 item.recipient_id for item in transaction.consequences
             } - set(actor_ids)
