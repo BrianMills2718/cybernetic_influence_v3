@@ -250,17 +250,26 @@
     {
       "moment_id": "initial_observations",
       "minute": 0,
-      "description": "Deliver configured incident representations.",
-      "external_inject_representation_ids": [
-        "public_cause_claim",
-        "technical_credential_report"
-      ]
+    "description": "Deliver configured incident representations.",
+    "external_inject_representation_ids": [
+      "public_cause_claim",
+      "technical_credential_report"
+    ],
+    "active_component_request_ids": [
+      "incident_messages",
+      "responder_actions"
+    ],
+    "active_transition_contract_ids": []
     },
     {
       "moment_id": "joint_recovery_attempt",
-      "minute": 30,
-      "description": "Collect same-revision recovery intents and adjudicate them.",
-      "external_inject_representation_ids": []
+    "minute": 30,
+    "description": "Collect same-revision recovery intents and adjudicate them.",
+    "external_inject_representation_ids": [],
+    "active_component_request_ids": [
+      "recovery_resolution"
+    ],
+    "active_transition_contract_ids": []
     }
   ],
   "fidelity_assumptions": [

@@ -449,23 +449,38 @@
       "moment_id": "initial_claims",
       "minute": 0,
       "description": "Deliver shared and targeted initial representations.",
-      "external_inject_representation_ids": [
-        "public_fuel_claim",
-        "technical_fuel_message",
-        "labor_route_message"
-      ]
+    "external_inject_representation_ids": [
+      "public_fuel_claim",
+      "technical_fuel_message",
+      "labor_route_message"
+    ],
+    "active_component_request_ids": [
+      "information_routes",
+      "actor_decisions"
+    ],
+    "active_transition_contract_ids": []
     },
     {
       "moment_id": "first_joint_attempt",
-      "minute": 60,
-      "description": "Collect same-revision action intents and adjudicate a joint plan.",
-      "external_inject_representation_ids": []
+    "minute": 60,
+    "description": "Collect same-revision action intents and adjudicate a joint plan.",
+    "external_inject_representation_ids": [],
+    "active_component_request_ids": [
+      "cargo_movement",
+      "fuel_accounting",
+      "joint_resolution"
+    ],
+    "active_transition_contract_ids": []
     },
     {
       "moment_id": "outcome_observation",
-      "minute": 120,
-      "description": "Deliver canonical commit or rejection consequences.",
-      "external_inject_representation_ids": []
+    "minute": 120,
+    "description": "Deliver canonical commit or rejection consequences.",
+    "external_inject_representation_ids": [],
+    "active_component_request_ids": [
+      "joint_resolution"
+    ],
+    "active_transition_contract_ids": []
     }
   ],
   "fidelity_assumptions": [

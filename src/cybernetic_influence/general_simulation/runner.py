@@ -564,6 +564,14 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             for representation_id in moment.external_inject_representation_ids
         }
 
+    def _active_component_requests(self) -> list[dict[str, object]]:
+        request_ids = set(self._moment().active_component_request_ids)
+        return [
+            item.model_dump(mode="json")
+            for item in self._proposal.component_requests
+            if item.request_id in request_ids
+        ]
+
     def get_action_attempt(
         self,
         context: entity_component.ComponentContextMapping,
@@ -596,6 +604,9 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 actor_id,
                 current_minute=moment.minute,
                 delivered_representation_ids=self._delivered_representations(),
+                active_transition_contract_ids=set(
+                    moment.active_transition_contract_ids
+                ),
             ).model_dump_json()
         if output_type == entity_lib.OutputType.RESOLVE:
             inbox = self.get_entity().get_component(INBOX_COMPONENT, type_=InboxComponent)
@@ -660,8 +671,9 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "and an actor intent support a bounded material transformation, express it through "
                     "preconditioned resource quantity changes and matching public inventory-record "
                     "changes. Quantities may never become negative. Do not merely record that an attempt "
-                    "was requested when the supplied world state lets this authority adjudicate its result."
-                    " Apply only declared sensing_rules, resource_transformations, and resource_transports. A sensing rule "
+                    "was requested when the supplied world state lets this authority adjudicate its result. "
+                    "Apply only the active component requests and transition contracts for this moment; do not perform a later phase early. "
+                    "A sensing rule "
                     "reveals only its named hidden keys when a permitted observer actually attempts it. "
                     "A transformation may execute only when a permitted operator attempts it and every "
                     "declared input quantity is available; apply at most maximum_batches and update the "
@@ -680,10 +692,8 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "world": world.state.model_dump(mode="json"),
                         "intents": [item.model_dump(mode="json") for item in intents],
                         "authority": authority.model_dump(mode="json"),
-                        "configured_transition_requests": [
-                            item.model_dump(mode="json")
-                            for item in self._proposal.component_requests
-                        ],
+                        "active_component_requests": self._active_component_requests(),
+                        "active_transition_contract_ids": moment.active_transition_contract_ids,
                         "configured_active_systems": [
                             item.model_dump(mode="json")
                             for item in self._proposal.active_systems

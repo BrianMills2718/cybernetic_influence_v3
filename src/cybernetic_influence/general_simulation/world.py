@@ -63,6 +63,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
         *,
         current_minute: int = 0,
         delivered_representation_ids: set[str] | None = None,
+        active_transition_contract_ids: set[str] | None = None,
     ) -> ActorContext:
         access = next(
             (item for item in self._spec.actor_access if item.actor_id == actor_id), None
@@ -117,6 +118,10 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             )
             for item in self._spec.sensing_contracts
             if actor_id in item.observer_ids
+            and (
+                active_transition_contract_ids is None
+                or item.contract_id in active_transition_contract_ids
+            )
         ]
         available_contracts.extend(
             AvailableTransitionContract(
@@ -134,6 +139,10 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             )
             for item in self._spec.resource_transformation_contracts
             if actor_id in item.operator_ids
+            and (
+                active_transition_contract_ids is None
+                or item.contract_id in active_transition_contract_ids
+            )
         )
         available_contracts.extend(
             AvailableTransitionContract(
@@ -153,6 +162,10 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             )
             for item in self._spec.resource_transport_contracts
             if actor_id in item.operator_ids
+            and (
+                active_transition_contract_ids is None
+                or item.contract_id in active_transition_contract_ids
+            )
         )
         return ActorContext(
             actor_id=actor_id,

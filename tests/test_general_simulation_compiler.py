@@ -12,6 +12,7 @@ from cybernetic_influence.general_simulation.authoring_models import (
     GeneralWorldRecordProposalV1,
     ResourceStockProposalV1,
     ResourceTransportProposalV1,
+    StateEntryV1,
 )
 from cybernetic_influence.general_simulation.authoring import _diagnostics
 from cybernetic_influence.general_simulation.compiler import (
@@ -89,6 +90,14 @@ def test_unknown_material_behavior_remains_visibly_unapprovable() -> None:
             material_to_question=True,
         )
     )
+    proposal.schedule[-1] = proposal.schedule[-1].model_copy(
+        update={
+            "active_component_request_ids": [
+                *proposal.schedule[-1].active_component_request_ids,
+                "quantum_prediction",
+            ]
+        }
+    )
 
     compiled = compile_general_simulation(proposal)
 
@@ -128,6 +137,16 @@ def test_resource_transport_requires_declared_directed_route_and_custody() -> No
         arrival_minute_key="fuel_arrival_minute",
     )
     proposal.resource_transports.append(transport)
+    assert proposal.spatial_extension is not None
+    bridge = next(
+        item
+        for item in proposal.spatial_extension.links
+        if item.link_id == "main_bridge"
+    )
+    bridge.public_state.append(StateEntryV1(key="travel_time_minutes", value=12))
+    proposal.schedule[1] = proposal.schedule[1].model_copy(
+        update={"active_transition_contract_ids": ["move_dispatch_fuel"]}
+    )
 
     compile_general_simulation(proposal)
 

@@ -148,6 +148,8 @@ class ScheduledMomentProposalV1(_StrictModel):
     minute: int = Field(ge=0)
     description: str = Field(min_length=1)
     external_inject_representation_ids: list[str]
+    active_component_request_ids: list[str] = Field(min_length=1)
+    active_transition_contract_ids: list[str]
 
 
 class SensingRuleProposalV1(_StrictModel):
@@ -287,6 +289,57 @@ class GeneralSimulationProposalV1(_StrictModel):
         for label, values in collections.items():
             if len(values) != len(set(values)):
                 raise ValueError(f"duplicate {label} IDs")
+        request_ids = set(collections["component requests"])
+        transition_contract_ids = {
+            *[item.rule_id for item in self.sensing_rules],
+            *[item.transformation_id for item in self.resource_transformations],
+            *[item.transport_id for item in self.resource_transports],
+        }
+        scheduled_requests: set[str] = set()
+        scheduled_contracts: set[str] = set()
+        for moment in self.schedule:
+            if len(moment.active_component_request_ids) != len(
+                set(moment.active_component_request_ids)
+            ):
+                raise ValueError(
+                    f"moment {moment.moment_id} repeats active component requests"
+                )
+            if len(moment.active_transition_contract_ids) != len(
+                set(moment.active_transition_contract_ids)
+            ):
+                raise ValueError(
+                    f"moment {moment.moment_id} repeats active transition contracts"
+                )
+            unknown_requests = sorted(
+                set(moment.active_component_request_ids) - request_ids
+            )
+            if unknown_requests:
+                raise ValueError(
+                    f"moment {moment.moment_id} names unknown component requests: "
+                    + ", ".join(unknown_requests)
+                )
+            unknown_contracts = sorted(
+                set(moment.active_transition_contract_ids) - transition_contract_ids
+            )
+            if unknown_contracts:
+                raise ValueError(
+                    f"moment {moment.moment_id} names unknown transition contracts: "
+                    + ", ".join(unknown_contracts)
+                )
+            scheduled_requests.update(moment.active_component_request_ids)
+            scheduled_contracts.update(moment.active_transition_contract_ids)
+        missing_requests = sorted(request_ids - scheduled_requests)
+        if missing_requests:
+            raise ValueError(
+                "every component request must have a scheduled execution moment: "
+                + ", ".join(missing_requests)
+            )
+        missing_contracts = sorted(transition_contract_ids - scheduled_contracts)
+        if missing_contracts:
+            raise ValueError(
+                "every transition contract must have a scheduled execution moment: "
+                + ", ".join(missing_contracts)
+            )
         return self
 
 

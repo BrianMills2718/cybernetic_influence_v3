@@ -107,6 +107,14 @@ def test_unknown_material_behavior_is_retained_but_cannot_be_approved(
             material_to_question=True,
         )
     )
+    unsupported.schedule[-1] = unsupported.schedule[-1].model_copy(
+        update={
+            "active_component_request_ids": [
+                *unsupported.schedule[-1].active_component_request_ids,
+                "unsupported_oracle",
+            ]
+        }
+    )
     store = AuthoringDraftStore(tmp_path)
     created = store.create(now="2026-08-13T12:00:00Z", target_kind="general_world_v1")
     service = GeneralDraftAuthoringService(store, call=provider_for(unsupported))

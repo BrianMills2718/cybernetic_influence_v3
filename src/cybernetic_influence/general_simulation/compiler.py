@@ -276,6 +276,87 @@ def compile_general_simulation(
                 f"moment {moment.moment_id} injects unknown representations: "
                 + ", ".join(unknown)
             )
+    request_ids = {item.request_id for item in proposal.component_requests}
+    contract_ids = {
+        *[item.rule_id for item in proposal.sensing_rules],
+        *[item.transformation_id for item in proposal.resource_transformations],
+        *[item.transport_id for item in proposal.resource_transports],
+    }
+    scheduled_request_ids: set[str] = set()
+    scheduled_contract_ids: set[str] = set()
+    for moment in proposal.schedule:
+        unknown_requests = sorted(
+            set(moment.active_component_request_ids) - request_ids
+        )
+        if unknown_requests:
+            raise GeneralCompilationError(
+                f"moment {moment.moment_id} names unknown component requests: "
+                + ", ".join(unknown_requests)
+            )
+        unknown_contracts = sorted(
+            set(moment.active_transition_contract_ids) - contract_ids
+        )
+        if unknown_contracts:
+            raise GeneralCompilationError(
+                f"moment {moment.moment_id} names unknown transition contracts: "
+                + ", ".join(unknown_contracts)
+            )
+        scheduled_request_ids.update(moment.active_component_request_ids)
+        scheduled_contract_ids.update(moment.active_transition_contract_ids)
+    missing_requests = sorted(request_ids - scheduled_request_ids)
+    if missing_requests:
+        raise GeneralCompilationError(
+            "component requests have no scheduled execution moment: "
+            + ", ".join(missing_requests)
+        )
+    missing_contracts = sorted(contract_ids - scheduled_contract_ids)
+    if missing_contracts:
+        raise GeneralCompilationError(
+            "transition contracts have no scheduled execution moment: "
+            + ", ".join(missing_contracts)
+        )
+    sensing_field_counts: dict[tuple[str, str], int] = {}
+    for rule in proposal.sensing_rules:
+        for hidden_key in rule.reveal_hidden_keys:
+            key = (rule.output_record_id, hidden_key)
+            sensing_field_counts[key] = sensing_field_counts.get(key, 0) + 1
+    public_record_fields = {
+        item.record_id: {entry.key for entry in item.public_state}
+        for item in proposal.world_records
+    }
+    for rule in proposal.sensing_rules:
+        required_fields = {
+            (
+                f"{rule.subject_ref}_{hidden_key}"
+                if sensing_field_counts[(rule.output_record_id, hidden_key)] > 1
+                else hidden_key
+            )
+            for hidden_key in rule.reveal_hidden_keys
+        }
+        missing_fields = sorted(
+            required_fields - public_record_fields.get(rule.output_record_id, set())
+        )
+        if missing_fields:
+            raise GeneralCompilationError(
+                f"sensing rule {rule.rule_id} writes undeclared public fields on "
+                f"{rule.output_record_id}: " + ", ".join(missing_fields)
+            )
+    if proposal.spatial_extension:
+        route_public_fields = {
+            item.link_id: {entry.key for entry in item.public_state}
+            for item in proposal.spatial_extension.links
+        }
+        for transport in proposal.resource_transports:
+            missing_time = sorted(
+                route_id
+                for route_id in transport.allowed_route_ids
+                if "travel_time_minutes" not in route_public_fields.get(route_id, set())
+            )
+            if missing_time:
+                raise GeneralCompilationError(
+                    f"transport {transport.transport_id} requires public "
+                    "travel_time_minutes on routes: " + ", ".join(missing_time)
+                )
     if proposal.spatial_extension:
         place_ids = {item.place_id for item in proposal.spatial_extension.places}
         for placement in proposal.spatial_extension.placements:
