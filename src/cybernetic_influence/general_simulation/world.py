@@ -559,6 +559,22 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 input_indices.append(match)
             if not input_indices:
                 continue
+            produced_quantity = snapshots[output_index][1]
+            inventory_indices = [
+                index
+                for index, operation in enumerate(transaction.operations)
+                if index not in claimed
+                and operation.target.record_type == "record"
+                and operation.target.record_id
+                == transformation_contract.public_inventory_record_id
+                and operation.target.field is not None
+                and operation.target.field.startswith("state.")
+                and isinstance(operation.value, (int, float))
+                and isinstance(produced_quantity, (int, float))
+                and self._close(float(operation.value), float(produced_quantity))
+            ]
+            if not inventory_indices:
+                continue
             attribution = OperationAttribution(
                 operation_index=0,
                 authority_id=transaction.authority_id,
@@ -566,30 +582,8 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 contract_id=transformation_contract.contract_id,
                 intent_ids=[item.intent_id for item in selected],
             )
-            for index in [*input_indices, output_index]:
+            for index in [*input_indices, output_index, *inventory_indices]:
                 claimed[index] = attribution.model_copy(update={"operation_index": index})
-            produced_quantity = snapshots[output_index][1]
-            for index, operation in enumerate(transaction.operations):
-                if index in claimed:
-                    continue
-                if (
-                    operation.target.record_type == "record"
-                    and operation.target.record_id
-                    == transformation_contract.public_inventory_record_id
-                    and operation.target.field is not None
-                    and operation.target.field.startswith("state.")
-                ):
-                    if operation.target.field == "state.quantity" and (
-                        not isinstance(operation.value, (int, float))
-                        or not isinstance(produced_quantity, (int, float))
-                        or not self._close(
-                            float(operation.value), float(produced_quantity)
-                        )
-                    ):
-                        continue
-                    claimed[index] = attribution.model_copy(
-                        update={"operation_index": index}
-                    )
 
         for transport_contract in self._spec.resource_transport_contracts:
             selected = [

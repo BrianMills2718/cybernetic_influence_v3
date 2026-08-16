@@ -1054,6 +1054,22 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                                 "world": world.state.model_dump(mode="json"),
                                 "intents": [item.model_dump(mode="json") for item in intents],
                                 "authority": effective_authority.model_dump(mode="json"),
+                                "active_component_requests": self._active_component_requests(),
+                                "sensing_rules": [
+                                    item.model_dump(mode="json")
+                                    for item in self._scenario.sensing_rules
+                                    if item.rule_id in active_sensing_rules
+                                ],
+                                "resource_transformations": [
+                                    item.model_dump(mode="json")
+                                    for item in self._scenario.resource_transformations
+                                    if item.transformation_id in active_transformations
+                                ],
+                                "resource_transports": [
+                                    item.model_dump(mode="json")
+                                    for item in self._scenario.resource_transports
+                                    if item.transport_id in active_transports
+                                ],
                                 "requirements": {
                                     "authority_id": self._authority_id,
                                     "base_revision": world.state.revision,

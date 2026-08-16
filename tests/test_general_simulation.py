@@ -289,6 +289,41 @@ def test_declared_contracts_license_complete_transition_and_retain_attribution()
     )
 
 
+def test_exact_transformation_requires_matching_public_inventory_update() -> None:
+    spec = _contract_world().spec
+    semantic = next(
+        item
+        for item in spec.authorities
+        if item.authority_id == "port_semantic_adjudicator"
+    )
+    semantic.patch_grammar.allowed_operations = []
+    semantic.patch_grammar.allowed_record_types = []
+    world = CanonicalWorld(spec)
+    intent = _contract_intent("produce")
+    operations = _contract_transaction().operations[1:4]
+    transaction = WorldTransaction(
+        transaction_id="partial_transformation",
+        base_revision=0,
+        authority_id="port_semantic_adjudicator",
+        intent_ids=[intent.intent_id],
+        operations=operations,
+        preconditions=[],
+        consequences=[],
+        evidence_refs=[intent.intent_id],
+        stated_rationale="Attempt a transformation without its declared public update.",
+    )
+
+    rejected = world.validate_and_commit(transaction, intents=[intent], current_minute=60)
+
+    assert not rejected.accepted
+    assert any(
+        "not licensed by a complete declared transition contract" in error
+        for error in rejected.errors
+    )
+    assert world.state.resources["raw_a"].quantity == 600
+    assert world.state.resources["finished"].quantity == 0
+
+
 def test_exact_transport_requires_compiled_status_and_capacity_guards() -> None:
     base = _contract_world()
     spec = base.spec
