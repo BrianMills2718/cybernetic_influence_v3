@@ -187,8 +187,8 @@ def test_public_authoring_advertises_and_dispatches_only_certified_models(
     monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
     monkeypatch.setattr(
         api_module,
-        "model_catalog",
-        lambda: [{"model": "codex/gpt-5.6-luna"}],
+        "authoring_model_ids",
+        lambda: ["codex/gpt-5.6-luna"],
     )
     api = TestClient(
         create_app(

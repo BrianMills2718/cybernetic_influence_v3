@@ -16,8 +16,10 @@ from pytest import MonkeyPatch
 
 from cybernetic_influence.run_configuration import (
     RunLlmOptions,
+    _current_authoring_schema_digests,
     _current_coordination_schema_digests,
     _current_schema_digests,
+    authoring_model_ids,
     coordination_live_model_ids,
     live_options_contract,
     llm_client_revision,
@@ -27,6 +29,7 @@ from cybernetic_influence.run_configuration import (
 
 MODEL = "openrouter/openai/gpt-5.6-terra"
 CODEX_MODEL = "codex/gpt-5.6-terra"
+CODEX_LUNA_MODEL = "codex/gpt-5.6-luna"
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT_REVISION = installed_llm_client_revision()
 
@@ -39,6 +42,9 @@ def test_launch_agent_binds_global_and_coordination_certification_groups() -> No
     assert environment["CYBERNETIC_INFLUENCE_CERT_TERRA"] == "__CERT_TERRA__"
     assert environment["CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA"] == (
         "__CERT_CODEX_LUNA__"
+    )
+    assert environment["CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA"] == (
+        "__CERT_AUTHORING_CODEX_LUNA__"
     )
     assert environment["CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA"] == (
         "__CERT_CODEX_TERRA__"
@@ -167,6 +173,64 @@ def _codex_observation(
         selected_attempt_receipt_digest=None,
         evidence_ref=f"/test/{schema_class}.json",
     )
+
+
+def _codex_authoring_observation(
+    schema_class: str,
+    *,
+    observed_at: datetime,
+) -> RouteCertificationObservation:
+    schema_digests = _current_authoring_schema_digests(CODEX_LUNA_MODEL)
+    assert schema_digests is not None
+    return RouteCertificationObservation.build(
+        requested_model=CODEX_LUNA_MODEL,
+        resolved_model=CODEX_LUNA_MODEL,
+        upstream_provider_name="OpenAI Codex subscription",
+        upstream_provider_endpoint="codex_cli",
+        execution_mode="workspace_agent",
+        schema_class=schema_class,
+        schema_sha256=schema_digests[schema_class],
+        outcome="parseable",
+        failure_stage="none",
+        logical_call_id=f"logical-authoring-{schema_class}",
+        trace_id=f"trace-authoring-{schema_class}",
+        observed_at=observed_at,
+        llm_client_revision=CLIENT_REVISION,
+        selected_attempt_receipt_digest=None,
+        evidence_ref=f"/test/authoring-{schema_class}.json",
+    )
+
+
+def test_authoring_catalog_requires_exact_proposal_and_review_certifications(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    now = datetime.now(timezone.utc)
+    store = RouteCertificationStore(tmp_path / "observations")
+    observations = [
+        _codex_authoring_observation(schema_class, observed_at=now)
+        for schema_class in (_current_authoring_schema_digests(CODEX_LUNA_MODEL) or {})
+    ]
+    for observation in observations:
+        store.append(observation)
+    monkeypatch.setattr(
+        "cybernetic_influence.run_configuration.codex_subscription_available",
+        lambda: True,
+    )
+    monkeypatch.setenv("LLM_CLIENT_REVISION", CLIENT_REVISION)
+    monkeypatch.setenv("LLM_ROUTE_CERTIFICATION_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA",
+        ",".join(item.observation_id for item in observations),
+    )
+
+    assert authoring_model_ids() == [CODEX_LUNA_MODEL]
+
+    monkeypatch.setenv(
+        "CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA",
+        observations[0].observation_id,
+    )
+    assert authoring_model_ids() == []
 
 
 def test_codex_catalog_requires_login_and_exact_schema_observations(

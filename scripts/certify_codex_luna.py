@@ -26,6 +26,12 @@ from cybernetic_influence.analysis.coordination_measurement import CoderOutput
 from cybernetic_influence.experiments.coordination_experiment import (
     PRESSURE_SOURCE_DECISION_MODELS,
 )
+from cybernetic_influence.general_simulation.authoring_models import (
+    DependencyCompletenessReviewV1,
+)
+from cybernetic_influence.general_simulation.study_models import (
+    AuthoredSimulationProposalEnvelopeV2,
+)
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
     CODEX_TERRA_MODEL,
@@ -41,7 +47,17 @@ from cybernetic_influence.scenarios.coordination_decision import (
 
 
 def _messages(schema: type[BaseModel]) -> list[dict[str, str]]:
-    if schema is CausalMomentNarration:
+    if schema is AuthoredSimulationProposalEnvelopeV2:
+        request = (
+            "Create a compact valid simulation of one person receiving a message "
+            "and recording it. Do not add an analyst question or analysis."
+        )
+    elif schema is DependencyCompletenessReviewV1:
+        request = (
+            "Return status complete, a concise schema-certification summary, and "
+            "no missing dependencies."
+        )
+    elif schema is CausalMomentNarration:
         request = (
             "Return a concise account and one detailed paragraph stating that "
             "this schema-certification probe retained no scenario claim."
@@ -85,7 +101,9 @@ def _certify(
             task="cybernetic_influence_route_certification",
             trace_id=trace_id,
             max_budget=0.10,
-            max_tokens=1000,
+            max_tokens=(
+                8000 if schema is AuthoredSimulationProposalEnvelopeV2 else 1000
+            ),
             reasoning_effort="medium",
             model_justification=(
                 "Certify the exact simulator schema through the selected "
@@ -128,6 +146,42 @@ def _certify(
 
 def main() -> None:
     route = sys.argv[1] if len(sys.argv) > 1 else "luna"
+    if route == "luna-authoring":
+        model = CODEX_LUNA_MODEL
+        revision = llm_client_revision()
+        data_root = Path(
+            os.environ.get("LLM_CLIENT_DATA_ROOT", "~/projects/data")
+        ).expanduser()
+        certification_root = Path(
+            os.environ.get(
+                "LLM_ROUTE_CERTIFICATION_ROOT",
+                "~/projects/data/llm_route_certification",
+            )
+        ).expanduser()
+        store = RouteCertificationStore(certification_root / "observations")
+        observability_db = data_root / "llm_observability.db"
+        ids = [
+            _certify(
+                schema,
+                model=model,
+                trace_id=(
+                    "cybernetic-influence/certification/luna/authoring/"
+                    f"{schema.__name__}"
+                ),
+                store=store,
+                evidence_root=observability_db,
+                llm_client_revision_value=revision,
+            )
+            for schema in (
+                AuthoredSimulationProposalEnvelopeV2,
+                DependencyCompletenessReviewV1,
+            )
+        ]
+        print(
+            "CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA="
+            + ",".join(ids)
+        )
+        return
     routes = {
         "luna": (
             CODEX_LUNA_MODEL,
@@ -149,7 +203,8 @@ def main() -> None:
         model, global_env, coordination_env = routes[route]
     except KeyError as error:
         raise SystemExit(
-            "usage: certify_codex_luna.py [luna|terra|openrouter-terra]"
+            "usage: certify_codex_luna.py "
+            "[luna|luna-authoring|terra|openrouter-terra]"
         ) from error
     revision = llm_client_revision()
     data_root = Path(

@@ -47,6 +47,7 @@ class _RouteAdvertisement(TypedDict):
     label: str
     certification_env: str
     coordination_certification_env: str
+    authoring_certification_env: NotRequired[str]
     narrator_reasoning_effort: ReasoningEffort
     agent_reasoning_efforts: NotRequired[tuple[ReasoningEffort, ...]]
     experimental_agent_reasoning_efforts: NotRequired[tuple[ReasoningEffort, ...]]
@@ -82,6 +83,9 @@ _ADVERTISEMENT: dict[str, _RouteAdvertisement] = {
         "certification_env": "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA",
         "coordination_certification_env": (
             "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA"
+        ),
+        "authoring_certification_env": (
+            "CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA"
         ),
         "agent_reasoning_efforts": ("medium",),
         "narrator_reasoning_effort": "medium",
@@ -374,6 +378,29 @@ def coordination_live_model_ids() -> list[str]:
     return supported
 
 
+def authoring_model_ids() -> list[str]:
+    """Return routes certified for the exact separated public authoring calls."""
+    try:
+        from llm_client import ALLOWED_EXECUTION_MODELS
+    except ImportError:
+        return []
+    supported: list[str] = []
+    for model, advertisement in _ADVERTISEMENT.items():
+        certification_env = advertisement.get("authoring_certification_env")
+        if not certification_env or model not in ALLOWED_EXECUTION_MODELS:
+            continue
+        if is_codex_subscription_model(model) and not codex_subscription_available():
+            continue
+        configured = os.getenv(certification_env, "").strip()
+        if _validated_schema_group_basis(
+            model,
+            configured,
+            _current_authoring_schema_digests(model),
+        ):
+            supported.append(model)
+    return supported
+
+
 def _current_schema_digests(model: str = DEFAULT_MODEL) -> dict[str, str] | None:
     """Reproduce the exact provider schema used by the selected route."""
     try:
@@ -435,6 +462,42 @@ def _current_coordination_schema_digests(
         else openrouter_native_provider_schema
     )
     return {name: route_schema_sha256(projector(schema)) for name, schema in schemas.items()}
+
+
+def _current_authoring_schema_digests(
+    model: str = PREFERRED_MODEL,
+) -> dict[str, str] | None:
+    """Reproduce both provider schemas used by the public configure action."""
+    try:
+        from llm_client import (
+            codex_native_provider_schema,
+            openrouter_native_provider_schema,
+            route_schema_sha256,
+        )
+
+        from cybernetic_influence.general_simulation.authoring_models import (
+            DependencyCompletenessReviewV1,
+        )
+        from cybernetic_influence.general_simulation.study_models import (
+            AuthoredSimulationProposalEnvelopeV2,
+        )
+    except ImportError:
+        return None
+    schemas = {
+        AuthoredSimulationProposalEnvelopeV2.__name__: (
+            AuthoredSimulationProposalEnvelopeV2
+        ),
+        DependencyCompletenessReviewV1.__name__: DependencyCompletenessReviewV1,
+    }
+    projector = (
+        codex_native_provider_schema
+        if is_codex_subscription_model(model)
+        else openrouter_native_provider_schema
+    )
+    return {
+        name: route_schema_sha256(projector(schema))
+        for name, schema in schemas.items()
+    }
 
 
 def resolve_live_configuration(

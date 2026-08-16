@@ -135,6 +135,7 @@ from cybernetic_influence.run_configuration import (
     EffectiveRunLlmConfiguration,
     MAXIMUM_PARTICIPANT_CALLS,
     RunLlmOptions,
+    authoring_model_ids,
     coordination_live_model_ids,
     live_options_contract,
     llm_client_revision,
@@ -2629,18 +2630,18 @@ def create_app(
         live_defaults = cast(dict[str, object], live_options["defaults"])
         authoring_models = list(AUTHORING_MODEL_OPTIONS)
         if os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1":
-            certified_model_ids = {
-                str(item["model"]) for item in model_catalog()
-            }
+            certified_model_ids = set(authoring_model_ids())
             authoring_models = [
                 item
                 for item in authoring_models
                 if item["model"] in certified_model_ids
             ]
-        authoring_model_ids = {item["model"] for item in authoring_models}
+        authoring_available_model_ids = {
+            item["model"] for item in authoring_models
+        }
         authoring_default = (
             AUTHORING_MODEL
-            if AUTHORING_MODEL in authoring_model_ids
+            if AUTHORING_MODEL in authoring_available_model_ids
             else (authoring_models[0]["model"] if authoring_models else None)
         )
         structured_authoring_contract = authoring_contract()
@@ -3058,8 +3059,7 @@ def create_app(
         _require_access(request)
         if (
             os.getenv("CYBERNETIC_INFLUENCE_LIVE") == "1"
-            and body.model
-            not in {str(item["model"]) for item in model_catalog()}
+            and body.model not in set(authoring_model_ids())
         ):
             raise HTTPException(
                 status_code=422,

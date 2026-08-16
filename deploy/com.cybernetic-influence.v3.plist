@@ -30,6 +30,8 @@
     <string>__CERT_TERRA__</string>
     <key>CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA</key>
     <string>__CERT_CODEX_LUNA__</string>
+    <key>CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA</key>
+    <string>__CERT_AUTHORING_CODEX_LUNA__</string>
     <key>CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA</key>
     <string>__CERT_CODEX_TERRA__</string>
     <key>CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH</key>
