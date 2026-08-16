@@ -1930,6 +1930,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
             document.get("execution_contract") == "general_world_v2"
             and isinstance(authoring.get("question"), str)
             and bool(str(authoring["question"]).strip())
+            and authoring.get("question") != authoring.get("description")
         ),
         node_overrides_by_revision=_general_world_node_overrides(
             document.get("general_simulation")
@@ -1946,6 +1947,15 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "execution": document.get("execution"),
         "profile": document.get("profile"),
         "execution_contract": document.get("execution_contract"),
+        "authoring": {
+            "question": (
+                None
+                if document.get("execution_contract") == "general_world_v2"
+                and authoring.get("question") == authoring.get("description")
+                else authoring.get("question")
+            ),
+            "description": authoring.get("description"),
+        },
         "title": authoring.get("title"),
         "description": authoring.get("description"),
         "template_id": authoring.get("template_id"),

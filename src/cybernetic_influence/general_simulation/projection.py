@@ -27,7 +27,8 @@ def project_general_run(
             raise TypeError("V2 compilation requires a V2 run result")
         v2 = True
         proposal = compiled.scenario
-        question = presentation_question or compiled.scenario.description
+        analyst_question = presentation_question
+        question = analyst_question or compiled.scenario.description
         scenario_id = compiled.scenario.scenario_id
         proposal_kind = "general_world_v2"
         analysis_spec: dict[str, object] | None = None
@@ -38,6 +39,7 @@ def project_general_run(
         v2 = False
         proposal = compiled.proposal
         question = compiled.proposal.question
+        analyst_question = question
         scenario_id = compiled.proposal.simulation_id
         proposal_kind = compiled.proposal.proposal_kind
         analysis_spec = (
@@ -181,7 +183,8 @@ def project_general_run(
             f"scheduled moments; {accepted} joint transactions committed and {rejected} were rejected."
         ),
         "story": {
-            "question": question,
+            "question": analyst_question,
+            "presentation_brief": question,
             "headline": proposal.title,
             "summary": proposal.description,
         },

@@ -548,6 +548,7 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     summary_payload = summary.json()
     assert summary_payload["profile"] == "general_world_v2"
     assert summary_payload["execution_contract"] == "general_world_v2"
+    assert summary_payload["authoring"]["question"]
     assert summary_payload["evidence_bundle"]["record_digest"]
     assert summary_payload["evidence_bundle"]["evidence_record_count"] > 0
     assert len(summary_payload["analysis_results"]) == 1
