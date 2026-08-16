@@ -132,19 +132,25 @@ revision 2, and evidence digest
 across attach/add/remove. Luna remained unavailable at its certified provider
 boundary, so neither artifact is a Luna execution.
 
-Validation boundary observed 2026-08-16: the same draft proves typed schema and
-reference validity, a connected 39-node/73-edge configuration graph, explicit
-coverage classification, and successful execution. It does **not** prove that
-every named consequential prerequisite is mechanically enforced. The exact
-cargo transport contract consumes and moves cargo over the bypass route, but
-does not itself consume truck, committed-fuel, or berth capacity or require the
-customs and labor status records. Those constraints influenced the retained
-trajectory through coarse LLM actor/adjudicator decisions. Until a generated
-dependency-enforcement report exists, describe this as structurally validated
-and executable—not causally closed or fully correct. The attached Waltzman lens
-is likewise presently a count-based evidence projection, not a complete
-operationalization of trust, perceived risk, dependencies, or coordination
-readiness.
+Validation boundary observed 2026-08-16: build
+`33b9bd9ff00d53a02d5e34f47b8768daa42b4fa9` serves a compiler-generated
+dependency-enforcement report. It separates exact authority from exact causal
+closure, lists declared reads that an exact contract does not enforce, blocks
+exact-required partial requests, rechecks saved approvals before execution,
+and visibly opens the blocking report. Retained draft `draft_2336c4427396` now
+flags fuel commitment and cargo movement as partial and cannot execute under
+its stale approval. Authentic Terra canary `draft_2c61378159f6` completed one
+authoring attempt at observed cost `$0.14373`; its bounded labor determination
+is correctly classified as coarse rather than exact.
+
+This report proves enforcement only for dependencies the author declares. The
+canary's exact cargo movement omitted customs clearance, labor approval, truck
+availability, and fuel from its declared reads, so `approvable` still does
+**not** mean the generated simulation is causally complete or fully correct.
+Describe it as structurally valid, executable, and causally classified over its
+declared dependencies. The attached Waltzman lens is likewise presently a
+count-based evidence projection, not a complete operationalization of trust,
+perceived risk, dependencies, or coordination readiness.
 
 Current public-service observation 2026-08-16: build
 `7a0725e5b7b2f86772ae21f659b73136fdc76b2b` serves the corrected public
