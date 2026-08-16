@@ -217,13 +217,13 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
     proposal = _native_v2_proposal()
 
     def provider(*args: Any, **kwargs: Any) -> tuple[object, object]:
-        del args
         if kwargs["response_model"] is DependencyCompletenessReviewV1:
             return DependencyCompletenessReviewV1(
                 status="complete",
                 summary="No stated exact-action prerequisite is omitted.",
                 missing_dependencies=[],
             ), SimpleNamespace(provider="test", cost=0.0)
+        assert "state.<key>" in args[1][0]["content"]
         return AuthoredSimulationProposalEnvelopeV2(proposal=proposal), SimpleNamespace(
             provider="test", cost=0.0
         )
