@@ -246,7 +246,15 @@ def _contract_transaction(*, delivered_quantity: int = 500) -> WorldTransaction:
 
 
 def test_declared_contracts_license_complete_transition_and_retain_attribution() -> None:
-    world = _contract_world()
+    spec = _contract_world().spec
+    semantic = next(
+        item
+        for item in spec.authorities
+        if item.authority_id == "port_semantic_adjudicator"
+    )
+    semantic.patch_grammar.allowed_operations = []
+    semantic.patch_grammar.allowed_record_types = []
+    world = CanonicalWorld(spec)
     intent = _contract_intent("inspect_quality", "produce", "deliver")
 
     result = world.validate_and_commit(

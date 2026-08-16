@@ -49,6 +49,7 @@ from .models import (
     GeneralMomentEvidence,
     ModelCallReceipt,
     SemanticActionIntent,
+    TransitionAuthoritySpec,
     TypedTarget,
     WorldTransaction,
     WorldTransactionProposal,
@@ -313,6 +314,45 @@ def _inject_selected_contract_preconditions(
     )
     return transaction.model_copy(
         update={"preconditions": [*transaction.preconditions, *additions]}
+    )
+
+
+def _effective_transition_authority(
+    world: CanonicalWorld,
+    authority: TransitionAuthoritySpec,
+) -> TransitionAuthoritySpec:
+    """Expose the operation grammar available through coarse and exact authority.
+
+    Exact-contract operations remain licensed only when canonical attribution
+    matches a selected contract. This union tells the adjudicator which patch
+    shapes it may propose without granting it additional commit authority.
+    """
+
+    exact_authority = next(
+        (
+            item
+            for item in world.spec.authorities
+            if item.implementation == "deterministic"
+        ),
+        None,
+    )
+    if exact_authority is None:
+        return authority
+    return authority.model_copy(
+        update={
+            "patch_grammar": authority.patch_grammar.model_copy(
+                update={
+                    "allowed_operations": sorted(
+                        set(authority.patch_grammar.allowed_operations)
+                        | set(exact_authority.patch_grammar.allowed_operations)
+                    ),
+                    "allowed_record_types": sorted(
+                        set(authority.patch_grammar.allowed_record_types)
+                        | set(exact_authority.patch_grammar.allowed_record_types)
+                    ),
+                }
+            )
+        }
     )
 
 
@@ -784,6 +824,7 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             authority = next(
                 item for item in world.spec.authorities if item.authority_id == self._authority_id
             )
+            effective_authority = _effective_transition_authority(world, authority)
             moment = self._moment()
             active_sensing_rules, active_transformations, active_transports = (
                 self._active_transition_contracts()
@@ -795,7 +836,10 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 system=(
                     "You are a bounded joint transition authority in an exploratory simulation. "
                     "Reconcile the same-revision semantic intents into one transaction containing "
-                    "only mutations allowed by the supplied patch grammar. You propose; canonical "
+                    "only mutations allowed by the supplied effective patch grammar. That grammar "
+                    "combines the coarse authority with configured exact-contract patch shapes; exact "
+                    "operations still commit only when canonical attribution matches a selected "
+                    "contract. You propose; canonical "
                     "validation determines whether the transaction commits. Do not put hidden world "
                     "facts into actor-visible consequences. Do not assess an analyst objective or "
                     "declare whether the simulation succeeded; this authority only adjudicates the "
@@ -830,7 +874,7 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                         "moment": moment.model_dump(mode="json"),
                         "world": world.state.model_dump(mode="json"),
                         "intents": [item.model_dump(mode="json") for item in intents],
-                        "authority": authority.model_dump(mode="json"),
+                        "authority": effective_authority.model_dump(mode="json"),
                         "active_component_requests": self._active_component_requests(),
                         "active_transition_contract_ids": moment.active_transition_contract_ids,
                         "configured_active_systems": [
@@ -985,7 +1029,7 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                                 "moment": moment.model_dump(mode="json"),
                                 "world": world.state.model_dump(mode="json"),
                                 "intents": [item.model_dump(mode="json") for item in intents],
-                                "authority": authority.model_dump(mode="json"),
+                                "authority": effective_authority.model_dump(mode="json"),
                                 "requirements": {
                                     "authority_id": self._authority_id,
                                     "base_revision": world.state.revision,

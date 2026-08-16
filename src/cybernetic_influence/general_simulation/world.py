@@ -229,21 +229,33 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             authority.authority_id: authority for authority in self._spec.authorities
         }
         authority = authorities.get(transaction.authority_id)
+        supplied_intents = list(intents or [])
+        if supplied_intents and set(transaction.intent_ids) != {
+            item.intent_id for item in supplied_intents
+        }:
+            errors.append("transaction intent ids differ from supplied actor intents")
+        operation_attributions, contract_errors = self._attribute_operations(
+            transaction,
+            intents=supplied_intents,
+            current_minute=current_minute,
+        )
+        exact_operation_indices = {
+            item.operation_index
+            for item in operation_attributions
+            if item.classification == "exact_contract"
+        }
         if authority is None:
             errors.append(f"unknown authority {transaction.authority_id}")
         else:
-            for operation in transaction.operations:
+            for index, operation in enumerate(transaction.operations):
+                if index in exact_operation_indices:
+                    continue
                 if operation.operation not in authority.patch_grammar.allowed_operations:
                     errors.append(f"operation {operation.operation} is outside authority grammar")
                 if operation.target.record_type not in authority.patch_grammar.allowed_record_types:
                     errors.append(
                         f"target type {operation.target.record_type} is outside authority grammar"
                     )
-        supplied_intents = list(intents or [])
-        if supplied_intents and set(transaction.intent_ids) != {
-            item.intent_id for item in supplied_intents
-        }:
-            errors.append("transaction intent ids differ from supplied actor intents")
         for consequence in transaction.consequences:
             if consequence.representation_id is None:
                 continue
@@ -297,11 +309,6 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     f"expected {precondition.comparison} {precondition.expected!r}, "
                     f"got {actual!r}"
                 )
-        operation_attributions, contract_errors = self._attribute_operations(
-            transaction,
-            intents=supplied_intents,
-            current_minute=current_minute,
-        )
         errors.extend(contract_errors)
         candidate = self._state.model_copy(deep=True)
         if not errors:

@@ -28,6 +28,7 @@ from cybernetic_influence.general_simulation.models import (
 )
 from cybernetic_influence.general_simulation.runner import (
     _drop_unauthorized_representation_deliveries,
+    _effective_transition_authority,
     _inject_selected_contract_preconditions,
     _memory_reference_is_grounded,
     _normalize_transaction_targets,
@@ -256,6 +257,34 @@ def test_selected_exact_transport_receives_compiled_guards() -> None:
         "trusted exact contract preconditions injected: "
         "record:relief_cargo:state.status"
     ]
+
+
+def test_adjudicator_sees_coarse_and_exact_patch_shapes_without_changing_authority() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    world = CanonicalWorld(compile_general_simulation(proposal).world_spec)
+    semantic = next(
+        item
+        for item in world.spec.authorities
+        if item.authority_id == "general_semantic_adjudicator"
+    )
+    exact = next(
+        item for item in world.spec.authorities if item.implementation == "deterministic"
+    )
+
+    effective = _effective_transition_authority(world, semantic)
+
+    assert effective.authority_id == semantic.authority_id
+    assert set(effective.patch_grammar.allowed_operations) == (
+        set(semantic.patch_grammar.allowed_operations)
+        | set(exact.patch_grammar.allowed_operations)
+    )
+    assert set(effective.patch_grammar.allowed_record_types) == (
+        set(semantic.patch_grammar.allowed_record_types)
+        | set(exact.patch_grammar.allowed_record_types)
+    )
+    assert semantic.patch_grammar != effective.patch_grammar
 
 
 def test_whole_sensing_state_is_expanded_and_unauthorized_delivery_is_omitted() -> None:
