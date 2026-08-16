@@ -158,7 +158,7 @@ same retained execution now drives the dedicated seven-step canonical guide at
 That guide distinguishes configured canonical structure from realized causal
 events and fails visibly if its exact retained run is absent. The Methodology
 page at <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=method> is a
-14-part technical paper covering the ontology, relation semantics, agency,
+15-part technical paper covering the ontology, relation semantics, agency,
 information lineage, capability and affordance distinctions, transition
 authority, evidence, sociotechnical resolution, authoring limits, and Waltzman
 analysis. That page has since been updated to distinguish historical
