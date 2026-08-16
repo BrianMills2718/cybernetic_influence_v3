@@ -187,6 +187,15 @@ class ResourceTransformationProposalV1(_StrictModel):
     output_quantity: float = Field(gt=0)
     maximum_batches: int = Field(ge=1)
     public_inventory_record_id: str = Field(pattern=_ID)
+    public_inventory_input_fields: dict[str, str] = Field(
+        default_factory=dict,
+        exclude_if=lambda value: not value,
+    )
+    public_inventory_output_field: str | None = Field(
+        default=None,
+        min_length=1,
+        exclude_if=lambda value: value is None,
+    )
 
     @model_validator(mode="before")
     @classmethod

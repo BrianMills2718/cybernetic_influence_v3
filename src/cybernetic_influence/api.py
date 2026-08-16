@@ -896,6 +896,67 @@ def _general_world_node_overrides(
     return revisions
 
 
+def _attach_transitions_to_causal_moments(
+    raw_moments: list[object],
+    transition_evidence: list[object],
+) -> list[dict[str, object]]:
+    """Join transaction attempts to their authored moment, never by list position."""
+    moments = [dict(item) for item in raw_moments if isinstance(item, dict)]
+    moment_ids = {
+        str(moment_id): index
+        for index, moment in enumerate(moments)
+        if isinstance(
+            (moment_id := moment.get("event_id", moment.get("moment_id"))), str
+        )
+    }
+    intent_to_moment: dict[str, int] = {}
+    for index, moment in enumerate(moments):
+        intent_ids = moment.get("intent_ids")
+        if isinstance(intent_ids, list):
+            for intent_id in intent_ids:
+                if isinstance(intent_id, str):
+                    intent_to_moment[intent_id] = index
+    grouped: list[list[dict[str, object]]] = [[] for _ in moments]
+    unresolved: list[dict[str, object]] = []
+    for raw_transition in transition_evidence:
+        if not isinstance(raw_transition, dict):
+            continue
+        transaction = raw_transition.get("transaction")
+        refs = (
+            transaction.get("evidence_refs")
+            if isinstance(transaction, dict)
+            else None
+        )
+        matching_indices = {
+            moment_ids[item]
+            for item in refs
+            if isinstance(item, str) and item in moment_ids
+        } if isinstance(refs, list) else set()
+        if not matching_indices and isinstance(transaction, dict):
+            intent_ids = transaction.get("intent_ids")
+            matching_indices = {
+                intent_to_moment[item]
+                for item in intent_ids
+                if isinstance(item, str) and item in intent_to_moment
+            } if isinstance(intent_ids, list) else set()
+        if len(matching_indices) == 1:
+            grouped[matching_indices.pop()].append(raw_transition)
+        else:
+            unresolved.append(raw_transition)
+    if unresolved and len(unresolved) == len(moments):
+        for index, transition in enumerate(unresolved):
+            grouped[index].append(transition)
+        unresolved = []
+    if unresolved:
+        raise ValueError(
+            f"could not attach {len(unresolved)} transition attempt(s) to a causal moment"
+        )
+    return [
+        {**moment, "transitions": grouped[index]}
+        for index, moment in enumerate(moments)
+    ]
+
+
 def _simulation_replay(
     *,
     title: object,
@@ -1079,22 +1140,23 @@ def _simulation_replay(
         if isinstance(objective_assessment, dict)
         else None
     )
-    add_scene(
-        scene_id="question",
-        kind="question",
-        scene_title=(
-            "Your review question"
-            if question_is_analyst_framing
-            else "The collective question"
-            if gate_ids
-            else "Simulation brief"
-        ),
-        scene_summary=question,
-        visible_nodes=gate_ids,
-        visible_edges=[],
-        focus_nodes=gate_ids,
-        facts=[("Simulation", str(title or "Retained simulation"))],
-    )
+    if not general_world or question_is_analyst_framing or gate_ids:
+        add_scene(
+            scene_id="question",
+            kind="question",
+            scene_title=(
+                "Your review question"
+                if question_is_analyst_framing
+                else "The collective question"
+                if gate_ids
+                else "Simulation brief"
+            ),
+            scene_summary=question,
+            visible_nodes=gate_ids,
+            visible_edges=[],
+            focus_nodes=gate_ids,
+            facts=[("Simulation", str(title or "Retained simulation"))],
+        )
     add_scene(
         scene_id="setup",
         kind="setup",
@@ -1226,7 +1288,13 @@ def _simulation_replay(
                 and isinstance(parent_revision, int)
                 and resulting_revision > parent_revision
             )
-            transition = moment.get("transition")
+            raw_transitions = moment.get("transitions")
+            transitions = (
+                [item for item in raw_transitions if isinstance(item, dict)]
+                if isinstance(raw_transitions, list)
+                else []
+            )
+            transition = transitions[-1] if transitions else moment.get("transition")
             transaction = (
                 transition.get("transaction")
                 if isinstance(transition, dict)
@@ -1418,6 +1486,11 @@ def _simulation_replay(
                 facts=[
                     ("Moment", str(index)),
                     ("People acting", str(len(participants))),
+                    *(
+                        [("Transaction attempts", str(len(transitions)))]
+                        if len(transitions) > 1
+                        else []
+                    ),
                     *(
                         [
                             (
@@ -1723,26 +1796,6 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
             )
     raw_outcome = document.get("outcome")
     outcome = deepcopy(raw_outcome) if isinstance(raw_outcome, dict) else {}
-    if document.get("profile") in {"general_world_v1", "general_world_v2"}:
-        general_simulation = document.get("general_simulation")
-        transition_evidence = (
-            general_simulation.get("transition_evidence")
-            if isinstance(general_simulation, dict)
-            else None
-        )
-        accepted_evidence = [
-            item
-            for item in transition_evidence
-            if isinstance(item, dict)
-            and isinstance(item.get("validation"), dict)
-            and item["validation"].get("accepted") is True
-            and isinstance(item.get("transaction"), dict)
-        ] if isinstance(transition_evidence, list) else []
-        if accepted_evidence:
-            terminal_transaction = accepted_evidence[-1]["transaction"]
-            terminal_summary = terminal_transaction.get("stated_rationale")
-            if isinstance(terminal_summary, str) and terminal_summary.strip():
-                outcome["terminal_summary"] = terminal_summary.strip()
     completion = document.get("completion")
     if not isinstance(completion, dict):
         completion = {}
@@ -1800,19 +1853,22 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
             else None
         )
         if isinstance(transition_evidence, list):
-            raw_moments = [
-                {
-                    **moment,
-                    **(
-                        {"transition": transition_evidence[index]}
-                        if index < len(transition_evidence)
-                        and isinstance(transition_evidence[index], dict)
-                        else {}
-                    ),
-                }
-                for index, moment in enumerate(raw_moments)
-                if isinstance(moment, dict)
-            ]
+            raw_moments = _attach_transitions_to_causal_moments(
+                raw_moments, transition_evidence
+            )
+            committed_moments = sum(
+                isinstance(moment.get("resulting_revision"), int)
+                and isinstance(moment.get("execution_parent"), str)
+                and str(moment["execution_parent"]).removeprefix("revision:").isdigit()
+                and int(moment["resulting_revision"])
+                > int(str(moment["execution_parent"]).removeprefix("revision:"))
+                for moment in raw_moments
+            )
+            outcome["terminal_summary"] = (
+                f"The simulation completed {len(raw_moments)} scheduled moments. "
+                f"{committed_moments} committed a validated transition; the retained final "
+                f"world is revision {outcome.get('final_revision', 0)}."
+            )
     rounds: dict[int, dict[str, object]] = {}
     for step in decision_steps:
         raw_round_index = step.get("round_index")
@@ -2022,6 +2078,14 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "participant_model_calls": document.get(
             "agent_model_calls", document.get("model_calls", 0)
         ),
+        "model": (
+            document.get("llm_configuration", {}).get("model")
+            if isinstance(document.get("llm_configuration"), dict)
+            else None
+        ),
+        "execution_providers": document.get("execution_providers", []),
+        "observed_cost": document.get("cost"),
+        "cost_coverage": document.get("cost_coverage"),
         "causal_moments": (
             len(raw_moments)
             if is_general_world and isinstance(raw_moments, list)

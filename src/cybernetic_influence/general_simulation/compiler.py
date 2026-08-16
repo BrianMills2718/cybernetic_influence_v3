@@ -111,6 +111,123 @@ def _state_dict(entries: list[Any]) -> dict[str, Any]:
     return values
 
 
+def _sensing_output_fields(
+    proposal: GeneralSimulationProposalV1 | ScenarioSpecV2,
+) -> dict[str, dict[str, str]]:
+    counts: dict[tuple[str, str], int] = {}
+    for rule in proposal.sensing_rules:
+        for hidden_key in rule.reveal_hidden_keys:
+            key = (rule.output_record_id, hidden_key)
+            counts[key] = counts.get(key, 0) + 1
+    return {
+        rule.rule_id: {
+            hidden_key: (
+                f"{rule.subject_ref}_{hidden_key}"
+                if counts[(rule.output_record_id, hidden_key)] > 1
+                else hidden_key
+            )
+            for hidden_key in rule.reveal_hidden_keys
+        }
+        for rule in proposal.sensing_rules
+    }
+
+
+def _transformation_inventory_fields(
+    proposal: GeneralSimulationProposalV1 | ScenarioSpecV2,
+) -> dict[str, tuple[str, dict[str, str]]]:
+    records = {item.record_id: item for item in proposal.world_records}
+    stocks = (
+        {item.resource_id: item for item in proposal.resource_extension.stocks}
+        if proposal.resource_extension
+        else {}
+    )
+    resolved: dict[str, tuple[str, dict[str, str]]] = {}
+    for transformation in proposal.resource_transformations:
+        record = records.get(transformation.public_inventory_record_id)
+        output = stocks.get(transformation.output_resource_id)
+        if record is None or output is None:
+            continue
+        state = _state_dict(record.public_state)
+        output_field = transformation.public_inventory_output_field
+        if output_field is not None:
+            if (
+                output_field not in state
+                or isinstance(state[output_field], bool)
+                or not isinstance(state[output_field], (int, float))
+            ):
+                raise GeneralCompilationError(
+                    f"transformation {transformation.transformation_id} names public inventory "
+                    f"output field {output_field!r}, but that field is not numeric on "
+                    f"{record.record_id}"
+                )
+        else:
+            semantic_candidates = [
+                key
+                for key, value in state.items()
+                if isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and (
+                    key == transformation.output_resource_id
+                    or transformation.output_resource_id in key
+                )
+            ]
+            quantity_candidates = [
+                key
+                for key, value in state.items()
+                if isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and float(value) == output.quantity
+            ]
+            candidates = semantic_candidates or quantity_candidates
+            if len(candidates) != 1:
+                raise GeneralCompilationError(
+                    f"transformation {transformation.transformation_id} needs an unambiguous "
+                    "public_inventory_output_field naming the existing numeric field that mirrors "
+                    f"resource {transformation.output_resource_id}; candidates={sorted(candidates)}"
+                )
+            output_field = candidates[0]
+        input_resource_ids = {
+            item.resource_id for item in transformation.input_resource_quantities
+        }
+        explicit_inputs = dict(transformation.public_inventory_input_fields)
+        unknown_input_resources = sorted(set(explicit_inputs) - input_resource_ids)
+        invalid_input_fields = sorted(
+            field
+            for field in explicit_inputs.values()
+            if field not in state
+            or isinstance(state[field], bool)
+            or not isinstance(state[field], (int, float))
+        )
+        if unknown_input_resources or invalid_input_fields:
+            raise GeneralCompilationError(
+                f"transformation {transformation.transformation_id} has invalid public "
+                "inventory input mappings: "
+                f"resources={unknown_input_resources}, fields={invalid_input_fields}"
+            )
+        input_fields = explicit_inputs
+        for resource_id in sorted(input_resource_ids - set(input_fields)):
+            stock = stocks[resource_id]
+            resource_tokens = set(resource_id.split("_"))
+            ranked = sorted(
+                (
+                    len(resource_tokens & set(field.split("_"))),
+                    field,
+                )
+                for field, value in state.items()
+                if field != output_field
+                and field not in input_fields.values()
+                and isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and float(value) == stock.quantity
+            )
+            if ranked and ranked[-1][0] >= 2 and (
+                len(ranked) == 1 or ranked[-1][0] > ranked[-2][0]
+            ):
+                input_fields[resource_id] = ranked[-1][1]
+        resolved[transformation.transformation_id] = (output_field, input_fields)
+    return resolved
+
+
 def _exact_contract_access(
     proposal: GeneralSimulationProposalV1 | ScenarioSpecV2,
 ) -> dict[str, tuple[set[str], set[str]]]:
@@ -185,6 +302,7 @@ def _compile_general_simulation(
                     f"representation {representation.representation_id} names unknown recipients: "
                     + ", ".join(unknown)
                 )
+    sensing_output_fields = _sensing_output_fields(proposal)
     for rule in proposal.sensing_rules:
         if rule.subject_ref not in declared_refs:
             raise GeneralCompilationError(
@@ -231,6 +349,28 @@ def _compile_general_simulation(
                 f"sensing rule {rule.rule_id} names unavailable hidden keys: "
                 + ", ".join(unknown_hidden_keys)
             )
+        output_record = next(
+            (
+                item
+                for item in proposal.world_records
+                if item.record_id == rule.output_record_id
+            ),
+            None,
+        )
+        output_keys = (
+            {item.key for item in output_record.public_state}
+            if output_record is not None
+            else set()
+        )
+        missing_output_fields = sorted(
+            set(sensing_output_fields[rule.rule_id].values()) - output_keys
+        )
+        if missing_output_fields:
+            raise GeneralCompilationError(
+                f"sensing rule {rule.rule_id} cannot publish its result because output "
+                f"record {rule.output_record_id} lacks public fields: "
+                + ", ".join(missing_output_fields)
+            )
     resource_ids = (
         {item.resource_id for item in proposal.resource_extension.stocks}
         if proposal.resource_extension else set()
@@ -259,6 +399,7 @@ def _compile_general_simulation(
                 f"transformation {transformation.transformation_id} names unknown inventory record "
                 f"{transformation.public_inventory_record_id}"
             )
+    transformation_inventory_fields = _transformation_inventory_fields(proposal)
     resource_custodians = (
         {item.resource_id: item.custodian_id for item in proposal.resource_extension.stocks}
         if proposal.resource_extension else {}
@@ -949,27 +1090,13 @@ def _compile_general_simulation(
                 representation_ids=sorted(visible_representations),
             )
         )
-    output_sensing_field_counts: dict[tuple[str, str], int] = {}
-    for rule in proposal.sensing_rules:
-        for hidden_key in rule.reveal_hidden_keys:
-            key = (rule.output_record_id, hidden_key)
-            output_sensing_field_counts[key] = (
-                output_sensing_field_counts.get(key, 0) + 1
-            )
     sensing_contracts = [
         SensingTransitionContract(
             contract_id=rule.rule_id,
             subject_type=("route" if rule.subject_ref in route_ids else "record"),
             subject_id=rule.subject_ref,
             observer_ids=rule.observer_ids,
-            hidden_to_output_fields={
-                hidden_key: (
-                    f"{rule.subject_ref}_{hidden_key}"
-                    if output_sensing_field_counts[(rule.output_record_id, hidden_key)] > 1
-                    else hidden_key
-                )
-                for hidden_key in rule.reveal_hidden_keys
-            },
+            hidden_to_output_fields=sensing_output_fields[rule.rule_id],
             output_record_id=rule.output_record_id,
             result_recipient_ids=rule.result_recipient_ids,
         )
@@ -987,6 +1114,12 @@ def _compile_general_simulation(
             output_quantity=item.output_quantity,
             maximum_batches=item.maximum_batches,
             public_inventory_record_id=item.public_inventory_record_id,
+            public_inventory_input_fields=transformation_inventory_fields[
+                item.transformation_id
+            ][1],
+            public_inventory_output_field=transformation_inventory_fields[
+                item.transformation_id
+            ][0],
         )
         for item in proposal.resource_transformations
     ]

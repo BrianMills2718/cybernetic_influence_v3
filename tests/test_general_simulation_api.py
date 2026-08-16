@@ -13,6 +13,7 @@ from pytest import MonkeyPatch
 import cybernetic_influence.api as api_module
 from cybernetic_influence.api import create_app
 from cybernetic_influence.api import _general_world_node_overrides
+from cybernetic_influence.api import _attach_transitions_to_causal_moments
 from cybernetic_influence.api import _simulation_replay
 from cybernetic_influence.analysis.theory_analysis import AnalysisSpecV2
 from cybernetic_influence.general_simulation.authoring_models import (
@@ -157,11 +158,58 @@ def test_general_replay_focuses_changed_nodes_and_edges() -> None:
         general_world=True,
     )
 
-    assert replay["scenes"][0]["title"] == "Simulation brief"
+    assert replay["scenes"][0]["title"] == "Who and what begin in the system"
     event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
     assert event["focus_node_ids"] == ["floor"]
     assert event["focus_edge_ids"] == ["storage_route"]
     assert "storage_route" in event["visible_edge_ids"]
+
+
+def test_general_replay_groups_repairs_with_their_causal_moment() -> None:
+    moments = [
+        {
+            "event_id": "moment_0_inspection",
+            "intent_ids": ["inspect"],
+            "narrative": "Inspect.",
+        },
+        {
+            "event_id": "moment_30_reservation",
+            "intent_ids": ["reserve"],
+            "narrative": "Reserve.",
+        },
+        {
+            "event_id": "moment_75_movement",
+            "intent_ids": ["move"],
+            "narrative": "Move.",
+        },
+        {
+            "event_id": "moment_150_update",
+            "intent_ids": ["update"],
+            "narrative": "Update.",
+        },
+    ]
+
+    def transition(moment_id: str, intent_id: str) -> dict[str, object]:
+        return {
+            "transaction": {
+                "evidence_refs": [moment_id],
+                "intent_ids": [intent_id],
+            },
+            "validation": {"accepted": True, "errors": []},
+        }
+
+    grouped = _attach_transitions_to_causal_moments(
+        moments,
+        [
+            transition("moment_0_inspection", "inspect"),
+            transition("moment_30_reservation", "reserve"),
+            transition("moment_30_reservation", "reserve"),
+            transition("moment_75_movement", "move"),
+            transition("moment_150_update", "update"),
+        ],
+    )
+
+    assert [len(item["transitions"]) for item in grouped] == [1, 2, 1, 1]
 
 
 def test_general_replay_does_not_present_rejected_operations_as_world_changes() -> None:
@@ -775,7 +823,10 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     outcome_scene = replay_scenes[-1]
     assert len(outcome_scene["visible_node_ids"]) <= 12
     assert len(outcome_scene["visible_edge_ids"]) <= 18
-    assert outcome_scene["summary"] == "Retain the world while recording joint review."
+    assert outcome_scene["summary"] == (
+        "The simulation completed 3 scheduled moments. 3 committed a validated "
+        "transition; the retained final world is revision 3."
+    )
     assert outcome_scene["facts"] == [
         {"label": "Committed transitions", "value": "3"},
         {"label": "Final world revision", "value": "3"},

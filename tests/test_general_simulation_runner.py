@@ -12,6 +12,7 @@ from cybernetic_influence.general_simulation.authoring_models import (
     GeneralSimulationProposalV1,
 )
 from cybernetic_influence.general_simulation.compiler import compile_general_simulation
+from cybernetic_influence.general_simulation.concordia_runtime import _call_model
 from cybernetic_influence.general_simulation.models import (
     ActorDecision,
     Assimilation,
@@ -45,6 +46,51 @@ from cybernetic_influence.general_simulation.projection import project_general_r
 
 FIXTURE = Path("tests/fixtures/general_simulation/port_coordination.json")
 SERVICE_FIXTURE = Path("tests/fixtures/general_simulation/service_incident.json")
+
+
+def test_model_receipt_retains_metered_provider_and_cost() -> None:
+    decision = ActorDecision(
+        assimilation=Assimilation(
+            attended_observation_ids=[],
+            memory_additions=[],
+            memory_revisions=[],
+            provenance_links=[],
+            interpretation="Retain the supplied context.",
+        ),
+        intent=SemanticActionIntent(
+            intent_id="intent_cost_probe",
+            actor_id="operator",
+            base_revision=0,
+            action="Observe.",
+            target_refs=[],
+            purpose="Verify telemetry.",
+            expected_effect="No world change.",
+            stated_rationale="This is a receipt probe.",
+        ),
+    )
+
+    def call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        del args, kwargs
+        return decision, SimpleNamespace(
+            cost=0.0123,
+            cost_source="provider_reported",
+            billing_mode="usage_based",
+        )
+
+    _, receipt = _call_model(
+        call,
+        role="actor",
+        response_model=ActorDecision,
+        system="Act.",
+        user="{}",
+        trace_id="cost_probe",
+        model="openrouter/openai/gpt-5.6-terra",
+    )
+
+    assert receipt.provider == "openrouter"
+    assert receipt.observed_cost == 0.0123
+    assert receipt.cost_source == "provider_reported"
+    assert receipt.billing_mode == "usage_based"
 
 
 def test_memory_provenance_accepts_only_unambiguous_sentence_prefixes() -> None:

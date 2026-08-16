@@ -157,6 +157,11 @@ def project_general_run(
         1 for item in result.transition_evidence if item.validation.accepted
     )
     rejected = len(result.transition_evidence) - accepted
+    observed_costs = [
+        receipt.observed_cost
+        for receipt in result.model_calls
+        if receipt.observed_cost is not None
+    ]
     objective_assessment = next(
         (
             item.transaction.objective_assessment
@@ -176,7 +181,15 @@ def project_general_run(
         "arm": "approved_draft",
         "execution": execution,
         "model_calls": len(result.model_calls),
-        "cost": 0.0,
+        "cost": round(sum(observed_costs), 8) if observed_costs else None,
+        "cost_coverage": (
+            "complete"
+            if len(observed_costs) == len(result.model_calls)
+            else "partial"
+            if observed_costs
+            else "unavailable"
+        ),
+        "execution_providers": sorted({item.provider for item in result.model_calls}),
         "headline": proposal.title,
         "summary": (
             f"{len(proposal.people)} people acted across {len(result.moments)} "

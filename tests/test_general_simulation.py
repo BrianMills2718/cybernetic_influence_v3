@@ -183,6 +183,7 @@ def _contract_world() -> CanonicalWorld:
             output_quantity=500,
             maximum_batches=1,
             public_inventory_record_id="finished_inventory",
+            public_inventory_output_field="quantity",
         )
     ]
     spec.resource_transport_contracts = [
@@ -322,6 +323,44 @@ def test_exact_transformation_requires_matching_public_inventory_update() -> Non
     )
     assert world.state.resources["raw_a"].quantity == 600
     assert world.state.resources["finished"].quantity == 0
+
+
+def test_exact_transformation_keeps_declared_input_inventory_mirror_consistent() -> None:
+    spec = _contract_world().spec
+    contract = spec.resource_transformation_contracts[0]
+    contract.public_inventory_input_fields = {"raw_a": "raw_a_quantity"}
+    spec.initial_state.records["finished_inventory"].state["raw_a_quantity"] = 600
+    world = CanonicalWorld(spec)
+    intent = _contract_intent("produce")
+    operations = [
+        *_contract_transaction().operations[1:5],
+        PatchOperation(
+            operation="replace",
+            target=TypedTarget(
+                record_type="record",
+                record_id="finished_inventory",
+                field="state.raw_a_quantity",
+            ),
+            value=100,
+        ),
+    ]
+    transaction = WorldTransaction(
+        transaction_id="mirrored_transformation",
+        base_revision=0,
+        authority_id="port_semantic_adjudicator",
+        intent_ids=[intent.intent_id],
+        operations=operations,
+        preconditions=[],
+        consequences=[],
+        evidence_refs=[intent.intent_id],
+        stated_rationale="Transform resources and update both declared inventory mirrors.",
+    )
+
+    result = world.validate_and_commit(transaction, intents=[intent], current_minute=60)
+
+    assert result.accepted
+    assert world.state.resources["raw_a"].quantity == 100
+    assert world.state.records["finished_inventory"].state["raw_a_quantity"] == 100
 
 
 def test_no_op_does_not_invalidate_complete_exact_transformation() -> None:

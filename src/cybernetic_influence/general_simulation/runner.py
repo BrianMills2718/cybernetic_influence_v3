@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, cast
@@ -392,6 +393,30 @@ def _drop_unauthorized_representation_deliveries(
             f"{consequence.consequence_id}"
         )
     return transaction.model_copy(update={"consequences": retained})
+
+
+def _drop_only_unlicensed_operations(
+    transaction: WorldTransaction,
+    errors: list[str],
+) -> WorldTransaction | None:
+    """Remove precisely identified shape violations without resampling valid effects."""
+    invalid_indices: set[int] = set()
+    for error in errors:
+        match = re.match(
+            r"operation (\d+) on \w+ [^ ]+ is not licensed by a complete declared transition contract$",
+            error,
+        )
+        if match is None:
+            return None
+        invalid_indices.add(int(match.group(1)))
+    if not invalid_indices or max(invalid_indices) >= len(transaction.operations):
+        return None
+    retained = [
+        operation
+        for index, operation in enumerate(transaction.operations)
+        if index not in invalid_indices
+    ]
+    return transaction.model_copy(update={"operations": retained})
 
 
 def _normalized_memory(value: str) -> str:
@@ -905,15 +930,15 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                             item.model_dump(mode="json")
                             for item in self._scenario.active_systems
                         ],
-                        "sensing_rules": [
+                        "sensing_contracts": [
                             item.model_dump(mode="json")
-                            for item in self._scenario.sensing_rules
-                            if item.rule_id in active_sensing_rules
+                            for item in world.spec.sensing_contracts
+                            if item.contract_id in active_sensing_rules
                         ],
-                        "resource_transformations": [
+                        "resource_transformation_contracts": [
                             item.model_dump(mode="json")
-                            for item in self._scenario.resource_transformations
-                            if item.transformation_id in active_transformations
+                            for item in world.spec.resource_transformation_contracts
+                            if item.contract_id in active_transformations
                         ],
                         "resource_transports": [
                             item.model_dump(mode="json")
@@ -1030,6 +1055,25 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             if repairable_shape_errors and len(repairable_shape_errors) == len(
                 validation.errors
             ):
+                pruned_transaction = _drop_only_unlicensed_operations(
+                    transaction, validation.errors
+                )
+                if pruned_transaction is not None:
+                    pruned_validation = world.validate_and_commit(
+                        pruned_transaction,
+                        envelope_corrections=[
+                            "trusted runtime removed only the explicitly unlicensed operations"
+                        ],
+                        intents=intents,
+                        current_minute=moment.minute,
+                    )
+                    if pruned_validation.accepted:
+                        transaction = pruned_transaction
+                        validation = pruned_validation
+                        repairable_shape_errors = []
+            if repairable_shape_errors and len(repairable_shape_errors) == len(
+                validation.errors
+            ):
                 self.receipts.append(receipt)
                 repaired, repair_receipt = _call_model(
                     self._call,
@@ -1055,15 +1099,15 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                                 "intents": [item.model_dump(mode="json") for item in intents],
                                 "authority": effective_authority.model_dump(mode="json"),
                                 "active_component_requests": self._active_component_requests(),
-                                "sensing_rules": [
+                                "sensing_contracts": [
                                     item.model_dump(mode="json")
-                                    for item in self._scenario.sensing_rules
-                                    if item.rule_id in active_sensing_rules
+                                    for item in world.spec.sensing_contracts
+                                    if item.contract_id in active_sensing_rules
                                 ],
-                                "resource_transformations": [
+                                "resource_transformation_contracts": [
                                     item.model_dump(mode="json")
-                                    for item in self._scenario.resource_transformations
-                                    if item.transformation_id in active_transformations
+                                    for item in world.spec.resource_transformation_contracts
+                                    if item.contract_id in active_transformations
                                 ],
                                 "resource_transports": [
                                     item.model_dump(mode="json")

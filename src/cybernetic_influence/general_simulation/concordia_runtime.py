@@ -117,7 +117,23 @@ def _call_model(
             timeout=timeout_s,
             **backend_options,
         )
-    provider = str(getattr(meta, "provider", "codex"))
+    raw_provider = getattr(meta, "provider", None)
+    if isinstance(raw_provider, str) and raw_provider.strip():
+        provider = raw_provider.strip()
+    elif model.startswith("openrouter/"):
+        provider = "openrouter"
+    elif model.startswith("codex/"):
+        provider = "codex"
+    else:
+        provider = "unknown"
+    raw_cost = getattr(meta, "cost", None)
+    observed_cost = (
+        float(raw_cost)
+        if isinstance(raw_cost, (int, float)) and raw_cost >= 0
+        else None
+    )
+    raw_cost_source = getattr(meta, "cost_source", None)
+    raw_billing_mode = getattr(meta, "billing_mode", None)
     return parsed, ModelCallReceipt(
         role=cast(Any, role),
         provider=provider,
@@ -127,6 +143,11 @@ def _call_model(
         structured_output=parsed.model_dump(mode="json"),
         decoding={"reasoning_effort": reasoning_effort, "max_tokens": 4000},
         exact_replay_possible=False,
+        observed_cost=observed_cost,
+        cost_source=(raw_cost_source if isinstance(raw_cost_source, str) else None),
+        billing_mode=(
+            raw_billing_mode if isinstance(raw_billing_mode, str) else None
+        ),
     )
 
 

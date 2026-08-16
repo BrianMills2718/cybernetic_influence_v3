@@ -155,6 +155,8 @@ class ResourceTransformationContract(StrictModel):
     output_quantity: float
     maximum_batches: int
     public_inventory_record_id: str
+    public_inventory_input_fields: dict[str, str] = Field(default_factory=dict)
+    public_inventory_output_field: str
 
 
 class ResourceTransportContract(StrictModel):
@@ -354,6 +356,9 @@ class ModelCallReceipt(StrictModel):
     structured_output: dict[str, Any]
     decoding: dict[str, JsonValue]
     exact_replay_possible: bool
+    observed_cost: float | None = Field(default=None, ge=0)
+    cost_source: str | None = None
+    billing_mode: str | None = None
 
 
 class AdoptionReceipt(StrictModel):

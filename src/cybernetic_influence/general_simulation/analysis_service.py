@@ -117,6 +117,11 @@ def _activation_rows(
         base_revision = intent.get("base_revision")
         if not isinstance(actor_id, str) or not isinstance(base_revision, int):
             continue
+        input_context = _json_mapping(record.payload.get("input_context"))
+        actor_context = _json_mapping(input_context.get("actor_context"))
+        causal_minute = actor_context.get("current_minute")
+        if not isinstance(causal_minute, int) or isinstance(causal_minute, bool):
+            causal_minute = base_revision + 1
         cognition_parts = [
             *_string_items(assimilation.get("interpretation")),
             *_string_items(assimilation.get("memory_additions")),
@@ -132,7 +137,8 @@ def _activation_rows(
             {
                 "evidence_ref": record.evidence_ref,
                 "actor_id": actor_id,
-                "moment": base_revision + 1,
+                "intent_id": intent.get("intent_id"),
+                "moment": causal_minute,
                 "text": " ".join([*cognition_parts, *intent_parts]).lower(),
                 "intent_text": " ".join(intent_parts).lower(),
                 "attended_observation_ids": _string_items(
@@ -171,6 +177,7 @@ def _pairwise_overlap(sets: list[set[str]]) -> dict[str, JsonValue]:
 
 def _transition_rows(
     records: list[EvidenceRecordV1],
+    moment_by_intent_id: dict[str, int],
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for record in records:
@@ -181,6 +188,13 @@ def _transition_rows(
             base_revision = transaction.get("base_revision")
         if not isinstance(base_revision, int):
             continue
+        intent_ids = transaction.get("intent_ids")
+        matched_moments = {
+            moment_by_intent_id[item]
+            for item in intent_ids
+            if isinstance(item, str) and item in moment_by_intent_id
+        } if isinstance(intent_ids, list) else set()
+        moment = min(matched_moments) if matched_moments else base_revision + 1
         operations = transaction.get("operations")
         accepted = validation.get("accepted") is True
         operation_count = len(operations) if isinstance(operations, list) else 0
@@ -198,7 +212,7 @@ def _transition_rows(
         rows.append(
             {
                 "evidence_ref": record.evidence_ref,
-                "moment": base_revision + 1,
+                "moment": moment,
                 "accepted": accepted,
                 "proposed_operation_count": operation_count,
                 "committed_operation_count": operation_count if accepted else 0,
@@ -216,7 +230,12 @@ def _waltzman_findings(
     actor_records = by_kind.get("participant_activation", [])
     transition_records = by_kind.get("causal_event", [])
     activations = _activation_rows(actor_records)
-    transitions = _transition_rows(transition_records)
+    moment_by_intent_id = {
+        cast(str, row["intent_id"]): cast(int, row["moment"])
+        for row in activations
+        if isinstance(row.get("intent_id"), str)
+    }
+    transitions = _transition_rows(transition_records, moment_by_intent_id)
 
     representation_sources: dict[str, str] = {}
     configured_recipients: dict[str, list[str]] = {}

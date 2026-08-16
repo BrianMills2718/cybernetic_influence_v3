@@ -208,6 +208,9 @@ def test_exact_request_blocks_when_declared_dependency_is_not_read_by_contract()
     assert fixed_item.causal_closure == "exact"
     assert not fixed_item.unenforced_dependency_refs
     assert fixed.coverage.approvable
+    assert fixed.world_spec.sensing_contracts[0].hidden_to_output_fields == {
+        "sealed": "sealed"
+    }
 
 
 def test_runtime_module_does_not_load_analysis_package() -> None:
@@ -466,6 +469,7 @@ def test_waltzman_lens_does_not_count_rejected_operations_as_committed() -> None
             evidence_kind="participant_activation",
             summary="Operator attempt.",
             payload={
+                "input_context": {"actor_context": {"current_minute": 75}},
                 "structured_output": {
                     "assimilation": {
                         "interpretation": "Dispatch remains blocked.",
@@ -474,6 +478,7 @@ def test_waltzman_lens_does_not_count_rejected_operations_as_committed() -> None
                     },
                     "intent": {
                         "actor_id": "operator",
+                        "intent_id": "attempt_dispatch_75",
                         "base_revision": 0,
                         "action": "Attempt dispatch.",
                         "purpose": "Move cargo.",
@@ -492,6 +497,7 @@ def test_waltzman_lens_does_not_count_rejected_operations_as_committed() -> None
             payload={
                 "transaction": {
                     "base_revision": 0,
+                    "intent_ids": ["attempt_dispatch_75"],
                     "operations": [
                         {"operation": "replace", "target": {}, "value": index}
                         for index in range(5)
@@ -533,7 +539,7 @@ def test_waltzman_lens_does_not_count_rejected_operations_as_committed() -> None
     assert isinstance(finding.value, dict)
     assert finding.value["by_moment"] == [
         {
-            "moment": 1,
+            "moment": 75,
             "participating_people": 1,
             "people_expressing_hold_or_nonattempt": 0,
             "people_seeking_verification_or_review": 0,

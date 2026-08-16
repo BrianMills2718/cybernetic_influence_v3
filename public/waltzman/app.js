@@ -3061,7 +3061,14 @@ function renderAuthoredResult(result) {
     ? `${questionLabel}: ${replayQuestion} Advance through the retained run one step at a time.`
     : 'Advance through this retained simulation one step at a time.'
   $('#create-run-heading').textContent = 'Simulation complete'
-  $('#create-run-detail').textContent = 'Replay retained information, decisions, actions, and world changes below.'
+  const executionProvider = (result.execution_providers || []).join(' + ')
+  const observedCost = typeof result.observed_cost === 'number'
+    ? ` · observed provider cost $${result.observed_cost.toFixed(3)}${result.cost_coverage === 'partial' ? ' (partial)' : ''}`
+    : ''
+  const modelDetail = result.model
+    ? ` · ${result.model}${executionProvider ? ` via ${executionProvider}` : ''}`
+    : ''
+  $('#create-run-detail').textContent = `Replay retained information, decisions, actions, and world changes below${modelDetail}${observedCost}.`
   $('#create-result-title').textContent = 'Follow what entered the simulation, what actors attempted, and what the world accepted.'
   $('#create-result-summary').textContent = replayQuestion
     ? `${questionLabel}: ${replayQuestion}`

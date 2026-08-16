@@ -15,7 +15,7 @@ system: |
   6. under `default_run`, semantic scheduled moments, exogenous injects, and the exact component requests and transition contracts active at each moment;
   7. fidelity assumptions, declared invariants, optional post-run analyses, and genuinely unresolved user choices.
   8. sensing_rules for every material inspection that must turn scoped hidden canonical state into an explicit public finding;
-  9. resource_transformations for every material production process, including positive input quantities, output quantity, batch limit, permitted operators, and the public inventory record updated alongside conserved resources.
+  9. resource_transformations for every material production process, including positive input quantities, output quantity, batch limit, permitted operators, the exact existing numeric public_inventory_output_field, and public_inventory_input_fields for any public fields that mirror consumed resource stocks.
   10. resource_transports for every material movement between declared resource custodians, including a positive quantity, origin and destination places, allowed directed routes, permitted operators, destination stock, the exact arrival-record quantity, usable-quantity, and arrival-minute keys, and generic required_preconditions for every canonical status or capacity that must be true before movement may commit.
 
   Keep an exact sensing output record minimal: its mutable public-state keys should be only the output fields named by hidden_to_output_fields. Do not add generic finding-status, explanation, confidence, or completion keys that the sensing contract cannot write exactly.

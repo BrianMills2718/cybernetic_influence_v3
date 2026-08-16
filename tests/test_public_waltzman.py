@@ -232,7 +232,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology1",
-        "assets/app.js?v=authoring16",
+        "assets/app.js?v=authoring17",
     ]
     assert {
         "overview-view",

@@ -559,16 +559,53 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 input_indices.append(match)
             if not input_indices:
                 continue
+            input_index_by_resource = dict(
+                zip(
+                    transformation_contract.input_resource_quantities,
+                    input_indices,
+                    strict=True,
+                )
+            )
+            input_inventory_indices: list[int] = []
+            for resource_id, field in (
+                transformation_contract.public_inventory_input_fields.items()
+            ):
+                expected = snapshots[input_index_by_resource[resource_id]][1]
+                match = next(
+                    (
+                        index
+                        for index, operation in enumerate(transaction.operations)
+                        if index not in claimed
+                        and self._targets(
+                            operation,
+                            "record",
+                            transformation_contract.public_inventory_record_id,
+                            f"state.{field}",
+                        )
+                        and operation.value == expected
+                    ),
+                    None,
+                )
+                if match is None:
+                    input_inventory_indices = []
+                    break
+                input_inventory_indices.append(match)
+            if (
+                transformation_contract.public_inventory_input_fields
+                and not input_inventory_indices
+            ):
+                continue
             produced_quantity = snapshots[output_index][1]
             inventory_indices = [
                 index
                 for index, operation in enumerate(transaction.operations)
                 if index not in claimed
-                and operation.target.record_type == "record"
-                and operation.target.record_id
-                == transformation_contract.public_inventory_record_id
-                and operation.target.field is not None
-                and operation.target.field.startswith("state.")
+                and self._targets(
+                    operation,
+                    "record",
+                    transformation_contract.public_inventory_record_id,
+                    f"state.{transformation_contract.public_inventory_output_field}",
+                )
                 and isinstance(operation.value, (int, float))
                 and isinstance(produced_quantity, (int, float))
                 and self._close(float(operation.value), float(produced_quantity))
@@ -582,7 +619,12 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 contract_id=transformation_contract.contract_id,
                 intent_ids=[item.intent_id for item in selected],
             )
-            for index in [*input_indices, output_index, *inventory_indices]:
+            for index in [
+                *input_indices,
+                output_index,
+                *input_inventory_indices,
+                *inventory_indices,
+            ]:
                 claimed[index] = attribution.model_copy(update={"operation_index": index})
 
         for transport_contract in self._spec.resource_transport_contracts:
