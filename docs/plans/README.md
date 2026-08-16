@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-08-14
+updated: 2026-08-16
 ---
 
 # Implementation Plans
@@ -13,10 +13,10 @@ updated: 2026-08-14
 ## Active execution
 
 [Slice 29: Separate scenario, run, analysis, and experiment authority](029-separate-simulation-run-analysis.md)
-is the approved current-to-target refactor. It preserves one conversational
-authoring experience while preventing analyst purpose from entering actor or
-transition-authority contexts, makes run evidence theory-neutral, and permits
-post-run analysis attachment without simulation effects.
+has completed its selected public V2 vertical and authentic isolation proof.
+Its active follow-up records the still-partial V1 retirement and the audited
+boundaries between structural compiler validity, causal-closure verification,
+progressive editing, and substantive post-run analysis.
 
 [Slice 28: Natural-language general simulation demo](028-natural-language-general-simulation-demo.md)
 is the implemented general-authoring foundation. Its monolithic

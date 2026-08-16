@@ -131,9 +131,24 @@ revision 2, and evidence digest
 across attach/add/remove. Luna remained unavailable at its certified provider
 boundary, so neither artifact is a Luna execution.
 
-Current natural-language authoring, canonical walkthrough, and methodology
-deployment 2026-08-12: the public service now runs exact revision
-`11861ccfba8d9297b1dd2233cfc2c95040bd655b`. The direct authoring entry is
+Validation boundary observed 2026-08-16: the same draft proves typed schema and
+reference validity, a connected 39-node/73-edge configuration graph, explicit
+coverage classification, and successful execution. It does **not** prove that
+every named consequential prerequisite is mechanically enforced. The exact
+cargo transport contract consumes and moves cargo over the bypass route, but
+does not itself consume truck, committed-fuel, or berth capacity or require the
+customs and labor status records. Those constraints influenced the retained
+trajectory through coarse LLM actor/adjudicator decisions. Until a generated
+dependency-enforcement report exists, describe this as structurally validated
+and executable—not causally closed or fully correct. The attached Waltzman lens
+is likewise presently a count-based evidence projection, not a complete
+operationalization of trust, perceived risk, dependencies, or coordination
+readiness.
+
+Earlier natural-language authoring, canonical walkthrough, and methodology
+milestone 2026-08-12: revision
+`11861ccfba8d9297b1dd2233cfc2c95040bd655b` introduced the direct authoring
+entry at
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=create>. A deployed
 Luna execution proved the bounded `influence_network_v1` path from analyst prose
 through typed generation, direct edit, approval, six autonomous person calls,
@@ -146,9 +161,9 @@ page at <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=method> is a
 14-part technical paper covering the ontology, relation semantics, agency,
 information lineage, capability and affordance distinctions, transition
 authority, evidence, sociotechnical resolution, authoring limits, and Waltzman
-analysis. It explicitly separates the deployed project-owned runtime from the
-adopted but not yet implemented Concordia outer lifecycle. The retained example
-is also available through
+analysis. That page has since been updated to distinguish historical
+project-owned execution profiles from the implemented Concordia general-world
+profile. The retained example is also available through
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=simulations&simulation=run_ffe88e1c15d5>.
 The `Simulations` page lists every retained completed run; it currently exposes
 29. Each opens through the same automatically generated staged replay rather

@@ -178,3 +178,20 @@ The decision is adopted only when one authentic general-world run establishes:
    unchanged; and
 5. the public authoring and replay surfaces use the split path rather than a
    parallel compatibility implementation.
+
+## Implementation status · 2026-08-16
+
+The selected public V2 path satisfies this adoption proof. Native draft
+`draft_2336c4427396` retained separate scenario and run contracts with no
+analysis. Run `run_0047f43377f8` completed with 15 model calls, canonical world
+revision 2, and theory-neutral evidence digest
+`ca2eaab362b661ea4f850d2295a297237ac5de694496f4a119c4035e752df59c`.
+Attaching Waltzman analysis, attaching an exact terminal analysis, and removing
+the exact analysis each generated an isolation receipt with the same call
+count, revision, and evidence digest.
+
+This adoption statement is deliberately path-scoped. Historical V1 artifacts
+remain readable, and V1 compatibility/execution branches have not all been
+retired. It also does not certify that a generated scenario is causally closed
+over every declared resource or prerequisite; that is a separate compiler and
+configuration-verification concern.

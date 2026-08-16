@@ -1,9 +1,9 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: approved_for_implementation
+status: active_follow_up
 created: 2026-08-14
-updated: 2026-08-14
+updated: 2026-08-16
 depends_on:
   - docs/GOAL.md
   - docs/ROADMAP.md
@@ -43,6 +43,32 @@ revision and failed at the provider boundary because the Codex subscription
 usage limit is exhausted until 2026-08-20 11:00 local time. The retained
 public native-V2 proof therefore used the currently advertised OpenRouter
 Terra route; do not describe either the authoring trace or run as Luna.
+
+## Adversarial implementation audit · 2026-08-16
+
+### Verified
+
+- New public drafts write native V2 scenario and run contracts.
+- The retained V2 run completed and reopened with zero analyses.
+- Post-run analysis attachment and removal preserved model-call count,
+  canonical revision, and the theory-neutral evidence digest.
+- The authored graph is connected and the three scheduled moments executed.
+- Public review distinguishes World, Run, and optional Analysis and provides a
+  generated configuration walkthrough.
+
+### Still open or partial
+
+| Boundary | Observed state | Required follow-up |
+| --- | --- | --- |
+| Generated-configuration correctness | Compiler checks schema, references, graph connectivity, declared coverage, and executability; it does not prove causal closure | Produce a dependency-enforcement report for every consequential prerequisite and fail or visibly degrade unsupported enforcement |
+| Relief-port mechanics | Exact cargo transport binds cargo, route, destination, custody, and arrival evidence; it does not consume truck, fuel, or berth capacity or require customs/labor clearance | Bind those dependencies to exact transition preconditions/effects or explicitly classify them as coarse assumptions |
+| Progressive editing | Workflow, conceptual layers, and walkthrough are staged; direct editors remain one long review page | Split direct editing into World, Run, and optional Analysis stages without hiding the full typed contract |
+| Waltzman analysis | Attached after execution and evidence-linked, but findings are primarily retained-evidence, topology, and execution counts | Define richer post-run operationalizations and limitations for trust structure, perceived risk, dependencies, and coordination readiness |
+| V1 retirement | Public new writes and the selected run use V2 | Preserve historical reading while removing or quarantining remaining V1 new-execution branches |
+
+The first row is the direct correctness blocker. A compiler-valid draft may be
+reviewed and executed, but the UI and documentation must not equate that status
+with a proof that every world record or resource constrains transitions.
 
 ## Planning mode and target
 
@@ -84,7 +110,8 @@ coordination readiness.
 1. Configure the description through the existing authoring conversation.
 2. Review three plain-language sections: **World**, **Run**, and optional
    **Analysis**.
-3. Approve and execute the port run with Luna.
+3. Approve and execute the port run with the preferred certified Luna route or
+   an explicitly disclosed certified fallback when Luna is unavailable.
 4. Reopen the completed run before any analytical lens is attached.
 5. Attach the Waltzman lens and inspect its evidence-linked result.
 6. Remove or replace the lens without rerunning the simulation.
@@ -116,10 +143,14 @@ execution. It does not establish predictive validity, stable behavioral
 distributions, counterfactual causality, or that the Waltzman constructs are
 empirically valid measures of real institutions.
 
-## Current state
+## Historical pre-implementation state
 
 Current source baseline: `d0719a5815ebac7cb11762eaff6ed5d924274289` on
 `origin/main` when this plan was written.
+
+This section preserves the coupling observed before 29A–29E so the accepted
+design remains traceable. It is not a description of the current public V2
+path; current implementation truth is recorded in the status and audit above.
 
 ### What works
 
@@ -551,7 +582,7 @@ their readers.
 | S29-7 | Analysis can be attached after completion without simulation effects | Model-call counts, world revision, and digest comparison |
 | S29-8 | Missing analytical evidence fails or degrades visibly | Unsupported analysis fixture |
 | S29-9 | Execution coverage uses causal/fidelity materiality | Compiler positive and unsupported fixtures |
-| S29-10 | One conversation still configures the complete experience | Authentic Luna authoring trace and browser path |
+| S29-10 | One conversation still configures the complete experience | Authentic authoring trace with disclosed provider route and browser path |
 | S29-11 | Causal graph excludes analysis and optional overlays are labeled | Browser graph/walkthrough inspection |
 | S29-12 | New public drafts use V2 and the old path cannot be silently selected | Runtime-generated adoption receipt and architecture check |
 | S29-13 | Retained flagship artifacts remain reviewable | Historical draft/run reopen check |
@@ -648,10 +679,21 @@ probe or freshly demonstrated blocker rather than narrowing the architecture.
   invariants; and
 - deployment or external stakeholder outreach.
 
-## Exact first implementation action
+## Original first implementation action · completed
 
 Implement 29A and its independent-digest tests, then immediately route the
 retained port fixture through 29B's runtime signature. Do not start with UI,
 methodology prose, new analyses, or broad migration. The first decision-bearing
 observation is an authentic Luna port continuation whose actor and adjudicator
 contexts contain no analysis purpose.
+
+## Current next implementation action
+
+Compile the retained relief-port draft into a machine-readable table of every
+consequential dependency and the transition authority that reads, consumes, or
+enforces it. The first focused acceptance case must show that cargo movement
+cannot succeed merely because cargo and a route exist when declared truck,
+fuel, berth, customs, or labor prerequisites remain unsatisfied. Preserve the
+current exact/coarse boundary: exact mechanics may enforce the dependency, or
+the compiler may label it as coarse and expose that limitation, but it may not
+silently imply exact enforcement.

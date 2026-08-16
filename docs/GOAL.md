@@ -3,7 +3,7 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-08-14
+updated: 2026-08-16
 supersedes: earlier comparison-centered and configurable Waltzman-Levin goals as the active product frontier; retained below as baseline evidence
 ---
 
@@ -34,6 +34,33 @@ generated trajectories.
 The product is a general **executable laboratory for decision environments**.
 Waltzman's framework is one theory module and supplies the first substantial
 experimental question; it does not define the whole product.
+
+## Current implementation truth
+
+The public new-simulation path now writes separate V2 scenario and run
+contracts. One retained relief-port run completed without a selected analysis;
+post-run Waltzman and exact-outcome lenses were attached and removed without
+changing its model-call count, canonical world revision, or evidence digest.
+This establishes the selected scenario/run/analysis authority split for the
+public V2 path. Historical V1 readers and execution branches remain and must
+not be described as retired.
+
+The next hard product boundary is **generated-configuration causal closure**.
+The current compiler proves typed validity, reference integrity, graph
+connectivity, declared execution coverage, and executability. It does not yet
+prove that every consequential dependency named by an authored world is
+actually enforced by a transition contract. In the retained relief-port draft,
+for example, the exact cargo transport contract moves cargo over a route but
+does not itself consume truck, fuel, or berth capacity or require customs and
+labor clearance. Those constraints affected the retained trajectory through
+coarse actor/adjudicator reasoning, but their mere presence in the world must
+not be presented as exact mechanical enforcement.
+
+The review experience separates World, Run, and optional Analysis and provides
+a generated walkthrough. Direct editing is still one long review surface, not
+a completed step-by-step editor. The current Waltzman lens is also a thin,
+count-based evidence projection; richer operationalization of trust structure,
+perceived risk, dependencies, and coordination readiness remains future work.
 
 ## Adopted foundation
 
