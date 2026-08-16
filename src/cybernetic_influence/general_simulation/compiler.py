@@ -480,6 +480,25 @@ def _compile_general_simulation(
         unknown_reads = sorted(set(request.required_reads) - declared_refs)
         entry, evidence = resolve_request(request, selected_registry, actor_ids=actor_ids)
         evidence = list(evidence)
+        if (
+            isinstance(request, ComponentRequestV2)
+            and request.fidelity_need == "bounded"
+            and not request.transition_contract_ids
+            and entry is not None
+            and entry.fidelity == "exact"
+        ):
+            bounded_entry, bounded_evidence = resolve_request(
+                request,
+                tuple(item for item in selected_registry if item.fidelity == "coarse_llm"),
+                actor_ids=actor_ids,
+            )
+            if bounded_entry is not None:
+                entry = bounded_entry
+                evidence = [
+                    "bounded semantic behavior was not promoted to an exact "
+                    "structural component",
+                    *bounded_evidence,
+                ]
         classification: Literal[
             "exact", "coarse_llm", "descriptive", "unsupported"
         ]

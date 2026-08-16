@@ -60,15 +60,30 @@ Terra route; do not describe either the authoring trace or run as Luna.
 
 | Boundary | Observed state | Required follow-up |
 | --- | --- | --- |
-| Generated-configuration correctness | Compiler checks schema, references, graph connectivity, declared coverage, and executability; it does not prove causal closure | Produce a dependency-enforcement report for every consequential prerequisite and fail or visibly degrade unsupported enforcement |
-| Relief-port mechanics | Exact cargo transport binds cargo, route, destination, custody, and arrival evidence; it does not consume truck, fuel, or berth capacity or require customs/labor clearance | Bind those dependencies to exact transition preconditions/effects or explicitly classify them as coarse assumptions |
+| Generated-configuration correctness | Compiler now reports exact, partial, coarse, descriptive, or unsupported closure per request and lists dependencies not read by an exact contract; exact-required partial closure blocks approval and execution | Extend exact prerequisite machinery only where the simulation requires it; preserve visible coarse classifications elsewhere |
+| Relief-port mechanics | The deployed report now flags fuel commitment and cargo movement as partial because their exact contracts do not read the declared status prerequisites | Split hybrid responsibilities or bind fuel, capacity, customs, and labor dependencies to exact transition preconditions/effects |
 | Progressive editing | Workflow, conceptual layers, and walkthrough are staged; direct editors remain one long review page | Split direct editing into World, Run, and optional Analysis stages without hiding the full typed contract |
 | Waltzman analysis | Attached after execution and evidence-linked, but findings are primarily retained-evidence, topology, and execution counts | Define richer post-run operationalizations and limitations for trust structure, perceived risk, dependencies, and coordination readiness |
 | V1 retirement | Public new writes and the selected run use V2 | Preserve historical reading while removing or quarantining remaining V1 new-execution branches |
 
-The first row is the direct correctness blocker. A compiler-valid draft may be
-reviewed and executed, but the UI and documentation must not equate that status
-with a proof that every world record or resource constrains transitions.
+The first reporting slice is complete. Compiler validity no longer implies
+exact causal closure: the public review displays closure separately, and saved
+approvals that fail the current closure gate cannot execute. The remaining
+correctness work is to improve the generated configuration and exact contract
+vocabulary rather than hiding hybrid behavior behind an `exact` label.
+
+An authentic Terra authoring canary on 2026-08-16 passed the structural and
+declared-closure checks in one attempt, but still omitted customs clearance,
+labor approval, fuel, and truck availability from the exact cargo-transport
+request's declared reads. It also matched a bounded labor determination to the
+exact spatial-topology component because the prose mentioned a route. The first
+issue is a dependency-completeness problem, not a closure-check failure: the
+compiler can prove that declared reads are enforced but cannot yet prove that
+the author declared every materially necessary read. The second issue is now
+kept coarse: a V2 request that explicitly asks for bounded semantic behavior is
+not promoted to an exact structural component merely because its prose mentions
+a route or resource. Therefore `approvable` means no declared blocking gap, not
+“the generated simulation is causally complete.”
 
 ## Planning mode and target
 
@@ -689,11 +704,9 @@ contexts contain no analysis purpose.
 
 ## Current next implementation action
 
-Compile the retained relief-port draft into a machine-readable table of every
-consequential dependency and the transition authority that reads, consumes, or
-enforces it. The first focused acceptance case must show that cargo movement
-cannot succeed merely because cargo and a route exist when declared truck,
-fuel, berth, customs, or labor prerequisites remain unsatisfied. Preserve the
-current exact/coarse boundary: exact mechanics may enforce the dependency, or
-the compiler may label it as coarse and expose that limitation, but it may not
-silently imply exact enforcement.
+Use the new closure report to repair one freshly authored relief-port draft.
+Requests that combine exact resource movement with broader legal, labor, or
+organizational judgment must be split into exact and coarse responsibilities or
+lowered honestly to bounded/coarse fidelity. Then select the smallest missing
+generic precondition needed to make the port trajectory materially stronger;
+do not build a domain-specific port mechanism.

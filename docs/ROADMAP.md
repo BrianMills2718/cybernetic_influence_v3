@@ -283,7 +283,7 @@ conditions, not evidence of hostile attribution or an operational detector.
 | `GEN-C1` | Current Cybernetic Influence capability parity on Concordia | hard | substantially satisfied on the public V2 path; causal-closure verification is the direct blocker | Authoring, execution, retention, replay, maps, narration, and analyses are inspectably equivalent, and consequential generated constraints have declared enforcement coverage |
 | `GEN-C2` | Cross-domain generalization | evidence | representative port/service seam observed; broader claim deferred | One materially different exemplar reuses the same seams without generated code or a scenario-specific runtime |
 | `GEN-C3` | Scenario, run, analysis, and experiment authority are separated | hard | satisfied for public V2 writes and execution; historical V1 retirement is partial | One authentic run has analysis-free actor/adjudicator inputs and theory-neutral evidence; post-run analysis attachment changes no simulation call, context, revision, or evidence digest |
-| `GEN-C4` | Generated configurations are causally closed over declared consequential dependencies | hard | open; retained port draft exposes the gap | Every material resource, authorization, topology, and prerequisite is mapped to an exact authority, an explicitly coarse authority, or a visible unsupported result; compiler success never implies unimplemented enforcement |
+| `GEN-C4` | Generated configurations are causally closed over declared consequential dependencies | hard | first enforcement report implemented; port mechanics remain partial | Every material resource, authorization, topology, and prerequisite is mapped to an exact authority, an explicitly coarse authority, or a visible unsupported result; compiler success never implies unimplemented enforcement |
 | `GEN-C5` | Review is progressively editable without hiding the complete contract | evidence | partial; logical layers and walkthrough exist, direct editors remain one long page | A first-time analyst can move through World, Run, and optional Analysis as distinct editable steps, inspect the generated graph, approve, run, and replay without scanning the full contract at once |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
@@ -295,11 +295,15 @@ the judgment passed on the operator's behalf.
 There are five explicit tracks rather than one blended implementation queue:
 
 1. **Generated-configuration causal closure — active engineering boundary.**
-   Add a compiler-produced dependency-enforcement report that distinguishes
-   exact, coarse, descriptive, and unsupported enforcement for every
-   consequential authored prerequisite. Exercise it against the retained
-   relief-port world; do not call a draft "correct" merely because its schema,
-   references, graph, and run validate.
+   The compiler now distinguishes exact, partial, coarse, descriptive, and
+   unsupported closure for each request and reports which declared dependencies
+   are not read by an exact contract. Exact-required partial requests block
+   approval and execution. A live Terra authoring canary also exposed the next
+   boundary: this proves enforcement only for dependencies the author declared;
+   it does not prove that the author named every material prerequisite. Next,
+   repair the authoring output so hybrid behavior is split or honestly coarse,
+   then add exact generic prerequisites only where they materially improve the
+   simulation.
 2. **Progressive editing — product comprehension boundary.** Preserve the full
    typed configuration while turning World, Run, and optional Analysis into
    distinct editable stages. Keep Configure-now and approval available without

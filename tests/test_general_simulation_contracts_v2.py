@@ -229,6 +229,57 @@ def test_runtime_module_does_not_load_analysis_package() -> None:
     assert probe.returncode == 0, probe.stderr
 
 
+def test_v2_exact_registry_match_without_contract_does_not_claim_exact_reads() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    scenario, run_spec = adapt_general_proposal_v1(
+        proposal,
+        run_id="run_bounded_route_determination",
+    )
+    request = scenario.component_requests[0].model_copy(
+        update={
+            "behavior_description": (
+                "The union representative considers route evidence and attempts "
+                "to communicate a labor-safe dispatch determination."
+            ),
+            "required_reads": ["temporary_route"],
+            "transition_contract_ids": [],
+            "fidelity_need": "bounded",
+            "blocks_if_unexecutable": True,
+        }
+    )
+    scenario = ScenarioSpecV2.model_validate(
+        {
+            **scenario.model_dump(mode="json"),
+            "component_requests": [
+                request.model_dump(mode="json"),
+                *[
+                    item.model_dump(mode="json")
+                    for item in scenario.component_requests[1:]
+                ],
+            ],
+        }
+    )
+    run_spec = run_spec.model_copy(update={"scenario_digest": scenario.digest})
+
+    compiled = compile_general_simulation_v2(scenario, run_spec)
+    item = next(
+        item
+        for item in compiled.coverage.items
+        if item.request_id == request.request_id
+    )
+
+    assert item.classification == "coarse_llm"
+    assert item.causal_closure == "coarse"
+    assert item.unenforced_dependency_refs == ["temporary_route"]
+    assert item.dependency_enforcement[0].enforcement == "coarse_llm"
+    assert "not promoted to an exact structural component" in " ".join(
+        item.compiler_evidence
+    )
+    assert not item.blocking
+
+
 def test_analysis_attachment_changes_neither_scenario_nor_run_identity() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         FIXTURE.read_text(encoding="utf-8")

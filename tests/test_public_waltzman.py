@@ -72,6 +72,7 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     assert "${closureCounts.partial || 0} partial" in script
     assert "Not read by an exact contract" in script
     assert "Review causal-closure labels before approval" in script
+    assert "Approval needs revision" in script
 
 
 def _dataset() -> dict[str, object]:

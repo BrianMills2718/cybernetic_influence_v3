@@ -1712,6 +1712,7 @@ function renderGeneralCoverage(draft) {
     result[closure] = (result[closure] || 0) + 1
     return result
   }, {})
+  $('#create-coverage').open = (coverage.blocking_request_ids || []).length > 0
   $('#create-coverage-summary').textContent = `Execution coverage · ${counts.exact || 0} exact authorities · ${counts.coarse_llm || 0} coarse LLM · causal closure: ${closureCounts.exact || 0} exact · ${closureCounts.partial || 0} partial · ${closureCounts.coarse || 0} coarse · ${closureCounts.descriptive || 0} descriptive · ${closureCounts.unsupported || 0} unsupported`
   $('#create-coverage-detail').innerHTML = coverage.items.length
     ? coverage.items.map((item) => {
@@ -1995,7 +1996,9 @@ function renderCreateSimulation() {
   $('#create-approve').hidden = !ready
   $('#create-run').hidden = authoringDraft.status !== 'approved' || coverageBlocked
   $('#create-action-heading').textContent = authoringDraft.status === 'approved'
-    ? 'Approved and ready to run'
+    ? coverageBlocked
+      ? 'Approval needs revision'
+      : 'Approved and ready to run'
     : onlyOpenQuestions
       ? 'Choose where these decisions belong'
       : ready
