@@ -2158,6 +2158,9 @@ function renderCreateSimulation() {
   }
   const author = authoringModel()
   const conversationOnly = Boolean(authoringDraft && !authoringDraft.proposal)
+  $('.create-composer > header span').textContent = author
+    ? `${author.label} · medium thinking`
+    : 'Simulation builder unavailable'
   $('#create-view').classList.toggle('has-draft', Boolean(authoringDraft))
   $('#create-title').textContent = authoringDraft?.proposal
     ? 'Review and run this simulation.'
@@ -2200,7 +2203,10 @@ function renderCreateSimulation() {
     $('#create-review').hidden = true
     $('.create-brief').hidden = true
     setCreateFlow('describe')
-    $('#create-status').textContent = 'Conversation saved. Reply above, or configure now with explicit assumptions.'
+    const providerError = diagnostics.find((item) => item.severity === 'error')
+    $('#create-status').textContent = providerError
+      ? providerError.message
+      : 'Conversation saved. Reply above, or configure now with explicit assumptions.'
     $('#create-draft-title').textContent = 'Draft needs more information'
     $('#create-draft-description').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
     $('#create-world-facts').innerHTML = ''

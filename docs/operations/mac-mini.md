@@ -230,6 +230,29 @@ a grid rather than a misleading vertical stack. A fresh 1440-by-1000 Chromium
 pass opened the deployed URL, advanced to replay step two, and observed no
 console errors, failed requests, bad responses, or horizontal overflow.
 
+Public conversational-authoring correction observed 2026-08-16: build
+`17d41448a9e7878580f148add066dd1e2dfba57d` retains discussion-only drafts
+across refresh and deep links, distinguishes clarification from immediate
+configuration, and advertises authoring models from an authoring-specific
+certification group rather than reusing participant/narrator certification.
+The exact V2 proposal and dependency-review schemas were certified on the
+target host through `codex/gpt-5.6-luna` as
+`routeobs1_1e9e294f1013da5a8baedd96` and
+`routeobs1_fd849653dbcc134f50efa32c`. The prior Terra route was removed from
+the public authoring catalog after its exact V2 schema request failed at the
+provider boundary.
+
+Retained public draft `draft_c7c45d64f341` reopened its original outage
+conversation, then completed revision 3 through Luna as "Coordination during
+a prolonged power outage." The result is ready for review with four people,
+eight canonical records, three information representations, three active
+systems, exact sensing/fuel contracts, and no analyst question or unresolved
+diagnostic. A 1440-by-1000 Chromium pass observed the generated walkthrough and
+graph with zero console errors, failed requests, bad responses, or horizontal
+overflow. This recovery draft needed five bounded proposal attempts and took
+about ten minutes; correctness and target deployment are verified, but
+authoring latency is not yet demo-quality.
+
 Earlier natural-language authoring, canonical walkthrough, and methodology
 milestone 2026-08-12: revision
 `11861ccfba8d9297b1dd2233cfc2c95040bd655b` introduced the direct authoring
