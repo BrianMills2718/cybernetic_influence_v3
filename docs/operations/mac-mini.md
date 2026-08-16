@@ -117,11 +117,12 @@ trajectory, then reloads completed public runs after refresh. The public store
 currently adds a matched three-run custom triad. Its role-aligned comparison is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist>.
 
-Current separated-authoring deployment 2026-08-14: the public service runs
-commit `c3a19e13682f9bca8164d772215903d18c280507`. New drafts write native V2
-scenario and run contracts rather than passing through the V1 authoring
-proposal. Authentic Terra-authored draft `draft_2336c4427396` produced the
-relief-port configuration without an analyst question or preselected analysis;
+Separated-authoring first deployment 2026-08-14: commit
+`c3a19e13682f9bca8164d772215903d18c280507` established that new drafts write
+native V2 scenario and run contracts rather than passing through the V1
+authoring proposal. Authentic Terra-authored draft `draft_2336c4427396`
+produced the relief-port configuration without an analyst question or
+preselected analysis;
 authentic retained run `run_0047f43377f8` completed with 15 model calls and 26
 theory-neutral evidence records. The completed-run UI can attach and remove
 Waltzman or exact-outcome analysis without rerunning people or changing the
@@ -144,6 +145,13 @@ and executable—not causally closed or fully correct. The attached Waltzman len
 is likewise presently a count-based evidence projection, not a complete
 operationalization of trust, perceived risk, dependencies, or coordination
 readiness.
+
+Current public-service observation 2026-08-16: build
+`7a0725e5b7b2f86772ae21f659b73136fdc76b2b` serves the corrected public
+Methodology page. A fresh desktop Chromium visit to `?view=method` displayed
+the V2 authority split, causal-closure limitation, and current Waltzman-lens
+boundary with zero console errors and zero failed requests. `/api/config`
+reported the same build commit.
 
 Earlier natural-language authoring, canonical walkthrough, and methodology
 milestone 2026-08-12: revision
