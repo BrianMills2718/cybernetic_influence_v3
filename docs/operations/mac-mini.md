@@ -195,6 +195,30 @@ unchanged. This is one synthetic safe-failure trajectory and one post-run
 diagnostic lens; it is not a human-behavior estimate, repeated-run invariant,
 or proof of general causal completeness.
 
+Public causal-correctness repair observed 2026-08-16: build
+`7724d43cd2f84e67befdcfe07b3d2e54513cc5f5` serves the repaired retained
+wildfire run `run_1a6c2a5a48f9` at
+<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=create&draft=draft_e4d1bcd598eb&authored_run=run_1a6c2a5a48f9>.
+The authentic OpenRouter Terra execution completed 24 medium-reasoning calls
+without an output-repair call. Provider receipts report complete API-metered
+cost of `$0.1496211`. The compiled sensing contract published the degraded
+bridge finding, and the resource transformation changed both conserved bed
+stocks and their public inventory mirrors from six to two available and zero
+to four reserved. Four scheduled moments produced four aligned transition
+records; three committed and the guarded minute-75 attempt was rejected.
+
+The generated replay opens with the configured system rather than an empty
+question scene, presents the four moments in authored causal order, and ends
+with a synthesized retained-world summary. The attached Waltzman lens groups
+evidence at minutes 0, 30, 75, and 150 rather than by coincident world
+revision. Analysis attachment preserved 24 model calls, world revision 3, and
+evidence digest
+`02f4a4b70fa5ce17b487afaa3e206fa0f8c8ddb733615165fbee609e2b267f62`.
+A 1440-by-1000 Chromium pass advanced through all six replay scenes with no
+console errors, failed requests, bad responses, or horizontal overflow. This
+remains one synthetic execution and does not establish a Waltzman invariant,
+human behavior, or complete causal coverage.
+
 Earlier natural-language authoring, canonical walkthrough, and methodology
 milestone 2026-08-12: revision
 `11861ccfba8d9297b1dd2233cfc2c95040bd655b` introduced the direct authoring
