@@ -1087,7 +1087,7 @@ def _simulation_replay(
             if question_is_analyst_framing
             else "The collective question"
             if gate_ids
-            else "The operational objective"
+            else "Simulation brief"
         ),
         scene_summary=question,
         visible_nodes=gate_ids,
@@ -1928,6 +1928,8 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         general_world=document.get("profile") in {"general_world_v1", "general_world_v2"},
         question_is_analyst_framing=(
             document.get("execution_contract") == "general_world_v2"
+            and isinstance(authoring.get("question"), str)
+            and bool(str(authoring["question"]).strip())
         ),
         node_overrides_by_revision=_general_world_node_overrides(
             document.get("general_simulation")

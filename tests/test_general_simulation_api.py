@@ -157,6 +157,7 @@ def test_general_replay_focuses_changed_nodes_and_edges() -> None:
         general_world=True,
     )
 
+    assert replay["scenes"][0]["title"] == "Simulation brief"
     event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
     assert event["focus_node_ids"] == ["floor"]
     assert event["focus_edge_ids"] == ["storage_route"]
