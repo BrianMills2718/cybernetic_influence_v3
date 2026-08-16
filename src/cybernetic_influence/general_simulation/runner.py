@@ -172,16 +172,56 @@ def _normalize_transaction_targets(
             )
             operations.append(operation.model_copy(update={"value": value}))
             continue
-        normalized = operation if operation.operation == "create" else operation.model_copy(
-            update={
-                "target": _normalize_target(
-                    operation.target,
-                    world,
-                    correction_context="operation",
-                    corrections=corrections,
-                )
-            }
+        normalized = (
+            operation
+            if operation.operation == "create" and operation.target.field is None
+            else operation.model_copy(
+                update={
+                    "target": _normalize_target(
+                        operation.target,
+                        world,
+                        correction_context="operation",
+                        corrections=corrections,
+                    )
+                }
+            )
         )
+        if (
+            normalized.operation == "create"
+            and normalized.target.field is not None
+            and normalized.target.record_id
+            in getattr(world.state, f"{normalized.target.record_type}s")
+        ):
+            if (
+                normalized.target.record_type == "record"
+                and "." not in normalized.target.field
+                and normalized.target.field
+                not in {
+                    "record_id",
+                    "kind",
+                    "label",
+                    "state",
+                    "hidden_state",
+                    "visible_to_actor_ids",
+                }
+            ):
+                corrected_field = f"state.{normalized.target.field}"
+                corrections.append(
+                    f"operation target {normalized.target.record_id} field normalized "
+                    f"from {normalized.target.field} to {corrected_field}"
+                )
+                normalized = normalized.model_copy(
+                    update={
+                        "target": normalized.target.model_copy(
+                            update={"field": corrected_field}
+                        )
+                    }
+                )
+            corrections.append(
+                "field-scoped create normalized to replace for existing "
+                f"{normalized.target.record_type} {normalized.target.record_id}"
+            )
+            normalized = normalized.model_copy(update={"operation": "replace"})
         if (
             normalized.operation == "replace"
             and normalized.target.record_type == "record"
@@ -770,6 +810,8 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "Apply only the active component requests and transition contracts for this moment; do not perform a later phase early. "
                     "A sensing rule "
                     "reveals only its named hidden keys when a permitted observer actually attempts it. "
+                    "For a sensing result, update only the public output fields named by "
+                    "hidden_to_output_fields; do not add a status, explanation, or other output field. "
                     "A transformation may execute only when a permitted operator attempts it and every "
                     "declared input quantity is available; apply at most maximum_batches and update the "
                     "named public inventory record in the same transaction. A resource transport may "
@@ -911,24 +953,30 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 intents=intents,
                 current_minute=moment.minute,
             )
-            grammar_errors = [
+            repairable_shape_errors = [
                 error
                 for error in validation.errors
                 if "outside authority grammar" in error
+                or "not licensed by a complete declared transition contract" in error
             ]
-            if grammar_errors and len(grammar_errors) == len(validation.errors):
+            if repairable_shape_errors and len(repairable_shape_errors) == len(
+                validation.errors
+            ):
                 self.receipts.append(receipt)
                 repaired, repair_receipt = _call_model(
                     self._call,
                     role="adjudicator",
                     response_model=WorldTransactionProposal,
                     system=(
-                        "Repair one rejected transition-authority output. Preserve the "
-                        "substantive judgment, but use only operations and target record "
-                        "types in the supplied authority patch grammar. Actor-visible "
+                        "Repair one rejected transition-authority output whose patch shape "
+                        "did not match its authority or selected exact contract. Preserve the "
+                        "substantive judgment, but remove undeclared effects and use only "
+                        "operations and target record types in the supplied authority patch grammar. Actor-visible "
                         "communications belong in consequences; do not create, replace, "
                         "or rebind information representations unless the grammar explicitly "
-                        "allows that target type. Do not evade a world invariant or invent "
+                        "allows that target type. For exact sensing, write only the mapped "
+                        "public output fields. Do not evade a failed precondition or world "
+                        "invariant, change canonical facts to make an action pass, or invent "
                         "new evidence. Return only the corrected typed transaction."
                     ),
                     user=json.dumps(

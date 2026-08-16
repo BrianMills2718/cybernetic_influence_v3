@@ -149,6 +149,44 @@ def test_whole_record_targets_do_not_require_state_field_normalization() -> None
     assert corrections == []
 
 
+def test_field_scoped_create_on_existing_record_normalizes_to_replace() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    world = CanonicalWorld(compile_general_simulation(proposal).world_spec)
+    transaction = WorldTransaction(
+        transaction_id="add_record_state_field",
+        base_revision=0,
+        authority_id="general_semantic_adjudicator",
+        intent_ids=["intent_1"],
+        operations=[
+            PatchOperation(
+                operation="create",
+                target=TypedTarget(
+                    record_type="record",
+                    record_id="relief_cargo",
+                    field="decision",
+                ),
+                value="withheld pending review",
+            )
+        ],
+        preconditions=[],
+        consequences=[],
+        evidence_refs=["relief_cargo"],
+        stated_rationale="Add one field without recreating the record.",
+    )
+    corrections: list[str] = []
+
+    normalized = _normalize_transaction_targets(transaction, world, corrections)
+
+    assert normalized.operations[0].operation == "replace"
+    assert normalized.operations[0].target.field == "state.decision"
+    assert corrections == [
+        "operation target relief_cargo field normalized from decision to state.decision",
+        "field-scoped create normalized to replace for existing record relief_cargo",
+    ]
+
+
 def test_whole_sensing_state_is_expanded_and_unauthorized_delivery_is_omitted() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         FIXTURE.read_text(encoding="utf-8")
