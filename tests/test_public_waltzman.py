@@ -69,6 +69,9 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     assert "How can “${node.label}” enter the simulation?" in script
     assert "No theory-specific analysis is attached" in script
     assert "analysis-boundary-diagram" in script
+    assert "${closureCounts.partial || 0} partial" in script
+    assert "Not read by an exact contract" in script
+    assert "Review causal-closure labels before approval" in script
 
 
 def _dataset() -> dict[str, object]:

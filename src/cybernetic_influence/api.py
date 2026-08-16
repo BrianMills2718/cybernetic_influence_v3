@@ -2904,7 +2904,13 @@ def create_app(
     def get_draft(draft_id: str, request: Request) -> dict[str, object]:
         _require_access(request)
         try:
-            return drafts.get(draft_id)
+            document = drafts.get(draft_id)
+            if document.get("target_kind") in {"general_world_v1", "general_world_v2"}:
+                compiled = authoring.compile_general(document)
+                document = deepcopy(document)
+                document["coverage"] = compiled.coverage.model_dump(mode="json")
+                document["configuration_graph"] = compiled.configuration_graph
+            return document
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         except DraftNotFoundError as error:

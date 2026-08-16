@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from .authoring_models import (
     CoverageItemV1,
+    DependencyEnforcementItemV1,
     ExecutionCoverageReportV1,
     GeneralSimulationProposalV1,
     ScheduledMomentProposalV1,
@@ -106,6 +107,30 @@ def _state_dict(entries: list[Any]) -> dict[str, Any]:
     if len(values) != len(entries):
         raise GeneralCompilationError("state entry keys must be unique within each record")
     return values
+
+
+def _exact_contract_access(
+    proposal: GeneralSimulationProposalV1 | ScenarioSpecV2,
+) -> dict[str, tuple[set[str], set[str]]]:
+    """Return declared semantic reads and writes for each exact contract."""
+    access: dict[str, tuple[set[str], set[str]]] = {}
+    for rule in proposal.sensing_rules:
+        access[rule.rule_id] = ({rule.subject_ref}, {rule.output_record_id})
+    for transformation in proposal.resource_transformations:
+        access[transformation.transformation_id] = (
+            {item.resource_id for item in transformation.input_resource_quantities},
+            {transformation.output_resource_id, transformation.public_inventory_record_id},
+        )
+    for transport in proposal.resource_transports:
+        access[transport.transport_id] = (
+            {transport.source_resource_id, *transport.allowed_route_ids},
+            {
+                transport.source_resource_id,
+                transport.destination_resource_id,
+                transport.arrival_record_id,
+            },
+        )
+    return access
 
 
 def _compile_general_simulation(
@@ -449,6 +474,7 @@ def _compile_general_simulation(
                 )
     coverage_items: list[CoverageItemV1] = []
     resolved: list[RegisteredComponentV1] = []
+    contract_access = _exact_contract_access(proposal)
     for request in proposal.component_requests:
         unknown_subjects = sorted(set(request.subject_refs) - declared_refs)
         unknown_reads = sorted(set(request.required_reads) - declared_refs)
@@ -500,6 +526,87 @@ def _compile_general_simulation(
             assumptions = entry.assumptions
             if entry not in resolved:
                 resolved.append(entry)
+        dependency_enforcement: list[DependencyEnforcementItemV1] = []
+        exact_readers: dict[str, list[str]] = {}
+        exact_writers: dict[str, list[str]] = {}
+        for contract_id in request.transition_contract_ids:
+            reads, writes = contract_access[contract_id]
+            for dependency_ref in reads:
+                exact_readers.setdefault(dependency_ref, []).append(contract_id)
+            for dependency_ref in writes:
+                exact_writers.setdefault(dependency_ref, []).append(contract_id)
+        for dependency_ref in dict.fromkeys(request.required_reads):
+            enforcement: Literal[
+                "exact_read",
+                "exact_write_only",
+                "coarse_llm",
+                "descriptive",
+                "unsupported",
+            ]
+            dependency_contract_ids: list[str]
+            dependency_evidence: list[str]
+            if dependency_ref in exact_readers:
+                enforcement = "exact_read"
+                dependency_contract_ids = sorted(exact_readers[dependency_ref])
+                dependency_evidence = [
+                    "read as an exact transition precondition or input"
+                ]
+            elif dependency_ref in exact_writers:
+                enforcement = "exact_write_only"
+                dependency_contract_ids = sorted(exact_writers[dependency_ref])
+                dependency_evidence = [
+                    "written by an exact contract but not read as a prerequisite"
+                ]
+            elif (
+                classification == "exact"
+                and not request.transition_contract_ids
+                and component_ref is not None
+            ):
+                enforcement = "exact_read"
+                dependency_contract_ids = []
+                dependency_evidence = [
+                    f"covered by registered exact component {component_ref}"
+                ]
+            elif classification == "coarse_llm":
+                enforcement = "coarse_llm"
+                dependency_contract_ids = []
+                dependency_evidence = ["available only to coarse LLM adjudication"]
+            elif classification == "descriptive":
+                enforcement = "descriptive"
+                dependency_contract_ids = []
+                dependency_evidence = ["descriptive context has no transition authority"]
+            else:
+                enforcement = "unsupported"
+                dependency_contract_ids = []
+                dependency_evidence = ["no bound exact contract reads this dependency"]
+            dependency_enforcement.append(
+                DependencyEnforcementItemV1(
+                    dependency_ref=dependency_ref,
+                    enforcement=enforcement,
+                    transition_contract_ids=dependency_contract_ids,
+                    compiler_evidence=dependency_evidence,
+                )
+            )
+        unenforced_dependency_refs = [
+            item.dependency_ref
+            for item in dependency_enforcement
+            if item.enforcement != "exact_read"
+        ]
+        if classification == "exact":
+            causal_closure: Literal[
+                "exact", "partial", "coarse", "descriptive", "unsupported"
+            ] = "partial" if unenforced_dependency_refs else "exact"
+        elif classification == "coarse_llm":
+            causal_closure = "coarse"
+        elif classification == "descriptive":
+            causal_closure = "descriptive"
+        else:
+            causal_closure = "unsupported"
+        if causal_closure == "partial":
+            evidence.append(
+                "required dependencies not read by an exact contract: "
+                + ", ".join(unenforced_dependency_refs)
+            )
         material = (
             request.blocks_if_unexecutable
             if isinstance(request, ComponentRequestV2)
@@ -509,6 +616,13 @@ def _compile_general_simulation(
             "unsupported",
             "descriptive",
         }
+        if (
+            isinstance(request, ComponentRequestV2)
+            and material
+            and request.fidelity_need == "exact"
+            and causal_closure != "exact"
+        ):
+            blocking = True
         coverage_items.append(
             CoverageItemV1(
                 request_id=request.request_id,
@@ -519,6 +633,9 @@ def _compile_general_simulation(
                 assumptions=assumptions,
                 blocking=blocking,
                 compiler_evidence=evidence,
+                causal_closure=causal_closure,
+                dependency_enforcement=dependency_enforcement,
+                unenforced_dependency_refs=unenforced_dependency_refs,
             )
         )
     coverage = ExecutionCoverageReportV1(

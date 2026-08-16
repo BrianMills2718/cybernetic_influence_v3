@@ -1707,9 +1707,18 @@ function renderGeneralCoverage(draft) {
     result[item.classification] = (result[item.classification] || 0) + 1
     return result
   }, {})
-  $('#create-coverage-summary').textContent = `Execution coverage · ${counts.exact || 0} exact · ${counts.coarse_llm || 0} coarse LLM · ${counts.descriptive || 0} descriptive · ${counts.unsupported || 0} unsupported`
+  const closureCounts = coverage.items.reduce((result, item) => {
+    const closure = item.causal_closure || 'unknown'
+    result[closure] = (result[closure] || 0) + 1
+    return result
+  }, {})
+  $('#create-coverage-summary').textContent = `Execution coverage · ${counts.exact || 0} exact authorities · ${counts.coarse_llm || 0} coarse LLM · causal closure: ${closureCounts.exact || 0} exact · ${closureCounts.partial || 0} partial · ${closureCounts.coarse || 0} coarse · ${closureCounts.descriptive || 0} descriptive · ${closureCounts.unsupported || 0} unsupported`
   $('#create-coverage-detail').innerHTML = coverage.items.length
-    ? coverage.items.map((item) => `<p><strong>${escapeHtml(sentence(item.request_id))} · ${escapeHtml(sentence(item.classification))}${item.blocking ? ' · blocks approval' : ''}</strong><span>${escapeHtml((item.what_can_change || []).join(' · ') || 'No executable change is claimed.')}</span><small>${escapeHtml((item.assumptions || []).join(' · ') || (item.compiler_evidence || []).join(' · '))}</small></p>`).join('')
+    ? coverage.items.map((item) => {
+      const missing = item.unenforced_dependency_refs || []
+      const closure = item.causal_closure || 'unknown'
+      return `<p><strong>${escapeHtml(sentence(item.request_id))} · ${escapeHtml(sentence(item.classification))} authority · ${escapeHtml(sentence(closure))} causal closure${item.blocking ? ' · blocks approval' : ''}</strong><span>${escapeHtml((item.what_can_change || []).join(' · ') || 'No executable change is claimed.')}</span>${missing.length ? `<span>Not read by an exact contract: ${escapeHtml(missing.map(sentence).join(', '))}</span>` : ''}<small>${escapeHtml((item.assumptions || []).join(' · ') || (item.compiler_evidence || []).join(' · '))}</small></p>`
+    }).join('')
     : '<p><strong>No execution coverage was compiled.</strong><span>The draft cannot be approved until material behavior is classified.</span></p>'
 }
 
@@ -1919,7 +1928,7 @@ function renderCreateSimulation() {
   $('#create-draft-state').textContent = sentence(authoringDraft.status)
   $('#create-diagnostics').innerHTML = diagnostics.length
     ? diagnostics.map((item) => `<p class="create-diagnostic ${escapeHtml(item.severity)}"><strong>${escapeHtml(sentence(item.severity))}</strong>${escapeHtml(item.message)}</p>`).join('')
-    : '<p class="create-diagnostic ready"><strong>Compiler check passed</strong>The draft can be reviewed and approved.</p>'
+    : '<p class="create-diagnostic ready"><strong>Compiler check passed</strong>References and declared execution coverage are valid. Review causal-closure labels before approval.</p>'
   if (!proposal) {
     $('.create-composer').hidden = false
     $('#create-review').hidden = true
@@ -1984,7 +1993,7 @@ function renderCreateSimulation() {
   const onlyOpenQuestions = general && diagnostics.length > 0 && diagnostics.every((item) => item.code === 'unresolved') && !coverageBlocked
   $('#create-resolve-questions').hidden = !onlyOpenQuestions
   $('#create-approve').hidden = !ready
-  $('#create-run').hidden = authoringDraft.status !== 'approved'
+  $('#create-run').hidden = authoringDraft.status !== 'approved' || coverageBlocked
   $('#create-action-heading').textContent = authoringDraft.status === 'approved'
     ? 'Approved and ready to run'
     : onlyOpenQuestions
@@ -1993,7 +2002,9 @@ function renderCreateSimulation() {
         ? 'Ready for your decision'
         : 'Resolve the items above before running'
   $('#create-action-detail').textContent = authoringDraft.status === 'approved'
-    ? 'The selected model will now operate the modeled people and coarse transition authorities.'
+    ? coverageBlocked
+      ? 'This saved approval predates the current causal-closure check. Revise and approve the configuration again before running.'
+      : 'The selected model will now operate the modeled people and coarse transition authorities.'
     : onlyOpenQuestions
       ? 'These questions can remain endogenous: the modeled people decide them during the run instead of you deciding them in advance.'
       : ready

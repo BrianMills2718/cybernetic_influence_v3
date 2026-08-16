@@ -18,6 +18,8 @@ from cybernetic_influence.analysis.theory_analysis import (
 )
 from cybernetic_influence.general_simulation.authoring_models import (
     GeneralSimulationProposalV1,
+    SensingRuleProposalV1,
+    StateEntryV1,
 )
 from cybernetic_influence.general_simulation.analysis_service import (
     analyze_run_evidence_v2,
@@ -91,6 +93,121 @@ def test_retained_port_proposal_adapts_to_independent_v2_contracts() -> None:
     assert compiled.scenario_digest == scenario.digest
     assert compiled.run_spec_digest == run_spec.digest
     assert compiled.coverage.approvable
+
+
+def test_exact_request_blocks_when_declared_dependency_is_not_read_by_contract() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    scenario, run_spec = adapt_general_proposal_v1(
+        proposal,
+        run_id="run_relief_port_closure",
+    )
+    records = [
+        item.model_copy(
+            update={
+                "public_state": [
+                    *item.public_state,
+                    StateEntryV1(key="sealed", value=False),
+                ],
+                "hidden_state": [
+                    *item.hidden_state,
+                    StateEntryV1(key="sealed", value=True),
+                ],
+            }
+        )
+        if item.record_id == "relief_cargo"
+        else item
+        for item in scenario.world_records
+    ]
+    requests = [
+        item.model_copy(
+            update={
+                "required_reads": ["relief_cargo", "temporary_route"],
+                "transition_contract_ids": ["inspect_relief_cargo"],
+            }
+        )
+        if item.request_id == "information_routes"
+        else item
+        for item in scenario.component_requests
+    ]
+    scenario = ScenarioSpecV2.model_validate(
+        {
+            **scenario.model_dump(mode="json"),
+            "world_records": [item.model_dump(mode="json") for item in records],
+            "component_requests": [item.model_dump(mode="json") for item in requests],
+            "sensing_rules": [
+                SensingRuleProposalV1(
+                    rule_id="inspect_relief_cargo",
+                    subject_ref="relief_cargo",
+                    observer_ids=["port_coordinator"],
+                    reveal_hidden_keys=["sealed"],
+                    output_record_id="relief_cargo",
+                    result_recipient_ids=["port_coordinator"],
+                ).model_dump(mode="json")
+            ],
+        }
+    )
+    moments = [
+        item.model_copy(
+            update={
+                "active_transition_contract_ids": [
+                    *item.active_transition_contract_ids,
+                    "inspect_relief_cargo",
+                ]
+            }
+        )
+        if item.moment_id == "initial_claims"
+        else item
+        for item in run_spec.scheduled_moments
+    ]
+    run_spec = run_spec.model_copy(
+        update={"scenario_digest": scenario.digest, "scheduled_moments": moments}
+    )
+
+    compiled = compile_general_simulation_v2(scenario, run_spec)
+    item = next(
+        item
+        for item in compiled.coverage.items
+        if item.request_id == "information_routes"
+    )
+
+    assert item.classification == "exact"
+    assert item.causal_closure == "partial"
+    assert item.unenforced_dependency_refs == ["temporary_route"]
+    assert [
+        (dependency.dependency_ref, dependency.enforcement)
+        for dependency in item.dependency_enforcement
+    ] == [
+        ("relief_cargo", "exact_read"),
+        ("temporary_route", "unsupported"),
+    ]
+    assert item.blocking
+    assert "information_routes" in compiled.coverage.blocking_request_ids
+
+    fixed_requests = [
+        request.model_copy(update={"required_reads": ["relief_cargo"]})
+        if request.request_id == "information_routes"
+        else request
+        for request in scenario.component_requests
+    ]
+    fixed_scenario = ScenarioSpecV2.model_validate(
+        {
+            **scenario.model_dump(mode="json"),
+            "component_requests": [
+                request.model_dump(mode="json") for request in fixed_requests
+            ],
+        }
+    )
+    fixed_run = run_spec.model_copy(update={"scenario_digest": fixed_scenario.digest})
+    fixed = compile_general_simulation_v2(fixed_scenario, fixed_run)
+    fixed_item = next(
+        item for item in fixed.coverage.items if item.request_id == "information_routes"
+    )
+
+    assert fixed_item.causal_closure == "exact"
+    assert not fixed_item.unenforced_dependency_refs
+    assert fixed.coverage.approvable
 
 
 def test_runtime_module_does_not_load_analysis_package() -> None:

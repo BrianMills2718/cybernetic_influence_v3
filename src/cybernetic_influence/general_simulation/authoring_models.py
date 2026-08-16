@@ -396,6 +396,22 @@ class CoverageItemV1(_StrictModel):
     assumptions: list[str]
     blocking: bool
     compiler_evidence: list[str]
+    causal_closure: Literal["exact", "partial", "coarse", "descriptive", "unsupported"] = (
+        "unsupported"
+    )
+    dependency_enforcement: list["DependencyEnforcementItemV1"] = Field(
+        default_factory=list
+    )
+    unenforced_dependency_refs: list[str] = Field(default_factory=list)
+
+
+class DependencyEnforcementItemV1(_StrictModel):
+    dependency_ref: str
+    enforcement: Literal[
+        "exact_read", "exact_write_only", "coarse_llm", "descriptive", "unsupported"
+    ]
+    transition_contract_ids: list[str] = Field(default_factory=list)
+    compiler_evidence: list[str] = Field(default_factory=list)
 
 
 class ExecutionCoverageReportV1(_StrictModel):

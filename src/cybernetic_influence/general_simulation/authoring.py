@@ -217,7 +217,8 @@ def _diagnostics(
                 "severity": "error",
                 "code": "unsupported_behavior",
                 "message": (
-                    f"Material behavior {request_id!r} is {item.classification}; "
+                    f"Material behavior {request_id!r} has {item.causal_closure} "
+                    f"causal closure ({item.classification} authority); "
                     + "; ".join(item.compiler_evidence)
                 ),
             }
@@ -252,7 +253,8 @@ def _diagnostics_v2(
                 "severity": "error",
                 "code": "unsupported_behavior",
                 "message": (
-                    f"Material behavior {request_id!r} is {item.classification}; "
+                    f"Material behavior {request_id!r} has {item.causal_closure} "
+                    f"causal closure ({item.classification} authority); "
                     + "; ".join(item.compiler_evidence)
                 ),
             }
@@ -916,6 +918,10 @@ class GeneralDraftAuthoringService:
         if current.get("status") != "approved" or not isinstance(approval, dict):
             raise GeneralCompilationError("draft must be approved before execution")
         compiled = self.compile(current)
+        if not compiled.coverage.approvable:
+            raise GeneralCompilationError(
+                "approved draft no longer has complete required execution coverage"
+            )
         if isinstance(compiled, CompiledGeneralSimulationV2):
             bundle = AuthoredSimulationBundleV2.model_validate(current["proposal"])
             if approval.get("bundle_digest") != bundle.digest:

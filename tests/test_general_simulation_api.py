@@ -247,6 +247,23 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
     document = generated.json()
     assert document["status"] == "ready_for_review"
     assert document["coverage"]["blocking_request_ids"] == []
+    assert all(
+        item["causal_closure"] in {"exact", "coarse"}
+        for item in document["coverage"]["items"]
+    )
+
+    retained_path = tmp_path / "drafts" / f"{draft['draft_id']}.json"
+    retained = json.loads(retained_path.read_text(encoding="utf-8"))
+    retained["coverage"] = {
+        "registry_digest": "stale_snapshot",
+        "items": [],
+        "blocking_request_ids": [],
+    }
+    retained_path.write_text(json.dumps(retained), encoding="utf-8")
+    reopened = api.get(f"/api/authoring/drafts/{draft['draft_id']}")
+    assert reopened.status_code == 200
+    assert reopened.json()["coverage"]["registry_digest"] != "stale_snapshot"
+    assert reopened.json()["coverage"]["items"]
 
     preview = api.get(f"/api/authoring/drafts/{draft['draft_id']}/preview")
     assert preview.status_code == 200
