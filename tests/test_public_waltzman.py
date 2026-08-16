@@ -201,9 +201,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Edit one role—or keep the reviewed coalition" in page
     assert "Institutional oughts—not personal commands" in page
     assert "Edit personal character and memory" in page
-    assert "Describe a simulation." in page
-    assert "Configure simulation now" in page
-    assert "Coverage is explicit:" in page
+    assert "Describe a world. Build an editable simulation." in page
+    assert "Ask clarifying questions" in page
+    assert "Configure now with assumptions" in page
     assert "Save this section and recompile" in page
     assert "Configuration sections" in page
     assert "What exists before the run" in page
@@ -248,11 +248,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=ontology2",
-        "assets/styles.css?v=authoring9",
+        "assets/styles.css?v=authoring10",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=authoring18",
+        "assets/app.js?v=authoring19",
     ]
     assert {
         "overview-view",

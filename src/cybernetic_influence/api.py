@@ -3037,7 +3037,10 @@ def create_app(
         _require_access(request)
         try:
             document = drafts.get(draft_id)
-            if document.get("target_kind") in {"general_world_v1", "general_world_v2"}:
+            if (
+                document.get("target_kind") in {"general_world_v1", "general_world_v2"}
+                and isinstance(document.get("proposal"), dict)
+            ):
                 compiled = authoring.compile_general(document)
                 document = deepcopy(document)
                 document["coverage"] = compiled.coverage.model_dump(mode="json")

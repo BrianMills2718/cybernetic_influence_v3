@@ -40,6 +40,9 @@ from cybernetic_influence.authoring.service import (
     _ProposalConsumer,
     _provider_candidate_from_proposal,
 )
+from cybernetic_influence.general_simulation.authoring_models import (
+    GeneralAuthoringDiscussionV1,
+)
 from cybernetic_influence.run_configuration import (
     EffectiveRunLlmConfiguration,
     llm_client_revision,
@@ -260,6 +263,45 @@ def test_draft_is_idempotent_revisioned_previewable_approved_and_runnable(tmp_pa
     assert run.json()["cost"] == 0.0
     assert run.json()["authoring"]["draft_id"] == draft_id
     assert run.json()["authoring"]["description"]
+
+
+def test_discussion_only_general_draft_can_be_reloaded_before_configuration(
+    tmp_path: Path,
+) -> None:
+    def discuss_call(*_args: object, **_kwargs: object) -> tuple[object, object]:
+        return GeneralAuthoringDiscussionV1(
+            reply="I understand the outage world.",
+            understood_summary="A city coordinates during a prolonged power outage.",
+            material_questions=["What event should end the run?"],
+        ), _Meta()
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=discuss_call,
+        )
+    )
+    draft_id = api.post("/api/authoring/drafts").json()["draft_id"]
+    discussed = api.post(
+        f"/api/authoring/drafts/{draft_id}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "outage_discussion",
+            "message": "Simulate coordination during a city power outage.",
+            "mode": "discuss",
+        },
+    )
+
+    assert discussed.status_code == 200
+    reloaded = api.get(f"/api/authoring/drafts/{draft_id}")
+    assert reloaded.status_code == 200
+    assert reloaded.json()["revision"] == 1
+    assert reloaded.json()["proposal"] is None
+    assert reloaded.json()["coverage"] is None
+    assert reloaded.json()["configuration_graph"] is None
+    assert reloaded.json()["messages"] == discussed.json()["messages"]
 
 
 def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corruption(

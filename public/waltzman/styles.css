@@ -1175,12 +1175,9 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-hero { max-width: 900px; }
 .create-hero h2 { font-size: clamp(2rem, 3.6vw, 3.4rem); letter-spacing: -0.045em; line-height: 1.03; margin: 10px 0 12px; max-width: 20ch; }
 .create-hero > p { color: var(--muted); font-size: 0.95rem; line-height: 1.55; margin: 0 0 10px; max-width: 72ch; }
-.create-hero .create-capability-note { border-left: 2px solid var(--accent); font-size: 0.82rem; padding-left: 12px; }
-.create-hero .create-capability-note strong { color: var(--text); }
 .create-simulation.has-draft { gap: 22px; }
 .create-simulation.has-draft .create-hero h2 { font-size: clamp(2rem, 3.5vw, 3.2rem); margin-bottom: 12px; max-width: 22ch; }
 .create-simulation.has-draft .create-hero > p { font-size: 0.95rem; line-height: 1.55; }
-.create-simulation.has-draft .create-capability-note { display: none; }
 .create-flow { display: grid; gap: 1px; grid-template-columns: repeat(4, 1fr); max-width: 760px; }
 .create-flow span { background: var(--panel); color: var(--muted); font-size: 0.75rem; font-weight: 750; padding: 11px 13px; }
 .create-flow span.active { background: #173249; color: #fff; }
@@ -1566,7 +1563,6 @@ tbody tr:last-child td { border-bottom: 0; }
   .create-simulation { gap: 16px; }
   .create-hero h2 { font-size: 2.35rem; margin: 7px 0 9px; }
   .create-hero > p { font-size: 0.83rem; line-height: 1.42; margin-bottom: 7px; }
-  .create-hero .create-capability-note { font-size: 0.72rem; }
   .create-composer { padding: 17px; }
   .create-composer textarea { max-height: 116px; }
   .create-composer > div, .create-actions { align-items: stretch; flex-direction: column; }

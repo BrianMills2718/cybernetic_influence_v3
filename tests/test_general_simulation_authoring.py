@@ -122,6 +122,11 @@ def test_discussion_retains_chat_without_configuring(tmp_path: Path) -> None:
         }
     ]
 
+    reloaded = store.get(str(created["draft_id"]))
+    assert reloaded["revision"] == 1
+    assert reloaded["proposal"] is None
+    assert reloaded["messages"] == discussed["messages"]
+
 
 def test_unknown_material_behavior_is_retained_but_cannot_be_approved(
     tmp_path: Path,

@@ -2157,13 +2157,18 @@ function renderCreateSimulation() {
     $('#create-result').hidden = true
   }
   const author = authoringModel()
+  const conversationOnly = Boolean(authoringDraft && !authoringDraft.proposal)
   $('#create-view').classList.toggle('has-draft', Boolean(authoringDraft))
   $('#create-title').textContent = authoringDraft?.proposal
     ? 'Review and run this simulation.'
-    : 'Design a simulation with the selected authoring model.'
+    : conversationOnly
+      ? 'Refine the simulation—or configure it now.'
+      : 'Describe a world. Build an editable simulation.'
   $('.create-hero > p').textContent = authoringDraft?.proposal
     ? 'Review the world, the run conditions, and any optional analysis separately. Everything below is retained and editable before the selected model runs the simulation.'
-    : 'Describe a world in ordinary language. The authoring model can clarify it with you, or configure it immediately using disclosed assumptions.'
+    : conversationOnly
+      ? 'Your conversation is retained. Answer the questions below, add another instruction, or ask the model to make explicit assumptions and build the editable configuration.'
+      : 'Tell us what exists, what can change, and what you want to explore. Refine it in conversation or ask the model to make explicit assumptions now.'
   $('#create-generate').disabled = !author || authoringBusy
   $('#create-configure-now').disabled = !author || authoringBusy
   renderAuthoringChat()
@@ -2178,7 +2183,7 @@ function renderCreateSimulation() {
     $('.create-hero .case-label').textContent = 'Create a simulation'
     $('#create-review').hidden = true
     $('#create-status').textContent = author
-      ? 'Describe a sociotechnical world to begin. The authoring model will generate a retained typed draft.'
+      ? 'Describe the situation, then choose whether to clarify it or configure it immediately.'
       : 'The structured authoring route is unavailable. No provider-free fallback will be shown.'
     return
   }
@@ -2195,7 +2200,7 @@ function renderCreateSimulation() {
     $('#create-review').hidden = true
     $('.create-brief').hidden = true
     setCreateFlow('describe')
-    $('#create-status').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
+    $('#create-status').textContent = 'Conversation saved. Reply above, or configure now with explicit assumptions.'
     $('#create-draft-title').textContent = 'Draft needs more information'
     $('#create-draft-description').textContent = authoringDraft.authoring_summary || 'Reply to the authoring model using the revision box below.'
     $('#create-world-facts').innerHTML = ''
@@ -2316,8 +2321,11 @@ async function keepQuestionsInsideSimulation() {
 
 function renderAuthoringChat() {
   const messages = authoringDraft?.messages || []
-  if (!messages.length) return
-  $('#create-chat').innerHTML = messages.map((item) => `<article class="user"><strong>You</strong><p>${escapeHtml(item.content)}</p></article><article class="assistant"><strong>Authoring model</strong><p>${escapeHtml(item.assistant_summary || 'I retained that context.')}</p></article>`).join('')
+  if (!messages.length) {
+    $('#create-chat').innerHTML = '<article class="assistant"><strong>Simulation builder</strong><p>Describe the situation in your own words. I can ask a few material questions, or configure an editable draft immediately.</p></article>'
+    return
+  }
+  $('#create-chat').innerHTML = messages.map((item) => `<article class="user"><strong>You</strong><p>${escapeHtml(item.content)}</p></article><article class="assistant"><strong>Simulation builder</strong><p>${escapeHtml(item.assistant_summary || 'I retained that context.')}</p></article>`).join('')
   $('#create-chat').scrollTop = $('#create-chat').scrollHeight
 }
 
