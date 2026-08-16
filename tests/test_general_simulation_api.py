@@ -378,6 +378,77 @@ def test_dependency_review_repairs_an_omitted_exact_action_prerequisite(
     ]
 
 
+def test_dependency_review_can_repair_after_two_compiler_retries(
+    tmp_path: Path,
+) -> None:
+    proposal = _native_v2_proposal()
+    generation_calls = 0
+    review_calls = 0
+
+    def provider(*_args: Any, **kwargs: Any) -> tuple[object, object]:
+        nonlocal generation_calls, review_calls
+        if kwargs["response_model"] is DependencyCompletenessReviewV1:
+            review_calls += 1
+            if review_calls == 1:
+                return DependencyCompletenessReviewV1(
+                    status="repair_required",
+                    summary="The compiled candidate omitted one communication prerequisite.",
+                    missing_dependencies=[
+                        MissingDependencyFindingV1(
+                            exact_action_request_id="cargo_movement",
+                            prerequisite_description=(
+                                "The bridge finding must reach the transport coordinator."
+                            ),
+                            existing_ref="bridge_finding_delivery",
+                            evidence="The analyst required the finding to be communicated.",
+                            required_resolution="declare_world_state",
+                        )
+                    ],
+                ), SimpleNamespace(provider="test", cost=0.0)
+            return DependencyCompletenessReviewV1(
+                status="complete",
+                summary="The repaired candidate covers the communication prerequisite.",
+                missing_dependencies=[],
+            ), SimpleNamespace(provider="test", cost=0.0)
+        generation_calls += 1
+        if generation_calls <= 2:
+            raise ValueError(f"bounded compiler repair {generation_calls}")
+        return AuthoredSimulationProposalEnvelopeV2(proposal=proposal), SimpleNamespace(
+            provider="test", cost=0.0
+        )
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=provider,
+        )
+    )
+    draft = api.post("/api/authoring/drafts").json()
+    generated = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "late_review_repair",
+            "message": "Model a bridge-dependent cargo transfer.",
+        },
+    )
+
+    assert generated.status_code == 200
+    assert generated.json()["status"] == "ready_for_review"
+    assert generation_calls == 4
+    assert review_calls == 2
+    assert [item["status"] for item in generated.json()["attempts"]] == [
+        "repair",
+        "repair",
+        "accepted",
+        "repair",
+        "accepted",
+        "accepted",
+    ]
+
+
 def test_live_general_authoring_runs_as_pollable_background_job(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:

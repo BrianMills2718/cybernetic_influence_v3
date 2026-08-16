@@ -50,7 +50,7 @@ from .study_models import (
 StructuredCall = Callable[..., tuple[Any, Any]]
 GENERAL_AUTHORING_TASK = "cybernetic_influence_v3_general_world_draft"
 GENERAL_AUTHORING_PROMPT_VERSION = "general_world_draft.v2"
-GENERAL_AUTHORING_MAX_ATTEMPTS = 3
+GENERAL_AUTHORING_MAX_ATTEMPTS = 5
 GENERAL_AUTHORING_MAX_BUDGET = 0.10
 GENERAL_AUTHORING_MAX_TOKENS = 8000
 GENERAL_AUTHORING_CALL_TIMEOUT_S = 300
@@ -814,6 +814,20 @@ class GeneralDraftAuthoringService:
                 repair_feedback = (
                     "Return one complete native V2 proposal envelope matching the supplied schema."
                 )
+
+        if (
+            bundle is None
+            and compiled is None
+            and repair_feedback
+            and not diagnostics
+        ):
+            diagnostics = [
+                {
+                    "severity": "error",
+                    "code": "repair_exhausted",
+                    "message": repair_feedback,
+                }
+            ]
 
         if bundle is not None and compiled is not None:
             status = "needs_input" if diagnostics else "ready_for_review"
