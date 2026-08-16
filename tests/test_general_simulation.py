@@ -324,6 +324,56 @@ def test_exact_transformation_requires_matching_public_inventory_update() -> Non
     assert world.state.resources["finished"].quantity == 0
 
 
+def test_no_op_does_not_invalidate_complete_exact_transformation() -> None:
+    spec = _contract_world().spec
+    semantic = next(
+        item
+        for item in spec.authorities
+        if item.authority_id == "port_semantic_adjudicator"
+    )
+    semantic.patch_grammar.allowed_operations = []
+    semantic.patch_grammar.allowed_record_types = []
+    spec.initial_state.records["review_status"] = WorldRecord(
+        record_id="review_status",
+        kind="status",
+        label="Review status",
+        state={"status": "pending"},
+    )
+    world = CanonicalWorld(spec)
+    intent = _contract_intent("produce")
+    transformation_operations = [
+        *_contract_transaction().operations[1:5],
+        PatchOperation(
+            operation="replace",
+            target=TypedTarget(
+                record_type="record",
+                record_id="review_status",
+                field="state.status",
+            ),
+            value="pending",
+        ),
+    ]
+    transaction = WorldTransaction(
+        transaction_id="transformation_with_reasserted_status",
+        base_revision=0,
+        authority_id="port_semantic_adjudicator",
+        intent_ids=[intent.intent_id],
+        operations=transformation_operations,
+        preconditions=[],
+        consequences=[],
+        evidence_refs=[intent.intent_id],
+        stated_rationale="Transform resources while retaining an unchanged review status.",
+    )
+
+    result = world.validate_and_commit(transaction, intents=[intent], current_minute=60)
+
+    assert result.accepted
+    assert world.state.resources["raw_a"].quantity == 100
+    assert world.state.resources["finished"].quantity == 500
+    assert world.state.records["finished_inventory"].state["quantity"] == 500
+    assert world.evidence[-1].operation_attributions[-1].classification == "no_op"
+
+
 def test_exact_transport_requires_compiled_status_and_capacity_guards() -> None:
     base = _contract_world()
     spec = base.spec

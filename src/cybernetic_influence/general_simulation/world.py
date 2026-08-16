@@ -239,16 +239,16 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             intents=supplied_intents,
             current_minute=current_minute,
         )
-        exact_operation_indices = {
+        grammar_exempt_operation_indices = {
             item.operation_index
             for item in operation_attributions
-            if item.classification == "exact_contract"
+            if item.classification in {"exact_contract", "no_op"}
         }
         if authority is None:
             errors.append(f"unknown authority {transaction.authority_id}")
         else:
             for index, operation in enumerate(transaction.operations):
-                if index in exact_operation_indices:
+                if index in grammar_exempt_operation_indices:
                     continue
                 if operation.operation not in authority.patch_grammar.allowed_operations:
                     errors.append(f"operation {operation.operation} is outside authority grammar")
