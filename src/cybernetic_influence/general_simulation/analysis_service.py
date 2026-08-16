@@ -182,6 +182,8 @@ def _transition_rows(
         if not isinstance(base_revision, int):
             continue
         operations = transaction.get("operations")
+        accepted = validation.get("accepted") is True
+        operation_count = len(operations) if isinstance(operations, list) else 0
         preconditions = transaction.get("preconditions")
         precondition_refs: list[str] = []
         if isinstance(preconditions, list):
@@ -197,8 +199,9 @@ def _transition_rows(
             {
                 "evidence_ref": record.evidence_ref,
                 "moment": base_revision + 1,
-                "accepted": validation.get("accepted") is True,
-                "operation_count": len(operations) if isinstance(operations, list) else 0,
+                "accepted": accepted,
+                "proposed_operation_count": operation_count,
+                "committed_operation_count": operation_count if accepted else 0,
                 "precondition_refs": precondition_refs,
             }
         )
@@ -389,7 +392,8 @@ def _waltzman_findings(
                     bool(row["accepted"]) for row in transition_rows
                 ),
                 "committed_world_operations": sum(
-                    cast(int, row["operation_count"]) for row in transition_rows
+                    cast(int, row["committed_operation_count"])
+                    for row in transition_rows
                 ),
             }
         )

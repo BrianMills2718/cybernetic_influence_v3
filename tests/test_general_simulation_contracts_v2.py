@@ -445,3 +445,101 @@ def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
     assert unsupported.coverage_status == "unsupported"
     assert unsupported.missing_evidence == ["boundary_activity"]
     assert result.model_dump(mode="json") == retained_result
+
+
+def test_waltzman_lens_does_not_count_rejected_operations_as_committed() -> None:
+    records = [
+        EvidenceRecordV1(
+            evidence_ref="configuration:blocked_dispatch",
+            evidence_kind="configuration",
+            summary="Configuration.",
+            payload={},
+        ),
+        EvidenceRecordV1(
+            evidence_ref="terminal_state:blocked_dispatch",
+            evidence_kind="terminal_state",
+            summary="Terminal state.",
+            payload={"revision": 0},
+        ),
+        EvidenceRecordV1(
+            evidence_ref="call:operator",
+            evidence_kind="participant_activation",
+            summary="Operator attempt.",
+            payload={
+                "structured_output": {
+                    "assimilation": {
+                        "interpretation": "Dispatch remains blocked.",
+                        "attended_observation_ids": [],
+                        "provenance_links": [],
+                    },
+                    "intent": {
+                        "actor_id": "operator",
+                        "base_revision": 0,
+                        "action": "Attempt dispatch.",
+                        "purpose": "Move cargo.",
+                        "expected_effect": "Cargo may move.",
+                        "stated_rationale": "Attempt the guarded transition.",
+                        "target_refs": ["cargo"],
+                        "transition_contract_ids": ["cargo_transport"],
+                    },
+                }
+            },
+        ),
+        EvidenceRecordV1(
+            evidence_ref="transition:blocked_dispatch",
+            evidence_kind="causal_event",
+            summary="Rejected dispatch.",
+            payload={
+                "transaction": {
+                    "base_revision": 0,
+                    "operations": [
+                        {"operation": "replace", "target": {}, "value": index}
+                        for index in range(5)
+                    ],
+                    "preconditions": [],
+                },
+                "validation": {
+                    "base_revision": 0,
+                    "accepted": False,
+                    "errors": ["precondition failed"],
+                },
+            },
+        ),
+    ]
+    bundle_payload = {
+        "bundle_version": 2,
+        "bundle_id": "bundle_run_blocked_dispatch",
+        "run_id": "run_blocked_dispatch",
+        "scenario_id": "blocked_dispatch",
+        "scenario_digest": _digest("scenario"),
+        "run_spec_digest": _digest("run"),
+        "initial_state_digest": _digest("initial"),
+        "terminal_state_digest": _digest("terminal"),
+        "evidence_records": [item.model_dump(mode="json") for item in records],
+        "fidelity_assumptions": ["Rejected operations do not change canonical state."],
+        "known_omissions": [],
+    }
+    bundle = RunEvidenceBundleV2.model_validate(
+        {**bundle_payload, "record_digest": _digest(bundle_payload)}
+    )
+
+    analysis = analyze_run_evidence_v2(bundle, _waltzman_spec())
+
+    finding = next(
+        item
+        for item in analysis.findings
+        if item.construct_id == "coordination_readiness_signals"
+    )
+    assert isinstance(finding.value, dict)
+    assert finding.value["by_moment"] == [
+        {
+            "moment": 1,
+            "participating_people": 1,
+            "people_expressing_hold_or_nonattempt": 0,
+            "people_seeking_verification_or_review": 0,
+            "people_selecting_exact_transition_contract": 1,
+            "shared_dependency_count": 0,
+            "accepted_world_transitions": 0,
+            "committed_world_operations": 0,
+        }
+    ]

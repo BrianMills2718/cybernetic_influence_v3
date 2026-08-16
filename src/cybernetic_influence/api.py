@@ -1232,18 +1232,39 @@ def _simulation_replay(
                 if isinstance(transition, dict)
                 else None
             )
-            operations = (
+            attempted_operations = (
                 transaction.get("operations")
                 if isinstance(transaction, dict)
                 and isinstance(transaction.get("operations"), list)
                 else []
             )
-            consequences = (
+            attempted_consequences = (
                 transaction.get("consequences")
                 if isinstance(transaction, dict)
                 and isinstance(transaction.get("consequences"), list)
                 else []
             )
+            validation = (
+                transition.get("validation")
+                if isinstance(transition, dict)
+                and isinstance(transition.get("validation"), dict)
+                else None
+            )
+            transition_accepted = (
+                validation.get("accepted")
+                if isinstance(validation, dict)
+                and isinstance(validation.get("accepted"), bool)
+                else None
+            )
+            validation_errors = (
+                [str(item) for item in validation.get("errors", [])]
+                if isinstance(validation, dict)
+                and isinstance(validation.get("errors"), list)
+                else []
+            )
+            rejected_attempt = transition_accepted is False
+            operations = [] if rejected_attempt else attempted_operations
+            consequences = [] if rejected_attempt else attempted_consequences
             rationale = (
                 transaction.get("stated_rationale")
                 if isinstance(transaction, dict)
@@ -1331,6 +1352,25 @@ def _simulation_replay(
                 transition_facts = [
                     ("World change", "No canonical fields changed in this committed moment.")
                 ]
+            if rejected_attempt:
+                unmet_preconditions = sum(
+                    error.startswith("precondition failed")
+                    for error in validation_errors
+                )
+                rejection_reason = (
+                    f"{unmet_preconditions} required precondition"
+                    f"{'s were' if unmet_preconditions != 1 else ' was'} not met."
+                    if unmet_preconditions == len(validation_errors)
+                    and unmet_preconditions > 0
+                    else f"Canonical validation recorded {len(validation_errors)} error"
+                    f"{'s' if len(validation_errors) != 1 else ''}."
+                )
+                rejection_summary = (
+                    "Canonical validation rejected the joint attempt, so none of its "
+                    f"{len(attempted_operations)} proposed world change"
+                    f"{'s' if len(attempted_operations) != 1 else ''} committed. "
+                    f"{rejection_reason}"
+                )
             raw_evidence_refs = (
                 transaction.get("evidence_refs")
                 if isinstance(transaction, dict)
@@ -1364,7 +1404,13 @@ def _simulation_replay(
                 scene_title=str(moment.get("event_id") or f"World moment {index}")
                 .replace("_", " ")
                 .capitalize(),
-                scene_summary=(rationale.strip() if rationale and rationale.strip() else narrative),
+                scene_summary=(
+                    rejection_summary
+                    if rejected_attempt
+                    else rationale.strip()
+                    if rationale and rationale.strip()
+                    else narrative
+                ),
                 visible_nodes=visible_event_nodes,
                 visible_edges=visible_event_edges,
                 focus_nodes=(changed_node_ids or participants),
@@ -1373,7 +1419,17 @@ def _simulation_replay(
                     ("Moment", str(index)),
                     ("People acting", str(len(participants))),
                     *(
-                        transition_facts
+                        [
+                            (
+                                "Attempt",
+                                f"Rejected · {len(attempted_operations)} proposed world "
+                                f"change{'s' if len(attempted_operations) != 1 else ''}",
+                            ),
+                            ("World change", "No change committed."),
+                            ("Why", rejection_reason),
+                        ]
+                        if rejected_attempt
+                        else transition_facts
                         if transition_committed
                         else [("World change", "No change committed.")]
                     ),

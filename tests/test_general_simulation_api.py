@@ -164,6 +164,69 @@ def test_general_replay_focuses_changed_nodes_and_edges() -> None:
     assert "storage_route" in event["visible_edge_ids"]
 
 
+def test_general_replay_does_not_present_rejected_operations_as_world_changes() -> None:
+    replay = _simulation_replay(
+        title="Blocked dispatch",
+        headline="Blocked dispatch",
+        summary="One rejected transition.",
+        outcome={"accepted_transactions": 0, "final_revision": 0},
+        rounds=[],
+        network_nodes=[
+            {"id": "operator", "kind": "person", "label": "Operator"},
+            {"id": "cargo", "kind": "resource", "label": "Cargo"},
+        ],
+        network_edges=[],
+        raw_moments=[
+            {
+                "event_id": "attempt_dispatch",
+                "narrative": "Attempt cargo dispatch.",
+                "participants": ["operator"],
+                "execution_parent": "revision:0",
+                "resulting_revision": 0,
+                "transition": {
+                    "transaction": {
+                        "operations": [
+                            {
+                                "operation": "replace",
+                                "target": {
+                                    "record_type": "resource",
+                                    "record_id": "cargo",
+                                    "field": "quantity",
+                                },
+                                "value": 0,
+                            }
+                        ],
+                        "consequences": [],
+                        "stated_rationale": "Cargo moved successfully.",
+                    },
+                    "validation": {
+                        "accepted": False,
+                        "errors": [
+                            "precondition failed for dispatch authorization",
+                            "precondition failed for route clearance",
+                        ],
+                    },
+                },
+            }
+        ],
+        general_world=True,
+    )
+
+    event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
+    assert event["summary"] == (
+        "Canonical validation rejected the joint attempt, so none of its 1 "
+        "proposed world change committed. 2 required preconditions were not met."
+    )
+    assert event["focus_node_ids"] == ["operator"]
+    assert {item["label"]: item["value"] for item in event["facts"]} == {
+        "Moment": "1",
+        "People acting": "1",
+        "Attempt": "Rejected · 1 proposed world change",
+        "World change": "No change committed.",
+        "Why": "2 required preconditions were not met.",
+    }
+
+
 class _GeneralRuntimeFake:
     def __init__(self) -> None:
         self.actor_counter = 0
