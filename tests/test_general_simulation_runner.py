@@ -16,6 +16,7 @@ from cybernetic_influence.general_simulation.models import (
     ActorDecision,
     Assimilation,
     Consequence,
+    PatchGrammar,
     PatchOperation,
     Precondition,
     ResourceTransportContract,
@@ -259,7 +260,61 @@ def test_selected_exact_transport_receives_compiled_guards() -> None:
     ]
 
 
-def test_adjudicator_sees_coarse_and_exact_patch_shapes_without_changing_authority() -> None:
+def test_adjudicator_sees_only_selected_exact_patch_shapes_without_changing_authority() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    spec = compile_general_simulation(proposal).world_spec
+    spec.resource_transport_contracts = [
+        ResourceTransportContract(
+            contract_id="selected_transport",
+            operator_ids=["trucking_dispatcher"],
+            source_resource_id="dispatch_fuel",
+            destination_resource_id="dispatch_fuel",
+            quantity=1,
+            origin_place_id="outside_port",
+            destination_place_id="port",
+            allowed_route_ids=["temporary_route"],
+            arrival_record_id="relief_cargo",
+            arrival_quantity_key="quantity",
+            usable_quantity_key="usable_quantity",
+            arrival_minute_key="arrival_minute",
+        )
+    ]
+    world = CanonicalWorld(spec)
+    semantic = next(
+        item
+        for item in world.spec.authorities
+        if item.authority_id == "general_semantic_adjudicator"
+    ).model_copy(
+        update={
+            "patch_grammar": PatchGrammar(
+                allowed_operations=[],
+                allowed_record_types=[],
+            )
+        }
+    )
+    effective = _effective_transition_authority(
+        world,
+        semantic,
+        selected_contract_ids={"selected_transport"},
+    )
+
+    assert effective.authority_id == semantic.authority_id
+    assert set(effective.patch_grammar.allowed_operations) == {
+        *semantic.patch_grammar.allowed_operations,
+        "replace",
+    }
+    assert set(effective.patch_grammar.allowed_record_types) == {
+        *semantic.patch_grammar.allowed_record_types,
+        "record",
+        "resource",
+    }
+    assert "representation" not in effective.patch_grammar.allowed_record_types
+    assert semantic.patch_grammar != effective.patch_grammar
+
+
+def test_adjudicator_does_not_see_unselected_exact_patch_shapes() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         FIXTURE.read_text(encoding="utf-8")
     )
@@ -268,23 +323,22 @@ def test_adjudicator_sees_coarse_and_exact_patch_shapes_without_changing_authori
         item
         for item in world.spec.authorities
         if item.authority_id == "general_semantic_adjudicator"
-    )
-    exact = next(
-        item for item in world.spec.authorities if item.implementation == "deterministic"
+    ).model_copy(
+        update={
+            "patch_grammar": PatchGrammar(
+                allowed_operations=[],
+                allowed_record_types=[],
+            )
+        }
     )
 
-    effective = _effective_transition_authority(world, semantic)
+    effective = _effective_transition_authority(
+        world,
+        semantic,
+        selected_contract_ids=set(),
+    )
 
-    assert effective.authority_id == semantic.authority_id
-    assert set(effective.patch_grammar.allowed_operations) == (
-        set(semantic.patch_grammar.allowed_operations)
-        | set(exact.patch_grammar.allowed_operations)
-    )
-    assert set(effective.patch_grammar.allowed_record_types) == (
-        set(semantic.patch_grammar.allowed_record_types)
-        | set(exact.patch_grammar.allowed_record_types)
-    )
-    assert semantic.patch_grammar != effective.patch_grammar
+    assert effective == semantic
 
 
 def test_whole_sensing_state_is_expanded_and_unauthorized_delivery_is_omitted() -> None:

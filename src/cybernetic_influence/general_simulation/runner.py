@@ -320,36 +320,48 @@ def _inject_selected_contract_preconditions(
 def _effective_transition_authority(
     world: CanonicalWorld,
     authority: TransitionAuthoritySpec,
+    *,
+    selected_contract_ids: set[str],
 ) -> TransitionAuthoritySpec:
-    """Expose the operation grammar available through coarse and exact authority.
+    """Expose coarse grammar plus only the selected exact-contract patch shapes.
 
     Exact-contract operations remain licensed only when canonical attribution
-    matches a selected contract. This union tells the adjudicator which patch
-    shapes it may propose without granting it additional commit authority.
+    matches a selected contract. Keeping this view selection-scoped prevents an
+    unrelated exact component from advertising patch shapes that the current
+    intents cannot license at commit time.
     """
 
-    exact_authority = next(
-        (
-            item
-            for item in world.spec.authorities
-            if item.implementation == "deterministic"
-        ),
-        None,
+    allowed_operations = set(authority.patch_grammar.allowed_operations)
+    allowed_record_types = set(authority.patch_grammar.allowed_record_types)
+    selected_sensing = any(
+        item.contract_id in selected_contract_ids
+        for item in world.spec.sensing_contracts
     )
-    if exact_authority is None:
+    selected_transformation = any(
+        item.contract_id in selected_contract_ids
+        for item in world.spec.resource_transformation_contracts
+    )
+    selected_transport = any(
+        item.contract_id in selected_contract_ids
+        for item in world.spec.resource_transport_contracts
+    )
+    if selected_sensing:
+        allowed_operations.add("replace")
+        allowed_record_types.add("record")
+    if selected_transformation or selected_transport:
+        allowed_operations.add("replace")
+        allowed_record_types.update({"record", "resource"})
+    if (
+        allowed_operations == set(authority.patch_grammar.allowed_operations)
+        and allowed_record_types == set(authority.patch_grammar.allowed_record_types)
+    ):
         return authority
     return authority.model_copy(
         update={
             "patch_grammar": authority.patch_grammar.model_copy(
                 update={
-                    "allowed_operations": sorted(
-                        set(authority.patch_grammar.allowed_operations)
-                        | set(exact_authority.patch_grammar.allowed_operations)
-                    ),
-                    "allowed_record_types": sorted(
-                        set(authority.patch_grammar.allowed_record_types)
-                        | set(exact_authority.patch_grammar.allowed_record_types)
-                    ),
+                    "allowed_operations": sorted(allowed_operations),
+                    "allowed_record_types": sorted(allowed_record_types),
                 }
             )
         }
@@ -824,7 +836,16 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             authority = next(
                 item for item in world.spec.authorities if item.authority_id == self._authority_id
             )
-            effective_authority = _effective_transition_authority(world, authority)
+            selected_contract_ids = {
+                contract_id
+                for intent in intents
+                for contract_id in intent.transition_contract_ids
+            }
+            effective_authority = _effective_transition_authority(
+                world,
+                authority,
+                selected_contract_ids=selected_contract_ids,
+            )
             moment = self._moment()
             active_sensing_rules, active_transformations, active_transports = (
                 self._active_transition_contracts()
@@ -851,6 +872,9 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "preconditioned resource quantity changes and matching public inventory-record "
                     "changes. Quantities may never become negative. Do not merely record that an attempt "
                     "was requested when the supplied world state lets this authority adjudicate its result. "
+                    "Actor communications belong in consequences; do not create, replace, or rebind "
+                    "information representations unless the supplied grammar explicitly permits the "
+                    "representation target type. "
                     "Apply only the active component requests and transition contracts for this moment; do not perform a later phase early. "
                     "A sensing rule "
                     "reveals only its named hidden keys when a permitted observer actually attempts it. "
