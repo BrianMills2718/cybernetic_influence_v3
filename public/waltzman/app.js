@@ -1551,6 +1551,126 @@ function setAuthoringBusy(busy) {
   }
 }
 
+function graphIdentifierWords(identifier) {
+  return String(identifier || '')
+    .replace(/^moment:/, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+}
+
+function graphLabelWasGenerated(label, identifier) {
+  const normalize = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+  return !label || normalize(label) === normalize(identifier)
+}
+
+function graphObjectPhrase(words) {
+  const phrase = words.join(' ').toLowerCase()
+  const vocabulary = {
+    stance:"each person’s position",
+    verification:'verification results',
+    issue:'issues',
+    'source disposition':'source assessments',
+    commitment:'commitments',
+    proposal:'proposals',
+    withdrawal:'withdrawals',
+    meeting:'meeting',
+    'meeting snapshot':'the meeting summary',
+    'round snapshot':'the decision-round summary',
+    'verification response':'the verification response',
+    alignment:'the alignment update',
+    'external decision':'external decisions',
+    'technical source':'technical-source information',
+    'policy source':'policy information',
+    'local source':'local information',
+  }
+  return vocabulary[phrase] || phrase
+}
+
+function generatedMechanismLabel(identifier) {
+  const words = graphIdentifierWords(identifier).filter((word) => !/^v\d+$/i.test(word))
+  while (['exact', 'mechanism', 'system'].includes(words.at(-1)?.toLowerCase())) words.pop()
+  if (!words.length) return 'Applies a configured world rule'
+  const suffix = words.at(-1).toLowerCase()
+  const object = graphObjectPhrase(words.slice(0, -1))
+  const deliveryIndex = words.findIndex((word) => word.toLowerCase() === 'delivery')
+  if (deliveryIndex > 0) {
+    const content = graphObjectPhrase(words.slice(0, deliveryIndex))
+    const recipient = words.slice(deliveryIndex + 1)
+    const recipientLabel = sentence(recipient.join('_'))
+    const namedRecipient = recipientLabel ? `${recipientLabel.charAt(0).toUpperCase()}${recipientLabel.slice(1)}` : ''
+    return `Delivers ${content || 'information'}${namedRecipient ? ` to ${namedRecipient}` : ''}`
+  }
+  if (suffix === 'recorder') return `Records ${object || 'a structured result'}`
+  if (suffix === 'delivery') return `Delivers ${object || 'information'}`
+  if (suffix === 'scheduler') return `Schedules ${object === 'meeting' ? 'meetings' : object || 'world activity'}`
+  if (suffix === 'gate') return `Applies the ${object || 'decision'} rule`
+  if (suffix === 'adjudication' || suffix === 'adjudicator') return `Adjudicates ${object || 'proposed actions'}`
+  if (suffix === 'transport') return `Moves ${object || 'resources'}`
+  if (suffix === 'receiver') return `Receives ${object || 'results'}`
+  if (suffix === 'clock') return `Controls ${object || 'simulation'} timing`
+  if (suffix === 'builder') return `Builds ${object || 'a structured update'}`
+  if (suffix === 'monitor') return `Monitors ${object || 'world conditions'}`
+  if (suffix === 'planner') return `Plans ${object || 'a bounded response'}`
+  if (suffix === 'diagnostician') return `Diagnoses ${object || 'the observed state'}`
+  const toIndex = words.findIndex((word) => word.toLowerCase() === 'to')
+  if (toIndex > 0 && toIndex < words.length - 1) {
+    return `Converts ${graphObjectPhrase(words.slice(0, toIndex))} into ${graphObjectPhrase(words.slice(toIndex + 1))}`
+  }
+  const verbs = {
+    inspect:'Inspects', validate:'Validates', evaluate:'Evaluates', allocate:'Allocates',
+    authorize:'Authorizes', release:'Releases', move:'Moves', create:'Creates', deliver:'Delivers',
+    record:'Records', schedule:'Schedules', adjudicate:'Adjudicates', transform:'Transforms',
+  }
+  const verb = verbs[words[0].toLowerCase()]
+  if (verb) return `${verb} ${graphObjectPhrase(words.slice(1))}`
+  return sentence(words.join('_'))
+}
+
+function semanticGraphNode(rawNode) {
+  const node = {...rawNode}
+  const canonicalId = String(node.id || '')
+  const canonicalLabel = String(node.label || sentence(canonicalId))
+  const canonicalKind = String(node.canonical_kind || node.type || node.kind || 'thing')
+  const mechanismLike = node.kind === 'mechanism'
+    || canonicalKind === 'mechanism'
+    || canonicalKind.endsWith('_mechanism')
+    || canonicalKind === 'exact_transition'
+  const activeSystem = canonicalKind === 'active_system'
+  if (graphLabelWasGenerated(canonicalLabel, canonicalId) && (mechanismLike || activeSystem)) {
+    node.label = generatedMechanismLabel(canonicalId)
+  } else {
+    node.label = canonicalLabel
+  }
+  const description = String(node.description || '')
+  const genericDescription = !description
+    || description === 'Retained world entity.'
+    || description.includes(canonicalId)
+    || /^Reviewed (reusable )?(exact )?transition/i.test(description)
+  if (genericDescription && mechanismLike) {
+    node.description = `Exact transition rule that ${node.label.charAt(0).toLowerCase()}${node.label.slice(1)}. It validates a permitted attempt before updating canonical state.`
+  } else if (genericDescription && activeSystem) {
+    node.description = `Configured transition system that ${node.label.charAt(0).toLowerCase()}${node.label.slice(1)} within its declared causal scope.`
+  } else {
+    node.description = description || 'Configured world entity.'
+  }
+  node.state = {...node.state, canonical_id:canonicalId, canonical_label:canonicalLabel, canonical_kind:canonicalKind}
+  return node
+}
+
+function semanticGraphEdges(rawEdges, nodes) {
+  const labels = new Map(nodes.map((node) => [node.id, node.label]))
+  return rawEdges.map((rawEdge) => {
+    const edge = {...rawEdge}
+    let description = String(edge.description || 'Configured directed relation.')
+    for (const [identifier, label] of labels) {
+      if (identifier && description.includes(identifier)) description = description.replaceAll(identifier, label)
+    }
+    return {...edge, description}
+  })
+}
+
 function generalDraftProjection(proposal, compiledGraph = null) {
   const nodes = (compiledGraph?.nodes || []).map((item) => ({...item, kind:item.type || item.kind, description:item.description || item.content || item.label, state:{configured:true}}))
   const edges = (compiledGraph?.edges || []).map((item) => ({...item, description:item.description || item.label, enabled:true, routeIds:[item.id]}))
@@ -1587,7 +1707,8 @@ function generalDraftProjection(proposal, compiledGraph = null) {
     const current = orderedMoments[index]
     addEdge(`schedule-sequence:${previous.moment_id}:${current.moment_id}`, 'scheduled_after', `moment:${previous.moment_id}`, `moment:${current.moment_id}`, `Minute ${current.minute} is scheduled after minute ${previous.minute}. This orders opportunities, not outcomes.`)
   }
-  return {nodes, edges}
+  const semanticNodes = nodes.map(semanticGraphNode)
+  return {nodes:semanticNodes, edges:semanticGraphEdges(edges, semanticNodes)}
 }
 
 function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
@@ -2566,15 +2687,17 @@ function renderAuthoredResultRound() {
 function renderAuthoredResultNetwork(result, scene = null) {
   const projection = result.influence_network || {nodes:[], edges:[]}
   const nodeOverrides = new Map((scene?.node_overrides || []).map((item) => [item.node_id, item]))
+  const presentationNodes = (projection.nodes || []).map((item) => semanticGraphNode({...item, ...(nodeOverrides.get(item.id) || {})}))
+  const presentationEdges = semanticGraphEdges(projection.edges || [], presentationNodes)
   const visibleNodeIds = scene ? new Set(scene.visible_node_ids || []) : null
   const visibleEdgeIds = scene ? new Set(scene.visible_edge_ids || []) : null
   const visibleNodes = visibleNodeIds
-    ? projection.nodes.filter((item) => visibleNodeIds.has(item.id)).map((item) => ({...item, ...(nodeOverrides.get(item.id) || {})}))
-    : projection.nodes.map((item) => ({...item, ...(nodeOverrides.get(item.id) || {})}))
+    ? presentationNodes.filter((item) => visibleNodeIds.has(item.id))
+    : presentationNodes
   const visibleNodeSet = new Set(visibleNodes.map((item) => item.id))
   const visibleEdges = (visibleEdgeIds
-    ? projection.edges.filter((item) => visibleEdgeIds.has(item.id))
-    : projection.edges
+    ? presentationEdges.filter((item) => visibleEdgeIds.has(item.id))
+    : presentationEdges
   ).filter((item) => visibleNodeSet.has(item.source) && visibleNodeSet.has(item.target))
   const graph = $('#create-result-network-graph')
   if (!visibleNodes.length || !window.CyberneticGraph) {
@@ -2587,8 +2710,8 @@ function renderAuthoredResultNetwork(result, scene = null) {
   window.CyberneticGraph.render(graph, {
     nodes:visibleNodes,
     edges:visibleEdges,
-    legendNodes:projection.nodes,
-    legendEdges:projection.edges,
+    legendNodes:presentationNodes,
+    legendEdges:presentationEdges,
     boundaries:[], world:null, trajectory:{nodes:[], edges:[]},
     graphDiagnostics:{nodeClassification:{}, edgeClassification:{}, warnings:[]},
     viewMode:'causal',

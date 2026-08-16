@@ -109,6 +109,22 @@ def test_walkthrough_preserves_canonical_ids_behind_plain_language_labels() -> N
     assert "...(guideNodePresentation[node.id] || {})" in script
 
 
+def test_generated_simulation_graphs_use_one_semantic_display_adapter() -> None:
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    assert "function semanticGraphNode(rawNode)" in script
+    assert "function semanticGraphEdges(rawEdges, nodes)" in script
+    assert "function generatedMechanismLabel(identifier)" in script
+    assert "Records ${object || 'a structured result'}" in script
+    assert "Delivers ${content || 'information'}" in script
+    assert "Converts ${graphObjectPhrase(words.slice(0, toIndex))}" in script
+    assert "const semanticNodes = nodes.map(semanticGraphNode)" in script
+    assert "const presentationNodes = (projection.nodes || []).map" in script
+    assert "legendNodes:presentationNodes" in script
+    assert "canonical_id:canonicalId" in script
+    assert "canonical_label:canonicalLabel" in script
+
+
 def _dataset() -> dict[str, object]:
     return json.loads(DATA.read_text(encoding="utf-8"))
 
@@ -216,7 +232,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology1",
-        "assets/app.js?v=authoring15",
+        "assets/app.js?v=authoring16",
     ]
     assert {
         "overview-view",
