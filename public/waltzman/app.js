@@ -1275,7 +1275,7 @@ function configureControls() {
       generalReviewStage = button.dataset.generalReviewStage
       if (generalReviewStage === 'world') renderGeneralDraftWalkthrough(authoringDraft?.proposal, authoringDraft?.configuration_graph)
       renderGeneralReviewStage(authoringDraft?.proposal)
-      $('#create-review-tabs').scrollIntoView({behavior:'smooth', block:'start'})
+      $('#create-review-tabs').scrollIntoView({behavior:'smooth', block:'nearest'})
     }
   })
   $('#create-draft-walkthrough-previous').onclick = () => {
