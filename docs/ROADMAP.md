@@ -284,7 +284,7 @@ conditions, not evidence of hostile attribution or an operational detector.
 | `GEN-C2` | Cross-domain generalization | evidence | representative port/service seam observed; broader claim deferred | One materially different exemplar reuses the same seams without generated code or a scenario-specific runtime |
 | `GEN-C3` | Scenario, run, analysis, and experiment authority are separated | hard | satisfied for public V2 writes and execution; historical V1 retirement is partial | One authentic run has analysis-free actor/adjudicator inputs and theory-neutral evidence; post-run analysis attachment changes no simulation call, context, revision, or evidence digest |
 | `GEN-C4` | Generated configurations are causally closed over declared consequential dependencies | hard | satisfied for the selected relief-port vertical; cross-domain semantic completeness remains fallible | Every declared material resource, authorization, topology, and prerequisite is mapped to an exact authority, an explicitly coarse authority, or a visible unsupported result; generated revisions receive a separate dependency review without treating it as proof of universal completeness |
-| `GEN-C5` | Review is progressively editable without hiding the complete contract | evidence | partial; logical layers and walkthrough exist, direct editors remain one long page | A first-time analyst can move through World, Run, and optional Analysis as distinct editable steps, inspect the generated graph, approve, run, and replay without scanning the full contract at once |
+| `GEN-C5` | Review is progressively editable without hiding the complete contract | evidence | satisfied on the public V2 path; external stakeholder judgment remains part of `MVP-C6` | A first-time analyst can move through World, People, Information, Processes, Run, and optional Analysis as distinct editable sections, inspect the generated graph, approve, run, and replay without scanning the full contract at once |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
 Packet 24E supplies the candidate surface for that judgment; it does not mark
@@ -303,10 +303,13 @@ There are five explicit tracks rather than one blended implementation queue:
    blocked trajectory with unchanged cargo. This remains a selected-vertical
    result: the semantic reviewer can miss unstated dependencies and must not be
    presented as a universal correctness proof.
-2. **Progressive editing — product comprehension boundary.** Preserve the full
-   typed configuration while turning World, Run, and optional Analysis into
-   distinct editable stages. Keep Configure-now and approval available without
-   requiring the analyst to inspect every advanced field.
+2. **Progressive editing — selected V2 path satisfied.** The generated draft
+   now opens into World, People, Information, Processes, Run, and optional
+   Analysis sections. Each section exposes only its relevant direct editor;
+   the generated graph, one-click approval/run action, model revision prompt,
+   and complete typed contract remain available. External stakeholder
+   comprehension remains the `MVP-C6` judgment boundary rather than another
+   implementation prerequisite.
 3. **Waltzman analysis depth — separate analysis boundary.** Replace the current
    count-based lens with explicit evidence-linked operationalizations of the
    selected constructs. This must remain post-run and must not reintroduce an
@@ -420,10 +423,10 @@ not silently recreate the old runtime as a universal invariant set.
 - **Decision:** reset the foundation to Concordia while retaining the current
   product as parity evidence. Retain useful CI mechanisms and surfaces; replace
   its foundational runtime authority; clear the obsolete Candidate C handoff.
-- **Continue:** design and implement the smallest causal-closure report over the
-  retained relief-port configuration, then make the staged editor and
-  Waltzman-lens depth honest consumers of that contract. The independent M7
-  readout remains open and does not block this correction.
+- **Continue:** deepen the Waltzman post-run lens as an honest consumer of the
+  theory-neutral evidence bundle, then exercise the complete author→review→run
+  flow through the same public entrypoint Waltzman will receive. The
+  independent M7 readout remains open and does not block this correction.
 - **Reset:** at the earliest of roughly 45 minutes, two consecutive non-outcome
   increments, or user concern about pace, compare the current path with the most
   valuable reversible next move. Reset immediately if configuration requires

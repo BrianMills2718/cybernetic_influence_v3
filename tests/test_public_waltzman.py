@@ -142,7 +142,14 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Describe a simulation." in page
     assert "Configure simulation now" in page
     assert "Coverage is explicit:" in page
-    assert "Save and recompile" in page
+    assert "Save this section and recompile" in page
+    assert "Configuration sections" in page
+    assert "What exists before the run" in page
+    assert "Who can perceive, decide, and act" in page
+    assert "What can be represented and delivered" in page
+    assert "What can change the canonical world" in page
+    assert "When observations and attempts can occur" in page
+    assert "How retained evidence will be read afterward" in page
     assert "1 · Describe" in page
     assert "Guided replay" in page
     assert "Show the complete system" in page
@@ -172,11 +179,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=ontology1",
-        "assets/styles.css?v=authoring5",
+        "assets/styles.css?v=authoring6",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology1",
-        "assets/app.js?v=authoring12",
+        "assets/app.js?v=authoring13",
     ]
     assert {
         "overview-view",
@@ -224,6 +231,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-example-prompt",
         "create-service-example-prompt",
         "create-review",
+        "create-review-tabs",
+        "create-information-summary",
+        "create-process-summary",
+        "create-run-summary",
+        "create-analysis-summary",
         "create-brief-question",
         "create-brief-people",
         "create-brief-influences",

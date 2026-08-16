@@ -90,6 +90,10 @@ two generic patch-shape defects found and corrected before the clean rerun.
 - The authored graph is connected and the three scheduled moments executed.
 - Public review distinguishes World, Run, and optional Analysis and provides a
   generated configuration walkthrough.
+- The retained V2 draft now opens directly into a six-section workbench:
+  World, People, Information, Processes, Run, and optional Analysis. Each
+  section exposes only its relevant direct editor, while approval and the full
+  typed configuration remain available without traversing every section.
 
 ### Still open or partial
 
@@ -97,7 +101,7 @@ two generic patch-shape defects found and corrected before the clean rerun.
 | --- | --- | --- |
 | Generated-configuration correctness | Compiler reports exact, partial, coarse, descriptive, or unsupported closure per request; exact-required partial closure blocks approval and execution; generated revisions also receive a separate semantic dependency review | Treat semantic review as fallible and retain explicit coverage/unsupported results rather than claiming universal completeness |
 | Relief-port mechanics | Cargo movement exactly guards declared cargo, truck, fuel, berth, route, customs, labor, fuel-quality, and dispatch state; the judgments producing legal/labor state remain coarse | Preserve this split and add exact effects only when another stable reusable mechanism is actually required |
-| Progressive editing | Workflow, conceptual layers, and walkthrough are staged; direct editors remain one long review page | Split direct editing into World, Run, and optional Analysis stages without hiding the full typed contract |
+| Progressive editing | Satisfied on the public V2 path: direct editors, summaries, and compiler coverage are separated into World, People, Information, Processes, Run, and optional Analysis; the complete typed contract remains inspectable | Reassess only after authentic first-time stakeholder use or when another proposal family adopts the V2 workbench |
 | Waltzman analysis | Attached after execution and evidence-linked, but findings are primarily retained-evidence, topology, and execution counts | Define richer post-run operationalizations and limitations for trust structure, perceived risk, dependencies, and coordination readiness |
 | V1 retirement | Public new writes and the selected run use V2 | Preserve historical reading while removing or quarantining remaining V1 new-execution branches |
 

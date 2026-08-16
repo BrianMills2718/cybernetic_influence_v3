@@ -56,6 +56,7 @@ let selectedGeneralRecord = null
 let selectedGeneralState = null
 let selectedGeneralInformation = null
 let selectedGeneralMoment = null
+let generalReviewStage = 'world'
 let authoredRunPollHandle = null
 let authoredRunId = null
 let authoredRunProgressSequence = 0
@@ -1194,6 +1195,7 @@ function resetAuthoringWorkspace() {
   selectedGeneralState = null
   selectedGeneralInformation = null
   selectedGeneralMoment = null
+  generalReviewStage = 'world'
   document.body.classList.remove('authored-result')
   $('#create-review').classList.remove('result-mode')
   $('#create-run-status').hidden = true
@@ -1268,6 +1270,14 @@ function configureControls() {
   $('#create-general-information-select').onchange = (event) => { selectedGeneralInformation = event.target.value; renderGeneralEditor(authoringDraft.proposal) }
   $('#create-general-moment-select').onchange = (event) => { selectedGeneralMoment = event.target.value; renderGeneralEditor(authoringDraft.proposal) }
   $('#create-save-general').onclick = saveGeneralProposal
+  all('[data-general-review-stage]').forEach((button) => {
+    button.onclick = () => {
+      generalReviewStage = button.dataset.generalReviewStage
+      if (generalReviewStage === 'world') renderGeneralDraftWalkthrough(authoringDraft?.proposal, authoringDraft?.configuration_graph)
+      renderGeneralReviewStage(authoringDraft?.proposal)
+      $('#create-review-tabs').scrollIntoView({behavior:'smooth', block:'start'})
+    }
+  })
   $('#create-draft-walkthrough-previous').onclick = () => {
     authoredDraftWalkthroughStep = Math.max(0, authoredDraftWalkthroughStep - 1)
     renderGeneralDraftWalkthrough(authoringDraft.proposal, authoringDraft.configuration_graph)
@@ -1542,6 +1552,10 @@ function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
     window.CyberneticGraph?.clear?.($('#create-draft-network-graph'))
     return
   }
+  if (generalReviewStage !== 'world') {
+    section.hidden = true
+    return
+  }
   section.hidden = false
   const projection = generalDraftProjection(proposal, compiledGraph)
   const idsByType = (types) => new Set(projection.nodes.filter((item) => types.includes(item.type || item.kind)).map((item) => item.id))
@@ -1701,6 +1715,77 @@ function isGeneralProposal(proposal) {
   return ['general_world_v1', 'general_world_v2'].includes(proposal?.proposal_kind)
 }
 
+const generalReviewStageLabels = {
+  world:'world state',
+  people:'people',
+  information:'information paths',
+  processes:'transition processes',
+  run:'run timing',
+  analysis:'optional analysis',
+}
+
+function renderGeneralReviewStage(proposal) {
+  const general = isGeneralProposal(proposal)
+  const tabs = $('#create-review-tabs')
+  tabs.hidden = !general
+  if (!general) {
+    for (const id of ['create-information-summary', 'create-process-summary', 'create-run-summary', 'create-analysis-summary']) $(`#${id}`).hidden = true
+    $('#create-coverage').hidden = false
+    $('.create-world-summary').hidden = false
+    $('.create-people').hidden = false
+    return
+  }
+  if (!Object.hasOwn(generalReviewStageLabels, generalReviewStage)) generalReviewStage = 'world'
+  all('[data-general-review-stage]').forEach((button) => {
+    const selected = button.dataset.generalReviewStage === generalReviewStage
+    button.classList.toggle('active', selected)
+    button.setAttribute('aria-selected', String(selected))
+  })
+  all('[data-general-review-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.generalReviewPanel !== generalReviewStage
+  })
+  all('[data-general-editor-stage]').forEach((field) => {
+    field.hidden = field.dataset.generalEditorStage !== generalReviewStage
+  })
+  const editor = $('#create-general-editor')
+  editor.hidden = generalReviewStage === 'processes'
+  $('#create-general-editor-heading').textContent = `Edit ${generalReviewStageLabels[generalReviewStage]} directly`
+  $('#create-general-status').textContent = generalReviewStage === 'processes'
+    ? 'Ask the authoring model below to change a transition process; compiler coverage will be regenerated.'
+    : 'Change the visible fields, then save one retained typed revision without another model call.'
+}
+
+function renderGeneralStageSummaries(proposal) {
+  const representations = proposal.information_extension?.representations || []
+  const peopleById = new Map(proposal.people.map((person) => [person.entity_id, person.label]))
+  const activeSystems = proposal.active_systems || []
+  const requests = proposal.component_requests || []
+  const coverageByRequest = new Map((authoringDraft?.coverage?.items || []).map((item) => [item.request_id, item]))
+  $('#create-information-list').innerHTML = representations.length
+    ? representations.map((item) => `<article><span>${escapeHtml(item.apparent_source)} → ${escapeHtml(item.recipient_ids.map((id) => peopleById.get(id) || id).join(', '))}</span><strong>${escapeHtml(sentence(item.representation_id))}</strong><p>${escapeHtml(item.content)}</p><small>Configured delivery path · not automatic truth or belief</small></article>`).join('')
+    : '<p class="create-stage-empty">No information representations or delivery paths are configured.</p>'
+  $('#create-process-list').innerHTML = [
+    ...activeSystems.map((item) => `<article><span>Coarse transition system</span><strong>${escapeHtml(sentence(item.system_id))}</strong><p>${escapeHtml(item.behavior_summary)}</p><small>${escapeHtml(sentence(item.representation_strategy))} · owns ${escapeHtml((item.causal_responsibility_tags || []).map(sentence).join(', ') || 'declared bounded effects')}</small></article>`),
+    ...requests.map((item) => {
+      const coverage = coverageByRequest.get(item.request_id)
+      const classification = coverage?.classification || 'unclassified'
+      const closure = coverage?.causal_closure || 'unknown'
+      return `<article><span>${escapeHtml(sentence(classification))} authority · ${escapeHtml(sentence(closure))} closure</span><strong>${escapeHtml(sentence(item.request_id))}</strong><p>${escapeHtml(item.behavior_description)}</p><small>${item.material_to_question ? 'Material to the configured world' : 'Supporting behavior'}${coverage?.blocking ? ' · blocks approval' : ''}</small></article>`
+    }),
+  ].join('') || '<p class="create-stage-empty">No executable transition process is configured.</p>'
+  $('#create-run-list').innerHTML = proposal.schedule.length
+    ? [...proposal.schedule].sort((left, right) => left.minute - right.minute).map((item, index) => `<article><span>Moment ${index + 1} · minute ${escapeHtml(item.minute)}</span><strong>${escapeHtml(sentence(item.moment_id))}</strong><p>${escapeHtml(item.description)}</p><small>${item.external_inject_representation_ids?.length ? `Introduces ${escapeHtml(item.external_inject_representation_ids.map(sentence).join(', '))}` : 'No external information injected at this moment'}</small></article>`).join('')
+    : '<p class="create-stage-empty">No scheduled moments are configured.</p>'
+  $('#create-analysis-detail').innerHTML = proposal.analysis_spec
+    ? `<article><span>Post-run lens</span><strong>${escapeHtml(sentence(proposal.analysis_spec.profile))}</strong><p>${escapeHtml(proposal.analysis_spec.purpose)}</p><small>Reads retained evidence only · cannot affect execution</small></article>`
+    : `<article><span>No selected lens</span><strong>Raw retained evidence remains available</strong><p>${escapeHtml(proposal.analyst_question || 'No analysis question is required to execute this simulation.')}</p><small>You can attach an analysis after the run without changing the simulated world.</small></article>`
+  $('#create-review-world-count').textContent = `${proposal.world_records.length} records`
+  $('#create-review-people-count').textContent = `${proposal.people.length} people`
+  $('#create-review-information-count').textContent = `${representations.length} items`
+  $('#create-review-processes-count').textContent = `${activeSystems.length + requests.length} definitions`
+  $('#create-review-run-count').textContent = `${proposal.schedule.length} moments`
+}
+
 function hasCurrentDependencyReview(draft) {
   const latestMessage = (draft?.messages || []).at(-1)
   return latestMessage?.source === 'conversation'
@@ -1775,7 +1860,7 @@ function renderGeneralEditor(proposal) {
   $('#create-general-moment-select').innerHTML = proposal.schedule.map((item) => `<option value="${escapeHtml(item.moment_id)}">${escapeHtml(item.description)}</option>`).join('')
   $('#create-general-moment-select').value = selectedGeneralMoment
   $('#create-general-minute').value = proposal.schedule.find((item) => item.moment_id === selectedGeneralMoment)?.minute ?? 0
-  $('#create-general-status').textContent = 'Choose one item in each section, edit it, then save one retained revision.'
+  renderGeneralReviewStage(proposal)
 }
 
 function parseGeneralStateValue(text, original) {
@@ -1958,7 +2043,7 @@ function renderCreateSimulation() {
     $('#create-run').hidden = true
     return
   }
-  $('.create-composer').hidden = false
+  $('.create-composer').hidden = true
   const general = isGeneralProposal(proposal)
   const workflow = proposal.workflow || {}
   if (general) renderGeneralCoverage(authoringDraft)
@@ -1967,7 +2052,7 @@ function renderCreateSimulation() {
   renderInfluenceNetworkEditor(proposal)
   renderGeneralEditor(proposal)
   renderGeneralDraftWalkthrough(proposal, authoringDraft.configuration_graph)
-  $('.create-brief').hidden = false
+  $('.create-brief').hidden = general
   renderAuthoringBrief(proposal)
   $('#create-draft-title').textContent = proposal.title
   $('#create-draft-description').textContent = proposal.description
@@ -1985,18 +2070,23 @@ function renderCreateSimulation() {
   ].map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
   $('#create-world-groups').innerHTML = general ? [
     ['World records', objects.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(sentence(item.kind))} · ${(item.public_state || []).map((entry) => `${escapeHtml(sentence(entry.key))}: ${escapeHtml(Array.isArray(entry.value) ? JSON.stringify(entry.value) : entry.value)}`).join(' · ')}</span></li>`).join('')],
-    ['Information paths', information.map((item) => `<li><strong>${escapeHtml(item.apparent_source)} → ${escapeHtml(item.recipient_ids.join(', '))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')],
-    ['Active transition systems', proposal.active_systems.map((item) => `<li><strong>${escapeHtml(sentence(item.system_id))}</strong><span>${escapeHtml(item.behavior_summary)} · ${escapeHtml(sentence(item.representation_strategy))}</span></li>`).join('')],
+    ['Places and routes', [
+      ...(proposal.spatial_extension?.places || []).map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>Configured place</span></li>`),
+      ...(proposal.spatial_extension?.links || []).map((item) => `<li><strong>${escapeHtml(sentence(item.link_id))}</strong><span>${escapeHtml(item.origin_place_id)} → ${escapeHtml(item.destination_place_id)} · ${item.operational ? 'operational' : 'not operational'}</span></li>`),
+    ].join('')],
+    ['Conserved resources', (proposal.resource_extension?.stocks || []).map((item) => `<li><strong>${escapeHtml(sentence(item.resource_id))}</strong><span>${escapeHtml(item.quantity)} · custodian ${escapeHtml(item.custodian_id)}${item.conserved ? ' · conserved' : ''}</span></li>`).join('')],
   ].filter(([, items]) => items).map(([label, items]) => `<section><h4>${escapeHtml(label)}</h4><ul>${items}</ul></section>`).join('') : [
     ['Groups and analytical boundaries', boundaries.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span></li>`).join('')],
     ['World entities and processes', objects.map((item) => `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span></li>`).join('')],
     ['Information in the scenario', information.map((item) => `<li><strong>${escapeHtml(sentence(item.label))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')],
   ].filter(([, items]) => items).map(([label, items]) => `<section><h4>${escapeHtml(label)}</h4><ul>${items}</ul></section>`).join('')
   $('#create-people-list').innerHTML = proposal.people.map((person) => `<article><strong>${escapeHtml(person.label)}</strong><span>${escapeHtml(person.position)}</span><p>${escapeHtml(person.disposition)}</p></article>`).join('')
+  if (general) renderGeneralStageSummaries(proposal)
   $('.create-person-editor').hidden = general
   $('#create-person-select').innerHTML = proposal.people.map((person) => `<option value="${escapeHtml(person.entity_id)}">${escapeHtml(person.label)}</option>`).join('')
   if (!general) renderAuthoringPersonEditor()
   $('#create-raw-configuration').textContent = JSON.stringify(proposal, null, 2)
+  renderGeneralReviewStage(proposal)
   const coverageBlocked = (authoringDraft.coverage?.blocking_request_ids || []).length > 0
   const dependencyReviewPassed = !general || hasCurrentDependencyReview(authoringDraft)
   const ready = authoringDraft.status === 'ready_for_review' && diagnostics.length === 0 && !coverageBlocked
@@ -2915,7 +3005,7 @@ function showAuthoredConfiguration() {
   review.classList.remove('result-mode')
   document.body.classList.remove('authored-result')
   review.appendChild(runStatus)
-  $('.create-composer').hidden = false
+  $('.create-composer').hidden = true
   $('.create-hero .case-label').textContent = 'Create a simulation'
   $('#create-title').textContent = 'Describe the coordination problem you want to explore.'
   $('.create-hero > p').textContent = 'Describe the people, information sources, who receives which messages, and the collective decision. The authoring model turns that description into an editable influence network; the selected model then drives each person independently from their own character, memory, and received information.'

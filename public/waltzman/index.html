@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology1">
-  <link rel="stylesheet" href="assets/styles.css?v=authoring5">
+  <link rel="stylesheet" href="assets/styles.css?v=authoring6">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -267,7 +267,16 @@
         <section id="create-review" class="create-review" hidden>
           <header><div><span>Generated simulation plan</span><h3 id="create-draft-title">Draft</h3><p id="create-draft-description"></p></div><div class="draft-state"><span id="create-draft-revision"></span><strong id="create-draft-state"></strong></div></header>
           <div id="create-diagnostics"></div>
-          <section id="create-draft-walkthrough" class="create-draft-walkthrough" aria-labelledby="create-draft-walkthrough-title">
+          <nav id="create-review-tabs" class="create-review-tabs" aria-label="Configuration sections" hidden>
+            <button type="button" data-general-review-stage="world"><span>World</span><small id="create-review-world-count"></small></button>
+            <button type="button" data-general-review-stage="people"><span>People</span><small id="create-review-people-count"></small></button>
+            <button type="button" data-general-review-stage="information"><span>Information</span><small id="create-review-information-count"></small></button>
+            <button type="button" data-general-review-stage="processes"><span>Processes</span><small id="create-review-processes-count"></small></button>
+            <button type="button" data-general-review-stage="run"><span>Run</span><small id="create-review-run-count"></small></button>
+            <button type="button" data-general-review-stage="analysis"><span>Analysis</span><small>Optional</small></button>
+          </nav>
+          <div class="create-actions"><div><strong id="create-action-heading">Ready for your decision</strong><span id="create-action-detail">Approve this exact configuration, then run it with the selected model.</span></div><button id="create-resolve-questions" class="primary-cta" type="button" hidden>Keep these choices inside the simulation</button><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation</button><button id="create-start-over" class="quiet-button" type="button">Change description</button></div>
+          <section id="create-draft-walkthrough" class="create-draft-walkthrough" data-general-review-panel="world" aria-labelledby="create-draft-walkthrough-title">
             <header class="create-draft-walkthrough-controls">
               <div><span>Configuration walkthrough</span><strong id="create-draft-walkthrough-progress">Step 1</strong></div>
               <div><button id="create-draft-walkthrough-previous" type="button">Previous</button><button id="create-draft-walkthrough-next" class="primary-cta" type="button">Next →</button></div>
@@ -293,32 +302,35 @@
               <article id="create-brief-analysis-card"><span>3 · Analysis · optional</span><div id="create-brief-question"></div><div id="create-brief-analysis"></div><p class="analysis-separation-note">Applied only to retained evidence after the run.</p></article>
             </div>
           </section>
-          <div class="create-actions"><div><strong id="create-action-heading">Ready for your decision</strong><span id="create-action-detail">Approve this exact configuration, then run it with the selected model.</span></div><button id="create-resolve-questions" class="primary-cta" type="button" hidden>Keep these choices inside the simulation</button><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation</button><button id="create-start-over" class="quiet-button" type="button">Change description</button></div>
-          <details id="create-coverage" class="create-coverage"><summary id="create-coverage-summary">What will actually run</summary><div id="create-coverage-detail"></div></details>
-          <section class="create-world-summary" aria-labelledby="create-world-title"><div><span>World</span><h3 id="create-world-title">What the draft contains</h3></div><div id="create-world-facts"></div><div id="create-world-groups"></div></section>
-          <section class="create-people" aria-labelledby="create-people-title"><div><span>People</span><h3 id="create-people-title">Review the simulated people</h3></div><div id="create-people-list"></div></section>
+          <details id="create-coverage" class="create-coverage" data-general-review-panel="processes"><summary id="create-coverage-summary">What will actually run</summary><div id="create-coverage-detail"></div></details>
+          <section class="create-world-summary" data-general-review-panel="world" aria-labelledby="create-world-title"><div><span>World</span><h3 id="create-world-title">What exists before the run</h3></div><div id="create-world-facts"></div><div id="create-world-groups"></div></section>
+          <section class="create-people" data-general-review-panel="people" aria-labelledby="create-people-title"><div><span>People</span><h3 id="create-people-title">Who can perceive, decide, and act</h3></div><div id="create-people-list"></div></section>
+          <section id="create-information-summary" class="create-stage-summary" data-general-review-panel="information" hidden><div><span>Information</span><h3>What can be represented and delivered</h3><p>Delivery is explicit. It does not automatically make a claim true, noticed, believed, or acted upon.</p></div><div id="create-information-list" class="create-stage-list"></div></section>
+          <section id="create-process-summary" class="create-stage-summary" data-general-review-panel="processes" hidden><div><span>Processes</span><h3>What can change the canonical world</h3><p>Exact mechanisms and coarse transition systems own bounded changes. Actors propose attempts; validation determines what commits.</p></div><div id="create-process-list" class="create-stage-list"></div></section>
+          <section id="create-run-summary" class="create-stage-summary" data-general-review-panel="run" hidden><div><span>Run</span><h3>When observations and attempts can occur</h3><p>Scheduled moments create opportunities for action. They do not predetermine success.</p></div><div id="create-run-list" class="create-stage-list"></div></section>
+          <section id="create-analysis-summary" class="create-stage-summary" data-general-review-panel="analysis" hidden><div><span>Analysis · optional</span><h3>How retained evidence will be read afterward</h3><p>Analysis cannot write world state, alter actor memories, or steer the run.</p></div><div id="create-analysis-detail" class="create-stage-list"></div></section>
           <details class="create-person-editor"><summary>Edit one person directly</summary><label for="create-person-select">Person<select id="create-person-select"></select></label><label for="create-person-label">Name<input id="create-person-label"></label><label for="create-person-position">Position<textarea id="create-person-position" rows="2"></textarea></label><label for="create-person-disposition">Disposition<textarea id="create-person-disposition" rows="3"></textarea></label><label for="create-person-memories">Memories <small>One per line</small><textarea id="create-person-memories" rows="4"></textarea></label><label for="create-person-values">Values <small>One per line</small><textarea id="create-person-values" rows="4"></textarea></label><label for="create-person-goals">Goals <small>One per line</small><textarea id="create-person-goals" rows="4"></textarea></label><label for="create-person-beliefs">Beliefs <small>One per line</small><textarea id="create-person-beliefs" rows="4"></textarea></label><button id="create-save-person" type="button">Save person without another model call</button></details>
           <details id="create-scenario-editor" class="create-scenario-editor" hidden><summary>Edit the decision and incoming influences directly</summary><div class="create-scenario-grid"><label>Simulation title<input id="create-scenario-title"></label><label>Decision situation<textarea id="create-scenario-description" rows="3"></textarea></label><label>Environment<select id="create-scenario-condition"><option value="baseline">No outside pressure</option><option value="heterogeneous_pressure">Outside pressure</option><option value="stabilization">Outside pressure plus stabilizing processes</option></select></label><label>Collective objective<textarea id="create-scenario-goal" rows="3"></textarea></label><label>Requirements that must be respected <small>One per line</small><textarea id="create-scenario-constraints" rows="4"></textarea></label></div><div><h4>Information that enters the simulation</h4><div id="create-scenario-concerns" class="create-scenario-concerns"></div></div><button id="create-save-scenario" type="button">Save scenario without another model call</button><p id="create-scenario-status" class="create-status" aria-live="polite"></p></details>
           <details id="create-network-editor" class="create-scenario-editor" hidden><summary>Edit the influence network directly</summary><div class="create-scenario-grid"><label>Simulation title<input id="create-network-title"></label><label>Situation<textarea id="create-network-description" rows="3"></textarea></label><label>Collective decision<textarea id="create-network-question" rows="3"></textarea></label><label>Decision-round times <small>Comma separated</small><input id="create-network-rounds"></label><label>What people see from earlier rounds<select id="create-network-feedback"><option value="none">Only the shared question</option><option value="stances">Public stances</option><option value="stances_and_reasons">Stances and stated reasons</option></select></label><label>Minimum full support<input id="create-network-min-support" type="number" min="0" step="1"></label><label>Minimum support or conditional<input id="create-network-min-combined" type="number" min="1" step="1"></label><label>Maximum opposition<input id="create-network-max-oppose" type="number" min="0" step="1"></label></div><div><h4>Messages and explicit recipients</h4><div id="create-network-deliveries" class="create-network-deliveries"></div></div><button id="create-save-network" type="button">Save network without another model call</button><p id="create-network-status" class="create-status" aria-live="polite"></p></details>
           <details id="create-general-editor" class="create-scenario-editor" hidden open>
-            <summary>Edit consequential inputs directly</summary>
+            <summary id="create-general-editor-heading">Edit this section directly</summary>
             <p class="create-editor-note">Each save creates a retained typed revision and recompiles it. No model call is made.</p>
             <div class="create-scenario-grid">
-              <label>Your review question <small>Not shown to simulated people or the world adjudicator</small><textarea id="create-general-question" rows="3"></textarea></label>
-              <label>Simulation description<textarea id="create-general-description" rows="3"></textarea></label>
-              <label>Person<select id="create-general-person-select"></select></label>
-              <label>Person’s position<textarea id="create-general-person-position" rows="2"></textarea></label>
-              <label>Person’s disposition<textarea id="create-general-person-disposition" rows="3"></textarea></label>
-              <label>Person’s memories <small>One per line</small><textarea id="create-general-person-memories" rows="4"></textarea></label>
-              <label>World record<select id="create-general-record-select"></select></label>
-              <label>State field<select id="create-general-state-select"></select></label>
-              <label>State value<input id="create-general-state-value"></label>
-              <label>Information item<select id="create-general-information-select"></select></label>
-              <fieldset class="create-general-recipients"><legend>Who receives it</legend><div id="create-general-recipients"></div></fieldset>
-              <label>Scheduled moment<select id="create-general-moment-select"></select></label>
-              <label>Minute<input id="create-general-minute" type="number" min="0" step="1"></label>
+              <label data-general-editor-stage="analysis">Optional analysis question <small>Not shown to simulated people or transition authorities</small><textarea id="create-general-question" rows="3"></textarea></label>
+              <label data-general-editor-stage="world">Simulation description<textarea id="create-general-description" rows="3"></textarea></label>
+              <label data-general-editor-stage="people">Person<select id="create-general-person-select"></select></label>
+              <label data-general-editor-stage="people">Person’s position<textarea id="create-general-person-position" rows="2"></textarea></label>
+              <label data-general-editor-stage="people">Person’s disposition<textarea id="create-general-person-disposition" rows="3"></textarea></label>
+              <label data-general-editor-stage="people">Person’s memories <small>One per line</small><textarea id="create-general-person-memories" rows="4"></textarea></label>
+              <label data-general-editor-stage="world">World record<select id="create-general-record-select"></select></label>
+              <label data-general-editor-stage="world">State field<select id="create-general-state-select"></select></label>
+              <label data-general-editor-stage="world">State value<input id="create-general-state-value"></label>
+              <label data-general-editor-stage="information">Information item<select id="create-general-information-select"></select></label>
+              <fieldset class="create-general-recipients" data-general-editor-stage="information"><legend>Who receives it</legend><div id="create-general-recipients"></div></fieldset>
+              <label data-general-editor-stage="run">Scheduled moment<select id="create-general-moment-select"></select></label>
+              <label data-general-editor-stage="run">Minute<input id="create-general-minute" type="number" min="0" step="1"></label>
             </div>
-            <button id="create-save-general" type="button">Save and recompile</button>
+            <button id="create-save-general" type="button">Save this section and recompile</button>
             <p id="create-general-status" class="create-status" aria-live="polite"></p>
           </details>
           <section class="create-revise"><label for="create-revision-prompt"><strong>Tell the authoring model what to change</strong><textarea id="create-revision-prompt" rows="4" placeholder="Make the technical reviewer more skeptical, clarify the legal constraint, and delay the local-health report until the third meeting."></textarea></label><button id="create-revise" type="button">Generate revised configuration</button></section>
@@ -728,6 +740,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=ontology1" defer></script>
-  <script src="assets/app.js?v=authoring12" defer></script>
+  <script src="assets/app.js?v=authoring13" defer></script>
 </body>
 </html>
