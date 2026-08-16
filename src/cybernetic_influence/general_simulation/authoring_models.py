@@ -167,6 +167,13 @@ class ResourceQuantityRequirementV1(_StrictModel):
     quantity: float = Field(gt=0)
 
 
+class PublicInventoryInputFieldV1(_StrictModel):
+    """Provider-safe mapping from one conserved input to its public mirror field."""
+
+    resource_id: str = Field(pattern=_ID)
+    field: str = Field(min_length=1)
+
+
 class TransitionPreconditionProposalV1(_StrictModel):
     """One generic canonical-state guard on an exact transition contract."""
 
@@ -187,8 +194,8 @@ class ResourceTransformationProposalV1(_StrictModel):
     output_quantity: float = Field(gt=0)
     maximum_batches: int = Field(ge=1)
     public_inventory_record_id: str = Field(pattern=_ID)
-    public_inventory_input_fields: dict[str, str] = Field(
-        default_factory=dict,
+    public_inventory_input_fields: list[PublicInventoryInputFieldV1] = Field(
+        default_factory=list,
         exclude_if=lambda value: not value,
     )
     public_inventory_output_field: str | None = Field(
@@ -209,10 +216,21 @@ class ResourceTransformationProposalV1(_StrictModel):
                 {"resource_id": resource_id, "quantity": quantity}
                 for resource_id, quantity in quantities.items()
             ]
+        input_fields = migrated.get("public_inventory_input_fields")
+        if isinstance(input_fields, dict):
+            migrated["public_inventory_input_fields"] = [
+                {"resource_id": resource_id, "field": field}
+                for resource_id, field in input_fields.items()
+            ]
         return migrated
 
     @model_validator(mode="after")
     def unique_input_resources(self) -> "ResourceTransformationProposalV1":
+        input_field_resource_ids = [
+            item.resource_id for item in self.public_inventory_input_fields
+        ]
+        if len(input_field_resource_ids) != len(set(input_field_resource_ids)):
+            raise ValueError("public inventory input resource IDs must be unique")
         resource_ids = [item.resource_id for item in self.input_resource_quantities]
         if len(resource_ids) != len(set(resource_ids)):
             raise ValueError("transformation input resource IDs must be unique")

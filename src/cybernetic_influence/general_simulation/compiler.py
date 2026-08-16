@@ -189,7 +189,10 @@ def _transformation_inventory_fields(
         input_resource_ids = {
             item.resource_id for item in transformation.input_resource_quantities
         }
-        explicit_inputs = dict(transformation.public_inventory_input_fields)
+        explicit_inputs = {
+            item.resource_id: item.field
+            for item in transformation.public_inventory_input_fields
+        }
         unknown_input_resources = sorted(set(explicit_inputs) - input_resource_ids)
         invalid_input_fields = sorted(
             field
