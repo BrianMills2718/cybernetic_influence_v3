@@ -76,7 +76,8 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     assert "dependency review passed" in script
     assert "Exact reads and guards" in script
     assert "Simulation brief" in script
-    assert "what actors attempted, and what the world accepted" in script
+    assert "what actors attempted, and what the world accepted" not in script
+    assert "The replay separates what people received and attempted" in script
 
 
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
@@ -111,6 +112,7 @@ def test_walkthrough_preserves_canonical_ids_behind_plain_language_labels() -> N
 
 def test_generated_simulation_graphs_use_one_semantic_display_adapter() -> None:
     script = SCRIPT.read_text(encoding="utf-8")
+    graph_source = (ROOT / "frontend" / "src" / "main.tsx").read_text(encoding="utf-8")
 
     assert "function semanticGraphNode(rawNode)" in script
     assert "function semanticGraphEdges(rawEdges, nodes)" in script
@@ -123,6 +125,20 @@ def test_generated_simulation_graphs_use_one_semantic_display_adapter() -> None:
     assert "legendNodes:presentationNodes" in script
     assert "canonical_id:canonicalId" in script
     assert "canonical_label:canonicalLabel" in script
+    assert "connectedEdges.length === 0" in graph_source
+    assert "Math.min(4, Math.ceil(Math.sqrt(ordered.length)))" in graph_source
+
+
+def test_completed_simulation_starts_with_outcome_and_keeps_analysis_optional() -> None:
+    page = PAGE.read_text(encoding="utf-8")
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    assert "function authoredReplayOutcome(result)" in script
+    assert "Outcome at a glance" in page
+    assert '<details id="create-result-lenses"' in page
+    assert "button.dataset.view === 'simulations'" in script
+    assert "See the outcome first, then advance through" in script
+    assert "Retained execution${modelDetail}${observedCost}" in script
 
 
 def _dataset() -> dict[str, object]:
@@ -142,7 +158,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Understand the purpose" in page
     assert "Read a simulation" in page
     assert "Create your own" in page
-    assert "Your simulations" in page
+    assert ">Simulations</button>" in page
     assert "Methodology" in page
     assert "Each simulation you run here remains retained on the server" in page
     assert "Historical development runs stay out of this list" in page
@@ -196,9 +212,13 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What can change the canonical world" in page
     assert "When observations and attempts can occur" in page
     assert "How retained evidence will be read afterward" in page
-    assert "Interpret this retained run" in page
+    assert "Analyze this run" in page
     assert "Explain coordination through Waltzman’s lens" in page
     assert "Adding or removing a lens never reruns the people or changes the world" in page
+    assert "Outcome at a glance" in page
+    assert "One retained synthetic execution—not a prediction" in page
+    assert "Optional Waltzman lens and exact terminal evidence" in page
+    assert "Execution details" in page
     assert "1 · Describe" in page
     assert "Guided replay" in page
     assert "Show the complete system" in page
@@ -227,12 +247,12 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "A simulator becomes an experimental instrument only through a declared comparison" in page
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
-        "assets/graph-canvas.css?v=ontology1",
-        "assets/styles.css?v=authoring8",
+        "assets/graph-canvas.css?v=ontology2",
+        "assets/styles.css?v=authoring9",
     ]
     assert shape.scripts == [
-        "assets/graph-canvas.js?v=ontology1",
-        "assets/app.js?v=authoring17",
+        "assets/graph-canvas.js?v=ontology2",
+        "assets/app.js?v=authoring18",
     ]
     assert {
         "overview-view",

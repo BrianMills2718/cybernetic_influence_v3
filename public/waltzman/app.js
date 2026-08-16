@@ -1244,6 +1244,7 @@ function resetAuthoringWorkspace() {
   document.body.classList.remove('authored-result')
   $('#create-review').classList.remove('result-mode')
   $('#create-run-status').hidden = true
+  $('#create-run-provenance').hidden = true
   $('#create-result').hidden = true
   $('.create-composer').hidden = false
   $('.create-hero .case-label').textContent = 'Create a simulation'
@@ -2780,6 +2781,34 @@ function renderAuthoredReplay() {
   renderAuthoredResultNetwork(authoredResult, scene)
 }
 
+function authoredReplayOutcome(result) {
+  const scenes = result?.simulation_replay?.scenes || []
+  const attemptedScene = [...scenes].reverse().find((scene) =>
+    (scene.facts || []).some((fact) => fact.label === 'Attempt'),
+  )
+  if (attemptedScene) {
+    const facts = new Map((attemptedScene.facts || []).map((fact) => [fact.label, fact.value]))
+    const attempt = String(facts.get('Attempt') || '')
+    const why = String(facts.get('Why') || '').trim()
+    const action = attemptedScene.title
+      .replace(/^Moment\s+\d+\s+/i, '')
+      .replace(/\battempts?\b/i, '')
+      .trim() || 'Scheduled action'
+    const actionLabel = action.charAt(0).toUpperCase() + action.slice(1)
+    const rejected = /^rejected\b/i.test(attempt)
+    const title = rejected ? `${actionLabel} did not proceed` : `${actionLabel} changed the world`
+    const summary = rejected
+      ? `The attempted ${action.toLowerCase()} was rejected${why ? ` because ${why.replace(/^[A-Z]/, (letter) => letter.toLowerCase()).replace(/\.$/, '')}` : ''}.`
+      : attemptedScene.summary
+    return {title, summary}
+  }
+  const terminalScene = [...scenes].reverse().find((scene) => scene.kind === 'outcome')
+  return {
+    title: terminalScene?.title || result?.title || 'Simulation completed',
+    summary: terminalScene?.summary || 'The retained simulation reached its configured endpoint.',
+  }
+}
+
 function completedSimulationHistory() {
   const localIds = localSimulationIds()
   return retainedRunHistory.filter((run) => run.status === 'completed' && localIds.has(run.run_id))
@@ -2873,6 +2902,7 @@ async function openSimulationReplay(runId) {
   $('#simulation-library-empty').hidden = true
   runStatus.hidden = false
   $('#create-result').hidden = true
+  $('#create-run-provenance').hidden = true
   $('#create-run-heading').textContent = 'Opening retained simulation…'
   $('#create-run-detail').textContent = 'Building its walkthrough from retained world and event evidence.'
   renderSimulationList()
@@ -3038,6 +3068,11 @@ function renderAuthoredResult(result) {
   authoredResultRoundIndex = 0
   authoredReplaySceneIndex = 0
   document.body.classList.add('authored-result')
+  all('.view-tabs [data-view]').forEach((button) => {
+    const active = button.dataset.view === 'simulations'
+    button.classList.toggle('active', active)
+    button.setAttribute('aria-pressed', String(active))
+  })
   setCreateFlow('replay')
   const review = $('#create-review')
   const runStatus = $('#create-run-status')
@@ -3060,7 +3095,7 @@ function renderAuthoredResult(result) {
   $('.create-hero > p').textContent = replayQuestion
     ? `${questionLabel}: ${replayQuestion} Advance through the retained run one step at a time.`
     : 'Advance through this retained simulation one step at a time.'
-  $('#create-run-heading').textContent = 'Simulation complete'
+  $('#create-run-heading').textContent = 'Completed synthetic simulation'
   const executionProvider = (result.execution_providers || []).join(' + ')
   const observedCost = typeof result.observed_cost === 'number'
     ? ` · observed provider cost $${result.observed_cost.toFixed(3)}${result.cost_coverage === 'partial' ? ' (partial)' : ''}`
@@ -3068,11 +3103,14 @@ function renderAuthoredResult(result) {
   const modelDetail = result.model
     ? ` · ${result.model}${executionProvider ? ` via ${executionProvider}` : ''}`
     : ''
-  $('#create-run-detail').textContent = `Replay retained information, decisions, actions, and world changes below${modelDetail}${observedCost}.`
-  $('#create-result-title').textContent = 'Follow what entered the simulation, what actors attempted, and what the world accepted.'
-  $('#create-result-summary').textContent = replayQuestion
-    ? `${questionLabel}: ${replayQuestion}`
-    : 'Advance one retained step at a time.'
+  $('#create-run-detail').textContent = 'See the outcome first, then advance through what each person received, attempted, and changed.'
+  $('#create-run-provenance-detail').textContent = `Retained execution${modelDetail}${observedCost}.`
+  $('#create-run-provenance').hidden = false
+  $('#create-result-title').textContent = 'What happened'
+  $('#create-result-summary').textContent = 'The replay separates what people received and attempted from what the simulated world actually accepted.'
+  const replayOutcome = authoredReplayOutcome(result)
+  $('#create-result-outcome-title').textContent = replayOutcome.title
+  $('#create-result-outcome-summary').textContent = replayOutcome.summary
   const gateChecks = result.outcome?.gate_checks
   const generalWorldResult = ['general_world_v1', 'general_world_v2'].includes(result.profile)
   const resultFacts = [
@@ -3094,6 +3132,7 @@ function renderAuthoredResult(result) {
     return `<li><strong>Round ${escapeHtml(step.round_index || '?')} · ${escapeHtml(step.person_label)}</strong><span>${escapeHtml(sentence(payload?.stance || 'no stated position'))}</span><p>${escapeHtml(payload?.reason || step.orientation || '')}</p></li>`
   }).join('')
   $('#create-result').hidden = false
+  $('#create-result-lenses').open = false
   renderResultAnalysisLenses(result)
   renderAuthoredResultRound()
   renderAuthoredReplay()
@@ -3162,6 +3201,7 @@ async function runAuthoredSimulation() {
   $('#create-run-status').hidden = false
   $('#create-run-heading').textContent = 'Starting the authored simulation…'
   $('#create-run-detail').textContent = 'Validating the approved configuration and selected model route.'
+  $('#create-run-provenance').hidden = true
   $('#create-result').hidden = true
   authoredResult = null
   document.body.classList.remove('authored-result')
@@ -3211,6 +3251,7 @@ async function loadAuthoredRunFromUrl() {
   }
   authoredRunId = runId
   $('#create-run-status').hidden = false
+  $('#create-run-provenance').hidden = true
   $('#create-run-heading').textContent = 'Opening retained simulation…'
   try {
     const progress = await apiRequest(`api/runs/${encodeURIComponent(runId)}/progress?include_projection=false`)

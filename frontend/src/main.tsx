@@ -507,6 +507,24 @@ function dagreLayout(
   nodes: Node<CanvasNodeData>[],
   edges: Edge<CanvasEdgeData>[],
 ): Node<CanvasNodeData>[] {
+  const connectedEdges = edges.filter((edge) => edge.source !== edge.target)
+  if (nodes.length > 1 && connectedEdges.length === 0) {
+    const ordered = [...nodes].sort((left, right) =>
+      left.data.raw.label.localeCompare(right.data.raw.label),
+    )
+    const columns = Math.min(4, Math.ceil(Math.sqrt(ordered.length)))
+    return ordered.map((node, index) => {
+      const width = Number(node.style?.width ?? NODE_WIDTH)
+      const height = Number(node.style?.height ?? NODE_HEIGHT)
+      return {
+        ...node,
+        position: {
+          x: 50 + (index % columns) * (width + 80),
+          y: 50 + Math.floor(index / columns) * (height + 70),
+        },
+      }
+    })
+  }
   const graph = new dagre.graphlib.Graph()
   graph.setDefaultEdgeLabel(() => ({}))
   graph.setGraph({
@@ -521,8 +539,8 @@ function dagreLayout(
     const height = Number(node.style?.height ?? NODE_HEIGHT)
     graph.setNode(node.id, { width, height })
   })
-  edges.forEach((edge) => {
-    if (edge.source !== edge.target) graph.setEdge(edge.source, edge.target)
+  connectedEdges.forEach((edge) => {
+    graph.setEdge(edge.source, edge.target)
   })
   dagre.layout(graph)
   return nodes.map((node) => {

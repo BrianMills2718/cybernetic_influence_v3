@@ -6,8 +6,8 @@
   <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
-  <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology1">
-  <link rel="stylesheet" href="assets/styles.css?v=authoring8">
+  <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology2">
+  <link rel="stylesheet" href="assets/styles.css?v=authoring9">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -23,7 +23,7 @@
       <button type="button" data-view="case">Case study</button>
       <button type="button" data-view="create">New simulation</button>
       <span class="view-tabs-divider" aria-hidden="true"></span>
-      <button type="button" data-view="simulations">Your simulations</button>
+      <button type="button" data-view="simulations">Simulations</button>
       <button type="button" class="view-tab-secondary" data-view="method">Methodology</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
@@ -343,10 +343,17 @@
           <section id="create-run-status" class="create-run-status" hidden aria-live="polite">
             <strong id="create-run-heading"></strong>
             <p id="create-run-detail"></p>
+            <details id="create-run-provenance" class="create-run-provenance" hidden><summary>Execution details</summary><p id="create-run-provenance-detail"></p></details>
             <button id="create-stop" class="quiet-button" type="button" hidden>Stop simulation</button>
             <section id="create-result" class="create-result" hidden aria-labelledby="create-result-title">
               <h3 id="create-result-title"></h3>
               <p id="create-result-summary"></p>
+              <section id="create-result-outcome" class="create-result-outcome" aria-labelledby="create-result-outcome-title">
+                <span>Outcome at a glance</span>
+                <h4 id="create-result-outcome-title"></h4>
+                <p id="create-result-outcome-summary"></p>
+                <small>One retained synthetic execution—not a prediction of human or institutional behavior.</small>
+              </section>
               <div id="create-result-facts" class="create-result-facts"></div>
               <section class="create-replay" aria-labelledby="create-replay-title">
                 <header class="create-replay-controls">
@@ -368,13 +375,15 @@
                   </section>
                 </div>
               </section>
-              <section id="create-result-lenses" class="create-result-lenses" hidden>
-                <h4>Interpret this retained run</h4>
-                <p>Apply a read-only lens to what people noticed, cited, attempted, and changed. Adding or removing a lens never reruns the people or changes the world.</p>
-                <div id="create-result-lens-list"></div>
-                <div class="create-result-lens-actions"><button id="create-add-waltzman-analysis" type="button">Explain coordination through Waltzman’s lens</button><button id="create-add-outcome-analysis" class="quiet-button" type="button">Read exact terminal outcome</button></div>
-                <p id="create-result-lens-status" class="create-status" aria-live="polite"></p>
-              </section>
+              <details id="create-result-lenses" class="create-result-lenses" hidden>
+                <summary><strong>Analyze this run</strong><span>Optional Waltzman lens and exact terminal evidence</span></summary>
+                <div class="create-result-lenses-body">
+                  <p>Apply a read-only lens to what people noticed, cited, attempted, and changed. Adding or removing a lens never reruns the people or changes the world.</p>
+                  <div id="create-result-lens-list"></div>
+                  <div class="create-result-lens-actions"><button id="create-add-waltzman-analysis" type="button">Explain coordination through Waltzman’s lens</button><button id="create-add-outcome-analysis" class="quiet-button" type="button">Read exact terminal outcome</button></div>
+                  <p id="create-result-lens-status" class="create-status" aria-live="polite"></p>
+                </div>
+              </details>
               <details class="create-result-complete"><summary>Explore the complete result and retained evidence</summary>
                 <section class="create-result-rounds" aria-labelledby="create-result-rounds-title">
                   <h4 id="create-result-rounds-title">What changed each round</h4>
@@ -744,7 +753,7 @@
     </section>
   </main>
 
-  <script src="assets/graph-canvas.js?v=ontology1" defer></script>
-  <script src="assets/app.js?v=authoring17" defer></script>
+  <script src="assets/graph-canvas.js?v=ontology2" defer></script>
+  <script src="assets/app.js?v=authoring18" defer></script>
 </body>
 </html>
