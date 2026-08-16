@@ -219,6 +219,17 @@ console errors, failed requests, bad responses, or horizontal overflow. This
 remains one synthetic execution and does not establish a Waltzman invariant,
 human behavior, or complete causal coverage.
 
+Public cold-start correction observed 2026-08-16: implementation commit
+`24a2595b02b04e2fba816ffb67f37c8cadc601fd` makes that same retained-run URL
+outcome-first. The completed run is located under `Simulations`, states that
+the evacuation attempt did not proceed because two required preconditions were
+unmet, and exposes the synthetic-run limitation before the guided replay.
+Provider/cost provenance and the optional Waltzman analysis remain available
+behind explicit disclosure. Setup records with no realized relations render in
+a grid rather than a misleading vertical stack. A fresh 1440-by-1000 Chromium
+pass opened the deployed URL, advanced to replay step two, and observed no
+console errors, failed requests, bad responses, or horizontal overflow.
+
 Earlier natural-language authoring, canonical walkthrough, and methodology
 milestone 2026-08-12: revision
 `11861ccfba8d9297b1dd2233cfc2c95040bd655b` introduced the direct authoring
