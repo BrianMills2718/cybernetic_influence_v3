@@ -272,7 +272,7 @@ class Precondition(StrictModel):
     comparison: Literal["equals", "greater_than_or_equal", "less_than_or_equal"] = (
         "equals"
     )
-    expected: PatchValue
+    expected: PatchValue = None
 
 
 class ObjectiveAssessment(StrictModel):

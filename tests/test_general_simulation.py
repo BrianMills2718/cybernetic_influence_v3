@@ -218,6 +218,21 @@ def _contract_intent(*contract_ids: str) -> SemanticActionIntent:
     )
 
 
+def test_omitted_nullable_precondition_value_is_an_explicit_null_guard() -> None:
+    precondition = Precondition.model_validate(
+        {
+            "target": {
+                "record_type": "record",
+                "record_id": "dispatch_authorization",
+                "field": "state.status",
+            }
+        }
+    )
+
+    assert precondition.expected is None
+    assert precondition.comparison == "equals"
+
+
 def _contract_transaction(*, delivered_quantity: int = 500) -> WorldTransaction:
     return WorldTransaction(
         transaction_id="contract_transition",
