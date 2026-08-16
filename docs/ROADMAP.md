@@ -62,9 +62,10 @@ boundary. [Slice 29](plans/029-separate-simulation-run-analysis.md) has adopted
 the split on the public V2 path: new drafts compile separate scenario and run
 contracts, theory-neutral runs may complete without an analysis, and analytical
 lenses attach afterward without simulation effects. Historical V1 readers and
-execution branches remain. The next direct blocker is proving that generated
-worlds are not merely structurally valid but causally closed over their declared
-consequential dependencies.
+execution branches remain. The selected relief-port vertical now also proves
+declared dependency enforcement, progressive review, and an evidence-linked
+Waltzman post-run lens; cross-domain semantic completeness and first-time
+stakeholder comprehension remain open rather than being implied by that proof.
 
 ## Retained Baseline Outcome Probe
 
@@ -280,7 +281,7 @@ conditions, not evidence of hostile attribution or an operational detector.
 | `POST-C1` | `ExperimentSpec` and matched decision-environment experiment | hard after foundation decision | provider-free mechanism proof technically satisfied; stakeholder readout pending | Baseline, fixed pressure, adaptive pressure, and authoritative validation have two retained runs each, cross-condition contrasts, time/subgroup measures, and exact evidence step-down |
 | `POST-C2` | Perturbation, robustness, and persuadability assays | optional | Packets 22A0–22A2 technically satisfied; stakeholder readout pending | Five matched provider-free rows distinguish concrete pathways and step down through one comparison UI to exact retained evidence |
 | `GEN-C0` | Concordia owns one general world-transition vertical end to end | hard | satisfied by Slice 28 | Port and service worlds compile from domain-neutral contracts, execute authentic Luna actors and adjudicators, restore strictly, and prove the old runtime did not execute |
-| `GEN-C1` | Current Cybernetic Influence capability parity on Concordia | hard | substantially satisfied on the public V2 path; causal-closure verification is the direct blocker | Authoring, execution, retention, replay, maps, narration, and analyses are inspectably equivalent, and consequential generated constraints have declared enforcement coverage |
+| `GEN-C1` | Current Cybernetic Influence capability parity on Concordia | hard | substantially satisfied on the public V2 path; stakeholder comprehension and broader-domain proof remain | Authoring, execution, retention, replay, maps, narration, and analyses are inspectably equivalent, and consequential generated constraints have declared enforcement coverage |
 | `GEN-C2` | Cross-domain generalization | evidence | representative port/service seam observed; broader claim deferred | One materially different exemplar reuses the same seams without generated code or a scenario-specific runtime |
 | `GEN-C3` | Scenario, run, analysis, and experiment authority are separated | hard | satisfied for public V2 writes and execution; historical V1 retirement is partial | One authentic run has analysis-free actor/adjudicator inputs and theory-neutral evidence; post-run analysis attachment changes no simulation call, context, revision, or evidence digest |
 | `GEN-C4` | Generated configurations are causally closed over declared consequential dependencies | hard | satisfied for the selected relief-port vertical; cross-domain semantic completeness remains fallible | Every declared material resource, authorization, topology, and prerequisite is mapped to an exact authority, an explicitly coarse authority, or a visible unsupported result; generated revisions receive a separate dependency review without treating it as proof of universal completeness |
@@ -310,10 +311,12 @@ There are five explicit tracks rather than one blended implementation queue:
    and complete typed contract remain available. External stakeholder
    comprehension remains the `MVP-C6` judgment boundary rather than another
    implementation prerequisite.
-3. **Waltzman analysis depth — separate analysis boundary.** Replace the current
-   count-based lens with explicit evidence-linked operationalizations of the
-   selected constructs. This must remain post-run and must not reintroduce an
-   analyst question into actors or adjudication.
+3. **Waltzman analysis depth — selected V2 path satisfied.** The deterministic
+   post-run lens now derives information exposure, source-reliance proxies,
+   expressed concern domains, shared action dependencies, and
+   coordination-readiness trajectories from retained typed evidence. It reports
+   operational definitions, record references, uncertainty, and limitations;
+   it does not add a trust score, call another model, or affect execution.
 4. **V1 retirement — bounded cleanup after V2 stability.** Preserve immutable
    historical artifacts and their reader, but remove or quarantine remaining
    V1 new-execution branches once the public V2 consumer checks pass.
@@ -413,20 +416,21 @@ not silently recreate the old runtime as a universal invariant set.
   remains evidence; the product tradeoff changed.
 - `GEN-C0` is satisfied by the Slice 28 production path and authentic traces.
   `GEN-C3` is satisfied for public V2 writes and execution, with historical V1
-  retirement still partial. `GEN-C1` cannot close until `GEN-C4` proves that
-  generated consequential dependencies are actually enforced or visibly
-  coarse/unsupported. `GEN-C2` retains one representative cross-domain proof;
-  broader generality remains conditional on that corrected verification path.
+  retirement still partial. `GEN-C4` is satisfied for the selected relief-port
+  vertical through declared exact/coarse/unsupported enforcement and semantic
+  review, without claiming universal completeness. `GEN-C2` retains one
+  representative cross-domain proof; broader generality and first-time
+  stakeholder comprehension remain open.
 
 ## Continue, Reset, Scale, Stop
 
 - **Decision:** reset the foundation to Concordia while retaining the current
   product as parity evidence. Retain useful CI mechanisms and surfaces; replace
   its foundational runtime authority; clear the obsolete Candidate C handoff.
-- **Continue:** deepen the Waltzman post-run lens as an honest consumer of the
-  theory-neutral evidence bundle, then exercise the complete author→review→run
-  flow through the same public entrypoint Waltzman will receive. The
-  independent M7 readout remains open and does not block this correction.
+- **Continue:** exercise the complete author→review→run→replay flow through the
+  same public entrypoint Waltzman will receive, including optional attachment
+  of the evidence-linked Waltzman lens. The independent M7 readout remains open
+  and does not block this correction.
 - **Reset:** at the earliest of roughly 45 minutes, two consecutive non-outcome
   increments, or user concern about pace, compare the current path with the most
   valuable reversible next move. Reset immediately if configuration requires

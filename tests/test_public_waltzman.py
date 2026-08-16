@@ -150,6 +150,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "What can change the canonical world" in page
     assert "When observations and attempts can occur" in page
     assert "How retained evidence will be read afterward" in page
+    assert "Interpret this retained run" in page
+    assert "Explain coordination through Waltzman’s lens" in page
+    assert "Adding or removing a lens never reruns the people or changes the world" in page
     assert "1 · Describe" in page
     assert "Guided replay" in page
     assert "Show the complete system" in page
@@ -179,11 +182,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=ontology1",
-        "assets/styles.css?v=authoring6",
+        "assets/styles.css?v=authoring8",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology1",
-        "assets/app.js?v=authoring13",
+        "assets/app.js?v=authoring15",
     ]
     assert {
         "overview-view",

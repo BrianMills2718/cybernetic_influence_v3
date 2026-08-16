@@ -409,6 +409,22 @@ def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
     assert analysis.coverage_status == "supported"
     assert analysis.model_call_receipts == []
     assert analysis.run_evidence_bundle_digest == evidence_bundle.record_digest
+    findings = {item.construct_id: item for item in analysis.findings}
+    assert set(findings) == {
+        "retained_evidence_coverage",
+        "coordination_pattern_summary",
+        "information_exposure_topology",
+        "trust_structure_proxies",
+        "perceived_risk_signals",
+        "coordination_dependencies",
+        "coordination_readiness_signals",
+    }
+    assert findings["coordination_pattern_summary"].method_class == "calculated"
+    assert "hidden trust score" in findings["trust_structure_proxies"].uncertainty
+    readiness = findings["coordination_readiness_signals"].value
+    assert isinstance(readiness, dict)
+    assert isinstance(readiness["by_moment"], list)
+    assert readiness["by_moment"]
     assert result.model_dump(mode="json") == retained_result
     assert len(result.model_calls) == len(scenario.people) + 1
     assert all(

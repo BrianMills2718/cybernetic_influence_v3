@@ -2728,12 +2728,17 @@ function builtInAnalysisSpec(profile) {
     analysis_id:'waltzman_coordination_review',
     profile,
     purpose:'Inspect information topology, dependencies, perceived risk, and coordination readiness in retained evidence.',
-    construct_definitions:['Waltzman-informed coordination constructs are derived from retained evidence after execution.'],
+    construct_definitions:[
+      'Information exposure is the configured delivery topology plus each person’s typed record of attended representations.',
+      'Trust structure is not scored directly; the lens reports source exposure, cited provenance, information overlap, and verification behavior as inspectable proxies.',
+      'Perceived risk is represented by transparent concern-domain markers in retained interpretations and rationales, preserved by person and moment.',
+      'Coordination readiness is represented by holds or non-attempts, verification behavior, exact contract selection, shared dependencies, and committed world changes over time.',
+    ],
     required_evidence_kinds:['configuration', 'terminal_state', 'causal_event', 'information_lineage', 'participant_activation'],
-    method_classes:['exact', 'calculated', 'llm_coded'],
-    aggregation:'Preserve per-person and per-moment variation before synthesis.',
-    uncertainty:'This interprets one synthetic AI-agent execution; it does not measure real institutions.',
-    limitations:['One execution does not establish an invariant.', 'Model outputs are audit records, not independent observations.'],
+    method_classes:['exact', 'calculated'],
+    aggregation:'Preserve person- and moment-level variation, then summarize the first and final observed readiness proxies without producing a scalar score.',
+    uncertainty:'This deterministic lens interprets one synthetic AI-agent execution; its lexical indicators and provenance counts are not calibrated measurements of people or institutions.',
+    limitations:['One execution does not establish an invariant or causal effect.', 'Model outputs are audit records, not independent observations.', 'Correct refusal may be the appropriate coordinated outcome.'],
     subject_refs:[],
   }
   return {
@@ -2751,11 +2756,56 @@ function builtInAnalysisSpec(profile) {
   }
 }
 
-function renderAnalysisValue(value) {
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return `<dl class="analysis-finding-values">${Object.entries(value).map(([label, item]) => `<div><dt>${escapeHtml(sentence(label))}</dt><dd>${escapeHtml(Array.isArray(item) ? item.join(' · ') : String(item))}</dd></div>`).join('')}</dl>`
+const analysisFindingPresentation = {
+  coordination_pattern_summary:{title:'What changed across the run', description:'A concise comparison of the first and final observed action-readiness signals.'},
+  information_exposure_topology:{title:'Who received and noticed what', description:'Configured delivery paths compared with each person’s retained attention record.'},
+  trust_structure_proxies:{title:'How source reliance differed', description:'Source exposure, cited provenance, information overlap, and verification behavior—without inventing a trust score.'},
+  perceived_risk_signals:{title:'Which concerns people expressed', description:'Transparent concern-domain markers preserved separately for every scheduled moment.'},
+  coordination_dependencies:{title:'Which requirements coupled people’s actions', description:'World references targeted by several people or enforced as transition guards.'},
+  coordination_readiness_signals:{title:'How action readiness changed', description:'Holds, verification, exact attempts, shared dependencies, and committed world operations over time.'},
+  retained_evidence_coverage:{title:'What evidence the lens inspected', description:'Exact retained-record counts; this is coverage, not a theory result.'},
+  terminal_outcome:{title:'Exact terminal outcome', description:'Canonical state and accepted or rejected transitions at the configured boundary.'},
+}
+
+function renderAnalysisValue(value, depth = 0) {
+  if (Array.isArray(value)) {
+    if (!value.length) return '<span>None</span>'
+    if (value.every((item) => item === null || ['string', 'number', 'boolean'].includes(typeof item))) {
+      return `<span>${escapeHtml(value.join(' · '))}</span>`
+    }
+    return `<ol class="analysis-value-list">${value.map((item) => `<li>${renderAnalysisValue(item, depth + 1)}</li>`).join('')}</ol>`
   }
-  return `<span>${escapeHtml(Array.isArray(value) ? value.join(' · ') : String(value))}</span>`
+  if (value && typeof value === 'object') {
+    return `<dl class="analysis-finding-values depth-${Math.min(depth, 2)}">${Object.entries(value).map(([label, item]) => `<div class="analysis-value-${escapeHtml(label)}"><dt>${escapeHtml(sentence(label))}</dt><dd>${renderAnalysisValue(item, depth + 1)}</dd></div>`).join('')}</dl>`
+  }
+  return `<span>${escapeHtml(String(value ?? 'Not recorded'))}</span>`
+}
+
+function renderCoordinationPatternSummary(value) {
+  const first = value?.first_moment || {}
+  const last = value?.last_moment || {}
+  const metric = (label, start, end, note = '') => `<article><span>${escapeHtml(label)}</span><div><strong>${escapeHtml(start)}</strong><i aria-hidden="true">→</i><strong>${escapeHtml(end)}</strong></div>${note ? `<small>${escapeHtml(note)}</small>` : ''}</article>`
+  const participantCount = (moment) => `${moment.people_expressing_hold_or_nonattempt ?? 0} of ${moment.participating_people ?? 0}`
+  return `<section class="analysis-trajectory-summary" aria-label="First to last moment comparison">
+    ${metric('Holds or non-attempts', participantCount(first), participantCount(last))}
+    ${metric('Exact world-action attempts', String(first.people_selecting_exact_transition_contract ?? 0), String(last.people_selecting_exact_transition_contract ?? 0))}
+    ${metric('Shared action dependencies', String(first.shared_dependency_count ?? 0), String(last.shared_dependency_count ?? 0), `Peak: ${value?.peak_shared_dependencies ?? 0}`)}
+    ${metric('Committed world changes', String(first.committed_world_operations ?? 0), String(last.committed_world_operations ?? 0))}
+  </section>
+  <p class="analysis-summary-copy">${escapeHtml(value?.summary || 'No directional summary was retained.')}</p>
+  <details class="analysis-summary-data"><summary>See the exact first and last moment counts</summary>${renderAnalysisValue({first_moment:first, last_moment:last, peak_shared_dependencies:value?.peak_shared_dependencies})}</details>`
+}
+
+function renderAnalysisFinding(finding) {
+  const presentation = analysisFindingPresentation[finding.construct_id] || {title:sentence(finding.construct_id), description:'Derived from the retained evidence linked below.'}
+  const primary = finding.construct_id === 'coordination_pattern_summary'
+  const value = primary ? renderCoordinationPatternSummary(finding.value) : renderAnalysisValue(finding.value)
+  return `<details class="analysis-finding ${primary ? 'primary' : ''}" ${primary ? 'open' : ''}>
+    <summary><span><strong>${escapeHtml(presentation.title)}</strong><small>${escapeHtml(presentation.description)}</small></span><em>${escapeHtml(sentence(finding.method_class))}</em></summary>
+    <div class="analysis-finding-body">${value}
+      <section class="analysis-finding-boundary"><strong>Interpretation boundary</strong><p>${escapeHtml(finding.uncertainty)}</p>${finding.limitations?.length ? `<ul>${finding.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}<details><summary>Retained evidence used · ${finding.evidence_refs.length} records</summary><p>${finding.evidence_refs.map(escapeHtml).join(' · ')}</p></details></section>
+    </div>
+  </details>`
 }
 
 function renderResultAnalysisLenses(result) {
@@ -2769,7 +2819,11 @@ function renderResultAnalysisLenses(result) {
     ? specs.map((spec) => {
       const analysis = [...resultsByDigest.values()].find((item) => item.result_id?.includes(spec.analysis_id))
       const findings = analysis?.findings || []
-      return `<article><div><strong>${escapeHtml(sentence(spec.profile))}</strong><span>${escapeHtml(sentence(analysis?.coverage_status || 'attached'))}</span></div><p>${escapeHtml(spec.purpose)}</p>${findings.length ? `<ul>${findings.map((finding) => `<li><strong>${escapeHtml(sentence(finding.construct_id))}</strong>${renderAnalysisValue(finding.value)}</li>`).join('')}</ul>` : ''}<button class="quiet-button" type="button" data-remove-analysis="${escapeHtml(spec.analysis_id)}">Remove lens</button></article>`
+      const order = ['coordination_pattern_summary', 'information_exposure_topology', 'trust_structure_proxies', 'perceived_risk_signals', 'coordination_dependencies', 'coordination_readiness_signals', 'terminal_outcome', 'retained_evidence_coverage']
+      const orderedFindings = [...findings].sort((left, right) => order.indexOf(left.construct_id) - order.indexOf(right.construct_id))
+      const title = spec.profile === 'waltzman_coordination_v1' ? 'Waltzman coordination lens' : 'Exact outcome readout'
+      const coverage = analysis?.coverage_status === 'supported' ? 'Evidence available' : sentence(analysis?.coverage_status || 'attached')
+      return `<article class="analysis-lens"><header><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(coverage)}</span></div><p>${escapeHtml(spec.purpose)}</p></header>${orderedFindings.length ? `<section class="analysis-findings">${orderedFindings.map(renderAnalysisFinding).join('')}</section>` : '<p>No supported findings were produced.</p>'}<details class="analysis-lens-method"><summary>Method, uncertainty, and scope</summary><p><strong>Aggregation</strong>${escapeHtml(spec.aggregation)}</p><p><strong>Uncertainty</strong>${escapeHtml(spec.uncertainty)}</p><ul>${(spec.construct_definitions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}${(spec.limitations || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></details><button class="quiet-button" type="button" data-remove-analysis="${escapeHtml(spec.analysis_id)}">Remove lens</button></article>`
     }).join('')
     : '<p><strong>No analysis attached.</strong> The retained execution is still available on its own.</p>'
   const profiles = new Set(specs.map((item) => item.profile))

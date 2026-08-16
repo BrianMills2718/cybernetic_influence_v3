@@ -37,6 +37,12 @@ supersedes_in_part:
   the exact lens was removed, and all three generated isolation receipts show
   unchanged model-call count, world revision, and run-evidence digest. V1
   historical readers and execution branches have not yet been retired.
+- **29F complete in the selected V2 implementation:** the Waltzman lens now
+  derives information exposure, source-reliance proxies, expressed concern
+  domains, shared action dependencies, and coordination-readiness trajectories
+  from retained typed evidence. The primary readout compares first and last
+  moments, detailed findings step down to record IDs, and analysis remains a
+  deterministic post-run consumer with no new model call or world mutation.
 
 Luna certification refresh was attempted against the current shared-client
 revision and failed at the provider boundary because the Codex subscription
@@ -102,7 +108,7 @@ two generic patch-shape defects found and corrected before the clean rerun.
 | Generated-configuration correctness | Compiler reports exact, partial, coarse, descriptive, or unsupported closure per request; exact-required partial closure blocks approval and execution; generated revisions also receive a separate semantic dependency review | Treat semantic review as fallible and retain explicit coverage/unsupported results rather than claiming universal completeness |
 | Relief-port mechanics | Cargo movement exactly guards declared cargo, truck, fuel, berth, route, customs, labor, fuel-quality, and dispatch state; the judgments producing legal/labor state remain coarse | Preserve this split and add exact effects only when another stable reusable mechanism is actually required |
 | Progressive editing | Satisfied on the public V2 path: direct editors, summaries, and compiler coverage are separated into World, People, Information, Processes, Run, and optional Analysis; the complete typed contract remains inspectable | Reassess only after authentic first-time stakeholder use or when another proposal family adopts the V2 workbench |
-| Waltzman analysis | Attached after execution and evidence-linked, but findings are primarily retained-evidence, topology, and execution counts | Define richer post-run operationalizations and limitations for trust structure, perceived risk, dependencies, and coordination readiness |
+| Waltzman analysis | Satisfied on the selected V2 path: post-run findings expose information topology, source-reliance proxies, expressed concern domains, shared dependencies, and readiness trajectories with record references and explicit limits | Validate comprehension with the intended stakeholder; repeated-run invariants and calibrated real-world measures remain separate future work |
 | V1 retirement | Public new writes and the selected run use V2 | Preserve historical reading while removing or quarantining remaining V1 new-execution branches |
 
 The first reporting slice is complete. Compiler validity no longer implies
