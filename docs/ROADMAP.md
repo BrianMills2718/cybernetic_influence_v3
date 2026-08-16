@@ -66,6 +66,10 @@ execution branches remain. The selected relief-port vertical now also proves
 declared dependency enforcement, progressive review, and an evidence-linked
 Waltzman post-run lens; cross-domain semantic completeness and first-time
 stakeholder comprehension remain open rather than being implied by that proof.
+The current public candidate for that comprehension judgment is native draft
+`draft_981bec08d29e` and retained run `run_702e57f9accc`: a six-step relief-port
+replay whose exact bridge inspection commits, whose guarded cargo attempt fails
+visibly, and whose detachable Waltzman lens leaves the simulation unchanged.
 
 ## Retained Baseline Outcome Probe
 
@@ -299,10 +303,11 @@ There are five explicit tracks rather than one blended implementation queue:
    Exact transport contracts now enforce generic typed prerequisites, and the
    trusted runtime injects compiled guards when an actor selects a transport.
    A separate semantic review can repair omitted prerequisites before approval.
-   Authentic draft `draft_59361013efcf` declared and enforced nine relief-port
-   movement guards; authentic run `run_d36f05900e22` retained the resulting
-   blocked trajectory with unchanged cargo. This remains a selected-vertical
-   result: the semantic reviewer can miss unstated dependencies and must not be
+   Authentic draft `draft_981bec08d29e` compiled the current relief-port world;
+   authentic run `run_702e57f9accc` committed the scoped bridge inspection and
+   rejected the later cargo attempt because three exact guards were unmet.
+   Cargo and fuel remained unchanged. This remains a selected-vertical result:
+   the semantic reviewer can miss unstated dependencies and must not be
    presented as a universal correctness proof.
 2. **Progressive editing — selected V2 path satisfied.** The generated draft
    now opens into World, People, Information, Processes, Run, and optional
@@ -316,15 +321,18 @@ There are five explicit tracks rather than one blended implementation queue:
    expressed concern domains, shared action dependencies, and
    coordination-readiness trajectories from retained typed evidence. It reports
    operational definitions, record references, uncertainty, and limitations;
-   it does not add a trust score, call another model, or affect execution.
+   it does not add a trust score, call another model, or affect execution. The
+   public projection now distinguishes rejected proposals from committed world
+   operations in both the replay and readiness trajectory.
 4. **V1 retirement — bounded cleanup after V2 stability.** Preserve immutable
    historical artifacts and their reader, but remove or quarantine remaining
    V1 new-execution branches once the public V2 consumer checks pass.
-5. **Stakeholder readout — separate retained MVP boundary.** Review corrected run
-   `run_eded0f70b15f` and decide whether its situation, trajectory, Waltzman
-   readout, Levin readout, evidence, and limitations are understandable without
-   raw JSON. This judgment can close M7 but does not decide the generalized
-   product architecture.
+5. **Stakeholder readout — separate retained MVP boundary.** Review current
+   public run `run_702e57f9accc` and decide whether its described world,
+   six-step trajectory, rejected guarded attempt, detachable Waltzman readout,
+   evidence, and limitations are understandable without raw JSON. This
+   judgment closes the current demo boundary but does not establish
+   cross-domain generality or decide the generalized product architecture.
 
 Detailed MVP implementation authority:
 [Slice 24](plans/024-configurable-theory-analysis-mvp.md).
@@ -427,10 +435,11 @@ not silently recreate the old runtime as a universal invariant set.
 - **Decision:** reset the foundation to Concordia while retaining the current
   product as parity evidence. Retain useful CI mechanisms and surfaces; replace
   its foundational runtime authority; clear the obsolete Candidate C handoff.
-- **Continue:** exercise the complete author→review→run→replay flow through the
-  same public entrypoint Waltzman will receive, including optional attachment
-  of the evidence-linked Waltzman lens. The independent M7 readout remains open
-  and does not block this correction.
+- **Continue:** use the retained public relief-port run as the stable demo while
+  soliciting first-time stakeholder comprehension. The complete
+  author→review→run→replay path, post-run Waltzman attachment, and isolation
+  boundary have been exercised; the remaining decision is usefulness, not
+  first execution or defect discovery.
 - **Reset:** at the earliest of roughly 45 minutes, two consecutive non-outcome
   increments, or user concern about pace, compare the current path with the most
   valuable reversible next move. Reset immediately if configuration requires

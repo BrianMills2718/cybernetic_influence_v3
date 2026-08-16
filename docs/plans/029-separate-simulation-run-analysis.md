@@ -16,7 +16,7 @@ supersedes_in_part:
 
 # Slice 29: Separate scenario, run, analysis, and experiment authority
 
-## Implementation status · 2026-08-14
+## Implementation status · 2026-08-16
 
 - **29A complete:** strict V2 scenario, run, evidence, and analysis contracts,
   independent digests, and the V1 compatibility adapter are on `main`.
@@ -43,6 +43,20 @@ supersedes_in_part:
   from retained typed evidence. The primary readout compares first and last
   moments, detailed findings step down to record IDs, and analysis remains a
   deterministic post-run consumer with no new model call or world mutation.
+
+The current stakeholder-path proof is native V2 draft `draft_981bec08d29e`
+and authentic retained run `run_702e57f9accc`. The four-person relief-port
+configuration contains 27 graph nodes and 67 directed edges with no coverage
+blocker. The run retained 15 Terra calls over three scheduled moments. Exact
+inspection committed the scoped bridge finding; a later five-operation joint
+attempt was rejected atomically because bridge clearance, dispatch approval,
+and prior trip capacity were absent; cargo and fuel therefore remained
+unchanged. The public six-step replay distinguishes this rejected attempt from
+realized state, and the attached Waltzman lens counts one committed operation
+at the first observed moment and zero at the last rather than counting the five
+rejected proposals. Analysis attachment preserved model calls (15), canonical
+revision (2), and evidence digest
+`7b8fcd686806d86f0e7511fbe8f62e8c41b595f8fbf26c76a1587abc559fa326`.
 
 Luna certification refresh was attempted against the current shared-client
 revision and failed at the provider boundary because the Codex subscription
@@ -100,6 +114,10 @@ two generic patch-shape defects found and corrected before the clean rerun.
   World, People, Information, Processes, Run, and optional Analysis. Each
   section exposes only its relevant direct editor, while approval and the full
   typed configuration remain available without traversing every section.
+- The stakeholder entrypoint was exercised in desktop Chrome through all six
+  replay steps. It rendered the rejected attempt as uncommitted, attached the
+  Waltzman lens after completion, had no console, page, request, or overflow
+  error, and retained a runtime-generated isolation receipt.
 
 ### Still open or partial
 
@@ -108,7 +126,7 @@ two generic patch-shape defects found and corrected before the clean rerun.
 | Generated-configuration correctness | Compiler reports exact, partial, coarse, descriptive, or unsupported closure per request; exact-required partial closure blocks approval and execution; generated revisions also receive a separate semantic dependency review | Treat semantic review as fallible and retain explicit coverage/unsupported results rather than claiming universal completeness |
 | Relief-port mechanics | Cargo movement exactly guards declared cargo, truck, fuel, berth, route, customs, labor, fuel-quality, and dispatch state; the judgments producing legal/labor state remain coarse | Preserve this split and add exact effects only when another stable reusable mechanism is actually required |
 | Progressive editing | Satisfied on the public V2 path: direct editors, summaries, and compiler coverage are separated into World, People, Information, Processes, Run, and optional Analysis; the complete typed contract remains inspectable | Reassess only after authentic first-time stakeholder use or when another proposal family adopts the V2 workbench |
-| Waltzman analysis | Satisfied on the selected V2 path: post-run findings expose information topology, source-reliance proxies, expressed concern domains, shared dependencies, and readiness trajectories with record references and explicit limits | Validate comprehension with the intended stakeholder; repeated-run invariants and calibrated real-world measures remain separate future work |
+| Waltzman analysis | Satisfied on the selected V2 path: post-run findings expose information topology, source-reliance proxies, expressed concern domains, shared dependencies, and readiness trajectories with record references and explicit limits; rejected proposals are not counted as committed changes | Validate comprehension with the intended stakeholder; repeated-run invariants and calibrated real-world measures remain separate future work |
 | V1 retirement | Public new writes and the selected run use V2 | Preserve historical reading while removing or quarantining remaining V1 new-execution branches |
 
 The first reporting slice is complete. Compiler validity no longer implies

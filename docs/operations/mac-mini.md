@@ -148,9 +148,10 @@ canary's exact cargo movement omitted customs clearance, labor approval, truck
 availability, and fuel from its declared reads, so `approvable` still does
 **not** mean the generated simulation is causally complete or fully correct.
 Describe it as structurally valid, executable, and causally classified over its
-declared dependencies. The attached Waltzman lens is likewise presently a
-count-based evidence projection, not a complete operationalization of trust,
-perceived risk, dependencies, or coordination readiness.
+declared dependencies. At that deployment the attached Waltzman lens was still
+a count-based evidence projection; the later public deployment recorded below
+supersedes that presentation without claiming a complete operationalization of
+trust, perceived risk, dependencies, or coordination readiness.
 
 Exact-prerequisite deployment observed 2026-08-16: public build
 `d92709d01134288e149966bf61be11519ac0509a` adds generic typed transport
@@ -165,12 +166,34 @@ request errors. The semantic review is adversarial assistance, not proof that
 all relevant dependencies have been discovered. Luna remained unavailable at
 the certified public authoring boundary; both artifacts use OpenRouter Terra.
 
-Current public-service observation 2026-08-16: build
+Earlier public-service observation 2026-08-16: build
 `7a0725e5b7b2f86772ae21f659b73136fdc76b2b` serves the corrected public
 Methodology page. A fresh desktop Chromium visit to `?view=method` displayed
 the V2 authority split, causal-closure limitation, and current Waltzman-lens
 boundary with zero console errors and zero failed requests. `/api/config`
 reported the same build commit.
+
+Current public stakeholder-path observation 2026-08-16: build
+`525c58d1e226df66f25cfa23e37dc0fe72de1d1e` serves native V2 draft
+`draft_981bec08d29e` and authentic retained run `run_702e57f9accc` at
+<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=create&draft=draft_981bec08d29e&authored_run=run_702e57f9accc>.
+The run retained 15 OpenRouter Terra calls, three scheduled moments, two
+accepted transactions, and one rejected transaction. The exact bridge
+inspection committed `restricted_load_review_required`. A later joint attempt
+proposed fuel preparation and cargo movement but failed three exact
+preconditions at the frozen revision, so neither fuel nor cargo changed.
+
+A fresh 1440-by-1000 Chrome pass opened the same URL, advanced through all six
+generated replay scenes, attached the Waltzman lens after completion, and
+reported zero console errors, page exceptions, failed requests, bad responses,
+or horizontal overflow. The replay describes the five proposed operations as a
+rejected attempt rather than realized changes. The lens reports committed world
+operations as one at the first observed moment and zero at the last. Attachment
+left model-call count 15, world revision 2, and evidence digest
+`7b8fcd686806d86f0e7511fbe8f62e8c41b595f8fbf26c76a1587abc559fa326`
+unchanged. This is one synthetic safe-failure trajectory and one post-run
+diagnostic lens; it is not a human-behavior estimate, repeated-run invariant,
+or proof of general causal completeness.
 
 Earlier natural-language authoring, canonical walkthrough, and methodology
 milestone 2026-08-12: revision
