@@ -2741,15 +2741,16 @@ function renderAuthoredResult(result) {
   $('.create-hero .case-label').textContent = 'Completed simulation'
   $('#create-title').textContent = result.title || 'Simulation result'
   const replayQuestion = result.simulation_replay?.question
+  const analystQuestion = result.authoring?.question
   const questionLabel = result.execution_contract === 'general_world_v2'
-    ? 'Your review question'
+    ? analystQuestion ? 'Your analysis question' : 'Simulation brief'
     : 'Collective question'
   $('.create-hero > p').textContent = replayQuestion
     ? `${questionLabel}: ${replayQuestion} Advance through the retained run one step at a time.`
     : 'Advance through this retained simulation one step at a time.'
   $('#create-run-heading').textContent = 'Simulation complete'
-  $('#create-run-detail').textContent = 'Replay the retained information, decisions, and collective outcome below.'
-  $('#create-result-title').textContent = 'Follow what entered the system and how people responded.'
+  $('#create-run-detail').textContent = 'Replay retained information, decisions, actions, and world changes below.'
+  $('#create-result-title').textContent = 'Follow what entered the simulation, what actors attempted, and what the world accepted.'
   $('#create-result-summary').textContent = replayQuestion
     ? `${questionLabel}: ${replayQuestion}`
     : 'Advance one retained step at a time.'

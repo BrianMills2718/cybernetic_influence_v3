@@ -283,7 +283,7 @@ conditions, not evidence of hostile attribution or an operational detector.
 | `GEN-C1` | Current Cybernetic Influence capability parity on Concordia | hard | substantially satisfied on the public V2 path; causal-closure verification is the direct blocker | Authoring, execution, retention, replay, maps, narration, and analyses are inspectably equivalent, and consequential generated constraints have declared enforcement coverage |
 | `GEN-C2` | Cross-domain generalization | evidence | representative port/service seam observed; broader claim deferred | One materially different exemplar reuses the same seams without generated code or a scenario-specific runtime |
 | `GEN-C3` | Scenario, run, analysis, and experiment authority are separated | hard | satisfied for public V2 writes and execution; historical V1 retirement is partial | One authentic run has analysis-free actor/adjudicator inputs and theory-neutral evidence; post-run analysis attachment changes no simulation call, context, revision, or evidence digest |
-| `GEN-C4` | Generated configurations are causally closed over declared consequential dependencies | hard | first enforcement report implemented; port mechanics remain partial | Every material resource, authorization, topology, and prerequisite is mapped to an exact authority, an explicitly coarse authority, or a visible unsupported result; compiler success never implies unimplemented enforcement |
+| `GEN-C4` | Generated configurations are causally closed over declared consequential dependencies | hard | satisfied for the selected relief-port vertical; cross-domain semantic completeness remains fallible | Every declared material resource, authorization, topology, and prerequisite is mapped to an exact authority, an explicitly coarse authority, or a visible unsupported result; generated revisions receive a separate dependency review without treating it as proof of universal completeness |
 | `GEN-C5` | Review is progressively editable without hiding the complete contract | evidence | partial; logical layers and walkthrough exist, direct editors remain one long page | A first-time analyst can move through World, Run, and optional Analysis as distinct editable steps, inspect the generated graph, approve, run, and replay without scanning the full contract at once |
 
 The only open MVP boundary is the stakeholder judgment portion of `MVP-C6`.
@@ -294,16 +294,15 @@ the judgment passed on the operator's behalf.
 
 There are five explicit tracks rather than one blended implementation queue:
 
-1. **Generated-configuration causal closure — active engineering boundary.**
-   The compiler now distinguishes exact, partial, coarse, descriptive, and
-   unsupported closure for each request and reports which declared dependencies
-   are not read by an exact contract. Exact-required partial requests block
-   approval and execution. A live Terra authoring canary also exposed the next
-   boundary: this proves enforcement only for dependencies the author declared;
-   it does not prove that the author named every material prerequisite. Next,
-   repair the authoring output so hybrid behavior is split or honestly coarse,
-   then add exact generic prerequisites only where they materially improve the
-   simulation.
+1. **Generated-configuration causal closure — selected vertical satisfied.**
+   Exact transport contracts now enforce generic typed prerequisites, and the
+   trusted runtime injects compiled guards when an actor selects a transport.
+   A separate semantic review can repair omitted prerequisites before approval.
+   Authentic draft `draft_59361013efcf` declared and enforced nine relief-port
+   movement guards; authentic run `run_d36f05900e22` retained the resulting
+   blocked trajectory with unchanged cargo. This remains a selected-vertical
+   result: the semantic reviewer can miss unstated dependencies and must not be
+   presented as a universal correctness proof.
 2. **Progressive editing — product comprehension boundary.** Preserve the full
    typed configuration while turning World, Run, and optional Analysis into
    distinct editable stages. Keep Configure-now and approval available without

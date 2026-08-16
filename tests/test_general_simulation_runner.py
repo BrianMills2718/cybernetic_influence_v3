@@ -18,6 +18,7 @@ from cybernetic_influence.general_simulation.models import (
     Consequence,
     PatchOperation,
     Precondition,
+    ResourceTransportContract,
     SemanticActionIntent,
     SensingTransitionContract,
     TypedTarget,
@@ -27,6 +28,7 @@ from cybernetic_influence.general_simulation.models import (
 )
 from cybernetic_influence.general_simulation.runner import (
     _drop_unauthorized_representation_deliveries,
+    _inject_selected_contract_preconditions,
     _memory_reference_is_grounded,
     _normalize_transaction_targets,
     _normalized_memory,
@@ -184,6 +186,75 @@ def test_field_scoped_create_on_existing_record_normalizes_to_replace() -> None:
     assert corrections == [
         "operation target relief_cargo field normalized from decision to state.decision",
         "field-scoped create normalized to replace for existing record relief_cargo",
+    ]
+
+
+def test_selected_exact_transport_receives_compiled_guards() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    spec = compile_general_simulation(proposal).world_spec
+    guard = Precondition(
+        target=TypedTarget(
+            record_type="record",
+            record_id="relief_cargo",
+            field="state.status",
+        ),
+        expected="cleared",
+    )
+    spec.resource_transport_contracts = [
+        ResourceTransportContract(
+            contract_id="move_relief_cargo",
+            operator_ids=["trucking_dispatcher"],
+            source_resource_id="dispatch_fuel",
+            destination_resource_id="dispatch_fuel",
+            quantity=1,
+            origin_place_id="outside_port",
+            destination_place_id="port",
+            allowed_route_ids=["temporary_route"],
+            arrival_record_id="relief_cargo",
+            arrival_quantity_key="quantity",
+            usable_quantity_key="usable_quantity",
+            arrival_minute_key="arrival_minute",
+            required_preconditions=[guard],
+        )
+    ]
+    world = CanonicalWorld(spec)
+    intent = SemanticActionIntent(
+        intent_id="move_intent",
+        actor_id="trucking_dispatcher",
+        base_revision=0,
+        action="Move relief cargo.",
+        target_refs=["relief_cargo"],
+        purpose="Deliver aid.",
+        expected_effect="Cargo reaches the port.",
+        stated_rationale="Attempt the configured transport.",
+        transition_contract_ids=["move_relief_cargo"],
+    )
+    transaction = WorldTransaction(
+        transaction_id="transport_without_restated_guard",
+        base_revision=0,
+        authority_id="general_semantic_adjudicator",
+        intent_ids=[intent.intent_id],
+        operations=[],
+        preconditions=[],
+        consequences=[],
+        evidence_refs=[intent.intent_id],
+        stated_rationale="The adjudicator omitted the compiled guard.",
+    )
+    corrections: list[str] = []
+
+    guarded = _inject_selected_contract_preconditions(
+        transaction,
+        intents=[intent],
+        world=world,
+        corrections=corrections,
+    )
+
+    assert guarded.preconditions == [guard]
+    assert corrections == [
+        "trusted exact contract preconditions injected: "
+        "record:relief_cargo:state.status"
     ]
 
 

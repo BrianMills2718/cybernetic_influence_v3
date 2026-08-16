@@ -75,6 +75,8 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     assert "Approval needs revision" in script
     assert "dependency review passed" in script
     assert "Exact reads and guards" in script
+    assert "Simulation brief" in script
+    assert "what actors attempted, and what the world accepted" in script
 
 
 def _dataset() -> dict[str, object]:

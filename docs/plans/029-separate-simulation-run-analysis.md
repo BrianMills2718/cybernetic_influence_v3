@@ -46,6 +46,41 @@ Terra route; do not describe either the authoring trace or run as Luna.
 
 ## Adversarial implementation audit · 2026-08-16
 
+### Exact-prerequisite follow-up · 2026-08-16
+
+The selected relief-port vertical now closes the previously observed omission
+without making legal or labor judgment exact. Generic resource-transport
+contracts can carry typed record, route, and resource preconditions using
+equality or numeric bounds. The compiler validates their targets and fields,
+requires every guarded referent in the owning request's declared reads, and
+reports those reads as exact causal closure. When an actor selects the exact
+transport, the trusted runtime attaches the compiled guards even if the LLM
+adjudicator omits them; canonical validation remains the pass/fail authority.
+
+A separate semantic dependency-review call now compares the analyst request and
+the generated proposal's own conditional claims with each exact action before
+the draft becomes ready. It can force a bounded authoring repair, but it remains
+an LLM review and is not proof that every real-world dependency was discovered.
+Direct edits rerun typed compilation but are visibly labeled as not having
+rerun the semantic review.
+
+Authentic Terra draft `draft_59361013efcf` required two bounded repairs, then
+compiled with nine exact cargo-movement guards: cargo, trucks, fuel, berth
+capacity, bypass operability, customs clearance, labor approval, verified fuel
+status, and joint dispatch authorization. The independent review accepted the
+final proposal at observed authoring cost `$0.0987663` across the three
+cost-bearing calls. The first generated attempt also exposed provider/schema
+failure, which remained visible rather than becoming a fallback configuration.
+
+Authentic run `run_d36f05900e22` executed the exact approved configuration with
+20 retained Terra calls, four committed causal moments, final revision four,
+and zero rejected transactions. Its agents correctly declined cargo movement
+because customs and labor prerequisites remained withheld; cargo stocks stayed
+unchanged. This demonstrates a clean blocked trajectory, not a successful
+transport or a claim that the semantic dependency review is complete in other
+domains. The earlier run `run_3f0ec02d6819` is retained as failure evidence for
+two generic patch-shape defects found and corrected before the clean rerun.
+
 ### Verified
 
 - New public drafts write native V2 scenario and run contracts.
@@ -60,8 +95,8 @@ Terra route; do not describe either the authoring trace or run as Luna.
 
 | Boundary | Observed state | Required follow-up |
 | --- | --- | --- |
-| Generated-configuration correctness | Compiler now reports exact, partial, coarse, descriptive, or unsupported closure per request and lists dependencies not read by an exact contract; exact-required partial closure blocks approval and execution | Extend exact prerequisite machinery only where the simulation requires it; preserve visible coarse classifications elsewhere |
-| Relief-port mechanics | The deployed report now flags fuel commitment and cargo movement as partial because their exact contracts do not read the declared status prerequisites | Split hybrid responsibilities or bind fuel, capacity, customs, and labor dependencies to exact transition preconditions/effects |
+| Generated-configuration correctness | Compiler reports exact, partial, coarse, descriptive, or unsupported closure per request; exact-required partial closure blocks approval and execution; generated revisions also receive a separate semantic dependency review | Treat semantic review as fallible and retain explicit coverage/unsupported results rather than claiming universal completeness |
+| Relief-port mechanics | Cargo movement exactly guards declared cargo, truck, fuel, berth, route, customs, labor, fuel-quality, and dispatch state; the judgments producing legal/labor state remain coarse | Preserve this split and add exact effects only when another stable reusable mechanism is actually required |
 | Progressive editing | Workflow, conceptual layers, and walkthrough are staged; direct editors remain one long review page | Split direct editing into World, Run, and optional Analysis stages without hiding the full typed contract |
 | Waltzman analysis | Attached after execution and evidence-linked, but findings are primarily retained-evidence, topology, and execution counts | Define richer post-run operationalizations and limitations for trust structure, perceived risk, dependencies, and coordination readiness |
 | V1 retirement | Public new writes and the selected run use V2 | Preserve historical reading while removing or quarantining remaining V1 new-execution branches |

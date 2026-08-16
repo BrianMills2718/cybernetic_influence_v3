@@ -152,6 +152,19 @@ declared dependencies. The attached Waltzman lens is likewise presently a
 count-based evidence projection, not a complete operationalization of trust,
 perceived risk, dependencies, or coordination readiness.
 
+Exact-prerequisite deployment observed 2026-08-16: public build
+`d92709d01134288e149966bf61be11519ac0509a` adds generic typed transport
+preconditions, trusted runtime guard injection, and a separate semantic
+dependency-completeness review for generated revisions. Authentic Terra draft
+`draft_59361013efcf` compiled nine cargo-movement guards after bounded repair.
+Authentic run `run_d36f05900e22` completed the same approved configuration with
+20 retained calls, four accepted transactions, zero rejected transactions, and
+unchanged cargo because customs and labor states remained withheld. A fresh
+desktop Chromium replay opened the retained run with no console or failed
+request errors. The semantic review is adversarial assistance, not proof that
+all relevant dependencies have been discovered. Luna remained unavailable at
+the certified public authoring boundary; both artifacts use OpenRouter Terra.
+
 Current public-service observation 2026-08-16: build
 `7a0725e5b7b2f86772ae21f659b73136fdc76b2b` serves the corrected public
 Methodology page. A fresh desktop Chromium visit to `?view=method` displayed
