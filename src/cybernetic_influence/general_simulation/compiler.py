@@ -28,6 +28,7 @@ from .models import (
     PatchGrammar,
     Place,
     Placement,
+    Precondition,
     Representation,
     ResourceTransformationContract,
     ResourceTransportContract,
@@ -35,6 +36,7 @@ from .models import (
     Route,
     SensingTransitionContract,
     TransitionAuthoritySpec,
+    TypedTarget,
     WorldRecord,
 )
 from .registry import RegisteredComponentV1, default_registry, registry_digest, resolve_request
@@ -123,7 +125,11 @@ def _exact_contract_access(
         )
     for transport in proposal.resource_transports:
         access[transport.transport_id] = (
-            {transport.source_resource_id, *transport.allowed_route_ids},
+            {
+                transport.source_resource_id,
+                *transport.allowed_route_ids,
+                *[item.record_id for item in transport.required_preconditions],
+            },
             {
                 transport.source_resource_id,
                 transport.destination_resource_id,
@@ -272,6 +278,48 @@ def _compile_general_simulation(
         }
         if proposal.spatial_extension else {}
     )
+    record_guard_fields = {
+        item.record_id: {
+            "kind",
+            "label",
+            *[f"state.{entry.key}" for entry in item.public_state],
+            *[f"hidden_state.{entry.key}" for entry in item.hidden_state],
+        }
+        for item in proposal.world_records
+    }
+    record_guard_fields.update(
+        {
+            person.entity_id: {
+                "kind",
+                "label",
+                "state.position",
+                "hidden_state.disposition",
+                "hidden_state.behavioral_profile",
+            }
+            for person in proposal.people
+        }
+    )
+    route_guard_fields = (
+        {
+            item.link_id: {
+                "operational",
+                *[f"public_state.{entry.key}" for entry in item.public_state],
+                *[f"hidden_state.{entry.key}" for entry in item.hidden_state],
+            }
+            for item in proposal.spatial_extension.links
+        }
+        if proposal.spatial_extension
+        else {}
+    )
+    resource_guard_fields = {
+        item.resource_id: {"quantity", "custodian_id", "conserved"}
+        for item in proposal.resource_extension.stocks
+    } if proposal.resource_extension else {}
+    precondition_fields = {
+        "record": record_guard_fields,
+        "route": route_guard_fields,
+        "resource": resource_guard_fields,
+    }
     for transport in proposal.resource_transports:
         unknown_resources = sorted(
             {transport.source_resource_id, transport.destination_resource_id}
@@ -328,6 +376,35 @@ def _compile_general_simulation(
                 f"transport {transport.transport_id} names unknown arrival record "
                 f"{transport.arrival_record_id}"
             )
+        valid_precondition_targets = {
+            "record": record_ids,
+            "route": route_ids,
+            "resource": resource_ids,
+        }
+        for precondition in transport.required_preconditions:
+            if precondition.record_id not in valid_precondition_targets[
+                precondition.record_type
+            ]:
+                raise GeneralCompilationError(
+                    f"transport {transport.transport_id} precondition names unknown "
+                    f"{precondition.record_type} {precondition.record_id}"
+                )
+            if precondition.comparison != "equals" and (
+                isinstance(precondition.expected, bool)
+                or not isinstance(precondition.expected, (int, float))
+            ):
+                raise GeneralCompilationError(
+                    f"transport {transport.transport_id} numeric precondition on "
+                    f"{precondition.record_id} requires a numeric expected value"
+                )
+            if precondition.field not in precondition_fields[
+                precondition.record_type
+            ].get(precondition.record_id, set()):
+                raise GeneralCompilationError(
+                    f"transport {transport.transport_id} precondition names unknown "
+                    f"field {precondition.field} on {precondition.record_type} "
+                    f"{precondition.record_id}"
+                )
     for moment in schedule:
         unknown = sorted(
             set(moment.external_inject_representation_ids) - representation_ids
@@ -380,6 +457,23 @@ def _compile_general_simulation(
         request.request_id: set(request.transition_contract_ids)
         for request in proposal.component_requests
     }
+    transport_precondition_refs = {
+        item.transport_id: {guard.record_id for guard in item.required_preconditions}
+        for item in proposal.resource_transports
+    }
+    for request in proposal.component_requests:
+        guarded_refs = set().union(
+            *(
+                transport_precondition_refs.get(contract_id, set())
+                for contract_id in request.transition_contract_ids
+            )
+        )
+        omitted = sorted(guarded_refs - set(request.required_reads))
+        if omitted:
+            raise GeneralCompilationError(
+                f"component request {request.request_id} omits exact contract "
+                "prerequisite refs from required_reads: " + ", ".join(omitted)
+            )
     unclaimed_contracts = sorted(
         contract_ids - set().union(*request_contracts.values())
         if request_contracts
@@ -910,6 +1004,18 @@ def _compile_general_simulation(
             arrival_quantity_key=item.arrival_quantity_key,
             usable_quantity_key=item.usable_quantity_key,
             arrival_minute_key=item.arrival_minute_key,
+            required_preconditions=[
+                Precondition(
+                    target=TypedTarget(
+                        record_type=guard.record_type,
+                        record_id=guard.record_id,
+                        field=guard.field,
+                    ),
+                    comparison=guard.comparison,
+                    expected=guard.expected,
+                )
+                for guard in item.required_preconditions
+            ],
         )
         for item in proposal.resource_transports
     ]

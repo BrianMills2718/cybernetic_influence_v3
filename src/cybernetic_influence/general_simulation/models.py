@@ -170,6 +170,7 @@ class ResourceTransportContract(StrictModel):
     arrival_quantity_key: str
     usable_quantity_key: str
     arrival_minute_key: str
+    required_preconditions: list["Precondition"] = Field(default_factory=list)
 
 
 class GeneralWorldSpec(StrictModel):
@@ -268,6 +269,9 @@ class PatchOperation(StrictModel):
 
 class Precondition(StrictModel):
     target: TypedTarget
+    comparison: Literal["equals", "greater_than_or_equal", "less_than_or_equal"] = (
+        "equals"
+    )
     expected: PatchValue
 
 

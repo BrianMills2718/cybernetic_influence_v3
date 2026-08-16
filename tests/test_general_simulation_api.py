@@ -17,7 +17,9 @@ from cybernetic_influence.api import _simulation_replay
 from cybernetic_influence.analysis.theory_analysis import AnalysisSpecV2
 from cybernetic_influence.general_simulation.authoring_models import (
     AnalysisSpecV1,
+    DependencyCompletenessReviewV1,
     GeneralSimulationProposalV1,
+    MissingDependencyFindingV1,
 )
 from cybernetic_influence.general_simulation.study_models import (
     AuthoredSimulationProposalEnvelopeV2,
@@ -215,7 +217,13 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
     proposal = _native_v2_proposal()
 
     def provider(*args: Any, **kwargs: Any) -> tuple[object, object]:
-        del args, kwargs
+        del args
+        if kwargs["response_model"] is DependencyCompletenessReviewV1:
+            return DependencyCompletenessReviewV1(
+                status="complete",
+                summary="No stated exact-action prerequisite is omitted.",
+                missing_dependencies=[],
+            ), SimpleNamespace(provider="test", cost=0.0)
         return AuthoredSimulationProposalEnvelopeV2(proposal=proposal), SimpleNamespace(
             provider="test", cost=0.0
         )
@@ -242,6 +250,13 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
         },
     )
     assert generated.status_code == 200
+    assert [item["status"] for item in generated.json()["attempts"]] == [
+        "accepted",
+        "accepted",
+    ]
+    assert generated.json()["messages"][-1]["trace_ids"][-1].endswith(
+        "/dependency-review"
+    )
     assert generated.json()["configuration_graph"]["isolated_node_ids"] == []
     assert generated.json()["configuration_graph"]["edges"]
     document = generated.json()
@@ -251,6 +266,7 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
         item["causal_closure"] in {"exact", "coarse"}
         for item in document["coverage"]["items"]
     )
+
 
     retained_path = tmp_path / "drafts" / f"{draft['draft_id']}.json"
     retained = json.loads(retained_path.read_text(encoding="utf-8"))
@@ -295,6 +311,72 @@ def test_general_authoring_api_create_generate_preview_edit_and_approve(
     assert approved.json()["approval"]["registry_digest"]
 
 
+def test_dependency_review_repairs_an_omitted_exact_action_prerequisite(
+    tmp_path: Path,
+) -> None:
+    proposal = _native_v2_proposal()
+    review_calls = 0
+    generation_inputs: list[str] = []
+
+    def provider(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        nonlocal review_calls
+        if kwargs["response_model"] is DependencyCompletenessReviewV1:
+            review_calls += 1
+            if review_calls == 1:
+                return DependencyCompletenessReviewV1(
+                    status="repair_required",
+                    summary="Cargo movement omitted one stated prerequisite.",
+                    missing_dependencies=[
+                        MissingDependencyFindingV1(
+                            exact_action_request_id="cargo_movement",
+                            prerequisite_description="Customs clearance must gate movement.",
+                            existing_ref="customs_release_status",
+                            evidence="The analyst called customs clearance a genuine prerequisite.",
+                            required_resolution="exact_guard",
+                        )
+                    ],
+                ), SimpleNamespace(provider="test", cost=0.0)
+            return DependencyCompletenessReviewV1(
+                status="complete",
+                summary="The repaired candidate covers every stated prerequisite.",
+                missing_dependencies=[],
+            ), SimpleNamespace(provider="test", cost=0.0)
+        generation_inputs.append(str(args[1][1]["content"]))
+        return AuthoredSimulationProposalEnvelopeV2(proposal=proposal), SimpleNamespace(
+            provider="test", cost=0.0
+        )
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=provider,
+        )
+    )
+    draft = api.post("/api/authoring/drafts").json()
+    generated = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "review_repair",
+            "message": "Model cargo movement where customs clearance is a genuine prerequisite.",
+        },
+    )
+
+    assert generated.status_code == 200
+    assert generated.json()["status"] == "ready_for_review"
+    assert review_calls == 2
+    assert len(generation_inputs) == 2
+    assert "Dependency completeness review requires repair" in generation_inputs[1]
+    assert [item["status"] for item in generated.json()["attempts"]] == [
+        "accepted",
+        "repair",
+        "accepted",
+        "accepted",
+    ]
+
+
 def test_live_general_authoring_runs_as_pollable_background_job(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
@@ -307,7 +389,13 @@ def test_live_general_authoring_runs_as_pollable_background_job(
     proposal = _native_v2_proposal()
 
     def provider(*args: Any, **kwargs: Any) -> tuple[object, object]:
-        del args, kwargs
+        del args
+        if kwargs["response_model"] is DependencyCompletenessReviewV1:
+            return DependencyCompletenessReviewV1(
+                status="complete",
+                summary="No stated exact-action prerequisite is omitted.",
+                missing_dependencies=[],
+            ), SimpleNamespace(provider="test", cost=0.0)
         return AuthoredSimulationProposalEnvelopeV2(proposal=proposal), SimpleNamespace(
             provider="test", cost=0.0
         )

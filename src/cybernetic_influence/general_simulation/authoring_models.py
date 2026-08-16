@@ -167,6 +167,18 @@ class ResourceQuantityRequirementV1(_StrictModel):
     quantity: float = Field(gt=0)
 
 
+class TransitionPreconditionProposalV1(_StrictModel):
+    """One generic canonical-state guard on an exact transition contract."""
+
+    record_type: Literal["record", "route", "resource"]
+    record_id: str = Field(pattern=_ID)
+    field: str = Field(min_length=1)
+    comparison: Literal["equals", "greater_than_or_equal", "less_than_or_equal"] = (
+        "equals"
+    )
+    expected: Scalar
+
+
 class ResourceTransformationProposalV1(_StrictModel):
     transformation_id: str = Field(pattern=_ID)
     operator_ids: list[str] = Field(min_length=1)
@@ -213,6 +225,9 @@ class ResourceTransportProposalV1(_StrictModel):
     arrival_quantity_key: str = Field(pattern=_ID)
     usable_quantity_key: str = Field(pattern=_ID)
     arrival_minute_key: str = Field(pattern=_ID)
+    required_preconditions: list[TransitionPreconditionProposalV1] = Field(
+        default_factory=list
+    )
 
 
 class AnalysisSpecV1(_StrictModel):
@@ -434,3 +449,27 @@ class GeneralAuthoringDiscussionV1(_StrictModel):
     reply: str = Field(min_length=1)
     understood_summary: str = Field(min_length=1)
     material_questions: list[str]
+
+
+class MissingDependencyFindingV1(_StrictModel):
+    exact_action_request_id: str = Field(pattern=_ID)
+    prerequisite_description: str = Field(min_length=1)
+    existing_ref: str | None
+    evidence: str = Field(min_length=1)
+    required_resolution: Literal[
+        "exact_guard", "required_read", "split_or_coarse", "declare_world_state"
+    ]
+
+
+class DependencyCompletenessReviewV1(_StrictModel):
+    """Semantic audit of whether generated exact actions omit stated prerequisites."""
+
+    status: Literal["complete", "repair_required"]
+    summary: str = Field(min_length=1)
+    missing_dependencies: list[MissingDependencyFindingV1]
+
+    @model_validator(mode="after")
+    def status_matches_findings(self) -> "DependencyCompletenessReviewV1":
+        if (self.status == "complete") != (not self.missing_dependencies):
+            raise ValueError("dependency review status must match missing_dependencies")
+        return self

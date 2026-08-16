@@ -230,6 +230,52 @@ def _normalize_transaction_targets(
     )
 
 
+def _inject_selected_contract_preconditions(
+    transaction: WorldTransaction,
+    *,
+    intents: list[SemanticActionIntent],
+    world: CanonicalWorld,
+    corrections: list[str],
+) -> WorldTransaction:
+    """Attach trusted exact guards selected by actor intents.
+
+    The adjudicator may restate these guards, but omission cannot weaken the
+    compiled contract. Canonical validation still decides whether each guard
+    passes against the frozen world revision.
+    """
+
+    selected_ids = {
+        contract_id
+        for intent in intents
+        for contract_id in intent.transition_contract_ids
+    }
+    required = [
+        precondition
+        for contract in world.spec.resource_transport_contracts
+        if contract.contract_id in selected_ids
+        for precondition in contract.required_preconditions
+    ]
+    existing = {
+        item.model_dump_json(exclude_none=False)
+        for item in transaction.preconditions
+    }
+    additions = [
+        item for item in required if item.model_dump_json(exclude_none=False) not in existing
+    ]
+    if not additions:
+        return transaction
+    corrections.append(
+        "trusted exact contract preconditions injected: "
+        + ", ".join(
+            f"{item.target.record_type}:{item.target.record_id}:{item.target.field}"
+            for item in additions
+        )
+    )
+    return transaction.model_copy(
+        update={"preconditions": [*transaction.preconditions, *additions]}
+    )
+
+
 def _drop_unauthorized_representation_deliveries(
     transaction: WorldTransaction,
     world: CanonicalWorld,
@@ -732,7 +778,10 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                     "operational. Move no more than the declared quantity by decrementing the source resource "
                     "and incrementing the destination resource in one transaction. Derive arrival minute from "
                     "the current moment plus the selected route's public travel_time_minutes, and update only "
-                    "the three declared arrival-record keys. A transport attempt is not permission or success."
+                    "the three declared arrival-record keys. Every configured required_precondition is a "
+                    "non-negotiable exact guard; the trusted runtime attaches it to a selected transport and "
+                    "canonical validation rejects the transition when it is false. A transport attempt is not "
+                    "permission or success."
                 ),
                 user=json.dumps(
                     {
@@ -806,6 +855,12 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             )
             transaction = _normalize_transaction_targets(
                 transaction, world, corrections
+            )
+            transaction = _inject_selected_contract_preconditions(
+                transaction,
+                intents=intents,
+                world=world,
+                corrections=corrections,
             )
             allowed_evidence_refs = (
                 expected_intents
@@ -915,6 +970,12 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 repair_corrections: list[str] = []
                 repaired_transaction = _normalize_transaction_targets(
                     repaired_transaction, world, repair_corrections
+                )
+                repaired_transaction = _inject_selected_contract_preconditions(
+                    repaired_transaction,
+                    intents=intents,
+                    world=world,
+                    corrections=repair_corrections,
                 )
                 if set(repaired_transaction.evidence_refs) - allowed_evidence_refs:
                     raise ValueError("repaired adjudicator output cited unknown canonical evidence")

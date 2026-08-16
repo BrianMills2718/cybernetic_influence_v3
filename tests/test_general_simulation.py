@@ -266,6 +266,76 @@ def test_declared_contracts_license_complete_transition_and_retain_attribution()
     )
 
 
+def test_exact_transport_requires_compiled_status_and_capacity_guards() -> None:
+    base = _contract_world()
+    spec = base.spec
+    spec.initial_state.records["dispatch_authorization"] = WorldRecord(
+        record_id="dispatch_authorization",
+        kind="authorization",
+        label="Dispatch authorization",
+        state={"status": "cleared"},
+    )
+    spec.initial_state.resources["fuel"] = ResourceStock(
+        resource_id="fuel", quantity=20, custodian_id="worker"
+    )
+    spec.resource_transport_contracts[0] = spec.resource_transport_contracts[
+        0
+    ].model_copy(
+        update={
+            "required_preconditions": [
+                Precondition(
+                    target=TypedTarget(
+                        record_type="record",
+                        record_id="dispatch_authorization",
+                        field="state.status",
+                    ),
+                    expected="cleared",
+                ),
+                Precondition(
+                    target=TypedTarget(
+                        record_type="resource", record_id="fuel", field="quantity"
+                    ),
+                    comparison="greater_than_or_equal",
+                    expected=10,
+                ),
+            ]
+        }
+    )
+    intent = _contract_intent("inspect_quality", "produce", "deliver")
+
+    missing = CanonicalWorld(spec)
+    rejected = missing.validate_and_commit(
+        _contract_transaction(), intents=[intent], current_minute=60
+    )
+    assert not rejected.accepted
+    assert any("not licensed by a complete declared transition contract" in item for item in rejected.errors)
+
+    guarded = CanonicalWorld(spec)
+    transaction = _contract_transaction().model_copy(
+        update={
+            "preconditions": [
+                *_contract_transaction().preconditions,
+                *spec.resource_transport_contracts[0].required_preconditions,
+            ]
+        }
+    )
+    accepted = guarded.validate_and_commit(
+        transaction, intents=[intent], current_minute=60
+    )
+    assert accepted.accepted
+
+    insufficient_spec = spec.model_copy(deep=True)
+    insufficient_spec.initial_state.resources["fuel"] = insufficient_spec.initial_state.resources[
+        "fuel"
+    ].model_copy(update={"quantity": 5})
+    insufficient = CanonicalWorld(insufficient_spec)
+    failed = insufficient.validate_and_commit(
+        transaction, intents=[intent], current_minute=60
+    )
+    assert not failed.accepted
+    assert any("greater_than_or_equal 10" in item for item in failed.errors)
+
+
 def test_sensing_contract_can_guard_not_yet_created_finding_with_null_precondition() -> None:
     world = _contract_world()
     intent = _contract_intent("inspect_quality")

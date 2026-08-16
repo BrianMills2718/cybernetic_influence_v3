@@ -13,6 +13,7 @@ from cybernetic_influence.general_simulation.authoring_models import (
     ResourceStockProposalV1,
     ResourceTransportProposalV1,
     StateEntryV1,
+    TransitionPreconditionProposalV1,
 )
 from cybernetic_influence.general_simulation.authoring import _diagnostics
 from cybernetic_influence.general_simulation.compiler import (
@@ -135,6 +136,14 @@ def test_resource_transport_requires_declared_directed_route_and_custody() -> No
         arrival_quantity_key="received_fuel_quantity",
         usable_quantity_key="usable_fuel_quantity",
         arrival_minute_key="fuel_arrival_minute",
+        required_preconditions=[
+            TransitionPreconditionProposalV1(
+                record_type="record",
+                record_id="relief_cargo",
+                field="state.status",
+                expected="awaiting_dispatch",
+            )
+        ],
     )
     proposal.resource_transports.append(transport)
     assert proposal.spatial_extension is not None
@@ -154,9 +163,56 @@ def test_resource_transport_requires_declared_directed_route_and_custody() -> No
     )
     proposal.component_requests[fuel_request_index] = proposal.component_requests[
         fuel_request_index
-    ].model_copy(update={"transition_contract_ids": ["move_dispatch_fuel"]})
+    ].model_copy(
+        update={
+            "transition_contract_ids": ["move_dispatch_fuel"],
+            "required_reads": ["dispatch_fuel", "relief_cargo"],
+        }
+    )
 
-    compile_general_simulation(proposal)
+    compiled = compile_general_simulation(proposal)
+    guard = compiled.world_spec.resource_transport_contracts[0].required_preconditions[0]
+    assert guard.target.record_id == "relief_cargo"
+    assert guard.target.field == "state.status"
+
+    proposal.component_requests[fuel_request_index] = proposal.component_requests[
+        fuel_request_index
+    ].model_copy(update={"required_reads": ["dispatch_fuel"]})
+    with pytest.raises(
+        GeneralCompilationError,
+        match="omits exact contract prerequisite refs.*relief_cargo",
+    ):
+        compile_general_simulation(proposal)
+    proposal.component_requests[fuel_request_index] = proposal.component_requests[
+        fuel_request_index
+    ].model_copy(update={"required_reads": ["dispatch_fuel", "relief_cargo"]})
+
+    proposal.resource_transports[0] = transport.model_copy(
+        update={
+            "required_preconditions": [
+                transport.required_preconditions[0].model_copy(
+                    update={"field": "state.nonexistent_status"}
+                )
+            ]
+        }
+    )
+    with pytest.raises(GeneralCompilationError, match="precondition names unknown field"):
+        compile_general_simulation(proposal)
+
+    proposal.resource_transports[0] = transport.model_copy(
+        update={
+            "required_preconditions": [
+                transport.required_preconditions[0].model_copy(
+                    update={
+                        "comparison": "greater_than_or_equal",
+                        "expected": True,
+                    }
+                )
+            ]
+        }
+    )
+    with pytest.raises(GeneralCompilationError, match="requires a numeric expected value"):
+        compile_general_simulation(proposal)
 
     proposal.resource_transports[0] = transport.model_copy(
         update={"origin_place_id": "port", "destination_place_id": "outside_port"}

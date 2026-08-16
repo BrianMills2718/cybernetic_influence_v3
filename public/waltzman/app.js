@@ -1701,8 +1701,15 @@ function isGeneralProposal(proposal) {
   return ['general_world_v1', 'general_world_v2'].includes(proposal?.proposal_kind)
 }
 
+function hasCurrentDependencyReview(draft) {
+  const latestMessage = (draft?.messages || []).at(-1)
+  return latestMessage?.source === 'conversation'
+    && (latestMessage.trace_ids || []).some((traceId) => String(traceId).includes('/dependency-review'))
+}
+
 function renderGeneralCoverage(draft) {
   const coverage = draft.coverage || {items:[], blocking_request_ids:[]}
+  const dependencyReviewPassed = hasCurrentDependencyReview(draft)
   const counts = coverage.items.reduce((result, item) => {
     result[item.classification] = (result[item.classification] || 0) + 1
     return result
@@ -1713,12 +1720,13 @@ function renderGeneralCoverage(draft) {
     return result
   }, {})
   $('#create-coverage').open = (coverage.blocking_request_ids || []).length > 0
-  $('#create-coverage-summary').textContent = `Execution coverage · ${counts.exact || 0} exact authorities · ${counts.coarse_llm || 0} coarse LLM · causal closure: ${closureCounts.exact || 0} exact · ${closureCounts.partial || 0} partial · ${closureCounts.coarse || 0} coarse · ${closureCounts.descriptive || 0} descriptive · ${closureCounts.unsupported || 0} unsupported`
+  $('#create-coverage-summary').textContent = `Execution coverage · ${counts.exact || 0} exact authorities · ${counts.coarse_llm || 0} coarse LLM · causal closure: ${closureCounts.exact || 0} exact · ${closureCounts.partial || 0} partial · ${closureCounts.coarse || 0} coarse · ${closureCounts.descriptive || 0} descriptive · ${closureCounts.unsupported || 0} unsupported${dependencyReviewPassed ? ' · dependency review passed' : ''}`
   $('#create-coverage-detail').innerHTML = coverage.items.length
     ? coverage.items.map((item) => {
       const missing = item.unenforced_dependency_refs || []
+      const enforced = (item.dependency_enforcement || []).filter((dependency) => dependency.enforcement === 'exact_read').map((dependency) => dependency.dependency_ref)
       const closure = item.causal_closure || 'unknown'
-      return `<p><strong>${escapeHtml(sentence(item.request_id))} · ${escapeHtml(sentence(item.classification))} authority · ${escapeHtml(sentence(closure))} causal closure${item.blocking ? ' · blocks approval' : ''}</strong><span>${escapeHtml((item.what_can_change || []).join(' · ') || 'No executable change is claimed.')}</span>${missing.length ? `<span>Not read by an exact contract: ${escapeHtml(missing.map(sentence).join(', '))}</span>` : ''}<small>${escapeHtml((item.assumptions || []).join(' · ') || (item.compiler_evidence || []).join(' · '))}</small></p>`
+      return `<p><strong>${escapeHtml(sentence(item.request_id))} · ${escapeHtml(sentence(item.classification))} authority · ${escapeHtml(sentence(closure))} causal closure${item.blocking ? ' · blocks approval' : ''}</strong><span>${escapeHtml((item.what_can_change || []).join(' · ') || 'No executable change is claimed.')}</span>${enforced.length ? `<span>Exact reads and guards: ${escapeHtml(enforced.map(sentence).join(', '))}</span>` : ''}${missing.length ? `<span>Not read by an exact contract: ${escapeHtml(missing.map(sentence).join(', '))}</span>` : ''}<small>${escapeHtml((item.assumptions || []).join(' · ') || (item.compiler_evidence || []).join(' · '))}</small></p>`
     }).join('')
     : '<p><strong>No execution coverage was compiled.</strong><span>The draft cannot be approved until material behavior is classified.</span></p>'
 }
@@ -1990,6 +1998,7 @@ function renderCreateSimulation() {
   if (!general) renderAuthoringPersonEditor()
   $('#create-raw-configuration').textContent = JSON.stringify(proposal, null, 2)
   const coverageBlocked = (authoringDraft.coverage?.blocking_request_ids || []).length > 0
+  const dependencyReviewPassed = !general || hasCurrentDependencyReview(authoringDraft)
   const ready = authoringDraft.status === 'ready_for_review' && diagnostics.length === 0 && !coverageBlocked
   const onlyOpenQuestions = general && diagnostics.length > 0 && diagnostics.every((item) => item.code === 'unresolved') && !coverageBlocked
   $('#create-resolve-questions').hidden = !onlyOpenQuestions
@@ -2011,7 +2020,9 @@ function renderCreateSimulation() {
     : onlyOpenQuestions
       ? 'These questions can remain endogenous: the modeled people decide them during the run instead of you deciding them in advance.'
       : ready
-        ? 'Approve this exact retained configuration, then run it with the selected model.'
+        ? dependencyReviewPassed
+          ? 'The generated configuration passed a separate dependency-completeness review. Approve this exact retained configuration, then run it with the selected model.'
+          : 'Direct edits passed typed compiler checks, but no semantic dependency review has run on this revision. You may inspect and approve it or ask the authoring model to review the revision.'
         : 'Unsupported material behavior or invalid configuration must be corrected before approval.'
   const showingResult = document.body.classList.contains('authored-result')
     && !$('#create-result').hidden

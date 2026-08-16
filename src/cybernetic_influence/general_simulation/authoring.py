@@ -27,6 +27,7 @@ from cybernetic_influence.llm_backend import (
 from cybernetic_influence.run_store import now_iso
 
 from .authoring_models import (
+    DependencyCompletenessReviewV1,
     GeneralAuthoringDiscussionV1,
     GeneralProposalEnvelopeV1,
     GeneralSimulationProposalV1,
@@ -129,6 +130,14 @@ def _discussion_prompt_source() -> str:
     )
 
 
+def _dependency_review_prompt_source() -> str:
+    return (
+        resources.files("cybernetic_influence.general_simulation")
+        .joinpath("prompts/dependency_completeness_review.yaml")
+        .read_text(encoding="utf-8")
+    )
+
+
 def _discussion_prompt(*, message: str, prior: dict[str, object]) -> tuple[str, str]:
     template = yaml.safe_load(_discussion_prompt_source())
     if not isinstance(template, dict):
@@ -160,6 +169,27 @@ def _prompt(
             prior=prior,
             repair_feedback=repair_feedback,
             candidate=candidate,
+        ),
+    )
+
+
+def _dependency_review_prompt(
+    *,
+    message: str,
+    proposal: AuthoredSimulationProposalV2,
+    compiled: CompiledGeneralSimulationV2,
+) -> tuple[str, str]:
+    template = yaml.safe_load(_dependency_review_prompt_source())
+    if not isinstance(template, dict):
+        raise ValueError("dependency completeness prompt must be a mapping")
+    environment = Environment(undefined=StrictUndefined, autoescape=False)
+    environment.filters["tojson"] = lambda value: json.dumps(value, sort_keys=True)
+    return (
+        environment.from_string(str(template["system"])).render(),
+        environment.from_string(str(template["user"])).render(
+            message=message,
+            proposal=proposal.model_dump(mode="json"),
+            coverage=compiled.coverage.model_dump(mode="json"),
         ),
     )
 
@@ -676,8 +706,73 @@ class GeneralDraftAuthoringService:
                             attempt_number,
                             trace_id,
                             "accepted",
-                            "The separated semantic proposal compiled with complete material coverage.",
+                            "The separated semantic proposal compiled; dependency completeness review follows.",
                             meta,
+                        )
+                    )
+                    review_trace_id = f"{trace_id}/dependency-review"
+                    review_system, review_user = _dependency_review_prompt(
+                        message=message,
+                        proposal=proposal,
+                        compiled=compiled,
+                    )
+                    with structured_backend_options(model) as review_backend_options:
+                        reviewed, review_meta = _call_with_deadline(
+                            self.call,
+                            model,
+                            [
+                                {"role": "system", "content": review_system},
+                                {"role": "user", "content": review_user},
+                            ],
+                            response_model=DependencyCompletenessReviewV1,
+                            task="cybernetic_influence_v3_dependency_completeness_review",
+                            trace_id=review_trace_id,
+                            max_budget=GENERAL_AUTHORING_MAX_BUDGET,
+                            max_tokens=2400,
+                            model_justification=(
+                                "Adversarially compare the analyst request with the generated "
+                                "exact transition dependencies before approval."
+                            ),
+                            reasoning_effort=reasoning_effort,
+                            timeout=180,
+                            **review_backend_options,
+                        )
+                    review = DependencyCompletenessReviewV1.model_validate(
+                        reviewed.model_dump(mode="json")
+                        if isinstance(reviewed, BaseModel)
+                        else reviewed
+                    )
+                    if review.status == "repair_required":
+                        repair_feedback = "Dependency completeness review requires repair: " + "; ".join(
+                            (
+                                f"{item.exact_action_request_id}: "
+                                f"{item.prerequisite_description} "
+                                f"(evidence: {item.evidence}; existing_ref: "
+                                f"{item.existing_ref or 'none'}; resolution: "
+                                f"{item.required_resolution})"
+                            )
+                            for item in review.missing_dependencies
+                        )
+                        attempts.append(
+                            _attempt(
+                                attempt_number,
+                                review_trace_id,
+                                "repair",
+                                repair_feedback,
+                                review_meta,
+                            )
+                        )
+                        proposal = None
+                        bundle = None
+                        compiled = None
+                        continue
+                    attempts.append(
+                        _attempt(
+                            attempt_number,
+                            review_trace_id,
+                            "accepted",
+                            review.summary,
+                            review_meta,
                         )
                     )
                     break
