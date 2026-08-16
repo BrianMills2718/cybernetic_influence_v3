@@ -1095,6 +1095,14 @@ tbody tr:last-child td { border-bottom: 0; }
 .guide-progress { display: flex; gap: 7px; }
 .guide-progress button { background: #102231; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); height: 28px; padding: 0; width: 28px; }
 .guide-progress button.active { background: var(--accent); border-color: var(--accent); color: #06111a; font-weight: 900; }
+.guide-provenance { border-top: 1px solid var(--line); color: var(--muted); font-size: 0.75rem; margin-top: 2px; padding-top: 12px; }
+.guide-provenance summary { color: var(--faint); cursor: pointer; font-weight: 750; width: fit-content; }
+.guide-provenance > div { background: #0b151f; border: 1px solid var(--line); border-radius: 10px; margin-top: 10px; max-width: 760px; padding: 14px 16px; }
+.guide-provenance p { line-height: 1.55; margin: 0 0 12px; }
+.guide-provenance dl { display: grid; gap: 8px; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; }
+.guide-provenance dl > div { min-width: 0; }
+.guide-provenance dt { color: var(--faint); font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.guide-provenance dd { color: var(--text); font-size: 0.72rem; margin: 3px 0 0; overflow-wrap: anywhere; }
 
 /* Completed simulation world briefing. */
 .case-world-hero { max-width: 940px; }
@@ -1573,6 +1581,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .guide-controls { display: grid; grid-template-columns: 1fr; }
   .guide-control-hint { grid-column: auto; }
   .guide-progress { flex-wrap: wrap; }
+  .guide-provenance dl { grid-template-columns: 1fr 1fr; }
   .guide-controls > div:last-child { display: grid; grid-template-columns: 0.7fr 1.3fr; }
   #guide-next { min-width: 0; }
   .methodology-hero h2 { font-size: 2.35rem; }

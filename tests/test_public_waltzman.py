@@ -79,6 +79,36 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     assert "what actors attempted, and what the world accepted" in script
 
 
+def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
+    page = PAGE.read_text(encoding="utf-8")
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    first_step = script.index("kicker:'Start with the decision'")
+    participant_step = script.index("kicker:'Meet the participants'")
+    provenance = page.index('class="guide-provenance"')
+
+    assert first_step < participant_step
+    assert "Should the city certify the election result?" in script
+    assert "The official audit reaches everyone. The anonymous allegation does not." in script
+    assert "A bookkeeping rule stored her choice." in script
+    assert "The bookkeeping rule did not choose for her." in script
+    assert "system ID: stance_recorder" in script
+    assert "Start with retained evidence" not in script
+    assert "facts:[['Run','run_ffe88e1c15d5']" not in script
+    assert page.index('id="guide-view"') < provenance
+    assert "These identifiers are retained for audit and replay" in page
+
+
+def test_walkthrough_preserves_canonical_ids_behind_plain_language_labels() -> None:
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    assert "stance_recorder:{label:'Records each person’s position'" in script
+    assert "decision_gate:{label:'Applies the fixed group rule'" in script
+    assert "canonical_id:node.id" in script
+    assert "canonical_label:node.label" in script
+    assert "...(guideNodePresentation[node.id] || {})" in script
+
+
 def _dataset() -> dict[str, object]:
     return json.loads(DATA.read_text(encoding="utf-8"))
 
@@ -116,10 +146,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Explore detection and bounded response" in page
     assert "below the level of “the institution”" not in page
     assert "Homogeneous broadcasts" in page
-    assert "Learn how to read a simulation before building one" in page
-    assert "Product walkthrough · retained Luna execution" in page
-    assert "Every displayed node, connection, mechanism, and event comes from the retained run" in page
-    assert "The view switches from configured structure to realized causal events" in page
+    assert "See how information becomes individual decisions and a group result" in page
+    assert "Product walkthrough · completed example" in page
+    assert "plain-language projection of one completed execution" in page
+    assert "Click Next to move from the simulation question to the final group result" in page
     assert "Deliver one generator before the clinic loses power" not in page
     assert "Person</b> perceives and acts" not in page
     assert page.index('class="guide-controls"') < page.index('class="guide-stage"')

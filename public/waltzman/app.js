@@ -740,87 +740,127 @@ function renderMethod() {
 
 const guideSteps = [
   {
-    kicker:'Start with retained evidence',
-    title:'One configured world produced one retained execution.',
-    body:'This is not an illustrative story. It is a projection of run_ffe88e1c15d5: a completed city-election certification simulation authored in natural language, compiled into reviewed components, and executed with six retained Luna participant calls.',
+    kicker:'Start with the decision',
+    title:'Should the city certify the election result?',
+    body:'This simulation follows three people through two decision rounds. They receive evidence through different information paths, independently choose a position, and then a fixed rule determines whether the group approves certification.',
+    mode:'causal',
+    nodeIds:['election_director_mara_chen', 'investigative_journalist_eli_navarro', 'neighborhood_coalition_organizer_priya_shah', 'stance_recorder', 'decision_gate', 'decision_register'],
+    edgeIds:['stance_election_director_mara_chen_route', 'stance_investigative_journalist_eli_navarro_route', 'stance_neighborhood_coalition_organizer_priya_shah_route', 'reads_decision_register_to_stance_recorder', 'writes_stance_recorder_to_decision_register', 'reads_decision_register_to_decision_gate', 'writes_decision_gate_to_decision_register'],
+    focus:['decision_register'],
+    facts:[['People','3 simulated decision-makers'], ['Evidence','2 differently routed reports'], ['Timing','2 decision rounds'], ['Group rule','Fixed before the run']],
+    language:[['Position','One person’s current choice: support, conditional support, defer, or oppose.'], ['Group decision','The result of applying the fixed rule to everyone’s latest position.']],
+    takeaway:'The simulation asks how differently routed information changes individual positions and whether those positions satisfy a collective rule.',
+  },
+  {
+    kicker:'Meet the participants',
+    title:'Three people approach the same decision from different positions.',
+    body:'Mara Chen is responsible for election certification, Eli Navarro investigates the evidence, and Priya Shah represents neighborhood concerns. Luna generates each person’s decisions from that person’s role, starting context, memories, and received information. The clock, records, and rules do not think or vote.',
     mode:'causal',
     nodeIds:['network_clock', 'election_director_mara_chen', 'investigative_journalist_eli_navarro', 'neighborhood_coalition_organizer_priya_shah', 'stance_recorder', 'decision_gate', 'decision_register'],
     edgeIds:['stance_election_director_mara_chen_route', 'stance_investigative_journalist_eli_navarro_route', 'stance_neighborhood_coalition_organizer_priya_shah_route', 'decision_evaluate_route', 'reads_decision_register_to_stance_recorder', 'writes_stance_recorder_to_decision_register', 'reads_decision_register_to_decision_gate', 'writes_decision_gate_to_decision_register'],
-    focus:['decision_register'],
-    facts:[['Run','run_ffe88e1c15d5'], ['Execution','Live · Luna'], ['World events','97 retained'], ['State revisions','20 committed']],
-    language:[['Configured structure','Records and routes present in canonical state.'], ['Retained execution','The append-only evidence produced when that configuration ran.']],
-    takeaway:'The walkthrough and raw run share one source of truth; there is no separate tutorial ontology.',
+    focus:['election_director_mara_chen', 'investigative_journalist_eli_navarro', 'neighborhood_coalition_organizer_priya_shah'],
+    facts:[['Mara Chen','Election director'], ['Eli Navarro','Investigative journalist'], ['Priya Shah','Neighborhood organizer'], ['Luna calls','2 decisions per person']],
+    language:[['Person','A simulated participant whose LLM can perceive authorized information and propose actions.'], ['World machinery','Sources, schedules, records, and rules that matter causally without being people or LLM agents.']],
+    takeaway:'The simulation distinguishes autonomous people from the non-agent machinery through which information and decisions move.',
   },
   {
-    kicker:'Separate existence from agency',
-    title:'Entities can exist without being autonomous agents.',
-    body:'Three person entities are bound to LLM active systems and produced six model traces. The information source, network clock, decision register, and exact mechanisms also exist and can participate causally, but they are not all people and they do not all reason with an LLM.',
+    kicker:'See who receives what',
+    title:'The official audit reaches everyone. The anonymous allegation does not.',
+    body:'The official audit is routed to Mara, Eli, and Priya. A later anonymous allegation is routed only to Eli and Priya. The simulation therefore gives different people different evidence instead of placing one shared narrative directly into every participant’s mind.',
     mode:'causal',
-    nodeIds:['official_audit_bulletin_source', 'audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'election_director_mara_chen', 'network_clock', 'decision_gate', 'decision_register'],
-    edgeIds:['audit_bulletin_to_all_participants_election_director_mara_chen_route', 'observation_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_election_director_mara_chen', 'decision_evaluate_route', 'reads_decision_register_to_decision_gate', 'writes_decision_gate_to_decision_register'],
-    focus:['election_director_mara_chen', 'network_clock'],
-    facts:[['People','3 LLM active systems'], ['Participant activations','6 model calls'], ['Clock','Exact scripted process'], ['Gate','Exact registered mechanism']],
-    language:[['Entity','Something with identity and state; agency is not implied.'], ['Active system','A separate trusted binding that may perceive and attempt actions for an entity.']],
-    takeaway:'A car, document, source, organization, or process need not be made into a human-like agent to matter.',
+    nodeIds:['official_audit_bulletin_source', 'anonymous_precinct_allegation_source', 'audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'audit_bulletin_to_all_participants_investigative_journalist_eli_navarro_delivery', 'audit_bulletin_to_all_participants_neighborhood_coalition_organizer_priya_shah_delivery', 'anonymous_allegation_to_journalist_and_organizer_investigative_journalist_eli_navarro_delivery', 'anonymous_allegation_to_journalist_and_organizer_neighborhood_coalition_organizer_priya_shah_delivery', 'election_director_mara_chen', 'investigative_journalist_eli_navarro', 'neighborhood_coalition_organizer_priya_shah'],
+    edgeIds:['audit_bulletin_to_all_participants_election_director_mara_chen_route', 'audit_bulletin_to_all_participants_investigative_journalist_eli_navarro_route', 'audit_bulletin_to_all_participants_neighborhood_coalition_organizer_priya_shah_route', 'anonymous_allegation_to_journalist_and_organizer_investigative_journalist_eli_navarro_route', 'anonymous_allegation_to_journalist_and_organizer_neighborhood_coalition_organizer_priya_shah_route', 'observation_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_election_director_mara_chen', 'observation_audit_bulletin_to_all_participants_investigative_journalist_eli_navarro_delivery_to_investigative_journalist_eli_navarro', 'observation_audit_bulletin_to_all_participants_neighborhood_coalition_organizer_priya_shah_delivery_to_neighborhood_coalition_organizer_priya_shah', 'observation_anonymous_allegation_to_journalist_and_organizer_investigative_journalist_eli_navarro_delivery_to_investigative_journalist_eli_navarro', 'observation_anonymous_allegation_to_journalist_and_organizer_neighborhood_coalition_organizer_priya_shah_delivery_to_neighborhood_coalition_organizer_priya_shah'],
+    focus:['official_audit_bulletin_source', 'anonymous_precinct_allegation_source'],
+    facts:[['Official audit','Mara · Eli · Priya'], ['Anonymous allegation','Eli · Priya only'], ['Mara','Never receives the allegation'], ['Delivery','Does not imply belief']],
+    language:[['Information path','A configured directed route from a source through an exact delivery rule to a named recipient.'], ['Observation','Information made available to a person; the person may trust, question, or ignore it.']],
+    takeaway:'Who receives which information is part of the simulated world, not an assumption left inside a prompt.',
   },
   {
-    kicker:'Inspect information structure',
-    title:'Source, representation, route, delivery, and observation are different records.',
-    body:'The official audit source holds a specific representation. A directed connection can carry it to a delivery mechanism, and that mechanism is authorized to create an observation for Mara. Lineage records provenance; the observation-target relation records who may receive the result.',
+    kicker:'Learn the picture language',
+    title:'A configured route shows what can happen—not what did happen.',
+    body:'Here the official audit source holds a message representation. A directed route can carry it to an exact delivery rule, which may create an observation for Mara. These configured arrows describe possible paths and permissions. The next step switches to the events that actually occurred.',
     mode:'causal',
-    nodeIds:['official_audit_bulletin_source', 'audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'election_director_mara_chen', 'decision_register'],
-    edgeIds:['location_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'lineage_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_route', 'observation_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_election_director_mara_chen', 'substrate_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_decision_register'],
-    focus:['audit_bulletin_to_all_participants_representation'],
-    facts:[['Actual source','Official audit office'], ['Representation','Typed influence-message JSON'], ['Recipient','Mara Chen only on this route'], ['Belief','Not implied by delivery']],
-    language:[['Representation','Content with encoding, lineage, carrier revision, and actual provenance.'], ['Observation target','An authorized recipient of a mechanism outcome—not proof of belief.']],
-    takeaway:'The system can distinguish what is true, what was represented, what arrived, and what an actor later inferred.',
+    nodeIds:['official_audit_bulletin_source', 'audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'election_director_mara_chen'],
+    edgeIds:['location_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'lineage_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_route', 'observation_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_election_director_mara_chen'],
+    focus:['audit_bulletin_to_all_participants_election_director_mara_chen_delivery'],
+    facts:[['Source → message','Where the content came from'], ['Source → delivery','Possible directed route'], ['Delivery → Mara','Authorized observation target'], ['No event yet','Nothing is claimed to have moved']],
+    language:[['Configured structure','The entities, records, mechanisms, and possible routes present before execution.'], ['Realized trajectory','The retained sequence of attempts and accepted world changes during this execution.']],
+    takeaway:'Separating possible structure from realized events prevents the visualization from pretending that every configured route was used.',
   },
   {
-    kicker:'Read configured arrows correctly',
-    title:'A configured arrow is a possible directed relation—not an event.',
-    body:'This graph is still the pre-execution structure. Connection arrows identify explicit output-port to input-port routes; read, write, substrate, lineage, location, and observation-target arrows identify other typed directed relations. They do not claim that an effect traveled during this run.',
-    mode:'causal',
-    nodeIds:['official_audit_bulletin_source', 'audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'election_director_mara_chen', 'stance_recorder', 'decision_register'],
-    edgeIds:['location_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'lineage_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_route', 'observation_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_election_director_mara_chen', 'stance_election_director_mara_chen_route', 'reads_decision_register_to_stance_recorder', 'writes_stance_recorder_to_decision_register'],
-    focus:['audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'stance_recorder'],
-    facts:[['Connection','Directed possible route'], ['Reads','Declared state dependency'], ['Writes','Declared mutation authority'], ['Lineage','Directed provenance relation']],
-    language:[['Topology','What is connected or related in the configured world.'], ['Trajectory','Which attempts, routes, mechanisms, and commits actually occurred.']],
-    takeaway:'Configured topology and realized causality are shown separately because confusing them would misrepresent the simulation.',
-  },
-  {
-    kicker:'Follow one realized delivery',
-    title:'Six retained events prove that the audit became Mara’s observation.',
-    body:'Now the visualization switches to the retained execution trajectory. The source attempted an injection, emitted an effect, routed it through the named connection, invoked an exact delivery mechanism, committed revision 1, and delivered observation_000000 to Mara. Every arrow here is a retained execution-parent link—not proof of counterfactual causation.',
+    kicker:'Follow what happened',
+    title:'The official audit actually reached Mara.',
+    body:'Now the view shows this execution rather than its configuration. The source issued the audit, the system routed it through Mara’s named path, the delivery rule validated the transfer, and the observation was added to Mara’s available information.',
     mode:'trajectory', eventSequences:[1, 2, 3, 4, 5, 6],
-    facts:[['Attempt','event_000001'], ['Route','event_000003'], ['Commit','revision 1'], ['Observation','observation_000000']],
-    language:[['Execution-parent arrow','The target event explicitly names the source event as execution ancestry.'], ['State commit','The validated patch changed canonical state and produced a new revision.']],
-    takeaway:'Only the event chain—not the configured route by itself—establishes that information actually arrived.',
+    facts:[['1','Source issues audit'], ['2','Message follows Mara’s route'], ['3','Delivery rule validates it'], ['4','Mara receives an observation']],
+    language:[['Accepted world change','A proposed update that passed its exact checks and entered canonical state.'], ['Execution link','The later event names the earlier event as part of its retained execution ancestry.']],
+    takeaway:'The retained event chain—not the configured arrow alone—shows that the audit reached Mara in this run.',
   },
   {
-    kicker:'Follow an autonomous decision',
-    title:'Mara proposed a stance; an exact mechanism recorded it.',
-    body:'After receiving her authorized observations, Mara’s Luna active system supported certification while retaining a residual risk. Her action emitted and routed a typed stance. The exact stance recorder validated its contract and committed the position to revision 8.',
+    kicker:'See a person decide',
+    title:'Mara chose support. A bookkeeping rule stored her choice.',
+    body:'After considering the information available to her, Mara’s Luna participant proposed support while naming a residual risk. The system then checked that her position contained an allowed choice, reason, source assessment, risk, and optional blocker before storing it in the shared decision record. The bookkeeping rule did not choose for her.',
     mode:'trajectory', eventSequences:[33, 34, 39, 40, 41],
-    facts:[['Actor','Election Director Mara Chen'], ['Model output','Support with stated risk'], ['Recorder','stance_recorder_v1'], ['Commit','revision 8']],
-    language:[['Action attempt','What an active system tried to do; it is not yet world truth.'], ['Transition authority','The registered mechanism permitted to validate and propose the resulting patch.']],
-    takeaway:'The LLM chose the proposed stance; exact world machinery decided how that proposal became retained state.',
+    facts:[['Person','Mara Chen'], ['Proposed position','Support'], ['Named risk','Localized issue could be missed'], ['Stored result','Mara: support']],
+    language:[['Stance','The raw-data name for a person’s stated decision position.'], ['Position-recording rule','Deterministic bookkeeping (system ID: stance_recorder) that validates and stores a position; it does not reason or vote.']],
+    takeaway:'Luna generated Mara’s decision; exact non-LLM machinery only checked and recorded the structured result.',
   },
   {
-    kicker:'Inspect the collective result',
-    title:'The fixed gate read retained positions and committed the outcome.',
-    body:'The network clock requested evaluation. The effect reached the exact decision gate, which read the retained positions and rule, passed its invariant, and committed the final counts and outcome at revision 20. The run then completed with a durable causal tail.',
+    kicker:'See the group result',
+    title:'Two people remained conditional, so the fixed rule did not approve certification.',
+    body:'At the end of round two, Mara supported certification. Eli and Priya supported it only if the precinct allegation received focused review. The rule required at least two unconditional supporters. With only one, the group result was not approved.',
     mode:'trajectory', eventSequences:[91, 92, 93, 94, 95, 96],
-    facts:[['Final positions','1 support · 2 conditional'], ['Gate','Support threshold failed'], ['Outcome','Not approved'], ['Final revision','20']],
-    language:[['Decision gate','A deterministic mechanism over retained positions and configured thresholds.'], ['Analysis','A later interpretation of evidence; it is not allowed to rewrite the trajectory.']],
-    takeaway:'The result is inspectable from model output through typed action, exact mechanism, validated patch, and final evidence.',
+    facts:[['Final positions','1 support · 2 conditional'], ['Required support','At least 2'], ['Other checks','Both passed'], ['Group result','Not approved']],
+    language:[['Collective decision rule','A deterministic count-and-threshold rule fixed before execution; it cannot change anyone’s position.'], ['Retained evidence','The technical record of prompts, model outputs, routed effects, checks, and accepted state changes available for later inspection.']],
+    takeaway:'The result follows from three independently generated positions and a fixed rule—not from an LLM narrator deciding what happened.',
   },
 ]
+
+const guideNodePresentation = {
+  network_clock:{label:'Simulation schedule', description:'Exact non-LLM process that opens rounds, releases scheduled information, and requests the final evaluation.'},
+  official_audit_bulletin_source:{label:'Official audit office', description:'Source of the report that the routine audit found no count discrepancy.'},
+  anonymous_precinct_allegation_source:{label:'Anonymous precinct report', description:'Source of an uncorroborated allegation about ballot handling in one precinct.'},
+  audit_bulletin_to_all_participants_representation:{label:'Official audit report', description:'The message content stating that the routine audit found no count discrepancy.'},
+  anonymous_allegation_to_journalist_and_organizer_representation:{label:'Anonymous allegation', description:'The message content alleging ballot alteration in one precinct.'},
+  audit_bulletin_to_all_participants_election_director_mara_chen_delivery:{label:'Deliver audit to Mara', description:'Exact non-LLM rule authorized to make the official audit available to Mara.'},
+  audit_bulletin_to_all_participants_investigative_journalist_eli_navarro_delivery:{label:'Deliver audit to Eli', description:'Exact non-LLM rule authorized to make the official audit available to Eli.'},
+  audit_bulletin_to_all_participants_neighborhood_coalition_organizer_priya_shah_delivery:{label:'Deliver audit to Priya', description:'Exact non-LLM rule authorized to make the official audit available to Priya.'},
+  anonymous_allegation_to_journalist_and_organizer_investigative_journalist_eli_navarro_delivery:{label:'Deliver allegation to Eli', description:'Exact non-LLM rule authorized to make the anonymous allegation available to Eli.'},
+  anonymous_allegation_to_journalist_and_organizer_neighborhood_coalition_organizer_priya_shah_delivery:{label:'Deliver allegation to Priya', description:'Exact non-LLM rule authorized to make the anonymous allegation available to Priya.'},
+  stance_recorder:{label:'Records each person’s position', description:'Exact non-LLM bookkeeping that validates and stores each person’s latest stated position. It does not choose the position.'},
+  decision_gate:{label:'Applies the fixed group rule', description:'Exact non-LLM rule that counts the latest positions and compares them with the configured approval thresholds.'},
+  decision_register:{label:'Shared decision record', description:'Canonical record containing the question, each person’s latest position, the fixed rule, and the resulting group decision.'},
+}
+
+const guideEventPresentation = {
+  event_000001:'The official audit office issues its report.',
+  event_000002:'The report becomes a routable effect.',
+  event_000003:'The report follows the configured route toward Mara.',
+  event_000004:'Mara’s delivery rule validates the transfer.',
+  event_000005:'The validated delivery enters canonical state.',
+  event_000006:'The official audit becomes available to Mara as an observation.',
+  event_000033:'Mara proposes support and states her reason and remaining risk.',
+  event_000034:'Mara’s structured position becomes a routable effect.',
+  event_000039:'Mara’s position follows the configured route to the decision record.',
+  event_000040:'The position-recording rule validates Mara’s structured choice.',
+  event_000041:'Mara’s support position enters the shared decision record.',
+  event_000091:'The simulation schedule requests the final group evaluation.',
+  event_000092:'The evaluation request becomes a routable effect.',
+  event_000093:'The request follows the configured route to the collective decision rule.',
+  event_000094:'The collective decision rule counts the latest positions and checks its thresholds.',
+  event_000095:'The resulting counts and not-approved outcome enter canonical state.',
+  event_000096:'The run completes with its retained evidence intact.',
+}
 
 function canonicalGuideProjection(step) {
   const nodeIds = new Set(step.nodeIds || [])
   const edgeIds = new Set(step.edgeIds || [])
   return {
-    nodes:(guideRun.nodes || []).filter((node) => nodeIds.has(node.id)),
+    nodes:(guideRun.nodes || []).filter((node) => nodeIds.has(node.id)).map((node) => ({
+      ...node,
+      ...(guideNodePresentation[node.id] || {}),
+      state:{...node.state, canonical_id:node.id, canonical_label:node.label},
+    })),
     edges:(guideRun.edges || [])
       .filter((edge) => edgeIds.has(edge.id) && nodeIds.has(edge.source) && nodeIds.has(edge.target))
       .map((edge) => ({...edge, routeIds:edge.exact_route_ids || [edge.id]})),
@@ -830,7 +870,10 @@ function canonicalGuideProjection(step) {
 function canonicalGuideTrajectory(step) {
   const eventIds = new Set((step.eventSequences || []).map((sequence) => `event_${String(sequence).padStart(6, '0')}`))
   return {
-    nodes:(guideRun.trajectory?.nodes || []).filter((node) => eventIds.has(node.id)),
+    nodes:(guideRun.trajectory?.nodes || []).filter((node) => eventIds.has(node.id)).map((node) => ({
+      ...node,
+      label:guideEventPresentation[node.id] || node.label,
+    })),
     edges:(guideRun.trajectory?.edges || []).filter((edge) => eventIds.has(edge.source) && eventIds.has(edge.target)),
   }
 }
@@ -838,8 +881,10 @@ function canonicalGuideTrajectory(step) {
 function renderGuideSelection(item, relationship = false) {
   const type = relationship ? sentence(item.kind || 'relation') : sentence(item.event_kind || item.kind || 'record')
   const identity = item.event_id || item.id
-  const description = item.summary || item.description || item.label || 'Retained runtime record.'
-  $('#guide-selection').innerHTML = `<strong>${escapeHtml(identity)} · ${escapeHtml(type)}:</strong> ${escapeHtml(description)}`
+  const presentation = guideNodePresentation[identity]
+  const label = presentation?.label || item.label || sentence(identity)
+  const description = guideEventPresentation[identity] || presentation?.description || item.summary || item.description || 'Retained runtime record.'
+  $('#guide-selection').innerHTML = `<strong>${escapeHtml(label)} · ${escapeHtml(type)}:</strong> ${escapeHtml(description)}`
 }
 
 function renderGuideGraph(step) {
