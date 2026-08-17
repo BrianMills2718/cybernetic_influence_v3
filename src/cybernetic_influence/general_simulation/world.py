@@ -660,8 +660,13 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 continue
             selected_attempts: set[tuple[float, str]] = set()
             for intent in selected:
-                arguments = intent.transition_contract_arguments.get(
-                    transport_contract.contract_id
+                arguments = next(
+                    (
+                        item
+                        for item in intent.transition_contract_arguments
+                        if item.contract_id == transport_contract.contract_id
+                    ),
+                    None,
                 )
                 if not arguments:
                     continue

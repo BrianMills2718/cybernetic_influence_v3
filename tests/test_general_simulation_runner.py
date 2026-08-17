@@ -25,7 +25,7 @@ from cybernetic_influence.general_simulation.models import (
     ResourceTransportContract,
     SemanticActionIntent,
     SensingTransitionContract,
-    TransitionContractArguments,
+    TransitionContractSelection,
     TypedTarget,
     WorldRecord,
     WorldTransaction,
@@ -177,9 +177,11 @@ def test_selected_one_batch_transformation_is_materialized_from_exact_contract()
         expected_effect="Consume fuel and produce backup power.",
         stated_rationale="Attempt the configured exact mechanism.",
         transition_contract_ids=["convert_fuel_to_backup_power"],
-        transition_contract_arguments={
-            "convert_fuel_to_backup_power": {"batches": 1}
-        },
+        transition_contract_arguments=[
+            TransitionContractSelection(
+                contract_id="convert_fuel_to_backup_power", batches=1
+            )
+        ],
     )
     transaction = WorldTransaction(
         transaction_id="adjudicator_mirror_error",
@@ -556,12 +558,13 @@ def test_parameterized_transport_materializes_the_attempted_quantity_and_route()
         expected_effect="Ten units reach the port.",
         stated_rationale="The smaller load fits the current plan.",
         transition_contract_ids=["move_dispatch_fuel"],
-        transition_contract_arguments={
-            "move_dispatch_fuel": {
-                "quantity": 10,
-                "route_id": "temporary_route",
-            }
-        },
+        transition_contract_arguments=[
+            TransitionContractSelection(
+                contract_id="move_dispatch_fuel",
+                quantity=10,
+                route_id="temporary_route",
+            )
+        ],
     )
     transaction = WorldTransaction(
         transaction_id="adjudicator_requested_full_capacity",
@@ -665,12 +668,13 @@ def test_new_resource_contract_selection_requires_explicit_attempt_arguments() -
     with pytest.raises(ValueError, match="requires structured"):
         actor._validate_decision(decision, context)
 
-    decision.intent.transition_contract_arguments = {
-        contract.contract_id: TransitionContractArguments(
+    decision.intent.transition_contract_arguments = [
+        TransitionContractSelection(
+            contract_id=contract.contract_id,
             quantity=contract.argument_schema["quantity"]["maximum"],
             route_id=contract.argument_schema["route_id"]["enum"][0],
         )
-    }
+    ]
     actor._validate_decision(decision, context)
 
 

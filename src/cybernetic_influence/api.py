@@ -1341,13 +1341,17 @@ def _simulation_replay(
                 intent = intent if isinstance(intent, dict) else {}
                 contract_arguments = intent.get("transition_contract_arguments")
                 structured_attempts = []
-                if isinstance(contract_arguments, dict):
-                    for contract_id, arguments in contract_arguments.items():
+                if isinstance(contract_arguments, list):
+                    for arguments in contract_arguments:
                         if not isinstance(arguments, dict):
+                            continue
+                        contract_id = arguments.get("contract_id")
+                        if not isinstance(contract_id, str):
                             continue
                         rendered_arguments = ", ".join(
                             f"{str(key).replace('_', ' ')}={value}"
                             for key, value in arguments.items()
+                            if key != "contract_id" and value is not None
                         )
                         structured_attempts.append(
                             f"{str(contract_id).replace('_', ' ')} ({rendered_arguments})"

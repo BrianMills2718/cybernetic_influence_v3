@@ -239,9 +239,10 @@ class Assimilation(StrictModel):
     interpretation: str
 
 
-class TransitionContractArguments(StrictModel):
+class TransitionContractSelection(StrictModel):
     """Small cross-domain parameter envelope for currently exact contracts."""
 
+    contract_id: str
     batches: int | None = Field(default=None, ge=1)
     quantity: float | None = Field(default=None, gt=0)
     route_id: str | None = None
@@ -257,8 +258,8 @@ class SemanticActionIntent(StrictModel):
     expected_effect: str
     stated_rationale: str
     transition_contract_ids: list[str] = Field(default_factory=list)
-    transition_contract_arguments: dict[str, TransitionContractArguments] = Field(
-        default_factory=dict,
+    transition_contract_arguments: list[TransitionContractSelection] = Field(
+        default_factory=list,
         description=(
             "Structured parameters for each selected exact contract. These values, not "
             "quantities implied only by prose, define the canonical attempted operation."

@@ -435,7 +435,14 @@ def _materialize_unambiguous_exact_transformations(
 
         requested_batches: set[int] = set()
         for intent in selected_by_contract[contract.contract_id]:
-            arguments = intent.transition_contract_arguments.get(contract.contract_id)
+            arguments = next(
+                (
+                    item
+                    for item in intent.transition_contract_arguments
+                    if item.contract_id == contract.contract_id
+                ),
+                None,
+            )
             if not arguments:
                 continue
             candidate_batches = arguments.batches
@@ -577,7 +584,14 @@ def _materialize_unambiguous_exact_transports(
         ]
         attempts: set[tuple[float, str]] = set()
         for intent in selected:
-            arguments = intent.transition_contract_arguments.get(contract.contract_id)
+            arguments = next(
+                (
+                    item
+                    for item in intent.transition_contract_arguments
+                    if item.contract_id == contract.contract_id
+                ),
+                None,
+            )
             if not arguments:
                 continue
             attempted_quantity = arguments.quantity
@@ -952,7 +966,12 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 f"{sorted(unknown_contract_ids)}; allowed IDs are "
                 f"{sorted(available_contract_ids)}"
             )
-        arguments = decision.intent.transition_contract_arguments
+        arguments = {
+            item.contract_id: item
+            for item in decision.intent.transition_contract_arguments
+        }
+        if len(arguments) != len(decision.intent.transition_contract_arguments):
+            raise ValueError("transition_contract_arguments contains duplicate contract IDs")
         unknown_argument_ids = set(arguments) - set(decision.intent.transition_contract_ids)
         if unknown_argument_ids:
             raise ValueError(
