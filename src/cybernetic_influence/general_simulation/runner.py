@@ -987,7 +987,8 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             if contract.contract_kind == "sensing":
                 if supplied is not None and any(
                     value is not None
-                    for value in supplied.model_dump(mode="python").values()
+                    for key, value in supplied.model_dump(mode="python").items()
+                    if key != "contract_id"
                 ):
                     raise ValueError(
                         f"sensing contract {contract_id} accepts no arguments"
