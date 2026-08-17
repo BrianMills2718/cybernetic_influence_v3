@@ -1187,10 +1187,28 @@ class GeneralDraftAuthoringService:
     ) -> dict[str, object]:
         current = self.store.get(draft_id)
         target_kind = current.get("target_kind")
+        materialization_corrections: list[str] = []
         if isinstance(proposal, AuthoredSimulationProposalV2):
+            scenario, materialization_corrections = (
+                materialize_unambiguous_contract_references(proposal.scenario)
+            )
+            proposal = proposal.model_copy(update={"scenario": scenario})
             proposal = materialize_authored_bundle_v2(
                 proposal, run_id=f"{draft_id}_run"
             )
+        elif isinstance(proposal, AuthoredSimulationBundleV2):
+            scenario, materialization_corrections = (
+                materialize_unambiguous_contract_references(proposal.scenario)
+            )
+            if materialization_corrections:
+                proposal = proposal.model_copy(
+                    update={
+                        "scenario": scenario,
+                        "default_run": proposal.default_run.model_copy(
+                            update={"scenario_digest": scenario.digest}
+                        ),
+                    }
+                )
         if target_kind == "general_world_v2" and not isinstance(
             proposal, AuthoredSimulationBundleV2
         ):
@@ -1228,6 +1246,10 @@ class GeneralDraftAuthoringService:
             configuration_graph = compiled_v1.configuration_graph
         status = "needs_input" if diagnostics else "ready_for_review"
         summary = "Saved the typed general-world proposal without a model call."
+        if materialization_corrections:
+            summary += " Trusted compiler materializations: " + "; ".join(
+                materialization_corrections
+            )
         return self.store.replace(
             draft_id,
             expected_revision=expected_revision,
