@@ -313,6 +313,20 @@ the fixed 20-unit transport contract ultimately executed 20 after validation
 rejected the first proposed patch. Contract selection governs canonical change;
 the UI does not yet foreground prose-versus-contract disagreement.
 
+Public authoring-progress canary observed 2026-08-16: build
+`817abd923cc33c26004f8a8ae1f082eead09b7cf` exposes the actual live authoring
+phase through the pollable job API and the single existing status line. A fresh
+1440-by-1000 Chromium session used the same two-message outage request and
+visibly advanced through starting Luna, discussion, proposal generation,
+proposal attempt 2, and dependency review before opening retained draft
+`draft_f4dc60dba4b1`. The first proposal omitted the exact transport route from
+the bound request reads; the compiler rejected it and Luna repaired the proposal
+on attempt 2. The retained draft has no analyst question, no blocking coverage
+item, and no diagnostic. The browser observed no console errors, failed
+requests, or horizontal overflow. Fast deterministic stages remain retained in
+the job progress history even when a one-second browser poll does not display
+them long enough to be seen.
+
 Public exact-transformation execution observed 2026-08-16: build
 `bc0c8a1d90a1ece81615c5f5a51845ae1fb52211` serves authentic Luna run
 `run_13807bbe9196` at
