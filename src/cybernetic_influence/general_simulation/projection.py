@@ -9,7 +9,11 @@ from .analysis_projection import project_waltzman_analysis
 from .authoring_models import GeneralSimulationProposalV1
 from .compiler import CompiledGeneralSimulationV1, CompiledGeneralSimulationV2
 from .contracts_v2 import ScenarioSpecV2
-from .models import GeneralGroupSimulationResult, GeneralGroupSimulationResultV2
+from .models import (
+    GeneralGroupSimulationResult,
+    GeneralGroupSimulationResultV2,
+    ModelCallReceipt,
+)
 
 
 def project_general_run(
@@ -77,15 +81,30 @@ def project_general_run(
         for receipt in result.model_calls
         if receipt.role == "actor" and receipt.trace_id.endswith("/repair/1")
     }
-    staged_assimilations = {
-        receipt.trace_id.removesuffix("/assimilation"): receipt
-        for receipt in result.model_calls
-        if receipt.role == "actor" and receipt.trace_id.endswith("/assimilation")
-    }
+    staged_assimilations: dict[str, ModelCallReceipt] = {}
+    staged_actions: dict[str, ModelCallReceipt] = {}
+    staged_call_counts: dict[str, int] = {}
+    for receipt in result.model_calls:
+        if receipt.role != "actor":
+            continue
+        if "/assimilation" in receipt.trace_id:
+            trace_base = receipt.trace_id.split("/assimilation", 1)[0]
+            staged_assimilations[trace_base] = receipt
+            staged_call_counts[trace_base] = staged_call_counts.get(trace_base, 0) + 1
+        elif "/action" in receipt.trace_id:
+            trace_base = receipt.trace_id.split("/action", 1)[0]
+            staged_actions[trace_base] = receipt
+            staged_call_counts[trace_base] = staged_call_counts.get(trace_base, 0) + 1
     for receipt in result.model_calls:
         if receipt.role == "actor":
-            if receipt.trace_id.endswith("/assimilation"):
+            if "/assimilation" in receipt.trace_id:
                 continue
+            if "/action" in receipt.trace_id:
+                trace_base = receipt.trace_id.split("/action", 1)[0]
+                if staged_actions.get(trace_base) is not receipt:
+                    continue
+            else:
+                trace_base = receipt.trace_id
             if receipt.trace_id in repaired_actor_trace_ids:
                 continue
             supplied = json.loads(receipt.input_context)
@@ -93,16 +112,14 @@ def project_general_run(
                 supplied = supplied["original_input"]
             context = supplied["actor_context"]
             output = receipt.structured_output
-            staged_assimilation = staged_assimilations.get(
-                receipt.trace_id.removesuffix("/action")
-            )
+            staged_assimilation = staged_assimilations.get(trace_base)
             assimilation_output = (
                 staged_assimilation.structured_output
                 if staged_assimilation is not None
                 else output.get("assimilation")
             )
             intent_output = (
-                output if receipt.trace_id.endswith("/action") else output.get("intent")
+                output if trace_base in staged_actions else output.get("intent")
             )
             observations = [
                 {
@@ -152,7 +169,7 @@ def project_general_run(
                             "payload": intent_output,
                         }
                     ],
-                    "model_call_count": 2 if staged_assimilation is not None else 1,
+                    "model_call_count": staged_call_counts.get(trace_base, 1),
                     "model": receipt.model,
                     "provider": receipt.provider,
                 }

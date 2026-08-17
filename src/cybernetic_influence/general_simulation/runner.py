@@ -840,6 +840,10 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
     def _produce_staged_decision(
         self, actor_context: ActorContext, actor_user: str, call_number: int
     ) -> ActorDecision:
+        trace_base = (
+            f"{self._trace_prefix}/moment/{call_number}/actor/"
+            f"{self._person.entity_id}"
+        )
         assimilation_output, assimilation_receipt = _call_model(
             self._call,
             role="actor",
@@ -852,28 +856,58 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 "not truth. Do not propose an action or alter canonical world state."
             ),
             user=actor_user,
-            trace_id=(
-                f"{self._trace_prefix}/moment/{call_number}/actor/"
-                f"{self._person.entity_id}/assimilation"
-            ),
+            trace_id=f"{trace_base}/assimilation",
             model=self._model,
             reasoning_effort=self._reasoning_effort,
         )
         assimilation = Assimilation.model_validate(assimilation_output)
-        validation_shell = ActorDecision(
-            assimilation=assimilation,
-            intent=SemanticActionIntent(
-                intent_id=f"validation_{self._person.entity_id}_{call_number}",
-                actor_id=actor_context.actor_id,
-                base_revision=actor_context.base_revision,
-                action="No action; validate assimilation only.",
-                target_refs=[],
-                purpose="Validate the separate cognition stage.",
-                expected_effect="No world change.",
-                stated_rationale="This placeholder is never emitted.",
-            ),
-        )
-        self._validate_decision(validation_shell, actor_context)
+
+        def validate_assimilation(candidate: Assimilation) -> None:
+            validation_shell = ActorDecision(
+                assimilation=candidate,
+                intent=SemanticActionIntent(
+                    intent_id=f"validation_{self._person.entity_id}_{call_number}",
+                    actor_id=actor_context.actor_id,
+                    base_revision=actor_context.base_revision,
+                    action="No action; validate assimilation only.",
+                    target_refs=[],
+                    purpose="Validate the separate cognition stage.",
+                    expected_effect="No world change.",
+                    stated_rationale="This placeholder is never emitted.",
+                ),
+            )
+            self._validate_decision(validation_shell, actor_context)
+
+        try:
+            validate_assimilation(assimilation)
+        except ValueError as validation_error:
+            self.receipts.append(assimilation_receipt)
+            repaired, repair_receipt = _call_model(
+                self._call,
+                role="actor",
+                response_model=Assimilation,
+                system=(
+                    "Repair one rejected perception-and-memory output. Preserve the "
+                    "person's substantive interpretation, but make every observation "
+                    "ID, provenance reference, and prior-memory reference conform "
+                    "exactly to the supplied authorized context. World-record IDs are "
+                    "not observation IDs. Do not propose an action or add new evidence."
+                ),
+                user=json.dumps(
+                    {
+                        "original_input": json.loads(actor_user),
+                        "rejected_output": assimilation.model_dump(mode="json"),
+                        "validation_error": str(validation_error),
+                    },
+                    sort_keys=True,
+                ),
+                trace_id=f"{trace_base}/assimilation-repair/1",
+                model=self._model,
+                reasoning_effort=self._reasoning_effort,
+            )
+            assimilation = Assimilation.model_validate(repaired)
+            assimilation_receipt = repair_receipt
+            validate_assimilation(assimilation)
         assimilated_memory = list(actor_context.private_memory)
         for revision in assimilation.memory_revisions:
             index = assimilated_memory.index(revision.prior_memory)
@@ -900,18 +934,42 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 },
                 sort_keys=True,
             ),
-            trace_id=(
-                f"{self._trace_prefix}/moment/{call_number}/actor/"
-                f"{self._person.entity_id}/action"
-            ),
+            trace_id=f"{trace_base}/action",
             model=self._model,
             reasoning_effort=self._reasoning_effort,
         )
-        decision = ActorDecision(
-            assimilation=assimilation,
-            intent=SemanticActionIntent.model_validate(action_output),
-        )
-        self._validate_decision(decision, actor_context)
+        action = SemanticActionIntent.model_validate(action_output)
+        decision = ActorDecision(assimilation=assimilation, intent=action)
+        try:
+            self._validate_decision(decision, actor_context)
+        except ValueError as validation_error:
+            self.receipts.append(action_receipt)
+            repaired, repair_receipt = _call_model(
+                self._call,
+                role="actor",
+                response_model=SemanticActionIntent,
+                system=(
+                    "Repair one rejected action-selection output. Preserve the person's "
+                    "substantive judgment, but make actor identity, world revision, target "
+                    "references, and transition-contract selections conform exactly to the "
+                    "supplied authorized context. Do not change the retained assimilation."
+                ),
+                user=json.dumps(
+                    {
+                        "original_input": json.loads(action_receipt.input_context),
+                        "rejected_output": action.model_dump(mode="json"),
+                        "validation_error": str(validation_error),
+                    },
+                    sort_keys=True,
+                ),
+                trace_id=f"{trace_base}/action-repair/1",
+                model=self._model,
+                reasoning_effort=self._reasoning_effort,
+            )
+            action = SemanticActionIntent.model_validate(repaired)
+            action_receipt = repair_receipt
+            decision = ActorDecision(assimilation=assimilation, intent=action)
+            self._validate_decision(decision, actor_context)
         self.receipts.extend([assimilation_receipt, action_receipt])
         return decision
 
