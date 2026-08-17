@@ -253,6 +253,29 @@ overflow. This recovery draft needed five bounded proposal attempts and took
 about ten minutes; correctness and target deployment are verified, but
 authoring latency is not yet demo-quality.
 
+Public authoring-retry canary observed 2026-08-16: build
+`8106be00b2ddf4440bba97474a8e313844ee46ae` added a concise final
+reference-and-coverage check to the Luna authoring prompt, derived from the
+four deterministic rejection classes in the preceding retained outage draft.
+The exact same two-message outage request produced native V2 draft
+`draft_7fcb2ae9070a` in two proposal generations plus one accepted dependency
+review. The first proposal required one repair for an undeclared sensing-output
+record; the second compiled and passed dependency review. This improves the
+same-request result from five proposal generations to two without weakening
+compiler enforcement.
+
+That draft was approved and executed through the public UI as retained Luna run
+`run_a4b868f62d5c`. It completed three accepted transactions, zero rejected
+transactions, final revision 3, and 15 subscription-included model calls.
+The exact contracts sensed the scoped restoration estimate, transported 40
+fuel units over the guarded route, and converted 20 hospital fuel units into 80
+backup-power units. A 1440-by-1000 Chromium pass opened the generated
+13-scene configuration walkthrough and five-scene completed replay, advanced
+through every scene, and observed no console errors, failed requests, or
+horizontal overflow. One remaining repair means first-pass authoring is not yet
+established; the bounded three-attempt stakeholder path is established for this
+canary.
+
 Public exact-transformation execution observed 2026-08-16: build
 `bc0c8a1d90a1ece81615c5f5a51845ae1fb52211` serves authentic Luna run
 `run_13807bbe9196` at
