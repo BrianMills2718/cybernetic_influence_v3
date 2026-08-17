@@ -42,6 +42,7 @@ from cybernetic_influence.general_simulation.runner import (
     _memory_reference_is_grounded,
     _normalize_transaction_targets,
     _normalized_memory,
+    _prune_unsupported_assimilation_provenance,
     run_general_simulation,
 )
 from cybernetic_influence.general_simulation.world import CanonicalWorld
@@ -676,6 +677,39 @@ def test_new_resource_contract_selection_requires_explicit_attempt_arguments() -
         )
     ]
     actor._validate_decision(decision, context)
+
+
+def test_unsupported_provenance_is_pruned_without_changing_interpretation() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    actor_id = "trucking_dispatcher"
+    person = next(item for item in proposal.people if item.entity_id == actor_id)
+    context = CanonicalWorld(compile_general_simulation(proposal).world_spec).actor_context(
+        actor_id
+    )
+    valid_ref = context.accessible_records[0].record_id
+    assimilation = Assimilation(
+        attended_observation_ids=[],
+        memory_additions=["The route remains uncertain."],
+        memory_revisions=[],
+        provenance_links=[valid_ref, "invented_location_label"],
+        interpretation="The exact interpretation must be preserved.",
+    )
+
+    pruned, corrections = _prune_unsupported_assimilation_provenance(
+        assimilation,
+        context,
+        configured_memories=person.memories,
+    )
+
+    assert pruned.interpretation == assimilation.interpretation
+    assert pruned.memory_additions == assimilation.memory_additions
+    assert pruned.provenance_links == [valid_ref]
+    assert corrections == [
+        "unsupported provenance citation omitted after model repair: "
+        "invented_location_label"
+    ]
 
 
 def test_adjudicator_sees_only_selected_exact_patch_shapes_without_changing_authority() -> None:

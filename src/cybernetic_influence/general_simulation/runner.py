@@ -870,6 +870,45 @@ def _memory_reference_is_grounded(reference: str, memories: set[str]) -> bool:
     return len(prefix_matches) == 1
 
 
+def _prune_unsupported_assimilation_provenance(
+    assimilation: Assimilation,
+    actor_context: ActorContext,
+    *,
+    configured_memories: list[str],
+) -> tuple[Assimilation, list[str]]:
+    """Remove only citations that cannot name supplied actor evidence."""
+
+    available = {
+        item.observation_id for item in actor_context.observations
+    } | {
+        item.representation_id
+        for item in actor_context.observations
+        if item.representation_id is not None
+    } | {item.record_id for item in actor_context.accessible_records} | {
+        item.route_id for item in actor_context.accessible_routes
+    }
+    available_memories = {
+        _normalized_memory(item)
+        for item in [*configured_memories, *actor_context.private_memory]
+    }
+    retained: list[str] = []
+    removed: list[str] = []
+    for item in assimilation.provenance_links:
+        grounded = item in available or (
+            item.startswith("private_memory:")
+            and _memory_reference_is_grounded(
+                item.partition(":")[2], available_memories
+            )
+        )
+        (retained if grounded else removed).append(item)
+    if not removed:
+        return assimilation, []
+    return assimilation.model_copy(update={"provenance_links": retained}), [
+        "unsupported provenance citation omitted after model repair: " + item
+        for item in removed
+    ]
+
+
 def _checkpoint_hash(checkpoint: Mapping[str, Any]) -> str:
     encoded = json.dumps(checkpoint, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode()).hexdigest()
@@ -1171,7 +1210,25 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             )
             assimilation = Assimilation.model_validate(repaired)
             assimilation_receipt = repair_receipt
-            validate_assimilation(assimilation)
+            try:
+                validate_assimilation(assimilation)
+            except ValueError:
+                raw_output = assimilation.model_dump(mode="json")
+                assimilation, output_corrections = (
+                    _prune_unsupported_assimilation_provenance(
+                        assimilation,
+                        actor_context,
+                        configured_memories=self._person.memories,
+                    )
+                )
+                validate_assimilation(assimilation)
+                assimilation_receipt = repair_receipt.model_copy(
+                    update={
+                        "raw_structured_output": raw_output,
+                        "structured_output": assimilation.model_dump(mode="json"),
+                        "output_corrections": output_corrections,
+                    }
+                )
         assimilated_memory = list(actor_context.private_memory)
         for revision in assimilation.memory_revisions:
             index = assimilated_memory.index(revision.prior_memory)

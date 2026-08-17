@@ -371,6 +371,8 @@ class ModelCallReceipt(StrictModel):
     trace_id: str
     input_context: str
     structured_output: dict[str, Any]
+    raw_structured_output: dict[str, Any] | None = None
+    output_corrections: list[str] = Field(default_factory=list)
     decoding: dict[str, JsonValue]
     exact_replay_possible: bool
     observed_cost: float | None = Field(default=None, ge=0)
