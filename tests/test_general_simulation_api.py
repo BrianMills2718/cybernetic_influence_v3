@@ -165,6 +165,172 @@ def test_general_replay_focuses_changed_nodes_and_edges() -> None:
     assert "storage_route" in event["visible_edge_ids"]
 
 
+def test_general_replay_prioritizes_exact_resource_chain_after_earlier_changes() -> None:
+    network_nodes: list[dict[str, object]] = [
+        {"id": "operator", "kind": "person", "label": "Operator"},
+        *[
+            {
+                "id": f"finding_{index}",
+                "kind": "information",
+                "label": f"Finding {index}",
+            }
+            for index in range(5)
+        ],
+        {"id": "graphite", "kind": "resource", "label": "Graphite cores"},
+        {"id": "cedar", "kind": "resource", "label": "Cedar slats"},
+        {"id": "pencils", "kind": "resource", "label": "Finished pencils"},
+        {"id": "inventory", "kind": "information", "label": "Finished inventory"},
+        {
+            "id": "make_pencils",
+            "kind": "mechanism",
+            "label": "Make pencils",
+            "mechanism_kind": "resource_transformation",
+        },
+    ]
+    network_edges: list[dict[str, object]] = [
+        {
+            "id": "make:graphite",
+            "kind": "resource_input",
+            "source": "graphite",
+            "target": "make_pencils",
+        },
+        {
+            "id": "make:cedar",
+            "kind": "resource_input",
+            "source": "cedar",
+            "target": "make_pencils",
+        },
+        {
+            "id": "make:pencils",
+            "kind": "resource_output",
+            "source": "make_pencils",
+            "target": "pencils",
+        },
+        {
+            "id": "make:inventory",
+            "kind": "mechanism_write",
+            "source": "make_pencils",
+            "target": "inventory",
+        },
+        {
+            "id": "make:operator",
+            "kind": "capability",
+            "source": "operator",
+            "target": "make_pencils",
+        },
+    ]
+    operations: list[dict[str, object]] = [
+        *[
+            {
+                "operation": "replace",
+                "target": {
+                    "record_type": "record",
+                    "record_id": f"finding_{index}",
+                    "field": "state.status",
+                },
+                "value": "confirmed",
+            }
+            for index in range(5)
+        ],
+        {
+            "operation": "replace",
+            "target": {
+                "record_type": "resource",
+                "record_id": "graphite",
+                "field": "quantity",
+            },
+            "value": 100,
+        },
+        {
+            "operation": "replace",
+            "target": {
+                "record_type": "resource",
+                "record_id": "cedar",
+                "field": "quantity",
+            },
+            "value": 100,
+        },
+        {
+            "operation": "replace",
+            "target": {
+                "record_type": "resource",
+                "record_id": "pencils",
+                "field": "quantity",
+            },
+            "value": 500,
+        },
+        {
+            "operation": "replace",
+            "target": {
+                "record_type": "record",
+                "record_id": "inventory",
+                "field": "state.quantity",
+            },
+            "value": 500,
+        },
+    ]
+    replay = _simulation_replay(
+        title="Pencil production",
+        headline="Pencil production",
+        summary="One retained transformation.",
+        outcome={"accepted_transactions": 1, "final_revision": 1},
+        rounds=[],
+        network_nodes=network_nodes,
+        network_edges=network_edges,
+        raw_moments=[
+            {
+                "event_id": "produce_pencils",
+                "narrative": "Produce a bounded batch of pencils.",
+                "participants": ["operator"],
+                "execution_parent": "revision:0",
+                "resulting_revision": 1,
+                "transition": {
+                    "transaction": {
+                        "operations": operations,
+                        "consequences": [],
+                        "stated_rationale": "Converted verified inputs into pencils.",
+                    },
+                    "operation_attributions": [
+                        {
+                            "operation_index": operation_index,
+                            "authority_id": "production_authority",
+                            "classification": "exact_contract",
+                            "contract_id": "make_pencils",
+                        }
+                        for operation_index in range(5, 9)
+                    ],
+                },
+            }
+        ],
+        general_world=True,
+    )
+
+    event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
+    assert event["visible_node_ids"][:4] == [
+        "make_pencils",
+        "graphite",
+        "cedar",
+        "pencils",
+    ]
+    assert event["focus_node_ids"][:4] == [
+        "make_pencils",
+        "graphite",
+        "cedar",
+        "pencils",
+    ]
+    assert {
+        "make:graphite",
+        "make:cedar",
+        "make:pencils",
+        "make:inventory",
+    } <= set(event["visible_edge_ids"])
+    fact_values = [item["value"] for item in event["facts"]]
+    assert "Graphite cores · quantity: 100" in fact_values
+    assert "Cedar slats · quantity: 100" in fact_values
+    assert "Finished pencils · quantity: 500" in fact_values
+    assert "Finished inventory · state.quantity: 500" in fact_values
+
+
 def test_general_replay_groups_repairs_with_their_causal_moment() -> None:
     moments = [
         {

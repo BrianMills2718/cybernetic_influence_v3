@@ -778,17 +778,20 @@ def _canonical_replay_network(
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     """Adapt any retained canonical graph to the shared replay graph contract."""
 
-    projected_nodes: list[dict[str, object]] = [
-        {
+    projected_nodes: list[dict[str, object]] = []
+    for node in nodes:
+        if not isinstance(node, dict) or not isinstance(node.get("id"), str):
+            continue
+        projected_node: dict[str, object] = {
             "id": str(node["id"]),
             "kind": _replay_node_kind(node.get("kind")),
             "canonical_kind": str(node.get("kind") or "thing"),
             "label": str(node.get("label") or node["id"]).replace("_", " "),
             "description": str(node.get("description") or "Retained world entity."),
         }
-        for node in nodes
-        if isinstance(node, dict) and isinstance(node.get("id"), str)
-    ]
+        if isinstance(node.get("mechanism_kind"), str):
+            projected_node["mechanism_kind"] = str(node["mechanism_kind"])
+        projected_nodes.append(projected_node)
     node_ids = {str(node["id"]) for node in projected_nodes}
     projected_edges: list[dict[str, object]] = []
     for edge in edges:
@@ -1301,16 +1304,24 @@ def _simulation_replay(
                 if isinstance(transition, dict)
                 else None
             )
-            attempted_operations = (
+            raw_attempted_operations = (
                 transaction.get("operations")
                 if isinstance(transaction, dict)
-                and isinstance(transaction.get("operations"), list)
+                else None
+            )
+            attempted_operations = (
+                [item for item in raw_attempted_operations if isinstance(item, dict)]
+                if isinstance(raw_attempted_operations, list)
                 else []
             )
-            attempted_consequences = (
+            raw_attempted_consequences = (
                 transaction.get("consequences")
                 if isinstance(transaction, dict)
-                and isinstance(transaction.get("consequences"), list)
+                else None
+            )
+            attempted_consequences = (
+                [item for item in raw_attempted_consequences if isinstance(item, dict)]
+                if isinstance(raw_attempted_consequences, list)
                 else []
             )
             validation = (
@@ -1345,17 +1356,35 @@ def _simulation_replay(
                 if isinstance(transition, dict)
                 else None
             )
-            contract_node_ids = [
-                str(item["contract_id"])
-                for item in raw_attributions
-                if isinstance(item, dict)
-                and isinstance(item.get("contract_id"), str)
-                and str(item["contract_id"]) in node_ids
-            ] if isinstance(raw_attributions, list) else []
-            change_facts: list[tuple[str, str]] = []
+            contract_node_ids = (
+                list(
+                    dict.fromkeys(
+                        str(item["contract_id"])
+                        for item in raw_attributions
+                        if isinstance(item, dict)
+                        and isinstance(item.get("contract_id"), str)
+                        and str(item["contract_id"]) in node_ids
+                    )
+                )
+                if isinstance(raw_attributions, list)
+                else []
+            )
+            attribution_by_operation = (
+                {
+                    int(item["operation_index"]): item
+                    for item in raw_attributions
+                    if isinstance(item, dict)
+                    and isinstance(item.get("operation_index"), int)
+                    and not isinstance(item.get("operation_index"), bool)
+                }
+                if isinstance(raw_attributions, list)
+                else {}
+            )
+            ranked_change_facts: list[tuple[int, int, tuple[str, str]]] = []
             changed_node_ids: list[str] = []
             changed_edge_ids: list[str] = []
-            for operation in operations[:5]:
+            ranked_changed_node_ids: list[tuple[int, int, str]] = []
+            for operation_index, operation in enumerate(operations):
                 if not isinstance(operation, dict):
                     continue
                 target = operation.get("target")
@@ -1365,6 +1394,21 @@ def _simulation_replay(
                     continue
                 target_id = str(target["record_id"])
                 target_type = target.get("record_type")
+                attribution = attribution_by_operation.get(operation_index, {})
+                exact_contract = (
+                    isinstance(attribution, dict)
+                    and attribution.get("classification") == "exact_contract"
+                )
+                target_is_resource = node_kind_by_id.get(target_id) == "resource"
+                priority = (
+                    0
+                    if exact_contract and target_is_resource
+                    else 1
+                    if target_is_resource
+                    else 2
+                    if exact_contract
+                    else 3
+                )
                 if target_type == "route" and target_id in edge_by_id:
                     changed_edge_ids.append(target_id)
                 elif target_type == "placement":
@@ -1373,6 +1417,9 @@ def _simulation_replay(
                         changed_edge_ids.append(placement_edge_id)
                 elif target_id in node_ids:
                     changed_node_ids.append(target_id)
+                    ranked_changed_node_ids.append(
+                        (priority, operation_index, target_id)
+                    )
                 target_label = node_label_by_id.get(
                     target_id, target_id.replace("_", " ").title()
                 )
@@ -1384,15 +1431,32 @@ def _simulation_replay(
                         and isinstance(raw_value.get("label"), str)
                         else target_label
                     )
-                    change_facts.append(("World change", f"Created {created_label}"))
+                    ranked_change_facts.append(
+                        (
+                            priority if target_id in node_ids else 3,
+                            operation_index,
+                            ("World change", f"Created {created_label}"),
+                        )
+                    )
                     continue
                 field = str(target.get("field") or "state").replace("_", " ")
                 rendered_value = replay_value(raw_value)
-                change_facts.append(
-                    ("World change", f"{target_label} · {field}: {rendered_value}")
+                ranked_change_facts.append(
+                    (
+                        priority if target_id in node_ids else 3,
+                        operation_index,
+                        (
+                            "World change",
+                            f"{target_label} · {field}: {rendered_value}",
+                        ),
+                    )
                 )
+            changed_node_ids = list(
+                dict.fromkeys(item[2] for item in sorted(ranked_changed_node_ids))
+            )
+            change_facts = [item[2] for item in sorted(ranked_change_facts)[:6]]
             communication_facts: list[tuple[str, str]] = []
-            for consequence in consequences[:3]:
+            for consequence in consequences[:2]:
                 if not isinstance(consequence, dict):
                     continue
                 recipient = consequence.get("recipient_id")
@@ -1450,9 +1514,29 @@ def _simulation_replay(
                 for item in raw_evidence_refs
                 if isinstance(item, str) and item in node_ids
             ][:6] if isinstance(raw_evidence_refs, list) else []
+            mechanism_neighbor_ids: list[str] = []
+            for edge in network_edges:
+                if not isinstance(edge, dict):
+                    continue
+                neighbor_source = edge.get("source")
+                neighbor_target = edge.get("target")
+                if neighbor_source in contract_node_ids and isinstance(
+                    neighbor_target, str
+                ):
+                    mechanism_neighbor_ids.append(neighbor_target)
+                if neighbor_target in contract_node_ids and isinstance(
+                    neighbor_source, str
+                ):
+                    mechanism_neighbor_ids.append(neighbor_source)
             moment_node_ids = list(
                 dict.fromkeys(
-                    [*participants, *contract_node_ids, *changed_node_ids, *evidence_node_ids]
+                    [
+                        *contract_node_ids,
+                        *changed_node_ids,
+                        *mechanism_neighbor_ids,
+                        *participants,
+                        *evidence_node_ids,
+                    ]
                 )
             )
             visible_event_nodes = list(dict.fromkeys(moment_node_ids))[:12]
@@ -1463,10 +1547,30 @@ def _simulation_replay(
                 if edge.get("source") in visible_event_node_set
                 and edge.get("target") in visible_event_node_set
             ]
+            mechanism_edge_priority = {
+                "resource_input": 0,
+                "resource_output": 0,
+                "mechanism_write": 1,
+                "permitted_route": 2,
+                "capability": 3,
+            }
+            induced_edge_ids.sort(
+                key=lambda edge_id: (
+                    mechanism_edge_priority.get(
+                        str(edge_by_id[edge_id].get("kind")), 4
+                    ),
+                    edge_id,
+                )
+            )
             visible_event_edges = list(
                 dict.fromkeys([*changed_edge_ids, *induced_edge_ids])
             )[:18]
             outcome_changed_nodes.extend(changed_node_ids)
+            focused_node_ids = [
+                node_id
+                for node_id in [*contract_node_ids, *changed_node_ids]
+                if node_id in visible_event_node_set
+            ]
             add_scene(
                 scene_id=f"event_{index}",
                 kind="event",
@@ -1482,7 +1586,7 @@ def _simulation_replay(
                 ),
                 visible_nodes=visible_event_nodes,
                 visible_edges=visible_event_edges,
-                focus_nodes=(changed_node_ids or participants),
+                focus_nodes=(focused_node_ids or participants),
                 focus_edges=changed_edge_ids,
                 facts=[
                     ("Moment", str(index)),
