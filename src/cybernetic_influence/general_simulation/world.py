@@ -462,6 +462,10 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     intent_ids=list(transaction.intent_ids),
                 )
 
+        def available_exact_slot(index: int) -> bool:
+            attribution = claimed.get(index)
+            return attribution is None or attribution.classification == "no_op"
+
         intents_by_contract: dict[str, list[SemanticActionIntent]] = {}
         for intent in intents:
             for contract_id in intent.transition_contract_ids:
@@ -482,7 +486,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             )
             for hidden_key, output_field in sensing_contract.hidden_to_output_fields.items():
                 for index, operation in enumerate(transaction.operations):
-                    if index in claimed:
+                    if not available_exact_slot(index):
                         continue
                     if (
                         self._targets(
@@ -515,7 +519,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             output_index: int | None = None
             batches = 0
             for index, operation in enumerate(transaction.operations):
-                if index in claimed or not self._targets(
+                if not available_exact_slot(index) or not self._targets(
                     operation,
                     "resource",
                     transformation_contract.output_resource_id,
@@ -546,7 +550,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 for index, operation in enumerate(transaction.operations):
                     delta = self._numeric_delta(*snapshots[index])
                     if (
-                        index not in claimed
+                        available_exact_slot(index)
                         and self._targets(operation, "resource", resource_id, "quantity")
                         and delta is not None
                         and self._close(delta, -(quantity * batches))
@@ -575,7 +579,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     (
                         index
                         for index, operation in enumerate(transaction.operations)
-                        if index not in claimed
+                        if available_exact_slot(index)
                         and self._targets(
                             operation,
                             "record",
@@ -599,7 +603,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             inventory_indices = [
                 index
                 for index, operation in enumerate(transaction.operations)
-                if index not in claimed
+                if available_exact_slot(index)
                 and self._targets(
                     operation,
                     "record",
@@ -661,7 +665,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             destination_index: int | None = None
             for index, operation in enumerate(transaction.operations):
                 delta = self._numeric_delta(*snapshots[index])
-                if index in claimed or delta is None:
+                if not available_exact_slot(index) or delta is None:
                     continue
                 if self._targets(
                     operation,
@@ -717,7 +721,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     (
                         index
                         for index, operation in enumerate(transaction.operations)
-                        if index not in claimed
+                        if available_exact_slot(index)
                         and self._targets(
                             operation,
                             "record",
@@ -736,7 +740,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 (
                     index
                     for index, operation in enumerate(transaction.operations)
-                    if index not in claimed
+                    if available_exact_slot(index)
                     and self._targets(
                         operation,
                         "record",

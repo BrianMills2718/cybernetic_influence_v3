@@ -20,6 +20,8 @@ from cybernetic_influence.general_simulation.models import (
     PatchGrammar,
     PatchOperation,
     Precondition,
+    ResourceStock,
+    ResourceTransformationContract,
     ResourceTransportContract,
     SemanticActionIntent,
     SensingTransitionContract,
@@ -33,6 +35,7 @@ from cybernetic_influence.general_simulation.runner import (
     _drop_unauthorized_representation_deliveries,
     _effective_transition_authority,
     _inject_selected_contract_preconditions,
+    _materialize_unambiguous_exact_transformations,
     _memory_reference_is_grounded,
     _normalize_transaction_targets,
     _normalized_memory,
@@ -119,6 +122,133 @@ def test_partial_prune_removes_untrusted_effect_claims() -> None:
     assert pruned.operations == [transaction.operations[0]]
     assert pruned.consequences == []
     assert "only the retained operations" in pruned.stated_rationale
+
+
+def test_selected_one_batch_transformation_is_materialized_from_exact_contract() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    spec = compile_general_simulation(proposal).world_spec
+    spec.initial_state.records["hospital_inventory"] = WorldRecord(
+        record_id="hospital_inventory",
+        kind="inventory",
+        label="Hospital inventory",
+        # The retained public mirror already equals the correct post-transform
+        # value, so its explicit exact-contract update is a semantic no-op.
+        state={"diesel_liters": 300.0, "backup_power_units": 0.0},
+    )
+    spec.initial_state.resources = {
+        "hospital_fuel": ResourceStock(
+            resource_id="hospital_fuel",
+            quantity=600.0,
+            custodian_id="hospital_inventory",
+        ),
+        "backup_power_units": ResourceStock(
+            resource_id="backup_power_units",
+            quantity=0.0,
+            custodian_id="hospital_inventory",
+        ),
+    }
+    spec.resource_transformation_contracts = [
+        ResourceTransformationContract(
+            contract_id="convert_fuel_to_backup_power",
+            operator_ids=["trucking_dispatcher"],
+            input_resource_quantities={"hospital_fuel": 300.0},
+            output_resource_id="backup_power_units",
+            output_quantity=180.0,
+            maximum_batches=1,
+            public_inventory_record_id="hospital_inventory",
+            public_inventory_input_fields={"hospital_fuel": "diesel_liters"},
+            public_inventory_output_field="backup_power_units",
+        )
+    ]
+    authority_id = spec.authorities[0].authority_id
+    world = CanonicalWorld(spec)
+    intent = SemanticActionIntent(
+        intent_id="convert_intent",
+        actor_id="trucking_dispatcher",
+        base_revision=0,
+        action="Convert one batch of fuel to backup power.",
+        target_refs=["hospital_fuel", "backup_power_units"],
+        purpose="Maintain hospital power.",
+        expected_effect="Consume fuel and produce backup power.",
+        stated_rationale="Attempt the configured exact mechanism.",
+        transition_contract_ids=["convert_fuel_to_backup_power"],
+    )
+    transaction = WorldTransaction(
+        transaction_id="adjudicator_mirror_error",
+        base_revision=0,
+        authority_id=authority_id,
+        intent_ids=[intent.intent_id],
+        operations=[
+            PatchOperation(
+                operation="replace",
+                target=TypedTarget(
+                    record_type="resource",
+                    record_id="hospital_fuel",
+                    field="quantity",
+                ),
+                value=300.0,
+            ),
+            PatchOperation(
+                operation="replace",
+                target=TypedTarget(
+                    record_type="resource",
+                    record_id="backup_power_units",
+                    field="quantity",
+                ),
+                value=180.0,
+            ),
+            PatchOperation(
+                operation="replace",
+                target=TypedTarget(
+                    record_type="record",
+                    record_id="hospital_inventory",
+                    field="state.diesel_liters",
+                ),
+                value=0.0,
+            ),
+            PatchOperation(
+                operation="replace",
+                target=TypedTarget(
+                    record_type="record",
+                    record_id="hospital_inventory",
+                    field="state.backup_power_units",
+                ),
+                value=180.0,
+            ),
+        ],
+        preconditions=[],
+        consequences=[],
+        evidence_refs=[intent.intent_id],
+        stated_rationale="The selected exact transformation should execute.",
+    )
+    corrections: list[str] = []
+
+    materialized = _materialize_unambiguous_exact_transformations(
+        transaction,
+        intents=[intent],
+        world=world,
+        corrections=corrections,
+    )
+    result = world.validate_and_commit(
+        materialized,
+        envelope_corrections=corrections,
+        intents=[intent],
+        current_minute=60,
+    )
+
+    assert result.accepted
+    assert world.state.resources["hospital_fuel"].quantity == 300.0
+    assert world.state.resources["backup_power_units"].quantity == 180.0
+    assert world.state.records["hospital_inventory"].state == {
+        "diesel_liters": 300.0,
+        "backup_power_units": 180.0,
+    }
+    assert corrections == [
+        "trusted runtime materialized selected exact transformation contracts: "
+        "convert_fuel_to_backup_power"
+    ]
 
 
 def test_model_receipt_retains_metered_provider_and_cost() -> None:

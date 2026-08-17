@@ -49,6 +49,8 @@ from .models import (
     GeneralGroupSimulationResultV2,
     GeneralMomentEvidence,
     ModelCallReceipt,
+    PatchOperation,
+    Precondition,
     SemanticActionIntent,
     TransitionAuthoritySpec,
     TypedTarget,
@@ -315,6 +317,229 @@ def _inject_selected_contract_preconditions(
     )
     return transaction.model_copy(
         update={"preconditions": [*transaction.preconditions, *additions]}
+    )
+
+
+def _materialize_unambiguous_exact_transformations(
+    transaction: WorldTransaction,
+    *,
+    intents: list[SemanticActionIntent],
+    world: CanonicalWorld,
+    corrections: list[str],
+) -> WorldTransaction:
+    """Render a selected exact transformation from its trusted contract.
+
+    The actor still decides whether to attempt a contract, and the LLM
+    authority still reconciles coarse effects and communications. Once a
+    selected exact transformation has an unambiguous batch count, however, its
+    arithmetic and public inventory mirrors are mechanism-owned rather than
+    prose-owned.
+
+    One-batch contracts are intrinsically unambiguous. For a multi-batch
+    contract, the adjudicator must propose a consistent input or output delta
+    from which the batch count can be recovered. Overlapping exact transforms
+    remain with the adjudicator until an explicit conflict policy exists.
+    """
+
+    selected_by_contract: dict[str, list[SemanticActionIntent]] = {}
+    for intent in intents:
+        for contract_id in intent.transition_contract_ids:
+            selected_by_contract.setdefault(contract_id, []).append(intent)
+
+    def controlled_targets(contract_id: str) -> set[tuple[str, str, str]]:
+        contract = next(
+            item
+            for item in world.spec.resource_transformation_contracts
+            if item.contract_id == contract_id
+        )
+        return {
+            *{
+                ("resource", resource_id, "quantity")
+                for resource_id in contract.input_resource_quantities
+            },
+            ("resource", contract.output_resource_id, "quantity"),
+            *{
+                (
+                    "record",
+                    contract.public_inventory_record_id,
+                    f"state.{field}",
+                )
+                for field in contract.public_inventory_input_fields.values()
+            },
+            (
+                "record",
+                contract.public_inventory_record_id,
+                f"state.{contract.public_inventory_output_field}",
+            ),
+        }
+
+    selected_contracts = [
+        contract
+        for contract in world.spec.resource_transformation_contracts
+        if any(
+            intent.actor_id in contract.operator_ids
+            for intent in selected_by_contract.get(contract.contract_id, [])
+        )
+    ]
+    target_owners: dict[tuple[str, str, str], list[str]] = {}
+    for contract in selected_contracts:
+        for target_key in controlled_targets(contract.contract_id):
+            target_owners.setdefault(target_key, []).append(contract.contract_id)
+
+    retained_operations = list(transaction.operations)
+    added_operations: list[PatchOperation] = []
+    added_preconditions: list[Precondition] = []
+    materialized_ids: list[str] = []
+    for contract in selected_contracts:
+        targets = controlled_targets(contract.contract_id)
+        if any(len(target_owners[target]) > 1 for target in targets):
+            continue
+
+        batch_candidates: set[int] = set()
+        for operation in transaction.operations:
+            if (
+                operation.operation != "replace"
+                or isinstance(operation.value, bool)
+                or not isinstance(operation.value, (int, float))
+            ):
+                continue
+            operation_target = operation.target
+            if (
+                operation_target.record_type == "resource"
+                and operation_target.record_id == contract.output_resource_id
+                and operation_target.field == "quantity"
+            ):
+                current = world.state.resources[operation_target.record_id].quantity
+                delta = float(operation.value) - current
+                candidate = round(delta / contract.output_quantity)
+                if (
+                    1 <= candidate <= contract.maximum_batches
+                    and abs(delta - candidate * contract.output_quantity) <= 1e-9
+                ):
+                    batch_candidates.add(candidate)
+            if (
+                operation_target.record_type == "resource"
+                and operation_target.record_id in contract.input_resource_quantities
+                and operation_target.field == "quantity"
+            ):
+                current = world.state.resources[operation_target.record_id].quantity
+                quantity = contract.input_resource_quantities[operation_target.record_id]
+                delta = current - float(operation.value)
+                candidate = round(delta / quantity)
+                if (
+                    1 <= candidate <= contract.maximum_batches
+                    and abs(delta - candidate * quantity) <= 1e-9
+                ):
+                    batch_candidates.add(candidate)
+
+        batches: int | None
+        if contract.maximum_batches == 1:
+            batches = 1
+        elif len(batch_candidates) == 1:
+            batches = next(iter(batch_candidates))
+        else:
+            feasible_batches = min(
+                int(world.state.resources[resource_id].quantity // quantity)
+                for resource_id, quantity in contract.input_resource_quantities.items()
+            )
+            batches = 1 if min(feasible_batches, contract.maximum_batches) == 1 else None
+        if batches is None:
+            continue
+
+        retained_operations = [
+            operation
+            for operation in retained_operations
+            if (
+                operation.target.record_type,
+                operation.target.record_id,
+                operation.target.field or "",
+            )
+            not in targets
+        ]
+        resulting_inputs: dict[str, float] = {}
+        for resource_id, per_batch in contract.input_resource_quantities.items():
+            required = per_batch * batches
+            current = world.state.resources[resource_id].quantity
+            resulting_inputs[resource_id] = current - required
+            added_preconditions.append(
+                Precondition(
+                    target=TypedTarget(
+                        record_type="resource",
+                        record_id=resource_id,
+                        field="quantity",
+                    ),
+                    comparison="greater_than_or_equal",
+                    expected=required,
+                )
+            )
+            added_operations.append(
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="resource",
+                        record_id=resource_id,
+                        field="quantity",
+                    ),
+                    value=resulting_inputs[resource_id],
+                )
+            )
+        output = world.state.resources[contract.output_resource_id]
+        resulting_output = output.quantity + contract.output_quantity * batches
+        added_operations.append(
+            PatchOperation(
+                operation="replace",
+                target=TypedTarget(
+                    record_type="resource",
+                    record_id=contract.output_resource_id,
+                    field="quantity",
+                ),
+                value=resulting_output,
+            )
+        )
+        for resource_id, field in contract.public_inventory_input_fields.items():
+            added_operations.append(
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="record",
+                        record_id=contract.public_inventory_record_id,
+                        field=f"state.{field}",
+                    ),
+                    value=resulting_inputs[resource_id],
+                )
+            )
+        added_operations.append(
+            PatchOperation(
+                operation="replace",
+                target=TypedTarget(
+                    record_type="record",
+                    record_id=contract.public_inventory_record_id,
+                    field=f"state.{contract.public_inventory_output_field}",
+                ),
+                value=resulting_output,
+            )
+        )
+        materialized_ids.append(contract.contract_id)
+
+    if not materialized_ids:
+        return transaction
+    existing_preconditions = {
+        item.model_dump_json(exclude_none=False) for item in transaction.preconditions
+    }
+    unique_preconditions = [
+        item
+        for item in added_preconditions
+        if item.model_dump_json(exclude_none=False) not in existing_preconditions
+    ]
+    corrections.append(
+        "trusted runtime materialized selected exact transformation contracts: "
+        + ", ".join(materialized_ids)
+    )
+    return transaction.model_copy(
+        update={
+            "operations": [*retained_operations, *added_operations],
+            "preconditions": [*transaction.preconditions, *unique_preconditions],
+        }
     )
 
 
@@ -1009,6 +1234,12 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
             transaction = _normalize_transaction_targets(
                 transaction, world, corrections
             )
+            transaction = _materialize_unambiguous_exact_transformations(
+                transaction,
+                intents=intents,
+                world=world,
+                corrections=corrections,
+            )
             transaction = _inject_selected_contract_preconditions(
                 transaction,
                 intents=intents,
@@ -1164,6 +1395,12 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 repair_corrections: list[str] = []
                 repaired_transaction = _normalize_transaction_targets(
                     repaired_transaction, world, repair_corrections
+                )
+                repaired_transaction = _materialize_unambiguous_exact_transformations(
+                    repaired_transaction,
+                    intents=intents,
+                    world=world,
+                    corrections=repair_corrections,
                 )
                 repaired_transaction = _inject_selected_contract_preconditions(
                     repaired_transaction,
