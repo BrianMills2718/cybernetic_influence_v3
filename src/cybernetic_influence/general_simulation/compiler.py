@@ -745,6 +745,27 @@ def _compile_general_simulation(
                 f"transport {transport.transport_id} names unknown arrival record "
                 f"{transport.arrival_record_id}"
             )
+        if (transport.arrival_status_key is None) != (
+            transport.arrival_status_value is None
+        ):
+            raise GeneralCompilationError(
+                f"transport {transport.transport_id} must declare both arrival_status_key "
+                "and arrival_status_value, or neither"
+            )
+        if transport.arrival_status_key is not None:
+            arrival_fields = next(
+                (
+                    {field.key for field in record.public_state}
+                    for record in proposal.world_records
+                    if record.record_id == transport.arrival_record_id
+                ),
+                set(),
+            )
+            if transport.arrival_status_key not in arrival_fields:
+                raise GeneralCompilationError(
+                    f"transport {transport.transport_id} writes undeclared public field "
+                    f"{transport.arrival_status_key} on {transport.arrival_record_id}"
+                )
         valid_precondition_targets = {
             "record": record_ids,
             "route": route_ids,
@@ -1365,6 +1386,8 @@ def _compile_general_simulation(
             arrival_quantity_key=item.arrival_quantity_key,
             usable_quantity_key=item.usable_quantity_key,
             arrival_minute_key=item.arrival_minute_key,
+            arrival_status_key=item.arrival_status_key,
+            arrival_status_value=item.arrival_status_value,
             required_preconditions=[
                 Precondition(
                     target=TypedTarget(

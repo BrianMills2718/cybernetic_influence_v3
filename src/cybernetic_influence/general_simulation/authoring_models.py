@@ -265,6 +265,11 @@ class ResourceTransportProposalV1(_StrictModel):
     arrival_quantity_key: str = Field(pattern=_ID)
     usable_quantity_key: str = Field(pattern=_ID)
     arrival_minute_key: str = Field(pattern=_ID)
+    # A transport result can carry more than quantities.  Keep this optional so
+    # existing scenarios remain valid, but require an explicit contract when a
+    # later action depends on a result state such as "arrived".
+    arrival_status_key: str | None = Field(default=None, pattern=_ID)
+    arrival_status_value: Scalar | None = None
     required_preconditions: list[TransitionPreconditionProposalV1] = Field(
         default_factory=list
     )

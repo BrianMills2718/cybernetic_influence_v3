@@ -761,10 +761,14 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 or not isinstance(travel_time, (int, float))
             ):
                 continue
-            required_arrivals = {
+            required_arrivals: dict[str, JsonValue] = {
                 transport_contract.arrival_quantity_key: attempted_quantity,
                 transport_contract.arrival_minute_key: current_minute + travel_time,
             }
+            if transport_contract.arrival_status_key is not None:
+                required_arrivals[transport_contract.arrival_status_key] = (
+                    transport_contract.arrival_status_value
+                )
             arrival_indices: list[int] = []
             for field_key, expected in required_arrivals.items():
                 match = next(

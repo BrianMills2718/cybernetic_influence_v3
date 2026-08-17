@@ -173,6 +173,8 @@ class ResourceTransportContract(StrictModel):
     arrival_quantity_key: str
     usable_quantity_key: str
     arrival_minute_key: str
+    arrival_status_key: str | None = None
+    arrival_status_value: JsonValue | None = None
     required_preconditions: list["Precondition"] = Field(default_factory=list)
 
 

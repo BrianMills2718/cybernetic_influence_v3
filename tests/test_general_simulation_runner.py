@@ -546,6 +546,8 @@ def test_parameterized_transport_materializes_the_attempted_quantity_and_route()
             arrival_quantity_key="quantity",
             usable_quantity_key="usable_quantity",
             arrival_minute_key="arrival_minute",
+            arrival_status_key="status",
+            arrival_status_value="arrived",
         )
     ]
     world = CanonicalWorld(spec)
@@ -598,7 +600,7 @@ def test_parameterized_transport_materializes_the_attempted_quantity_and_route()
     assert world.state.resources["dispatch_fuel"].quantity == 90
     assert world.state.resources["received_fuel"].quantity == 10
     assert world.state.records["relief_cargo"].state == {
-        "status": "awaiting_dispatch",
+        "status": "arrived",
         "quantity": 10,
         "usable_quantity": 10,
         "arrival_minute": 35,

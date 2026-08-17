@@ -619,6 +619,10 @@ def _materialize_unambiguous_exact_transports(
             ("record", contract.arrival_record_id, f"state.{contract.usable_quantity_key}"),
             ("record", contract.arrival_record_id, f"state.{contract.arrival_minute_key}"),
         }
+        if contract.arrival_status_key is not None:
+            target_keys.add(
+                ("record", contract.arrival_record_id, f"state.{contract.arrival_status_key}")
+            )
         retained_operations = [
             operation
             for operation in retained_operations
@@ -680,6 +684,18 @@ def _materialize_unambiguous_exact_transports(
                 ),
             ]
         )
+        if contract.arrival_status_key is not None:
+            additions.append(
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="record",
+                        record_id=contract.arrival_record_id,
+                        field=f"state.{contract.arrival_status_key}",
+                    ),
+                    value=cast(Any, contract.arrival_status_value),
+                )
+            )
         preconditions.extend(
             [
                 Precondition(
