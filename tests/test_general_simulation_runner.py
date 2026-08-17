@@ -45,6 +45,7 @@ from cybernetic_influence.general_simulation.runner import (
     _prune_unsupported_assimilation_provenance,
     run_general_simulation,
 )
+from cybernetic_influence.general_simulation.contracts_v2 import contract_digest
 from cybernetic_influence.general_simulation.world import CanonicalWorld
 from cybernetic_influence.general_simulation.analysis_projection import (
     project_waltzman_analysis,
@@ -54,6 +55,24 @@ from cybernetic_influence.general_simulation.projection import project_general_r
 
 FIXTURE = Path("tests/fixtures/general_simulation/port_coordination.json")
 SERVICE_FIXTURE = Path("tests/fixtures/general_simulation/service_incident.json")
+
+
+def test_contract_digest_preserves_pre_completion_transport_identity() -> None:
+    before = {
+        "resource_transports": [{"transport_id": "move_cargo", "quantity": 1}],
+    }
+    after_reading_old_draft = {
+        "resource_transports": [
+            {
+                "transport_id": "move_cargo",
+                "quantity": 1,
+                "arrival_status_key": None,
+                "arrival_status_value": None,
+            }
+        ],
+    }
+
+    assert contract_digest(before) == contract_digest(after_reading_old_draft)
 
 
 def _unlicensed_operation(index: int) -> PatchOperation:
