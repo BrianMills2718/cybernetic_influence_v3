@@ -65,6 +65,7 @@ let authoringBusy = false
 let authoredResult = null
 let authoredResultRoundIndex = 0
 let authoredReplaySceneIndex = 0
+let authoredReplayCognitionIndex = 0
 let authoredDraftWalkthroughStep = 0
 let authoredDraftWalkthroughStepCount = 0
 let retainedRunHistory = []
@@ -2848,7 +2849,16 @@ function renderAuthoredResultNetwork(result, scene = null) {
     selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
       const item = visibleNodes.find((candidate) => candidate.id === nodeId)
-      if (item) $('#create-result-network-inspector').innerHTML = selectionInspectorHtml({item, nodes:presentationNodes, edges:presentationEdges})
+      if (item) {
+        $('#create-result-network-inspector').innerHTML = selectionInspectorHtml({item, nodes:presentationNodes, edges:presentationEdges})
+        if (scene?.kind === 'cognition') {
+          const index = (scene.facts || []).findIndex((fact) => fact.label === item.label)
+          if (index >= 0) {
+            authoredReplayCognitionIndex = index
+            renderCognitionFacts(scene)
+          }
+        }
+      }
     },
     onSelectEdge:(item) => {
       $('#create-result-network-inspector').innerHTML = selectionInspectorHtml({item, relationship:true, nodes:presentationNodes, edges:presentationEdges})
@@ -2857,6 +2867,32 @@ function renderAuthoredResultNetwork(result, scene = null) {
   $('#create-result-network-status').textContent = scene
     ? `${visibleNodes.length} visible items · ${visibleEdges.length} visible arrows · ${(scene.focus_node_ids || []).length + (scene.focus_edge_ids || []).length} changed items highlighted · future evidence remains hidden`
     : `${projection.nodes.length} visible items · ${projection.edges.length} retained arrows`
+}
+
+function cognitionFactParts(value) {
+  const match = String(value || '').match(/^(.+?) · Interpreted: (.+?) · (Memory (?:changed: .+?|unchanged)) · Then attempted: (.+)$/s)
+  if (!match) return {noticed:'Retained attention record unavailable.', interpreted:String(value || ''), memory:'Memory record unavailable.', attempted:'Action record unavailable.'}
+  return {noticed:match[1], interpreted:match[2], memory:match[3], attempted:match[4]}
+}
+
+function renderCognitionFacts(scene) {
+  const facts = scene.facts || []
+  authoredReplayCognitionIndex = Math.max(0, Math.min(authoredReplayCognitionIndex, facts.length - 1))
+  const selected = facts[authoredReplayCognitionIndex]
+  const parts = cognitionFactParts(selected?.value)
+  const replayFacts = $('#create-replay-facts')
+  replayFacts.innerHTML = `
+    <div class="cognition-person-tabs"><dt>Inspect one person</dt><dd>${facts.map((fact, index) => `<button type="button" data-cognition-person="${index}" class="${index === authoredReplayCognitionIndex ? 'active' : ''}">${escapeHtml(fact.label)}</button>`).join('')}</dd></div>
+    <div><dt>Noticed</dt><dd>${escapeHtml(parts.noticed.replace(/^Noticed\s*/i, ''))}</dd></div>
+    <div><dt>Interpreted</dt><dd>${escapeHtml(parts.interpreted)}</dd></div>
+    <div><dt>Remembered</dt><dd>${escapeHtml(parts.memory.replace(/^Memory (?:changed:\s*)?/i, ''))}</dd></div>
+    <div><dt>Attempted next</dt><dd>${escapeHtml(parts.attempted)}</dd></div>`
+  all('[data-cognition-person]').forEach((button) => {
+    button.onclick = () => {
+      authoredReplayCognitionIndex = Number(button.dataset.cognitionPerson)
+      renderCognitionFacts(scene)
+    }
+  })
 }
 
 function renderAuthoredReplay() {
@@ -2879,7 +2915,8 @@ function renderAuthoredReplay() {
   $('#create-replay-summary').textContent = scene.summary
   const replayFacts = $('#create-replay-facts')
   replayFacts.classList.toggle('cognition-facts', scene.kind === 'cognition')
-  replayFacts.innerHTML = (scene.facts || []).map((fact) => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('')
+  if (scene.kind === 'cognition') renderCognitionFacts(scene)
+  else replayFacts.innerHTML = (scene.facts || []).map((fact) => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('')
   const previous = $('#create-replay-previous')
   const next = $('#create-replay-next')
   previous.disabled = authoredReplaySceneIndex === 0
@@ -2889,10 +2926,12 @@ function renderAuthoredReplay() {
     : `Next: ${scenes[authoredReplaySceneIndex + 1].title} →`
   previous.onclick = () => {
     authoredReplaySceneIndex -= 1
+    authoredReplayCognitionIndex = 0
     renderAuthoredReplay()
   }
   next.onclick = () => {
     authoredReplaySceneIndex += 1
+    authoredReplayCognitionIndex = 0
     renderAuthoredReplay()
   }
   $('#create-replay-whole').onclick = () => {

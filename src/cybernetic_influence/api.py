@@ -1355,7 +1355,8 @@ def _simulation_replay(
                                     if memory_changes
                                     else "Memory unchanged"
                                 ),
-                                f"Then attempted: {intent.get('action') or 'No action retained.'}",
+                                "Then attempted: "
+                                f"{str(intent.get('action') or 'No action retained.').replace('_', ' ')}",
                             ]
                         ),
                     )
