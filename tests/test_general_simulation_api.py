@@ -19,6 +19,7 @@ from cybernetic_influence.analysis.theory_analysis import AnalysisSpecV2
 from cybernetic_influence.general_simulation.authoring_models import (
     AnalysisSpecV1,
     DependencyCompletenessReviewV1,
+    GeneralAuthoringDiscussionV1,
     GeneralSimulationProposalV1,
     MissingDependencyFindingV1,
 )
@@ -1170,14 +1171,37 @@ def test_live_general_authoring_runs_as_pollable_background_job(
     monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
     monkeypatch.setattr(
         api_module,
-        "model_catalog",
-        lambda: [{"model": "codex/gpt-5.6-luna"}],
+        "authoring_model_ids",
+        lambda: ["codex/gpt-5.6-luna"],
     )
     proposal = _native_v2_proposal()
+    review_calls = 0
 
     def provider(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        nonlocal review_calls
         del args
+        if kwargs["response_model"] is GeneralAuthoringDiscussionV1:
+            return GeneralAuthoringDiscussionV1(
+                reply="I retained the requested world and one material uncertainty.",
+                understood_summary="A bounded relief-port coordination simulation.",
+                material_questions=["Who controls customs clearance?"],
+            ), SimpleNamespace(provider="test", cost=0.0)
         if kwargs["response_model"] is DependencyCompletenessReviewV1:
+            review_calls += 1
+            if review_calls == 1:
+                return DependencyCompletenessReviewV1(
+                    status="repair_required",
+                    summary="One prerequisite needs an explicit binding.",
+                    missing_dependencies=[
+                        MissingDependencyFindingV1(
+                            exact_action_request_id="cargo_movement",
+                            prerequisite_description="Customs clearance must be checked.",
+                            existing_ref="customs_clearance",
+                            evidence="The request makes customs clearance material.",
+                            required_resolution="exact_guard",
+                        )
+                    ],
+                ), SimpleNamespace(provider="test", cost=0.0)
             return DependencyCompletenessReviewV1(
                 status="complete",
                 summary="No stated exact-action prerequisite is omitted.",
@@ -1196,10 +1220,40 @@ def test_live_general_authoring_runs_as_pollable_background_job(
         )
     )
     draft = api.post("/api/authoring/drafts").json()
-    started = api.post(
+    discussion_started = api.post(
         f"/api/authoring/drafts/{draft['draft_id']}/messages",
         json={
             "expected_revision": 0,
+            "message_id": "background_discussion",
+            "message": "Help me define relief cargo coordination after a bridge failure.",
+            "mode": "discuss",
+        },
+    )
+    assert discussion_started.status_code == 202
+    discussion_job = discussion_started.json()
+    for _ in range(100):
+        polled = api.get(
+            f"/api/authoring/jobs/{discussion_job['job_id']}"
+        )
+        assert polled.status_code == 200
+        discussion_job = polled.json()
+        if discussion_job["status"] != "generating":
+            break
+        time.sleep(0.01)
+    assert discussion_job["status"] == "completed", json.dumps(
+        discussion_job, indent=2
+    )
+    assert [item["phase"] for item in discussion_job["progress"]] == [
+        "queued",
+        "discussion",
+        "retaining",
+        "complete",
+    ]
+
+    started = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/messages",
+        json={
+            "expected_revision": 1,
             "message_id": "background_generation",
             "message": "Model relief cargo coordination after a bridge failure.",
         },
@@ -1208,6 +1262,8 @@ def test_live_general_authoring_runs_as_pollable_background_job(
     assert started.status_code == 202
     job = started.json()
     assert job["status"] == "generating"
+    assert job["phase"] == "queued"
+    assert job["progress"][0]["phase"] == "queued"
     for _ in range(100):
         polled = api.get(f"/api/authoring/jobs/{job['job_id']}")
         assert polled.status_code == 200
@@ -1216,8 +1272,25 @@ def test_live_general_authoring_runs_as_pollable_background_job(
             break
         time.sleep(0.01)
     assert job["status"] == "completed"
+    assert job["phase"] == "complete"
+    phases = [item["phase"] for item in job["progress"]]
+    assert phases == [
+        "queued",
+        "proposal_generation",
+        "contract_materialization",
+        "compiling",
+        "dependency_review",
+        "repairing",
+        "proposal_generation",
+        "contract_materialization",
+        "compiling",
+        "dependency_review",
+        "retaining",
+        "complete",
+    ]
+    assert job["progress"][6]["attempt"] == 2
     assert job["draft"]["status"] == "ready_for_review"
-    assert job["draft"]["revision"] == 1
+    assert job["draft"]["revision"] == 2
 
 
 def test_general_proposal_endpoint_rejects_invented_implementation_reference(

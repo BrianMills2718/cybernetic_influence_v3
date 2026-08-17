@@ -2335,6 +2335,14 @@ function renderAuthoringChat() {
   $('#create-chat').scrollTop = $('#create-chat').scrollHeight
 }
 
+function authoringProgressText(job) {
+  const label = job.phase_label || 'Building the simulation'
+  const attempt = Number(job.attempt || 0)
+  const attemptLabel = attempt > 1 ? ` · proposal attempt ${attempt}` : ''
+  const detail = String(job.detail || '').trim()
+  return `${label}${attemptLabel}${detail ? ` — ${detail}` : ''}`
+}
+
 async function advanceAuthoringDraft(message, mode = 'configure') {
   const author = authoringModel()
   if (!author) throw new Error('The structured authoring model is unavailable')
@@ -2353,15 +2361,13 @@ async function advanceAuthoringDraft(message, mode = 'configure') {
     }),
   })
   if (response.status === 'generating' && response.job_id) {
-    const startedAt = Date.now()
-    const deadline = startedAt + 900000
+    const deadline = Date.now() + 900000
     let job = response
+    $('#create-status').textContent = authoringProgressText(job)
     while (job.status === 'generating' && Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 1000))
       job = await apiRequest(`api/authoring/jobs/${encodeURIComponent(response.job_id)}`)
-      if (job.status === 'generating' && Date.now() - startedAt > 120000) {
-        $('#create-status').textContent = 'Still compiling the typed world and checking its causal paths. Keep this tab open; the retained draft is safe to reload.'
-      }
+      if (job.status === 'generating') $('#create-status').textContent = authoringProgressText(job)
     }
     if (job.status === 'failed') throw new Error(job.error || 'Simulation generation failed')
     if (job.status !== 'completed' || !job.draft) {

@@ -80,6 +80,18 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     assert "The replay separates what people received and attempted" in script
 
 
+def test_authoring_progress_uses_retained_backend_stages() -> None:
+    page = PAGE.read_text(encoding="utf-8")
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    assert "function authoringProgressText(job)" in script
+    assert "job.phase_label" in script
+    assert "job.detail" in script
+    assert "proposal attempt ${attempt}" in script
+    assert "Still compiling the typed world" not in script
+    assert "assets/app.js?v=authoring21" in page
+
+
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
     page = PAGE.read_text(encoding="utf-8")
     script = SCRIPT.read_text(encoding="utf-8")
@@ -252,7 +264,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=authoring20",
+        "assets/app.js?v=authoring21",
     ]
     assert {
         "overview-view",

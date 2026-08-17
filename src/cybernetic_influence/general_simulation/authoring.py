@@ -49,6 +49,7 @@ from .study_models import (
 
 
 StructuredCall = Callable[..., tuple[Any, Any]]
+AuthoringProgress = Callable[[str, str, int | None], None]
 GENERAL_AUTHORING_TASK = "cybernetic_influence_v3_general_world_draft"
 GENERAL_AUTHORING_PROMPT_VERSION = "general_world_draft.v2"
 GENERAL_AUTHORING_MAX_ATTEMPTS = 5
@@ -61,6 +62,16 @@ GENERAL_AUTHORING_MODELS = {
     OPENROUTER_TERRA_MODEL,
     "openrouter/openai/gpt-5.6-sol",
 }
+
+
+def _report_progress(
+    progress: AuthoringProgress | None,
+    phase: str,
+    detail: str,
+    attempt: int | None = None,
+) -> None:
+    if progress is not None:
+        progress(phase, detail, attempt)
 
 
 def _is_terminal_provider_error(error: Exception) -> bool:
@@ -425,6 +436,7 @@ class GeneralDraftAuthoringService:
         message: str,
         model: str = CODEX_LUNA_MODEL,
         reasoning_effort: str = "medium",
+        progress: AuthoringProgress | None = None,
     ) -> dict[str, object]:
         if model not in GENERAL_AUTHORING_MODELS:
             raise ValueError("unsupported general authoring model")
@@ -441,6 +453,12 @@ class GeneralDraftAuthoringService:
             return current
         trace_id = f"{draft_id}/general/discussion/{expected_revision + 1}"
         system, user = _discussion_prompt(message=message, prior=_prior(current))
+        _report_progress(
+            progress,
+            "discussion",
+            "Luna is identifying the few choices that materially change this simulation.",
+            1,
+        )
         with structured_backend_options(model) as backend_options:
             parsed, meta = _call_with_deadline(
                 self.call,
@@ -465,6 +483,12 @@ class GeneralDraftAuthoringService:
                 f"{index}. {question}"
                 for index, question in enumerate(discussion.material_questions, start=1)
             )
+        _report_progress(
+            progress,
+            "retaining",
+            "Saving the discussion and unresolved choices to this draft.",
+            1,
+        )
         return self.store.replace(
             draft_id,
             expected_revision=expected_revision,
@@ -508,6 +532,7 @@ class GeneralDraftAuthoringService:
         message: str,
         model: str = CODEX_LUNA_MODEL,
         reasoning_effort: str = "medium",
+        progress: AuthoringProgress | None = None,
     ) -> dict[str, object]:
         current = self.store.get(draft_id)
         if current.get("target_kind") == "general_world_v2":
@@ -519,6 +544,7 @@ class GeneralDraftAuthoringService:
                 message=message,
                 model=model,
                 reasoning_effort=reasoning_effort,
+                progress=progress,
             )
         if model not in GENERAL_AUTHORING_MODELS:
             raise ValueError("unsupported general authoring model")
@@ -723,6 +749,7 @@ class GeneralDraftAuthoringService:
         message: str,
         model: str,
         reasoning_effort: str,
+        progress: AuthoringProgress | None,
     ) -> dict[str, object]:
         """Generate a native separated proposal and retain only its trusted bundle."""
         if model not in GENERAL_AUTHORING_MODELS:
@@ -760,6 +787,12 @@ class GeneralDraftAuthoringService:
             )
             meta: object | None = None
             try:
+                _report_progress(
+                    progress,
+                    "proposal_generation",
+                    "Luna is composing the people, world, information paths, and run conditions.",
+                    attempt_number,
+                )
                 with structured_backend_options(model) as backend_options:
                     parsed, meta = _call_with_deadline(
                         self.call,
@@ -783,6 +816,12 @@ class GeneralDraftAuthoringService:
                     )
                 raw = parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
                 proposal = AuthoredSimulationProposalEnvelopeV2.model_validate(raw).proposal
+                _report_progress(
+                    progress,
+                    "contract_materialization",
+                    "Linking uniquely determined fields and references without another model call.",
+                    attempt_number,
+                )
                 scenario, attempt_corrections = materialize_unambiguous_contract_references(
                     proposal.scenario
                 )
@@ -790,6 +829,12 @@ class GeneralDraftAuthoringService:
                 candidate = proposal.model_dump(mode="json")
                 bundle = materialize_authored_bundle_v2(
                     proposal, run_id=f"{draft_id}_run"
+                )
+                _report_progress(
+                    progress,
+                    "compiling",
+                    "Checking references, execution coverage, and registered transition contracts.",
+                    attempt_number,
                 )
                 compiled = compile_general_simulation_v2(
                     bundle.scenario, bundle.default_run
@@ -819,6 +864,12 @@ class GeneralDraftAuthoringService:
                         message=message,
                         proposal=proposal,
                         compiled=compiled,
+                    )
+                    _report_progress(
+                        progress,
+                        "dependency_review",
+                        "Luna is checking whether consequential prerequisites were omitted.",
+                        attempt_number,
                     )
                     with structured_backend_options(model) as review_backend_options:
                         reviewed, review_meta = _call_with_deadline(
@@ -872,6 +923,12 @@ class GeneralDraftAuthoringService:
                         proposal = None
                         bundle = None
                         compiled = None
+                        _report_progress(
+                            progress,
+                            "repairing",
+                            "The dependency review found a material omission; Luna will revise the proposal.",
+                            attempt_number,
+                        )
                         continue
                     attempts.append(
                         _attempt(
@@ -905,6 +962,12 @@ class GeneralDraftAuthoringService:
                 proposal = None
                 bundle = None
                 compiled = None
+                _report_progress(
+                    progress,
+                    "repairing",
+                    "The compiler found an invalid or unsupported reference; Luna will revise the proposal.",
+                    attempt_number,
+                )
             except (ValueError, GeneralCompilationError) as exc:
                 repair_feedback = str(exc)
                 diagnostics = [{"severity": "error", "code": "validation", "message": str(exc)}]
@@ -912,6 +975,12 @@ class GeneralDraftAuthoringService:
                 proposal = None
                 bundle = None
                 compiled = None
+                _report_progress(
+                    progress,
+                    "repairing",
+                    "The typed proposal did not validate; Luna will revise it from the retained error.",
+                    attempt_number,
+                )
             except Exception as exc:
                 concise_error = f"{type(exc).__name__}: {str(exc)[:500]}"
                 diagnostics = [
@@ -926,6 +995,12 @@ class GeneralDraftAuthoringService:
                     break
                 repair_feedback = (
                     "Return one complete native V2 proposal envelope matching the supplied schema."
+                )
+                _report_progress(
+                    progress,
+                    "repairing",
+                    "The model response was incomplete; Luna will return one complete typed proposal.",
+                    attempt_number,
                 )
 
         if (
@@ -968,6 +1043,12 @@ class GeneralDraftAuthoringService:
             coverage_payload = None
             graph_payload = None
         assistant_summary = " ".join([summary, *[item["message"] for item in diagnostics]])
+        _report_progress(
+            progress,
+            "retaining",
+            "Saving the retained result, diagnostics, and any editable typed configuration.",
+            None,
+        )
         return self.store.replace(
             draft_id,
             expected_revision=expected_revision,

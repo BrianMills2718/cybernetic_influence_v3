@@ -261,6 +261,20 @@ class DraftMessageRequest(BaseModel):
     mode: Literal["discuss", "configure"] = "configure"
 
 
+AUTHORING_PHASE_LABELS = {
+    "queued": "Starting Luna",
+    "discussion": "Understanding the simulation",
+    "proposal_generation": "Drafting people and world",
+    "contract_materialization": "Resolving exact references",
+    "compiling": "Checking runnable contracts",
+    "dependency_review": "Reviewing causal dependencies",
+    "repairing": "Repairing the configuration",
+    "retaining": "Saving the editable simulation",
+    "complete": "Step complete",
+    "failed": "Generation stopped",
+}
+
+
 class DraftApprovalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     expected_revision: int
@@ -3244,17 +3258,75 @@ def create_app(
                         content=deepcopy(authoring_jobs[existing_job_id]),
                     )
                 job_id = f"authoring_job_{uuid4().hex[:12]}"
+                queued_detail = (
+                    "Preparing the retained conversation for clarification."
+                    if body.mode == "discuss"
+                    else "Preparing the retained conversation for typed configuration."
+                )
+                queued_at = now_iso()
+                queued_progress: dict[str, object] = {
+                    "sequence": 1,
+                    "phase": "queued",
+                    "phase_label": AUTHORING_PHASE_LABELS["queued"],
+                    "detail": queued_detail,
+                    "attempt": None,
+                    "recorded_at": queued_at,
+                }
                 job: dict[str, object] = {
                     "job_id": job_id,
                     "draft_id": draft_id,
                     "message_id": body.message_id,
                     "status": "generating",
                     "expected_revision": body.expected_revision,
+                    "mode": body.mode,
+                    "phase": "queued",
+                    "phase_label": AUTHORING_PHASE_LABELS["queued"],
+                    "detail": queued_detail,
+                    "attempt": None,
+                    "progress_sequence": 1,
+                    "progress": [queued_progress],
+                    "updated_at": queued_at,
                 }
                 authoring_jobs[job_id] = job
                 authoring_job_keys[key] = job_id
 
             def execute_authoring_job() -> None:
+                def report_progress(
+                    phase: str, detail: str, attempt: int | None
+                ) -> None:
+                    recorded_at = now_iso()
+                    with authoring_job_lock:
+                        current_job = authoring_jobs[job_id]
+                        prior_sequence = current_job.get("progress_sequence")
+                        sequence = (
+                            prior_sequence + 1
+                            if isinstance(prior_sequence, int)
+                            else 1
+                        )
+                        history = deepcopy(
+                            cast(list[dict[str, object]], current_job.get("progress", []))
+                        )
+                        history.append(
+                            {
+                                "sequence": sequence,
+                                "phase": phase,
+                                "phase_label": AUTHORING_PHASE_LABELS[phase],
+                                "detail": detail,
+                                "attempt": attempt,
+                                "recorded_at": recorded_at,
+                            }
+                        )
+                        authoring_jobs[job_id] = {
+                            **current_job,
+                            "phase": phase,
+                            "phase_label": AUTHORING_PHASE_LABELS[phase],
+                            "detail": detail,
+                            "attempt": attempt,
+                            "progress_sequence": sequence,
+                            "progress": history,
+                            "updated_at": recorded_at,
+                        }
+
                 try:
                     authoring_method = authoring.discuss if body.mode == "discuss" else authoring.advance
                     document = authoring_method(
@@ -3264,25 +3336,76 @@ def create_app(
                         message=body.message,
                         model=body.model,
                         reasoning_effort=body.reasoning_effort,
+                        progress=report_progress,
                     )
                 except (DraftConflictError, DraftNotFoundError, ValueError) as error:
-                    result: dict[str, object] = {
-                        **job,
+                    result_fields: dict[str, object] = {
                         "status": "failed",
                         "error": str(error),
                     }
                 except Exception:
-                    result = {
-                        **job,
+                    result_fields = {
                         "status": "failed",
                         "error": (
                             "scenario drafting provider failed; the prior draft was preserved"
                         ),
                     }
                 else:
-                    result = {**job, "status": "completed", "draft": document}
+                    result_fields = {"status": "completed", "draft": document}
                 with authoring_job_lock:
-                    authoring_jobs[job_id] = result
+                    current_job = authoring_jobs[job_id]
+                    terminal_phase = (
+                        "complete"
+                        if result_fields["status"] == "completed"
+                        else "failed"
+                    )
+                    terminal_detail = (
+                        (
+                            "The discussion and material questions are retained."
+                            if body.mode == "discuss"
+                            else (
+                                "The editable retained simulation is ready for review."
+                                if cast(dict[str, object], result_fields["draft"])[
+                                    "status"
+                                ]
+                                == "ready_for_review"
+                                else "The retained result is ready to inspect."
+                            )
+                        )
+                        if terminal_phase == "complete"
+                        else str(result_fields["error"])
+                    )
+                    prior_sequence = current_job.get("progress_sequence")
+                    sequence = (
+                        prior_sequence + 1
+                        if isinstance(prior_sequence, int)
+                        else 1
+                    )
+                    recorded_at = now_iso()
+                    history = deepcopy(
+                        cast(list[dict[str, object]], current_job.get("progress", []))
+                    )
+                    history.append(
+                        {
+                            "sequence": sequence,
+                            "phase": terminal_phase,
+                            "phase_label": AUTHORING_PHASE_LABELS[terminal_phase],
+                            "detail": terminal_detail,
+                            "attempt": None,
+                            "recorded_at": recorded_at,
+                        }
+                    )
+                    authoring_jobs[job_id] = {
+                        **current_job,
+                        **result_fields,
+                        "phase": terminal_phase,
+                        "phase_label": AUTHORING_PHASE_LABELS[terminal_phase],
+                        "detail": terminal_detail,
+                        "attempt": None,
+                        "progress_sequence": sequence,
+                        "progress": history,
+                        "updated_at": recorded_at,
+                    }
 
             Thread(target=execute_authoring_job, daemon=True).start()
             return JSONResponse(status_code=202, content=job)

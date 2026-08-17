@@ -47,6 +47,7 @@ from cybernetic_influence.llm_backend import (
 )
 from cybernetic_influence.run_store import now_iso
 from cybernetic_influence.general_simulation.authoring import (
+    AuthoringProgress,
     GeneralDraftAuthoringService,
 )
 from cybernetic_influence.general_simulation.authoring_models import (
@@ -490,6 +491,7 @@ class DraftAuthoringService:
         self, draft_id: str, *, expected_revision: int, message_id: str, message: str,
         model: AuthoringModel = AUTHORING_MODEL,
         reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT,
+        progress: AuthoringProgress | None = None,
     ) -> dict[str, object]:
         existing_document = self.store.get(draft_id)
         if existing_document.get("target_kind") in {"general_world_v1", "general_world_v2"}:
@@ -500,6 +502,7 @@ class DraftAuthoringService:
                 message=message,
                 model=model,
                 reasoning_effort=reasoning_effort,
+                progress=progress,
             )
         selected_model = next(
             (item for item in AUTHORING_MODEL_OPTIONS if item["model"] == model),
@@ -704,6 +707,7 @@ class DraftAuthoringService:
         self, draft_id: str, *, expected_revision: int, message_id: str, message: str,
         model: AuthoringModel = AUTHORING_MODEL,
         reasoning_effort: AuthoringReasoningEffort = AUTHORING_REASONING_EFFORT,
+        progress: AuthoringProgress | None = None,
     ) -> dict[str, object]:
         document = self.store.get(draft_id)
         if document.get("target_kind") not in {"general_world_v1", "general_world_v2"}:
@@ -715,6 +719,7 @@ class DraftAuthoringService:
             message=message,
             model=model,
             reasoning_effort=reasoning_effort,
+            progress=progress,
         )
 
     def edit_person(
