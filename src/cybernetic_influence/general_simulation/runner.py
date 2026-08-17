@@ -433,17 +433,27 @@ def _materialize_unambiguous_exact_transformations(
                 ):
                     batch_candidates.add(candidate)
 
+        requested_batches: set[int] = set()
+        for intent in selected_by_contract[contract.contract_id]:
+            arguments = intent.transition_contract_arguments.get(contract.contract_id)
+            if not arguments:
+                continue
+            candidate_batches = arguments.get("batches")
+            if isinstance(candidate_batches, int) and not isinstance(
+                candidate_batches, bool
+            ):
+                requested_batches.add(candidate_batches)
         batches: int | None
-        if contract.maximum_batches == 1:
+        if len(requested_batches) == 1:
+            batches = next(iter(requested_batches))
+        elif contract.maximum_batches == 1 and not requested_batches:
+            # Compatibility for retained/reference decisions created before explicit
+            # contract arguments became mandatory for new model outputs.
             batches = 1
         elif len(batch_candidates) == 1:
             batches = next(iter(batch_candidates))
         else:
-            feasible_batches = min(
-                int(world.state.resources[resource_id].quantity // quantity)
-                for resource_id, quantity in contract.input_resource_quantities.items()
-            )
-            batches = 1 if min(feasible_batches, contract.maximum_batches) == 1 else None
+            batches = None
         if batches is None:
             continue
 
@@ -540,6 +550,161 @@ def _materialize_unambiguous_exact_transformations(
         update={
             "operations": [*retained_operations, *added_operations],
             "preconditions": [*transaction.preconditions, *unique_preconditions],
+        }
+    )
+
+
+def _materialize_unambiguous_exact_transports(
+    transaction: WorldTransaction,
+    *,
+    intents: list[SemanticActionIntent],
+    world: CanonicalWorld,
+    current_minute: int,
+    corrections: list[str],
+) -> WorldTransaction:
+    """Render selected parameterized transport attempts from trusted contracts."""
+
+    retained_operations = list(transaction.operations)
+    additions: list[PatchOperation] = []
+    preconditions = list(transaction.preconditions)
+    materialized: list[str] = []
+    for contract in world.spec.resource_transport_contracts:
+        selected = [
+            intent
+            for intent in intents
+            if contract.contract_id in intent.transition_contract_ids
+            and intent.actor_id in contract.operator_ids
+        ]
+        attempts: set[tuple[float, str]] = set()
+        for intent in selected:
+            arguments = intent.transition_contract_arguments.get(contract.contract_id)
+            if not arguments:
+                continue
+            attempted_quantity = arguments.get("quantity")
+            attempted_route = arguments.get("route_id")
+            if (
+                isinstance(attempted_quantity, (int, float))
+                and not isinstance(attempted_quantity, bool)
+                and isinstance(attempted_route, str)
+            ):
+                attempts.add((float(attempted_quantity), attempted_route))
+        if len(attempts) != 1:
+            continue
+        quantity, route_id = next(iter(attempts))
+        if not 0 < quantity <= contract.quantity or route_id not in contract.allowed_route_ids:
+            continue
+        route = world.state.routes[route_id]
+        travel_time = route.public_state.get("travel_time_minutes")
+        if not isinstance(travel_time, (int, float)):
+            continue
+
+        target_keys = {
+            ("resource", contract.source_resource_id, "quantity"),
+            ("resource", contract.destination_resource_id, "quantity"),
+            ("record", contract.arrival_record_id, f"state.{contract.arrival_quantity_key}"),
+            ("record", contract.arrival_record_id, f"state.{contract.usable_quantity_key}"),
+            ("record", contract.arrival_record_id, f"state.{contract.arrival_minute_key}"),
+        }
+        retained_operations = [
+            operation
+            for operation in retained_operations
+            if (
+                operation.target.record_type,
+                operation.target.record_id,
+                operation.target.field or "",
+            )
+            not in target_keys
+        ]
+        source = world.state.resources[contract.source_resource_id]
+        destination = world.state.resources[contract.destination_resource_id]
+        additions.extend(
+            [
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="resource",
+                        record_id=contract.source_resource_id,
+                        field="quantity",
+                    ),
+                    value=source.quantity - quantity,
+                ),
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="resource",
+                        record_id=contract.destination_resource_id,
+                        field="quantity",
+                    ),
+                    value=destination.quantity + quantity,
+                ),
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="record",
+                        record_id=contract.arrival_record_id,
+                        field=f"state.{contract.arrival_quantity_key}",
+                    ),
+                    value=quantity,
+                ),
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="record",
+                        record_id=contract.arrival_record_id,
+                        field=f"state.{contract.usable_quantity_key}",
+                    ),
+                    value=quantity,
+                ),
+                PatchOperation(
+                    operation="replace",
+                    target=TypedTarget(
+                        record_type="record",
+                        record_id=contract.arrival_record_id,
+                        field=f"state.{contract.arrival_minute_key}",
+                    ),
+                    value=current_minute + float(travel_time),
+                ),
+            ]
+        )
+        preconditions.extend(
+            [
+                Precondition(
+                    target=TypedTarget(
+                        record_type="resource",
+                        record_id=contract.source_resource_id,
+                        field="quantity",
+                    ),
+                    comparison="greater_than_or_equal",
+                    expected=quantity,
+                ),
+                Precondition(
+                    target=TypedTarget(
+                        record_type="route", record_id=route_id, field="operational"
+                    ),
+                    expected=True,
+                ),
+                *contract.required_preconditions,
+            ]
+        )
+        materialized.append(
+            f"{contract.contract_id}(quantity={quantity:g}, route_id={route_id})"
+        )
+    if not materialized:
+        return transaction
+    unique_preconditions = list(
+        {
+            item.model_dump_json(exclude_none=False): item
+            for item in preconditions
+        }.values()
+    )
+    corrections.append(
+        "trusted runtime materialized selected exact transport attempts: "
+        + ", ".join(materialized)
+    )
+    return transaction.model_copy(
+        update={
+            "operations": [*retained_operations, *additions],
+            "preconditions": unique_preconditions,
         }
     )
 
@@ -787,6 +952,75 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 f"{sorted(unknown_contract_ids)}; allowed IDs are "
                 f"{sorted(available_contract_ids)}"
             )
+        arguments = decision.intent.transition_contract_arguments
+        unknown_argument_ids = set(arguments) - set(decision.intent.transition_contract_ids)
+        if unknown_argument_ids:
+            raise ValueError(
+                "transition_contract_arguments named unselected contracts "
+                f"{sorted(unknown_argument_ids)}"
+            )
+        available_by_id = {
+            item.contract_id: item for item in actor_context.available_transition_contracts
+        }
+        for contract_id in decision.intent.transition_contract_ids:
+            contract = available_by_id[contract_id]
+            supplied = arguments.get(contract_id)
+            if contract.contract_kind == "sensing":
+                if supplied not in (None, {}):
+                    raise ValueError(
+                        f"sensing contract {contract_id} accepts no arguments"
+                    )
+                continue
+            if supplied is None:
+                raise ValueError(
+                    f"selected {contract.contract_kind} contract {contract_id} requires "
+                    "structured transition_contract_arguments"
+                )
+            if contract.contract_kind == "resource_transformation":
+                batches = supplied.get("batches")
+                batches_schema = contract.argument_schema.get("batches")
+                maximum = (
+                    batches_schema.get("maximum")
+                    if isinstance(batches_schema, dict)
+                    else None
+                )
+                if (
+                    isinstance(batches, bool)
+                    or not isinstance(batches, int)
+                    or not isinstance(maximum, int)
+                    or not 1 <= batches <= maximum
+                    or set(supplied) != {"batches"}
+                ):
+                    raise ValueError(
+                        f"contract {contract_id} requires integer batches from 1 to {maximum}"
+                    )
+            elif contract.contract_kind == "resource_transport":
+                quantity = supplied.get("quantity")
+                route_id = supplied.get("route_id")
+                quantity_schema = contract.argument_schema.get("quantity")
+                route_schema = contract.argument_schema.get("route_id")
+                maximum = (
+                    quantity_schema.get("maximum")
+                    if isinstance(quantity_schema, dict)
+                    else None
+                )
+                allowed_routes = (
+                    route_schema.get("enum") if isinstance(route_schema, dict) else None
+                )
+                if (
+                    isinstance(quantity, bool)
+                    or not isinstance(quantity, (int, float))
+                    or not isinstance(maximum, (int, float))
+                    or not 0 < float(quantity) <= float(maximum)
+                    or not isinstance(route_id, str)
+                    or not isinstance(allowed_routes, list)
+                    or route_id not in allowed_routes
+                    or set(supplied) != {"quantity", "route_id"}
+                ):
+                    raise ValueError(
+                        f"contract {contract_id} requires quantity in (0, {maximum}] and "
+                        f"route_id in {allowed_routes}"
+                    )
         available_observations = {
             item.observation_id for item in actor_context.observations
         }
@@ -929,7 +1163,10 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 "assimilation, the updated private memory, character, and available transition "
                 "contracts, return one coherent bounded semantic action intent against the "
                 "supplied world revision. A capability or contract permits an attempt; it does "
-                "not guarantee authorization or success."
+                "not guarantee authorization or success. For every selected resource contract, "
+                "supply the exact structured arguments required by its argument_schema. The "
+                "natural-language action must describe the same quantity, route, or batch count; "
+                "the structured arguments govern the canonical attempt."
             ),
             user=json.dumps(
                 {
@@ -958,7 +1195,9 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                     "Repair one rejected action-selection output. Preserve the person's "
                     "substantive judgment, but make actor identity, world revision, target "
                     "references, and transition-contract selections conform exactly to the "
-                    "supplied authorized context. Do not change the retained assimilation."
+                    "supplied authorized context. Make each selected resource contract's structured "
+                    "arguments satisfy its argument_schema, and make the action prose agree with "
+                    "those arguments. Do not change the retained assimilation."
                 ),
                 user=json.dumps(
                     {
@@ -1015,7 +1254,10 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                     "When several supplied transition contracts are jointly necessary and you are "
                     "authorized to attempt them, one coherent intent may select all of their exact "
                     "contract IDs. Otherwise select only the contracts you actually attempt. Selecting "
-                    "a contract permits only an attempt; it does not guarantee authorization or success."
+                    "a contract permits only an attempt; it does not guarantee authorization or success. "
+                    "For every selected resource contract, supply the exact arguments required by its "
+                    "argument_schema and describe those same values in the action prose. Structured "
+                    "arguments govern the canonical attempt."
                 ),
                 user=actor_user,
                 trace_id=(
@@ -1393,6 +1635,13 @@ class GeneralGameMasterActingComponent(entity_component.ActingComponent):  # typ
                 transaction,
                 intents=intents,
                 world=world,
+                corrections=corrections,
+            )
+            transaction = _materialize_unambiguous_exact_transports(
+                transaction,
+                intents=intents,
+                world=world,
+                current_minute=moment.minute,
                 corrections=corrections,
             )
             transaction = _inject_selected_contract_preconditions(

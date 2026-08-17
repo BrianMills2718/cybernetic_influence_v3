@@ -31,10 +31,12 @@ from cybernetic_influence.general_simulation.models import (
     WorldTransactionProposal,
 )
 from cybernetic_influence.general_simulation.runner import (
+    GeneralActorActingComponent,
     _drop_only_unlicensed_operations,
     _drop_unauthorized_representation_deliveries,
     _effective_transition_authority,
     _inject_selected_contract_preconditions,
+    _materialize_unambiguous_exact_transports,
     _materialize_unambiguous_exact_transformations,
     _memory_reference_is_grounded,
     _normalize_transaction_targets,
@@ -174,6 +176,9 @@ def test_selected_one_batch_transformation_is_materialized_from_exact_contract()
         expected_effect="Consume fuel and produce backup power.",
         stated_rationale="Attempt the configured exact mechanism.",
         transition_contract_ids=["convert_fuel_to_backup_power"],
+        transition_contract_arguments={
+            "convert_fuel_to_backup_power": {"batches": 1}
+        },
     )
     transaction = WorldTransaction(
         transaction_id="adjudicator_mirror_error",
@@ -507,6 +512,165 @@ def test_selected_exact_transport_receives_compiled_guards() -> None:
         "trusted exact contract preconditions injected: "
         "record:relief_cargo:state.status"
     ]
+
+
+def test_parameterized_transport_materializes_the_attempted_quantity_and_route() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    spec = compile_general_simulation(proposal).world_spec
+    spec.initial_state.resources["received_fuel"] = ResourceStock(
+        resource_id="received_fuel",
+        quantity=0,
+        custodian_id="relief_cargo",
+    )
+    spec.initial_state.routes["temporary_route"].public_state["travel_time_minutes"] = 15
+    spec.initial_state.records["relief_cargo"].state.update(
+        {"quantity": 0, "usable_quantity": 0, "arrival_minute": None}
+    )
+    spec.resource_transport_contracts = [
+        ResourceTransportContract(
+            contract_id="move_dispatch_fuel",
+            operator_ids=["trucking_dispatcher"],
+            source_resource_id="dispatch_fuel",
+            destination_resource_id="received_fuel",
+            quantity=20,
+            origin_place_id="outside_port",
+            destination_place_id="port",
+            allowed_route_ids=["temporary_route"],
+            arrival_record_id="relief_cargo",
+            arrival_quantity_key="quantity",
+            usable_quantity_key="usable_quantity",
+            arrival_minute_key="arrival_minute",
+        )
+    ]
+    world = CanonicalWorld(spec)
+    intent = SemanticActionIntent(
+        intent_id="move_ten_units",
+        actor_id="trucking_dispatcher",
+        base_revision=0,
+        action="Move 10 units over the temporary route.",
+        target_refs=["dispatch_fuel", "received_fuel", "temporary_route"],
+        purpose="Make a bounded delivery.",
+        expected_effect="Ten units reach the port.",
+        stated_rationale="The smaller load fits the current plan.",
+        transition_contract_ids=["move_dispatch_fuel"],
+        transition_contract_arguments={
+            "move_dispatch_fuel": {
+                "quantity": 10,
+                "route_id": "temporary_route",
+            }
+        },
+    )
+    transaction = WorldTransaction(
+        transaction_id="adjudicator_requested_full_capacity",
+        base_revision=0,
+        authority_id=spec.authorities[0].authority_id,
+        intent_ids=[intent.intent_id],
+        operations=[],
+        preconditions=[],
+        consequences=[],
+        evidence_refs=[intent.intent_id],
+        stated_rationale="The exact contract determines the realized attempt.",
+    )
+    corrections: list[str] = []
+
+    materialized = _materialize_unambiguous_exact_transports(
+        transaction,
+        intents=[intent],
+        world=world,
+        current_minute=20,
+        corrections=corrections,
+    )
+    result = world.validate_and_commit(
+        materialized,
+        envelope_corrections=corrections,
+        intents=[intent],
+        current_minute=20,
+    )
+
+    assert result.accepted
+    assert world.state.resources["dispatch_fuel"].quantity == 90
+    assert world.state.resources["received_fuel"].quantity == 10
+    assert world.state.records["relief_cargo"].state == {
+        "status": "awaiting_dispatch",
+        "quantity": 10,
+        "usable_quantity": 10,
+        "arrival_minute": 35,
+    }
+    assert corrections == [
+        "trusted runtime materialized selected exact transport attempts: "
+        "move_dispatch_fuel(quantity=10, route_id=temporary_route)"
+    ]
+
+
+def test_new_resource_contract_selection_requires_explicit_attempt_arguments() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    compiled = compile_general_simulation(proposal)
+    actor_id = "trucking_dispatcher"
+    compiled.world_spec.resource_transport_contracts = [
+        ResourceTransportContract(
+            contract_id="move_dispatch_fuel",
+            operator_ids=[actor_id],
+            source_resource_id="dispatch_fuel",
+            destination_resource_id="dispatch_fuel",
+            quantity=20,
+            origin_place_id="outside_port",
+            destination_place_id="port",
+            allowed_route_ids=["temporary_route"],
+            arrival_record_id="relief_cargo",
+            arrival_quantity_key="quantity",
+            usable_quantity_key="usable_quantity",
+            arrival_minute_key="arrival_minute",
+        )
+    ]
+    person = next(item for item in proposal.people if item.entity_id == actor_id)
+    actor = GeneralActorActingComponent(
+        lambda **_: None,
+        person=person,
+        trace_prefix="argument_validation",
+        model="codex/gpt-test",
+        reasoning_effort="medium",
+    )
+    context = CanonicalWorld(compiled.world_spec).actor_context(actor_id)
+    contract = next(
+        item
+        for item in context.available_transition_contracts
+        if item.contract_kind == "resource_transport"
+    )
+    decision = ActorDecision(
+        assimilation=Assimilation(
+            attended_observation_ids=[],
+            memory_additions=[],
+            memory_revisions=[],
+            provenance_links=[],
+            interpretation="No new evidence.",
+        ),
+        intent=SemanticActionIntent(
+            intent_id="missing_arguments",
+            actor_id=actor_id,
+            base_revision=0,
+            action="Attempt the configured movement.",
+            target_refs=contract.target_refs,
+            purpose="Exercise the contract.",
+            expected_effect="A bounded movement is attempted.",
+            stated_rationale="The contract is available.",
+            transition_contract_ids=[contract.contract_id],
+        ),
+    )
+
+    with pytest.raises(ValueError, match="requires structured"):
+        actor._validate_decision(decision, context)
+
+    decision.intent.transition_contract_arguments = {
+        contract.contract_id: {
+            "quantity": contract.argument_schema["quantity"]["maximum"],
+            "route_id": contract.argument_schema["route_id"]["enum"][0],
+        }
+    }
+    actor._validate_decision(decision, context)
 
 
 def test_adjudicator_sees_only_selected_exact_patch_shapes_without_changing_authority() -> None:

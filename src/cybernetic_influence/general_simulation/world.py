@@ -117,6 +117,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     f"finding in {item.output_record_id}."
                 ),
                 target_refs=[item.subject_id, item.output_record_id],
+                argument_schema={},
             )
             for item in self._spec.sensing_contracts
             if actor_id in item.observer_ids
@@ -138,6 +139,13 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     item.output_resource_id,
                     item.public_inventory_record_id,
                 ],
+                argument_schema={
+                    "batches": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": item.maximum_batches,
+                    }
+                },
             )
             for item in self._spec.resource_transformation_contracts
             if actor_id in item.operator_ids
@@ -166,6 +174,17 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                         for guard in item.required_preconditions
                     ],
                 ],
+                argument_schema={
+                    "quantity": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": item.quantity,
+                    },
+                    "route_id": {
+                        "type": "string",
+                        "enum": list(item.allowed_route_ids),
+                    },
+                },
             )
             for item in self._spec.resource_transport_contracts
             if actor_id in item.operator_ids
@@ -639,6 +658,30 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             ]
             if not selected:
                 continue
+            selected_attempts: set[tuple[float, str]] = set()
+            for intent in selected:
+                arguments = intent.transition_contract_arguments.get(
+                    transport_contract.contract_id
+                )
+                if not arguments:
+                    continue
+                attempted_quantity = arguments.get("quantity")
+                attempted_route = arguments.get("route_id")
+                if (
+                    isinstance(attempted_quantity, (int, float))
+                    and not isinstance(attempted_quantity, bool)
+                    and isinstance(attempted_route, str)
+                ):
+                    selected_attempts.add((float(attempted_quantity), attempted_route))
+            if len(selected_attempts) == 1:
+                attempted_quantity, attempted_route_id = next(iter(selected_attempts))
+            elif not selected_attempts:
+                # Compatibility for retained/reference decisions produced before
+                # explicit attempt arguments were part of the intent contract.
+                attempted_quantity = transport_contract.quantity
+                attempted_route_id = ""
+            else:
+                continue
             supplied_preconditions = {
                 (
                     item.target.record_type,
@@ -672,14 +715,14 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     "resource",
                     transport_contract.source_resource_id,
                     "quantity",
-                ) and self._close(delta, -transport_contract.quantity):
+                ) and self._close(delta, -attempted_quantity):
                     source_index = index
                 if self._targets(
                     operation,
                     "resource",
                     transport_contract.destination_resource_id,
                     "quantity",
-                ) and self._close(delta, transport_contract.quantity):
+                ) and self._close(delta, attempted_quantity):
                     destination_index = index
             selected_routes = list(
                 dict.fromkeys(
@@ -692,6 +735,8 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                     and precondition.expected is True
                 )
             )
+            if attempted_route_id and selected_routes != [attempted_route_id]:
+                continue
             if (
                 source_index is None
                 or destination_index is None
@@ -712,7 +757,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
             ):
                 continue
             required_arrivals = {
-                transport_contract.arrival_quantity_key: transport_contract.quantity,
+                transport_contract.arrival_quantity_key: attempted_quantity,
                 transport_contract.arrival_minute_key: current_minute + travel_time,
             }
             arrival_indices: list[int] = []
@@ -748,7 +793,7 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                         f"state.{transport_contract.usable_quantity_key}",
                     )
                     and isinstance(operation.value, (int, float))
-                    and 0 <= float(operation.value) <= transport_contract.quantity
+                    and 0 <= float(operation.value) <= attempted_quantity
                 ),
                 None,
             )

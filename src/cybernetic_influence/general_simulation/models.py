@@ -135,6 +135,7 @@ class AvailableTransitionContract(StrictModel):
     contract_kind: Literal["sensing", "resource_transformation", "resource_transport"]
     summary: str
     target_refs: list[str]
+    argument_schema: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 class SensingTransitionContract(StrictModel):
@@ -248,6 +249,13 @@ class SemanticActionIntent(StrictModel):
     expected_effect: str
     stated_rationale: str
     transition_contract_ids: list[str] = Field(default_factory=list)
+    transition_contract_arguments: dict[str, dict[str, JsonValue]] = Field(
+        default_factory=dict,
+        description=(
+            "Structured parameters for each selected exact contract. These values, not "
+            "quantities implied only by prose, define the canonical attempted operation."
+        ),
+    )
 
 
 class ActorDecision(StrictModel):

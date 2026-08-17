@@ -1339,6 +1339,24 @@ def _simulation_replay(
                     )
                 intent = trace.get("intent")
                 intent = intent if isinstance(intent, dict) else {}
+                contract_arguments = intent.get("transition_contract_arguments")
+                structured_attempts = []
+                if isinstance(contract_arguments, dict):
+                    for contract_id, arguments in contract_arguments.items():
+                        if not isinstance(arguments, dict):
+                            continue
+                        rendered_arguments = ", ".join(
+                            f"{str(key).replace('_', ' ')}={value}"
+                            for key, value in arguments.items()
+                        )
+                        structured_attempts.append(
+                            f"{str(contract_id).replace('_', ' ')} ({rendered_arguments})"
+                        )
+                attempted = str(
+                    intent.get("action") or "No action retained."
+                ).replace("_", " ")
+                if structured_attempts:
+                    attempted += " · Exact attempt: " + "; ".join(structured_attempts)
                 cognition_facts.append(
                     (
                         node_label_by_id.get(person_id, person_id.replace("_", " ").title()),
@@ -1355,8 +1373,7 @@ def _simulation_replay(
                                     if memory_changes
                                     else "Memory unchanged"
                                 ),
-                                "Then attempted: "
-                                f"{str(intent.get('action') or 'No action retained.').replace('_', ' ')}",
+                                f"Then attempted: {attempted}",
                             ]
                         ),
                     )
