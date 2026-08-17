@@ -27,6 +27,7 @@ from cybernetic_influence.general_simulation.authoring import (
     _suppress_redundant_custody_findings,
 )
 from cybernetic_influence.general_simulation.compiler import (
+    materialize_dependency_guard_repairs,
     materialize_unambiguous_contract_references,
 )
 from cybernetic_influence.general_simulation.study_models import (
@@ -314,6 +315,48 @@ def test_dependency_review_accepts_prior_exact_transport_as_custody_evidence() -
     assert retained.status == "repair_required"
     assert len(retained.missing_dependencies) == 1
     assert suppressions == []
+
+
+def test_dependency_review_can_apply_a_narrow_transport_guard_patch() -> None:
+    proposal = _proposal_with_exact_transport_then_transformation()
+    review = DependencyCompletenessReviewV1(
+        status="repair_required",
+        summary="The route must be operational before fuel moves.",
+        missing_dependencies=[
+            MissingDependencyFindingV1(
+                exact_action_request_id="deliver_fuel",
+                prerequisite_description="The temporary route must be operational.",
+                existing_ref="temporary_route",
+                evidence="The action claims it moves fuel along the route.",
+                required_resolution="exact_guard",
+                guard_repairs=[
+                    {
+                        "transition_contract_id": "deliver_fuel",
+                        "precondition": {
+                            "record_type": "route",
+                            "record_id": "temporary_route",
+                            "field": "operational",
+                            "comparison": "equals",
+                            "expected": True,
+                        },
+                    }
+                ],
+            )
+        ],
+    )
+
+    repaired, corrections = materialize_dependency_guard_repairs(proposal.scenario, review)
+
+    transport = repaired.resource_transports[0]
+    assert transport.required_preconditions[0].record_id == "temporary_route"
+    assert transport.required_preconditions[0].field == "operational"
+    request = next(
+        item for item in repaired.component_requests if item.request_id == "deliver_fuel"
+    )
+    assert "temporary_route" in request.required_reads
+    assert corrections == [
+        "deliver_fuel: added reviewer-proposed guard to deliver_fuel on route temporary_route."
+    ]
 
 
 def test_authoring_uses_materialization_and_custody_evidence_without_regeneration(
@@ -1110,6 +1153,89 @@ def test_dependency_review_repairs_an_omitted_exact_action_prerequisite(
         "repair",
         "accepted",
         "accepted",
+    ]
+
+
+def test_dependency_review_applies_reviewer_guard_without_regenerating_world(
+    tmp_path: Path,
+) -> None:
+    proposal = _proposal_with_exact_transport_then_transformation()
+    proposal_calls = 0
+    review_calls = 0
+
+    def provider(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        nonlocal proposal_calls, review_calls
+        if kwargs["response_model"] is DependencyCompletenessReviewV1:
+            review_calls += 1
+            if review_calls == 1:
+                return DependencyCompletenessReviewV1(
+                    status="repair_required",
+                    summary="Fuel movement needs the route-status guard.",
+                    missing_dependencies=[
+                        MissingDependencyFindingV1(
+                            exact_action_request_id="deliver_fuel",
+                            prerequisite_description="The temporary route must be operational.",
+                            existing_ref="temporary_route",
+                            evidence="The request says fuel must move on the temporary route.",
+                            required_resolution="exact_guard",
+                            guard_repairs=[
+                                {
+                                    "transition_contract_id": "deliver_fuel",
+                                    "precondition": {
+                                        "record_type": "route",
+                                        "record_id": "temporary_route",
+                                        "field": "operational",
+                                        "comparison": "equals",
+                                        "expected": True,
+                                    },
+                                }
+                            ],
+                        )
+                    ],
+                ), SimpleNamespace(provider="test", cost=0.0)
+            return DependencyCompletenessReviewV1(
+                status="complete",
+                summary="The repaired exact movement has the required route guard.",
+                missing_dependencies=[],
+            ), SimpleNamespace(provider="test", cost=0.0)
+        proposal_calls += 1
+        return AuthoredSimulationProposalEnvelopeV2(proposal=proposal), SimpleNamespace(
+            provider="test", cost=0.0
+        )
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=provider,
+        )
+    )
+    draft = api.post("/api/authoring/drafts").json()
+    generated = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "targeted_guard_repair",
+            "message": "Model fuel delivery where the route must be operational.",
+        },
+    )
+
+    assert generated.status_code == 200, generated.text
+    body = generated.json()
+    assert body["status"] == "ready_for_review"
+    assert proposal_calls == 1
+    assert review_calls == 2
+    assert "added reviewer-proposed guard" in body["attempts"][1]["message"]
+    transport = body["proposal"]["scenario"]["resource_transports"][0]
+    assert transport["required_preconditions"] == [
+        {
+            "record_type": "route",
+            "record_id": "temporary_route",
+            "field": "operational",
+            "comparison": "equals",
+            "expected": True,
+        }
     ]
 
 

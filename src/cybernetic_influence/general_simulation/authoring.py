@@ -38,6 +38,7 @@ from .compiler import (
     GeneralCompilationError,
     compile_general_simulation,
     compile_general_simulation_v2,
+    materialize_dependency_guard_repairs,
     materialize_unambiguous_contract_references,
 )
 from .study_models import (
@@ -901,6 +902,98 @@ class GeneralDraftAuthoringService:
                         proposal, review
                     )
                     if review.status == "repair_required":
+                        repaired_scenario, guard_corrections = (
+                            materialize_dependency_guard_repairs(proposal.scenario, review)
+                        )
+                        if guard_corrections:
+                            repaired_proposal = proposal.model_copy(
+                                update={"scenario": repaired_scenario}
+                            )
+                            repaired_bundle = materialize_authored_bundle_v2(
+                                repaired_proposal, run_id=f"{draft_id}_run"
+                            )
+                            repaired_compiled = compile_general_simulation_v2(
+                                repaired_bundle.scenario, repaired_bundle.default_run
+                            )
+                            repaired_diagnostics = _diagnostics_v2(
+                                repaired_bundle, repaired_compiled
+                            )
+                            if not repaired_diagnostics:
+                                recheck_trace_id = f"{review_trace_id}/guard-recheck"
+                                recheck_system, recheck_user = _dependency_review_prompt(
+                                    message=message,
+                                    proposal=repaired_proposal,
+                                    compiled=repaired_compiled,
+                                )
+                                _report_progress(
+                                    progress,
+                                    "dependency_review",
+                                    "Rechecking the narrowly repaired causal guards.",
+                                    attempt_number,
+                                )
+                                with structured_backend_options(model) as recheck_backend_options:
+                                    rechecked, recheck_meta = _call_with_deadline(
+                                        self.call,
+                                        model,
+                                        [
+                                            {"role": "system", "content": recheck_system},
+                                            {"role": "user", "content": recheck_user},
+                                        ],
+                                        response_model=DependencyCompletenessReviewV1,
+                                        task="cybernetic_influence_v3_dependency_guard_recheck",
+                                        trace_id=recheck_trace_id,
+                                        max_budget=GENERAL_AUTHORING_MAX_BUDGET,
+                                        max_tokens=2400,
+                                        model_justification=(
+                                            "Verify reviewer-proposed exact guards before retaining "
+                                            "the compiled scenario."
+                                        ),
+                                        reasoning_effort=reasoning_effort,
+                                        timeout=180,
+                                        **recheck_backend_options,
+                                    )
+                                recheck = DependencyCompletenessReviewV1.model_validate(
+                                    rechecked.model_dump(mode="json")
+                                    if isinstance(rechecked, BaseModel)
+                                    else rechecked
+                                )
+                                recheck, recheck_suppressions = (
+                                    _suppress_redundant_custody_findings(
+                                        repaired_proposal, recheck
+                                    )
+                                )
+                                attempts.append(
+                                    _attempt(
+                                        attempt_number,
+                                        review_trace_id,
+                                        "repair",
+                                        "; ".join(guard_corrections),
+                                        review_meta,
+                                    )
+                                )
+                                if recheck.status == "complete":
+                                    attempts.append(
+                                        _attempt(
+                                            attempt_number,
+                                            recheck_trace_id,
+                                            "accepted",
+                                            recheck.summary
+                                            + (
+                                                " Retained dependency equivalences: "
+                                                + "; ".join(recheck_suppressions)
+                                                if recheck_suppressions
+                                                else ""
+                                            ),
+                                            recheck_meta,
+                                        )
+                                    )
+                                    proposal = repaired_proposal
+                                    bundle = repaired_bundle
+                                    compiled = repaired_compiled
+                                    diagnostics = []
+                                    break
+                                review = recheck
+                                review_suppressions = recheck_suppressions
                         repair_feedback = "Dependency completeness review requires repair: " + "; ".join(
                             (
                                 f"{item.exact_action_request_id}: "

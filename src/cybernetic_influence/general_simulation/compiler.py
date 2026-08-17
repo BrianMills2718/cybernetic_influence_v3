@@ -12,6 +12,7 @@ from .authoring_models import (
     DependencyEnforcementItemV1,
     ExecutionCoverageReportV1,
     GeneralSimulationProposalV1,
+    DependencyCompletenessReviewV1,
     ScheduledMomentProposalV1,
 )
 from .contracts_v2 import (
@@ -272,6 +273,74 @@ def materialize_unambiguous_contract_references(
     if not corrections:
         return scenario, []
     return ScenarioSpecV2.model_validate(payload), corrections
+
+
+def materialize_dependency_guard_repairs(
+    scenario: ScenarioSpecV2,
+    review: DependencyCompletenessReviewV1,
+) -> tuple[ScenarioSpecV2, list[str]]:
+    """Apply only reviewer-specified, request-owned transport guards.
+
+    A dependency reviewer can identify the exact canonical fact that should
+    gate a transport more reliably than it can regenerate an entire world
+    proposal.  This keeps the semantic choice in retained model output while
+    constraining the trusted patch to an existing transport and its owning
+    component request.  It never creates a record, route, resource, actor, or
+    transition contract.
+    """
+
+    if review.status != "repair_required":
+        return scenario, []
+    payload = scenario.model_dump(mode="json")
+    requests = {
+        str(item["request_id"]): item
+        for item in payload["component_requests"]
+        if isinstance(item, dict)
+    }
+    transports = {
+        str(item["transport_id"]): item
+        for item in payload["resource_transports"]
+        if isinstance(item, dict)
+    }
+    corrections: list[str] = []
+    for finding in review.missing_dependencies:
+        if finding.required_resolution != "exact_guard" or not finding.guard_repairs:
+            continue
+        request = requests.get(finding.exact_action_request_id)
+        if request is None:
+            raise GeneralCompilationError(
+                "dependency reviewer names unknown request "
+                f"{finding.exact_action_request_id}"
+            )
+        owned_contract_ids = {
+            str(item) for item in request.get("transition_contract_ids", [])
+        }
+        for repair in finding.guard_repairs:
+            if repair.transition_contract_id not in owned_contract_ids:
+                raise GeneralCompilationError(
+                    "dependency reviewer tried to guard transport outside request "
+                    f"{finding.exact_action_request_id}: {repair.transition_contract_id}"
+                )
+            transport = transports.get(repair.transition_contract_id)
+            if transport is None:
+                raise GeneralCompilationError(
+                    "dependency reviewer exact guard must target a resource transport: "
+                    f"{repair.transition_contract_id}"
+                )
+            precondition = repair.precondition.model_dump(mode="json")
+            guards = transport.setdefault("required_preconditions", [])
+            if precondition in guards:
+                continue
+            guards.append(precondition)
+            corrections.append(
+                f"{finding.exact_action_request_id}: added reviewer-proposed guard "
+                f"to {repair.transition_contract_id} on "
+                f"{precondition['record_type']} {precondition['record_id']}."
+            )
+    if not corrections:
+        return scenario, []
+    repaired = ScenarioSpecV2.model_validate(payload)
+    return materialize_unambiguous_contract_references(repaired)[0], corrections
 
 
 def _transformation_inventory_fields(

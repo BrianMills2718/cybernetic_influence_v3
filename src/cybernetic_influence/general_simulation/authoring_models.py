@@ -186,6 +186,19 @@ class TransitionPreconditionProposalV1(_StrictModel):
     expected: Scalar
 
 
+class ExactGuardRepairV1(_StrictModel):
+    """A narrowly scoped reviewer-proposed guard for an existing transport.
+
+    This is deliberately a patch, not a second scenario proposal.  The reviewer
+    may only add a typed precondition to a transport already owned by the named
+    exact component request; the trusted compiler validates the reference and
+    field before it can become executable.
+    """
+
+    transition_contract_id: str = Field(pattern=_ID)
+    precondition: TransitionPreconditionProposalV1
+
+
 class ResourceTransformationProposalV1(_StrictModel):
     transformation_id: str = Field(pattern=_ID)
     operator_ids: list[str] = Field(min_length=1)
@@ -486,6 +499,13 @@ class MissingDependencyFindingV1(_StrictModel):
     required_resolution: Literal[
         "exact_guard", "required_read", "split_or_coarse", "declare_world_state"
     ]
+    guard_repairs: list[ExactGuardRepairV1] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def guard_repairs_match_resolution(self) -> "MissingDependencyFindingV1":
+        if self.guard_repairs and self.required_resolution != "exact_guard":
+            raise ValueError("guard repairs are only valid for exact_guard findings")
+        return self
 
 
 class DependencyCompletenessReviewV1(_StrictModel):

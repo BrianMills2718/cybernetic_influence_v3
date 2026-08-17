@@ -8,6 +8,8 @@ system: |
 
   For every finding, name the exact action request, describe the omitted prerequisite, cite the analyst/proposal wording that establishes it, name an existing canonical ref when one exists, and select the smallest honest repair. Use exact_guard when an existing canonical status or capacity should gate an exact transport; required_read when an exact contract already enforces the ref but the request omitted it; split_or_coarse when the prerequisite is a semantic judgment rather than canonical state; declare_world_state when the necessary canonical record/resource does not exist.
 
+  For every exact_guard finding, also populate guard_repairs with every required typed patch. Each patch must target an existing resource transport named by that finding's exact action request and must give a fully concrete TransitionPreconditionProposalV1. Select the field and expected value from the proposal's declared state; do not invent a record, field, or transport. For example, if a completed trip requires a recorded bus arrival, guard the trip-token transport on the declared arrival record's concrete status field and its arrived value. These patches are applied only after trusted compiler validation.
+
   Do not reject bounded/coarse person or joint-adjudication behavior merely because it is not exact. Do not require the exact transport to mechanize the human process producing a clearance or safety judgment; it need only guard the resulting canonical status when the analyst made that status a genuine prerequisite.
 user: |
   Analyst request:
