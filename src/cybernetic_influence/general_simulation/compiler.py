@@ -190,6 +190,20 @@ def materialize_unambiguous_contract_references(
         public_state = output_record.get("public_state")
         if not isinstance(public_state, list):
             continue
+        visible_to_actor_ids = output_record.get("visible_to_actor_ids")
+        if not isinstance(visible_to_actor_ids, list):
+            continue
+        existing_recipients = {str(item) for item in visible_to_actor_ids}
+        missing_recipients = sorted(
+            set(str(item) for item in rule.get("result_recipient_ids", []))
+            - existing_recipients
+        )
+        if missing_recipients:
+            visible_to_actor_ids.extend(missing_recipients)
+            corrections.append(
+                f"{rule_id}: granted declared sensing-result access to "
+                + ", ".join(missing_recipients)
+            )
         existing_keys = {
             str(item["key"])
             for item in public_state

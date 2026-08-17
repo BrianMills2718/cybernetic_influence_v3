@@ -85,7 +85,7 @@ def test_materializes_only_unambiguous_contract_references() -> None:
                 "label": "Restoration finding",
                 "public_state": [],
                 "hidden_state": [],
-                "visible_to_actor_ids": ["trucking_dispatcher"],
+                "visible_to_actor_ids": [],
             },
             {
                 "record_id": "backup_inventory",
@@ -143,7 +143,8 @@ def test_materializes_only_unambiguous_contract_references() -> None:
     assert finding_state == {"restoration_minutes": None}
     assert inventory_state == {"available_power": 0, "fuel_received": 100.0}
     assert transformation.public_inventory_input_fields[0].resource_id == "dispatch_fuel"
-    assert len(corrections) == 3
+    assert records["restoration_finding"].visible_to_actor_ids == ["trucking_dispatcher"]
+    assert len(corrections) == 4
 
 
 def _proposal_with_exact_transport_then_transformation() -> AuthoredSimulationProposalV2:
