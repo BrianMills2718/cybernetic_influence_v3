@@ -399,7 +399,14 @@ def _drop_only_unlicensed_operations(
     transaction: WorldTransaction,
     errors: list[str],
 ) -> WorldTransaction | None:
-    """Remove precisely identified shape violations without resampling valid effects."""
+    """Remove only extraneous effects while preserving truthful evidence.
+
+    A transaction whose every operation failed exact-contract attribution is a
+    failed attempt, not an acceptable no-op.  It must enter the bounded repair
+    path so the model can correct the complete contract shape.  When only some
+    operations are removed, their free-text consequences and rationale cannot
+    survive as claims about effects that did not commit.
+    """
     invalid_indices: set[int] = set()
     for error in errors:
         match = re.match(
@@ -411,12 +418,23 @@ def _drop_only_unlicensed_operations(
         invalid_indices.add(int(match.group(1)))
     if not invalid_indices or max(invalid_indices) >= len(transaction.operations):
         return None
+    if len(invalid_indices) == len(transaction.operations):
+        return None
     retained = [
         operation
         for index, operation in enumerate(transaction.operations)
         if index not in invalid_indices
     ]
-    return transaction.model_copy(update={"operations": retained})
+    return transaction.model_copy(
+        update={
+            "operations": retained,
+            "consequences": [],
+            "stated_rationale": (
+                "Trusted validation removed explicitly unlicensed operations; "
+                "only the retained operations were eligible to commit."
+            ),
+        }
+    )
 
 
 def _normalized_memory(value: str) -> str:

@@ -29,6 +29,7 @@ from cybernetic_influence.general_simulation.models import (
     WorldTransactionProposal,
 )
 from cybernetic_influence.general_simulation.runner import (
+    _drop_only_unlicensed_operations,
     _drop_unauthorized_representation_deliveries,
     _effective_transition_authority,
     _inject_selected_contract_preconditions,
@@ -46,6 +47,78 @@ from cybernetic_influence.general_simulation.projection import project_general_r
 
 FIXTURE = Path("tests/fixtures/general_simulation/port_coordination.json")
 SERVICE_FIXTURE = Path("tests/fixtures/general_simulation/service_incident.json")
+
+
+def _unlicensed_operation(index: int) -> PatchOperation:
+    return PatchOperation(
+        operation="replace",
+        target=TypedTarget(
+            record_type="record",
+            record_id=f"record_{index}",
+            field="state.status",
+        ),
+        value="claimed_complete",
+    )
+
+
+def test_exact_contract_rejection_cannot_be_pruned_into_false_no_op_success() -> None:
+    transaction = WorldTransaction(
+        transaction_id="failed_exact_attempt",
+        base_revision=2,
+        authority_id="semantic_adjudicator",
+        intent_ids=["attempt_conversion"],
+        operations=[_unlicensed_operation(0), _unlicensed_operation(1)],
+        preconditions=[],
+        consequences=[
+            Consequence(
+                consequence_id="false_success",
+                recipient_id="operator",
+                content="The conversion succeeded.",
+                apparent_source="semantic_adjudicator",
+            )
+        ],
+        evidence_refs=["attempt_conversion"],
+        stated_rationale="The conversion succeeded.",
+    )
+    errors = [
+        "operation 0 on record record_0 is not licensed by a complete declared transition contract",
+        "operation 1 on record record_1 is not licensed by a complete declared transition contract",
+    ]
+
+    assert _drop_only_unlicensed_operations(transaction, errors) is None
+
+
+def test_partial_prune_removes_untrusted_effect_claims() -> None:
+    transaction = WorldTransaction(
+        transaction_id="partial_shape_repair",
+        base_revision=2,
+        authority_id="semantic_adjudicator",
+        intent_ids=["bounded_attempt"],
+        operations=[_unlicensed_operation(0), _unlicensed_operation(1)],
+        preconditions=[],
+        consequences=[
+            Consequence(
+                consequence_id="mixed_claim",
+                recipient_id="operator",
+                content="Every requested effect succeeded.",
+                apparent_source="semantic_adjudicator",
+            )
+        ],
+        evidence_refs=["bounded_attempt"],
+        stated_rationale="Every requested effect succeeded.",
+    )
+
+    pruned = _drop_only_unlicensed_operations(
+        transaction,
+        [
+            "operation 1 on record record_1 is not licensed by a complete declared transition contract"
+        ],
+    )
+
+    assert pruned is not None
+    assert pruned.operations == [transaction.operations[0]]
+    assert pruned.consequences == []
+    assert "only the retained operations" in pruned.stated_rationale
 
 
 def test_model_receipt_retains_metered_provider_and_cost() -> None:

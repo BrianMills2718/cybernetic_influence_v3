@@ -1298,88 +1298,104 @@ def _simulation_replay(
                 if isinstance(raw_transitions, list)
                 else []
             )
-            transition = transitions[-1] if transitions else moment.get("transition")
-            transaction = (
-                transition.get("transaction")
-                if isinstance(transition, dict)
-                else None
-            )
-            raw_attempted_operations = (
-                transaction.get("operations")
-                if isinstance(transaction, dict)
-                else None
-            )
-            attempted_operations = (
-                [item for item in raw_attempted_operations if isinstance(item, dict)]
-                if isinstance(raw_attempted_operations, list)
-                else []
-            )
-            raw_attempted_consequences = (
-                transaction.get("consequences")
-                if isinstance(transaction, dict)
-                else None
-            )
-            attempted_consequences = (
-                [item for item in raw_attempted_consequences if isinstance(item, dict)]
-                if isinstance(raw_attempted_consequences, list)
-                else []
-            )
-            validation = (
-                transition.get("validation")
-                if isinstance(transition, dict)
-                and isinstance(transition.get("validation"), dict)
-                else None
-            )
-            transition_accepted = (
-                validation.get("accepted")
-                if isinstance(validation, dict)
-                and isinstance(validation.get("accepted"), bool)
-                else None
-            )
-            validation_errors = (
-                [str(item) for item in validation.get("errors", [])]
-                if isinstance(validation, dict)
-                and isinstance(validation.get("errors"), list)
-                else []
-            )
-            rejected_attempt = transition_accepted is False
-            operations = [] if rejected_attempt else attempted_operations
-            consequences = [] if rejected_attempt else attempted_consequences
-            rationale = (
-                transaction.get("stated_rationale")
-                if isinstance(transaction, dict)
-                and isinstance(transaction.get("stated_rationale"), str)
-                else None
-            )
-            raw_attributions = (
-                transition.get("operation_attributions")
-                if isinstance(transition, dict)
-                else None
-            )
-            contract_node_ids = (
-                list(
-                    dict.fromkeys(
-                        str(item["contract_id"])
-                        for item in raw_attributions
-                        if isinstance(item, dict)
-                        and isinstance(item.get("contract_id"), str)
-                        and str(item["contract_id"]) in node_ids
+            if not transitions and isinstance(moment.get("transition"), dict):
+                transitions = [moment["transition"]]
+            operations: list[dict[str, object]] = []
+            consequences: list[dict[str, object]] = []
+            evidence_refs: list[str] = []
+            raw_attributions: list[dict[str, object]] = []
+            accepted_rationales: list[str] = []
+            validation_errors: list[str] = []
+            rejected_attempt_count = 0
+            rejected_operation_count = 0
+            accepted_attempt_count = 0
+            for transition in transitions:
+                transaction = transition.get("transaction")
+                if not isinstance(transaction, dict):
+                    continue
+                raw_operations = transaction.get("operations")
+                transaction_operations = (
+                    [item for item in raw_operations if isinstance(item, dict)]
+                    if isinstance(raw_operations, list)
+                    else []
+                )
+                validation = transition.get("validation")
+                validation = validation if isinstance(validation, dict) else None
+                accepted = (
+                    validation.get("accepted")
+                    if isinstance(validation, dict)
+                    and isinstance(validation.get("accepted"), bool)
+                    else transition_committed
+                )
+                if accepted is False:
+                    rejected_attempt_count += 1
+                    rejected_operation_count += len(transaction_operations)
+                    raw_errors = validation.get("errors") if validation else None
+                    if isinstance(raw_errors, list):
+                        validation_errors.extend(str(item) for item in raw_errors)
+                    continue
+                accepted_attempt_count += 1
+                operation_offset = len(operations)
+                operations.extend(transaction_operations)
+                corrections = transition.get("envelope_corrections")
+                pruned_unlicensed_effects = (
+                    isinstance(corrections, list)
+                    and any(
+                        isinstance(item, str)
+                        and "removed only the explicitly unlicensed operations" in item
+                        for item in corrections
                     )
                 )
-                if isinstance(raw_attributions, list)
-                else []
+                raw_consequences = transaction.get("consequences")
+                if isinstance(raw_consequences, list) and not pruned_unlicensed_effects:
+                    consequences.extend(
+                        item for item in raw_consequences if isinstance(item, dict)
+                    )
+                raw_evidence_refs = transaction.get("evidence_refs")
+                if isinstance(raw_evidence_refs, list):
+                    evidence_refs.extend(
+                        str(item) for item in raw_evidence_refs if isinstance(item, str)
+                    )
+                rationale = transaction.get("stated_rationale")
+                if isinstance(rationale, str) and rationale.strip():
+                    accepted_rationales.append(rationale.strip())
+                transition_attributions = transition.get("operation_attributions")
+                if isinstance(transition_attributions, list):
+                    for item in transition_attributions:
+                        if not isinstance(item, dict):
+                            continue
+                        operation_index = item.get("operation_index")
+                        if not isinstance(operation_index, int) or isinstance(
+                            operation_index, bool
+                        ):
+                            continue
+                        raw_attributions.append(
+                            {
+                                **item,
+                                "operation_index": operation_offset + operation_index,
+                            }
+                        )
+            rejected_attempt = rejected_attempt_count > 0
+            rationale = (
+                accepted_rationales[0]
+                if len(transitions) == 1 and accepted_rationales
+                else None
             )
-            attribution_by_operation = (
-                {
-                    int(item["operation_index"]): item
+            contract_node_ids = list(
+                dict.fromkeys(
+                    str(item["contract_id"])
                     for item in raw_attributions
                     if isinstance(item, dict)
-                    and isinstance(item.get("operation_index"), int)
-                    and not isinstance(item.get("operation_index"), bool)
-                }
-                if isinstance(raw_attributions, list)
-                else {}
+                    and isinstance(item.get("contract_id"), str)
+                    and str(item["contract_id"]) in node_ids
+                )
             )
+            attribution_by_operation = {
+                int(item["operation_index"]): item
+                for item in raw_attributions
+                if isinstance(item.get("operation_index"), int)
+                and not isinstance(item.get("operation_index"), bool)
+            }
             ranked_change_facts: list[tuple[int, int, tuple[str, str]]] = []
             changed_node_ids: list[str] = []
             changed_edge_ids: list[str] = []
@@ -1500,20 +1516,15 @@ def _simulation_replay(
                 )
                 rejection_summary = (
                     "Canonical validation rejected the joint attempt, so none of its "
-                    f"{len(attempted_operations)} proposed world change"
-                    f"{'s' if len(attempted_operations) != 1 else ''} committed. "
+                    f"{rejected_operation_count} proposed world change"
+                    f"{'s' if rejected_operation_count != 1 else ''} committed. "
                     f"{rejection_reason}"
                 )
-            raw_evidence_refs = (
-                transaction.get("evidence_refs")
-                if isinstance(transaction, dict)
-                else None
-            )
             evidence_node_ids = [
                 str(item)
-                for item in raw_evidence_refs
+                for item in evidence_refs
                 if isinstance(item, str) and item in node_ids
-            ][:6] if isinstance(raw_evidence_refs, list) else []
+            ][:6]
             mechanism_neighbor_ids: list[str] = []
             for edge in network_edges:
                 if not isinstance(edge, dict):
@@ -1571,19 +1582,63 @@ def _simulation_replay(
                 for node_id in [*contract_node_ids, *changed_node_ids]
                 if node_id in visible_event_node_set
             ]
+            if len(transitions) > 1 and rejected_attempt:
+                scene_summary = (
+                    f"{len(transitions)} transaction attempts were retained: "
+                    f"{accepted_attempt_count} accepted and "
+                    f"{rejected_attempt_count} rejected. {narrative}"
+                    if transition_facts
+                    and transition_facts
+                    != [
+                        (
+                            "World change",
+                            "No canonical fields changed in this committed moment.",
+                        )
+                    ]
+                    else (
+                        f"{rejected_attempt_count} transaction attempt"
+                        f"{'s were' if rejected_attempt_count != 1 else ' was'} rejected, "
+                        "and the accepted follow-up committed no canonical fields. "
+                        f"{rejection_reason}"
+                    )
+                )
+            elif rejected_attempt:
+                scene_summary = rejection_summary
+            elif rationale and rationale.strip():
+                scene_summary = rationale.strip()
+            else:
+                scene_summary = narrative
+            rejection_facts = (
+                [
+                    (
+                        "Attempt" if len(transitions) == 1 else "Rejected attempts",
+                        (
+                            f"Rejected · {rejected_operation_count} proposed world change"
+                            f"{'s' if rejected_operation_count != 1 else ''}"
+                            if len(transitions) == 1
+                            else (
+                                f"{rejected_attempt_count} · {rejected_operation_count} "
+                                "proposed world changes did not commit"
+                            )
+                        ),
+                    ),
+                    ("Why", rejection_reason),
+                ]
+                if rejected_attempt
+                else []
+            )
+            committed_facts = (
+                transition_facts
+                if transition_committed
+                else [("World change", "No change committed.")]
+            )
             add_scene(
                 scene_id=f"event_{index}",
                 kind="event",
                 scene_title=str(moment.get("event_id") or f"World moment {index}")
                 .replace("_", " ")
                 .capitalize(),
-                scene_summary=(
-                    rejection_summary
-                    if rejected_attempt
-                    else rationale.strip()
-                    if rationale and rationale.strip()
-                    else narrative
-                ),
+                scene_summary=scene_summary,
                 visible_nodes=visible_event_nodes,
                 visible_edges=visible_event_edges,
                 focus_nodes=(focused_node_ids or participants),
@@ -1597,19 +1652,16 @@ def _simulation_replay(
                         else []
                     ),
                     *(
-                        [
-                            (
-                                "Attempt",
-                                f"Rejected · {len(attempted_operations)} proposed world "
-                                f"change{'s' if len(attempted_operations) != 1 else ''}",
+                        [*rejection_facts, *committed_facts]
+                        if len(transitions) > 1
+                        else [
+                            *rejection_facts,
+                            *(
+                                [("World change", "No change committed.")]
+                                if rejected_attempt
+                                else committed_facts
                             ),
-                            ("World change", "No change committed."),
-                            ("Why", rejection_reason),
                         ]
-                        if rejected_attempt
-                        else transition_facts
-                        if transition_committed
-                        else [("World change", "No change committed.")]
                     ),
                 ],
                 state_revision=(

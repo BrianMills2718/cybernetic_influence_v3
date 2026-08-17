@@ -378,6 +378,103 @@ def test_general_replay_groups_repairs_with_their_causal_moment() -> None:
     assert [len(item["transitions"]) for item in grouped] == [1, 2, 1, 1]
 
 
+def test_general_replay_exposes_rejected_attempt_before_no_op_repair() -> None:
+    false_consequence = {
+        "consequence_id": "false_success",
+        "recipient_id": "operator",
+        "content": "The conversion succeeded and produced 180 power units.",
+        "apparent_source": "adjudicator",
+        "representation_id": None,
+    }
+    replay = _simulation_replay(
+        title="Conversion attempt",
+        headline="Conversion attempt",
+        summary="One retained causal moment.",
+        outcome={"accepted_transactions": 1, "final_revision": 1},
+        rounds=[],
+        network_nodes=[
+            {"id": "operator", "kind": "person", "label": "Operator"},
+            {"id": "fuel", "kind": "resource", "label": "Fuel"},
+            {"id": "power", "kind": "resource", "label": "Power"},
+        ],
+        network_edges=[],
+        raw_moments=[
+            {
+                "event_id": "attempt_conversion",
+                "narrative": "Attempt one bounded conversion.",
+                "participants": ["operator"],
+                "execution_parent": "revision:0",
+                "resulting_revision": 1,
+                "transitions": [
+                    {
+                        "transaction": {
+                            "operations": [
+                                {
+                                    "operation": "replace",
+                                    "target": {
+                                        "record_type": "resource",
+                                        "record_id": "fuel",
+                                        "field": "quantity",
+                                    },
+                                    "value": 0,
+                                },
+                                {
+                                    "operation": "replace",
+                                    "target": {
+                                        "record_type": "resource",
+                                        "record_id": "power",
+                                        "field": "quantity",
+                                    },
+                                    "value": 180,
+                                },
+                            ],
+                            "consequences": [false_consequence],
+                            "evidence_refs": ["fuel", "power"],
+                            "stated_rationale": "The conversion succeeded.",
+                        },
+                        "validation": {
+                            "accepted": False,
+                            "errors": [
+                                "operation 0 was not licensed",
+                                "operation 1 was not licensed",
+                            ],
+                        },
+                    },
+                    {
+                        "transaction": {
+                            "operations": [],
+                            "consequences": [false_consequence],
+                            "evidence_refs": ["fuel", "power"],
+                            "stated_rationale": "The conversion succeeded.",
+                        },
+                        "envelope_corrections": [
+                            "trusted runtime removed only the explicitly unlicensed operations"
+                        ],
+                        "validation": {"accepted": True, "errors": []},
+                    },
+                ],
+            }
+        ],
+        general_world=True,
+    )
+
+    event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
+    facts = {item["label"]: item["value"] for item in event["facts"]}
+    assert facts["Transaction attempts"] == "2"
+    assert facts["Rejected attempts"] == (
+        "1 · 2 proposed world changes did not commit"
+    )
+    assert facts["World change"] == (
+        "No canonical fields changed in this committed moment."
+    )
+    assert "conversion succeeded" not in event["summary"].lower()
+    assert all(
+        "conversion succeeded" not in item["value"].lower()
+        for item in event["facts"]
+    )
+    assert event["focus_node_ids"] == ["operator"]
+
+
 def test_general_replay_does_not_present_rejected_operations_as_world_changes() -> None:
     replay = _simulation_replay(
         title="Blocked dispatch",
