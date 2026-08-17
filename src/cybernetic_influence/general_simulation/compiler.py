@@ -155,6 +155,28 @@ def materialize_unambiguous_contract_references(
     }
     corrections: list[str] = []
 
+    contract_access = _exact_contract_access(scenario)
+    for request in payload.get("component_requests", []):
+        if not isinstance(request, dict):
+            continue
+        required_reads = request.get("required_reads")
+        contract_ids = request.get("transition_contract_ids")
+        if not isinstance(required_reads, list) or not isinstance(contract_ids, list):
+            continue
+        implied_reads: set[str] = set()
+        for contract_id in contract_ids:
+            access = contract_access.get(str(contract_id))
+            if access is not None:
+                implied_reads.update(access[0])
+        missing_reads = sorted(implied_reads - {str(item) for item in required_reads})
+        if not missing_reads:
+            continue
+        required_reads.extend(missing_reads)
+        corrections.append(
+            f"{request['request_id']}: added exact contract prerequisite reads "
+            + ", ".join(missing_reads)
+        )
+
     sensing_fields = _sensing_output_fields(scenario)
     for rule in payload.get("sensing_rules", []):
         if not isinstance(rule, dict):

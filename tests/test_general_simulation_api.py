@@ -334,6 +334,12 @@ def test_authoring_uses_materialization_and_custody_evidence_without_regeneratio
     transformation["public_inventory_input_fields"][0]["resource_id"] = (
         "misnamed_hospital_fuel"
     )
+    delivery_request = next(
+        item
+        for item in payload["scenario"]["component_requests"]
+        if item["request_id"] == "deliver_fuel"
+    )
+    delivery_request["required_reads"].remove("temporary_route")
     proposal = AuthoredSimulationProposalV2.model_validate(payload)
     generation_calls = 0
     review_calls = 0
@@ -390,6 +396,9 @@ def test_authoring_uses_materialization_and_custody_evidence_without_regeneratio
     assert "rebound sole public inventory input mapping" in document["attempts"][0][
         "message"
     ]
+    assert "added exact contract prerequisite reads temporary_route" in document[
+        "attempts"
+    ][0]["message"]
     assert "Retained dependency equivalences" in document["attempts"][1]["message"]
     retained_inventory = next(
         item
@@ -399,6 +408,12 @@ def test_authoring_uses_materialization_and_custody_evidence_without_regeneratio
     assert {item["key"]: item["value"] for item in retained_inventory["public_state"]}[
         "fuel_liters"
     ] == 0
+    retained_delivery_request = next(
+        item
+        for item in document["proposal"]["scenario"]["component_requests"]
+        if item["request_id"] == "deliver_fuel"
+    )
+    assert "temporary_route" in retained_delivery_request["required_reads"]
 
 
 def test_general_world_replay_retains_state_by_revision() -> None:
