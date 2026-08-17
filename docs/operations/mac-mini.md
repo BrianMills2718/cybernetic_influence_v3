@@ -253,6 +253,29 @@ overflow. This recovery draft needed five bounded proposal attempts and took
 about ten minutes; correctness and target deployment are verified, but
 authoring latency is not yet demo-quality.
 
+Public exact-transformation execution observed 2026-08-16: build
+`bc0c8a1d90a1ece81615c5f5a51845ae1fb52211` serves authentic Luna run
+`run_13807bbe9196` at
+<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=simulations&simulation=run_13807bbe9196>.
+All four people selected their own semantic intents from the same frozen
+revision. When the hospital coordinator selected the configured one-batch
+fuel-conversion contract, the trusted exact mechanism—not adjudicator prose—
+materialized its arithmetic and inventory mirrors. The resulting validated
+transition changed hospital fuel from 600 to 300 liters and backup power from
+zero to 180 units. The run completed three accepted moments with 15 successful
+`codex/gpt-5.6-luna` calls, no repair call, complete subscription-included cost
+coverage, and final world revision 3.
+
+The preceding authentic run `run_c8d7086c9db8` is retained as a negative
+control for evidence handling: both conversion attempts were rejected and the
+replay reports the rejection without presenting the proposed effects as world
+fact. A fresh 1440-by-1000 Chrome pass advanced through all five scenes of the
+successful run, showed the exact sensing, transport, transformation, and final
+state, and observed no console errors, failed requests, bad responses, or
+horizontal overflow. This proves one generated one-batch exact transformation
+path. Multi-batch choice, overlapping exact transforms, and general
+simultaneous resource-conflict policy remain intentionally unresolved.
+
 Earlier natural-language authoring, canonical walkthrough, and methodology
 milestone 2026-08-12: revision
 `11861ccfba8d9297b1dd2233cfc2c95040bd655b` introduced the direct authoring
