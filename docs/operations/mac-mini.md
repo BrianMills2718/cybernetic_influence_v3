@@ -289,6 +289,30 @@ follow-on owner is deterministic materialization for unambiguous contract
 cross-references plus dependency-review rules that recognize canonical resource
 custody without demanding redundant status guards.
 
+Deterministic-authoring canary observed 2026-08-16: build
+`43da50b1dddae4d2b6264f1dff2ebd78d07c6845` materializes only uniquely
+determined sensing fields and one-input transformation inventory references,
+and recognizes an earlier exact transport into an initially empty resource as
+canonical custody evidence. The same retained two-message outage request
+produced native V2 draft `draft_c8969946ed68` after one Luna proposal and one
+accepted dependency review. Both attempts were accepted; this sample required
+zero deterministic corrections, so the materializer did not alter an already
+valid proposal.
+
+That exact draft was approved and executed through the public UI as retained
+Luna run `run_b59e0288eb48`. It completed four accepted transitions, one
+rejected-and-repaired transition, final revision 4, and 21
+subscription-included model calls. Exact sensing changed the shared restoration
+estimate from minute 240 to 180, exact transport moved 20 fuel units, and exact
+transformation consumed 5 hospital fuel units to produce 4 backup-energy units.
+All 13 generated configuration scenes and all 6 retained replay scenes rendered
+without empty steps, console errors, failed requests, or horizontal overflow at
+1440 by 1000. One retained semantic mismatch remains visible in evidence: the
+utility actor prose requested 10 fuel units while its structured selection of
+the fixed 20-unit transport contract ultimately executed 20 after validation
+rejected the first proposed patch. Contract selection governs canonical change;
+the UI does not yet foreground prose-versus-contract disagreement.
+
 Public exact-transformation execution observed 2026-08-16: build
 `bc0c8a1d90a1ece81615c5f5a51845ae1fb52211` serves authentic Luna run
 `run_13807bbe9196` at
