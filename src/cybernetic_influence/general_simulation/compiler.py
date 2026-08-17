@@ -132,6 +132,126 @@ def _sensing_output_fields(
     }
 
 
+def materialize_unambiguous_contract_references(
+    scenario: ScenarioSpecV2,
+) -> tuple[ScenarioSpecV2, list[str]]:
+    """Materialize contract-owned fields when the authored meaning is unambiguous.
+
+    The authoring model still selects records, resources, fields, and contracts.
+    This pass only closes mechanically implied references; it never chooses among
+    multiple candidate records, resources, or fields.
+    """
+
+    payload = scenario.model_dump(mode="json")
+    records = {
+        str(item["record_id"]): item
+        for item in payload["world_records"]
+        if isinstance(item, dict)
+    }
+    resources = {
+        str(item["resource_id"]): item
+        for item in (payload.get("resource_extension") or {}).get("stocks", [])
+        if isinstance(item, dict)
+    }
+    corrections: list[str] = []
+
+    sensing_fields = _sensing_output_fields(scenario)
+    for rule in payload.get("sensing_rules", []):
+        if not isinstance(rule, dict):
+            continue
+        rule_id = str(rule["rule_id"])
+        output_record_id = str(rule["output_record_id"])
+        output_record = records.get(output_record_id)
+        if output_record is None:
+            continue
+        public_state = output_record.get("public_state")
+        if not isinstance(public_state, list):
+            continue
+        existing_keys = {
+            str(item["key"])
+            for item in public_state
+            if isinstance(item, dict) and "key" in item
+        }
+        for field in sensing_fields[rule_id].values():
+            if field in existing_keys:
+                continue
+            public_state.append({"key": field, "value": None})
+            existing_keys.add(field)
+            corrections.append(
+                f"{rule_id}: declared missing sensing output field "
+                f"{output_record_id}.{field} with initial value null"
+            )
+
+    for transformation in payload.get("resource_transformations", []):
+        if not isinstance(transformation, dict):
+            continue
+        transformation_id = str(transformation["transformation_id"])
+        inventory_id = str(transformation["public_inventory_record_id"])
+        inventory = records.get(inventory_id)
+        if inventory is None:
+            continue
+        public_state = inventory.get("public_state")
+        if not isinstance(public_state, list):
+            continue
+        state_entries = {
+            str(item["key"]): item
+            for item in public_state
+            if isinstance(item, dict) and "key" in item
+        }
+        input_requirements = transformation.get("input_resource_quantities", [])
+        input_resource_ids = [
+            str(item["resource_id"])
+            for item in input_requirements
+            if isinstance(item, dict) and "resource_id" in item
+        ]
+        input_mappings = transformation.get("public_inventory_input_fields", [])
+        if not isinstance(input_mappings, list):
+            input_mappings = []
+        if len(input_resource_ids) == 1 and len(input_mappings) == 1:
+            mapping = input_mappings[0]
+            if isinstance(mapping, dict) and mapping.get("resource_id") not in input_resource_ids:
+                previous_resource_id = str(mapping.get("resource_id"))
+                mapping["resource_id"] = input_resource_ids[0]
+                corrections.append(
+                    f"{transformation_id}: rebound sole public inventory input mapping "
+                    f"from {previous_resource_id} to {input_resource_ids[0]}"
+                )
+        for mapping in input_mappings:
+            if not isinstance(mapping, dict):
+                continue
+            resource_id = str(mapping.get("resource_id"))
+            field = str(mapping.get("field"))
+            stock = resources.get(resource_id)
+            if stock is None or field in state_entries:
+                continue
+            entry = {"key": field, "value": stock["quantity"]}
+            public_state.append(entry)
+            state_entries[field] = entry
+            corrections.append(
+                f"{transformation_id}: declared missing public input mirror "
+                f"{inventory_id}.{field} from resource {resource_id}"
+            )
+        output_field = transformation.get("public_inventory_output_field")
+        output_resource_id = str(transformation.get("output_resource_id"))
+        output_stock = resources.get(output_resource_id)
+        if (
+            isinstance(output_field, str)
+            and output_field not in state_entries
+            and output_stock is not None
+        ):
+            entry = {"key": output_field, "value": output_stock["quantity"]}
+            public_state.append(entry)
+            state_entries[output_field] = entry
+            corrections.append(
+                f"{transformation_id}: declared missing public output mirror "
+                f"{inventory_id}.{output_field} from resource {output_resource_id}"
+            )
+
+    if not corrections:
+        return scenario, []
+    return ScenarioSpecV2.model_validate(payload), corrections
+
+
 def _transformation_inventory_fields(
     proposal: GeneralSimulationProposalV1 | ScenarioSpecV2,
 ) -> dict[str, tuple[str, dict[str, str]]]:

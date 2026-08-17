@@ -38,6 +38,7 @@ from .compiler import (
     GeneralCompilationError,
     compile_general_simulation,
     compile_general_simulation_v2,
+    materialize_unambiguous_contract_references,
 )
 from .study_models import (
     AuthoredSimulationBundleV2,
@@ -230,6 +231,96 @@ def _prior(document: dict[str, object]) -> dict[str, object]:
     if isinstance(document.get("proposal"), dict):
         result["proposal"] = document["proposal"]
     return result
+
+
+def _suppress_redundant_custody_findings(
+    proposal: AuthoredSimulationProposalV2,
+    review: DependencyCompletenessReviewV1,
+) -> tuple[DependencyCompletenessReviewV1, list[str]]:
+    """Suppress only review findings already enforced by exact resource custody."""
+
+    if review.status == "complete":
+        return review, []
+    scenario = proposal.scenario
+    requests = {item.request_id: item for item in scenario.component_requests}
+    transformations = {
+        item.transformation_id: item for item in scenario.resource_transformations
+    }
+    transports = {item.transport_id: item for item in scenario.resource_transports}
+    stocks = (
+        {item.resource_id: item for item in scenario.resource_extension.stocks}
+        if scenario.resource_extension
+        else {}
+    )
+    contract_moments: dict[str, int] = {}
+    for index, moment in enumerate(proposal.default_run.scheduled_moments):
+        for contract_id in moment.active_transition_contract_ids:
+            contract_moments.setdefault(contract_id, index)
+
+    retained = []
+    suppressions: list[str] = []
+    for finding in review.missing_dependencies:
+        request = requests.get(finding.exact_action_request_id)
+        suppressed_by: tuple[str, str] | None = None
+        if (
+            request is not None
+            and finding.existing_ref is not None
+            and finding.required_resolution in {"exact_guard", "required_read"}
+        ):
+            for contract_id in request.transition_contract_ids:
+                transformation = transformations.get(contract_id)
+                transformation_moment = contract_moments.get(contract_id)
+                if transformation is None or transformation_moment is None:
+                    continue
+                for requirement in transformation.input_resource_quantities:
+                    stock = stocks.get(requirement.resource_id)
+                    if (
+                        stock is None
+                        or stock.quantity != 0
+                        or requirement.resource_id not in request.required_reads
+                    ):
+                        continue
+                    for transport in transports.values():
+                        transport_moment = contract_moments.get(transport.transport_id)
+                        if (
+                            transport.destination_resource_id == requirement.resource_id
+                            and transport.arrival_record_id == finding.existing_ref
+                            and transport_moment is not None
+                            and transport_moment < transformation_moment
+                        ):
+                            suppressed_by = (
+                                transport.transport_id,
+                                requirement.resource_id,
+                            )
+                            break
+                    if suppressed_by is not None:
+                        break
+                if suppressed_by is not None:
+                    break
+        if suppressed_by is None:
+            retained.append(finding)
+            continue
+        suppressions.append(
+            f"{finding.exact_action_request_id}: {finding.existing_ref} is redundant "
+            f"because exact transport {suppressed_by[0]} supplies initially empty "
+            f"canonical resource {suppressed_by[1]} before the transformation"
+        )
+
+    if len(retained) == len(review.missing_dependencies):
+        return review, []
+    return (
+        DependencyCompletenessReviewV1(
+            status="complete" if not retained else "repair_required",
+            summary=(
+                "All remaining exact action prerequisites are covered after recognizing "
+                "canonical resource custody produced by earlier exact transport."
+                if not retained
+                else review.summary
+            ),
+            missing_dependencies=retained,
+        ),
+        suppressions,
+    )
 
 
 def _diagnostics(
@@ -692,6 +783,10 @@ class GeneralDraftAuthoringService:
                     )
                 raw = parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else parsed
                 proposal = AuthoredSimulationProposalEnvelopeV2.model_validate(raw).proposal
+                scenario, attempt_corrections = materialize_unambiguous_contract_references(
+                    proposal.scenario
+                )
+                proposal = proposal.model_copy(update={"scenario": scenario})
                 candidate = proposal.model_dump(mode="json")
                 bundle = materialize_authored_bundle_v2(
                     proposal, run_id=f"{draft_id}_run"
@@ -706,7 +801,16 @@ class GeneralDraftAuthoringService:
                             attempt_number,
                             trace_id,
                             "accepted",
-                            "The separated semantic proposal compiled; dependency completeness review follows.",
+                            (
+                                "The separated semantic proposal compiled after "
+                                f"{len(attempt_corrections)} retained deterministic "
+                                "correction(s); dependency completeness review follows."
+                                + (
+                                    " Corrections: " + "; ".join(attempt_corrections)
+                                    if attempt_corrections
+                                    else ""
+                                )
+                            ),
                             meta,
                         )
                     )
@@ -742,6 +846,9 @@ class GeneralDraftAuthoringService:
                         if isinstance(reviewed, BaseModel)
                         else reviewed
                     )
+                    review, review_suppressions = _suppress_redundant_custody_findings(
+                        proposal, review
+                    )
                     if review.status == "repair_required":
                         repair_feedback = "Dependency completeness review requires repair: " + "; ".join(
                             (
@@ -771,7 +878,13 @@ class GeneralDraftAuthoringService:
                             attempt_number,
                             review_trace_id,
                             "accepted",
-                            review.summary,
+                            review.summary
+                            + (
+                                " Retained dependency equivalences: "
+                                + "; ".join(review_suppressions)
+                                if review_suppressions
+                                else ""
+                            ),
                             review_meta,
                         )
                     )

@@ -22,6 +22,12 @@ from cybernetic_influence.general_simulation.authoring_models import (
     GeneralSimulationProposalV1,
     MissingDependencyFindingV1,
 )
+from cybernetic_influence.general_simulation.authoring import (
+    _suppress_redundant_custody_findings,
+)
+from cybernetic_influence.general_simulation.compiler import (
+    materialize_unambiguous_contract_references,
+)
 from cybernetic_influence.general_simulation.study_models import (
     AuthoredSimulationProposalEnvelopeV2,
     AuthoredSimulationProposalV2,
@@ -57,6 +63,341 @@ def _native_v2_proposal() -> AuthoredSimulationProposalV2:
         unresolved_questions=bundle.unresolved_questions,
         analyst_question=bundle.analyst_question,
     )
+
+
+def test_materializes_only_unambiguous_contract_references() -> None:
+    scenario_payload = _native_v2_proposal().scenario.model_dump(mode="json")
+    scenario_payload["world_records"].extend(
+        [
+            {
+                "record_id": "outage_truth",
+                "kind": "infrastructure_condition",
+                "label": "Outage truth",
+                "public_state": [],
+                "hidden_state": [{"key": "restoration_minutes", "value": 180}],
+                "visible_to_actor_ids": ["trucking_dispatcher"],
+            },
+            {
+                "record_id": "restoration_finding",
+                "kind": "inspection_finding",
+                "label": "Restoration finding",
+                "public_state": [],
+                "hidden_state": [],
+                "visible_to_actor_ids": ["trucking_dispatcher"],
+            },
+            {
+                "record_id": "backup_inventory",
+                "kind": "public_inventory",
+                "label": "Backup inventory",
+                "public_state": [{"key": "available_power", "value": 0}],
+                "hidden_state": [],
+                "visible_to_actor_ids": ["trucking_dispatcher"],
+            },
+        ]
+    )
+    scenario_payload["resource_extension"]["stocks"].append(
+        {
+            "resource_id": "backup_power",
+            "quantity": 0,
+            "custodian_id": "trucking_dispatcher",
+            "conserved": True,
+        }
+    )
+    scenario_payload["sensing_rules"] = [
+        {
+            "rule_id": "sense_restoration",
+            "subject_ref": "outage_truth",
+            "observer_ids": ["trucking_dispatcher"],
+            "reveal_hidden_keys": ["restoration_minutes"],
+            "output_record_id": "restoration_finding",
+            "result_recipient_ids": ["trucking_dispatcher"],
+        }
+    ]
+    scenario_payload["resource_transformations"] = [
+        {
+            "transformation_id": "convert_fuel",
+            "operator_ids": ["trucking_dispatcher"],
+            "input_resource_quantities": [
+                {"resource_id": "dispatch_fuel", "quantity": 20}
+            ],
+            "output_resource_id": "backup_power",
+            "output_quantity": 80,
+            "maximum_batches": 1,
+            "public_inventory_record_id": "backup_inventory",
+            "public_inventory_input_fields": [
+                {"resource_id": "misnamed_fuel", "field": "fuel_received"}
+            ],
+            "public_inventory_output_field": "available_power",
+        }
+    ]
+
+    scenario = _native_v2_proposal().scenario.model_validate(scenario_payload)
+    normalized, corrections = materialize_unambiguous_contract_references(scenario)
+
+    records = {item.record_id: item for item in normalized.world_records}
+    finding_state = {item.key: item.value for item in records["restoration_finding"].public_state}
+    inventory_state = {item.key: item.value for item in records["backup_inventory"].public_state}
+    transformation = normalized.resource_transformations[0]
+    assert finding_state == {"restoration_minutes": None}
+    assert inventory_state == {"available_power": 0, "fuel_received": 100.0}
+    assert transformation.public_inventory_input_fields[0].resource_id == "dispatch_fuel"
+    assert len(corrections) == 3
+
+
+def _proposal_with_exact_transport_then_transformation() -> AuthoredSimulationProposalV2:
+    proposal_payload = _native_v2_proposal().model_dump(mode="json")
+    scenario = proposal_payload["scenario"]
+    scenario["world_records"].extend(
+        [
+            {
+                "record_id": "fuel_delivery_record",
+                "kind": "delivery_record",
+                "label": "Fuel delivery record",
+                "public_state": [
+                    {"key": "arrived_quantity", "value": 0},
+                    {"key": "usable_quantity", "value": 0},
+                    {"key": "arrival_minute", "value": None},
+                ],
+                "hidden_state": [],
+                "visible_to_actor_ids": ["trucking_dispatcher"],
+            },
+            {
+                "record_id": "hospital_inventory",
+                "kind": "public_inventory",
+                "label": "Hospital inventory",
+                "public_state": [
+                    {"key": "fuel_liters", "value": 0},
+                    {"key": "available_power", "value": 0},
+                ],
+                "hidden_state": [],
+                "visible_to_actor_ids": ["trucking_dispatcher"],
+            },
+        ]
+    )
+    scenario["resource_extension"]["stocks"].extend(
+        [
+            {
+                "resource_id": "fuel_hospital",
+                "quantity": 0,
+                "custodian_id": "trucking_dispatcher",
+                "conserved": True,
+            },
+            {
+                "resource_id": "backup_power",
+                "quantity": 0,
+                "custodian_id": "trucking_dispatcher",
+                "conserved": True,
+            },
+        ]
+    )
+    scenario["resource_transports"] = [
+        {
+            "transport_id": "deliver_fuel",
+            "operator_ids": ["trucking_dispatcher"],
+            "source_resource_id": "dispatch_fuel",
+            "destination_resource_id": "fuel_hospital",
+            "source_custodian_id": "trucking_dispatcher",
+            "destination_custodian_id": "trucking_dispatcher",
+            "quantity": 40,
+            "origin_place_id": "outside_port",
+            "destination_place_id": "port",
+            "allowed_route_ids": ["temporary_route"],
+            "arrival_record_id": "fuel_delivery_record",
+            "arrival_quantity_key": "arrived_quantity",
+            "usable_quantity_key": "usable_quantity",
+            "arrival_minute_key": "arrival_minute",
+            "required_preconditions": [],
+        }
+    ]
+    temporary_route = next(
+        item
+        for item in scenario["spatial_extension"]["links"]
+        if item["link_id"] == "temporary_route"
+    )
+    temporary_route["public_state"].append(
+        {"key": "travel_time_minutes", "value": 30}
+    )
+    scenario["resource_transformations"] = [
+        {
+            "transformation_id": "convert_fuel",
+            "operator_ids": ["trucking_dispatcher"],
+            "input_resource_quantities": [
+                {"resource_id": "fuel_hospital", "quantity": 20}
+            ],
+            "output_resource_id": "backup_power",
+            "output_quantity": 80,
+            "maximum_batches": 1,
+            "public_inventory_record_id": "hospital_inventory",
+            "public_inventory_input_fields": [
+                {"resource_id": "fuel_hospital", "field": "fuel_liters"}
+            ],
+            "public_inventory_output_field": "available_power",
+        }
+    ]
+    scenario["component_requests"].extend(
+        [
+            {
+                "request_id": "deliver_fuel",
+                "subject_refs": [
+                    "trucking_dispatcher",
+                    "dispatch_fuel",
+                    "fuel_hospital",
+                    "temporary_route",
+                ],
+                "behavior_description": "Move fuel to hospital custody.",
+                "required_reads": ["dispatch_fuel", "temporary_route"],
+                "desired_effects": ["transfer bounded fuel custody"],
+                "fidelity_need": "exact",
+                "causally_material": True,
+                "fidelity_material": True,
+                "transition_contract_ids": ["deliver_fuel"],
+            },
+            {
+            "request_id": "convert_after_delivery",
+            "subject_refs": [
+                "trucking_dispatcher",
+                "fuel_hospital",
+                "backup_power",
+            ],
+            "behavior_description": "Convert available hospital fuel after delivery.",
+            "required_reads": ["fuel_hospital"],
+            "desired_effects": ["produce bounded backup power"],
+            "fidelity_need": "exact",
+            "causally_material": True,
+            "fidelity_material": True,
+            "transition_contract_ids": ["convert_fuel"],
+            },
+        ]
+    )
+    moments = proposal_payload["default_run"]["scheduled_moments"]
+    moments[1]["active_component_request_ids"].append("deliver_fuel")
+    moments[1]["active_transition_contract_ids"].append("deliver_fuel")
+    moments[2]["active_component_request_ids"].append("convert_after_delivery")
+    moments[2]["active_transition_contract_ids"].append("convert_fuel")
+    return AuthoredSimulationProposalV2.model_validate(proposal_payload)
+
+
+def test_dependency_review_accepts_prior_exact_transport_as_custody_evidence() -> None:
+    proposal = _proposal_with_exact_transport_then_transformation()
+    review = DependencyCompletenessReviewV1(
+        status="repair_required",
+        summary="Delivery record should guard conversion.",
+        missing_dependencies=[
+            MissingDependencyFindingV1(
+                exact_action_request_id="convert_after_delivery",
+                prerequisite_description="Fuel delivery must precede conversion.",
+                existing_ref="fuel_delivery_record",
+                evidence="The proposal says after delivery.",
+                required_resolution="exact_guard",
+            )
+        ],
+    )
+
+    filtered, suppressions = _suppress_redundant_custody_findings(proposal, review)
+
+    assert filtered.status == "complete"
+    assert filtered.missing_dependencies == []
+    assert suppressions and "deliver_fuel" in suppressions[0]
+
+    payload = proposal.model_dump(mode="json")
+    fuel = next(
+        item
+        for item in payload["scenario"]["resource_extension"]["stocks"]
+        if item["resource_id"] == "fuel_hospital"
+    )
+    fuel["quantity"] = 5
+    prepositioned = AuthoredSimulationProposalV2.model_validate(payload)
+    retained, suppressions = _suppress_redundant_custody_findings(
+        prepositioned, review
+    )
+    assert retained.status == "repair_required"
+    assert len(retained.missing_dependencies) == 1
+    assert suppressions == []
+
+
+def test_authoring_uses_materialization_and_custody_evidence_without_regeneration(
+    tmp_path: Path,
+) -> None:
+    payload = _proposal_with_exact_transport_then_transformation().model_dump(
+        mode="json"
+    )
+    inventory = next(
+        item
+        for item in payload["scenario"]["world_records"]
+        if item["record_id"] == "hospital_inventory"
+    )
+    inventory["public_state"] = [
+        item for item in inventory["public_state"] if item["key"] != "fuel_liters"
+    ]
+    transformation = payload["scenario"]["resource_transformations"][0]
+    transformation["public_inventory_input_fields"][0]["resource_id"] = (
+        "misnamed_hospital_fuel"
+    )
+    proposal = AuthoredSimulationProposalV2.model_validate(payload)
+    generation_calls = 0
+    review_calls = 0
+
+    def provider(*_args: Any, **kwargs: Any) -> tuple[object, object]:
+        nonlocal generation_calls, review_calls
+        if kwargs["response_model"] is DependencyCompletenessReviewV1:
+            review_calls += 1
+            return DependencyCompletenessReviewV1(
+                status="repair_required",
+                summary="Delivery record should guard conversion.",
+                missing_dependencies=[
+                    MissingDependencyFindingV1(
+                        exact_action_request_id="convert_after_delivery",
+                        prerequisite_description="Fuel delivery must precede conversion.",
+                        existing_ref="fuel_delivery_record",
+                        evidence="The proposal says after delivery.",
+                        required_resolution="exact_guard",
+                    )
+                ],
+            ), SimpleNamespace(provider="test", cost=0.0)
+        generation_calls += 1
+        return AuthoredSimulationProposalEnvelopeV2(proposal=proposal), SimpleNamespace(
+            provider="test", cost=0.0
+        )
+
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            authoring_call=provider,
+        )
+    )
+    draft = api.post("/api/authoring/drafts").json()
+    response = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/messages",
+        json={
+            "expected_revision": 0,
+            "message_id": "deterministic_materialization",
+            "message": "Model exact fuel delivery followed by bounded conversion.",
+        },
+    )
+
+    assert response.status_code == 200
+    document = response.json()
+    assert document["status"] == "ready_for_review"
+    assert generation_calls == 1
+    assert review_calls == 1
+    assert [item["status"] for item in document["attempts"]] == [
+        "accepted",
+        "accepted",
+    ]
+    assert "rebound sole public inventory input mapping" in document["attempts"][0][
+        "message"
+    ]
+    assert "Retained dependency equivalences" in document["attempts"][1]["message"]
+    retained_inventory = next(
+        item
+        for item in document["proposal"]["scenario"]["world_records"]
+        if item["record_id"] == "hospital_inventory"
+    )
+    assert {item["key"]: item["value"] for item in retained_inventory["public_state"]}[
+        "fuel_liters"
+    ] == 0
 
 
 def test_general_world_replay_retains_state_by_revision() -> None:
