@@ -536,6 +536,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "scene.kind === 'cognition'" in script
     assert "function renderCognitionFacts(scene)" in script
     assert "data-cognition-person" in script
+    assert "cognition-stage" in script
     assert "cognition-facts" in style
     assert "Causal moments" in script
     assert "Retained model decisions" in script

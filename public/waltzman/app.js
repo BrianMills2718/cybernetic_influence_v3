@@ -2913,6 +2913,7 @@ function renderAuthoredReplay() {
   $('#create-replay-kind').textContent = sentence(scene.kind)
   $('#create-replay-title').textContent = scene.title
   $('#create-replay-summary').textContent = scene.summary
+  $('.create-replay-stage').classList.toggle('cognition-stage', scene.kind === 'cognition')
   const replayFacts = $('#create-replay-facts')
   replayFacts.classList.toggle('cognition-facts', scene.kind === 'cognition')
   if (scene.kind === 'cognition') renderCognitionFacts(scene)

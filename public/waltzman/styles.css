@@ -1385,6 +1385,8 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-replay-controls button { min-width: 110px; }
 .create-replay-controls button:disabled { cursor: default; opacity: .4; }
 .create-replay-stage { display: grid; gap: 1px; grid-template-columns: minmax(250px, .34fr) minmax(0, 1fr); min-height: 620px; }
+.create-replay-stage.cognition-stage { height: min(760px, calc(100vh - 180px)); min-height: 620px; }
+.create-replay-stage.cognition-stage .create-replay-explanation { justify-content: flex-start; overflow-y: auto; }
 .create-replay-explanation { background: var(--panel); display: flex; flex-direction: column; justify-content: center; padding: 28px; }
 .create-replay-explanation h4 { font-size: clamp(1.35rem, 2.4vw, 2.15rem); letter-spacing: -.03em; line-height: 1.12; margin: 10px 0 12px; }
 .create-replay-explanation > p { color: var(--muted); line-height: 1.65; }
