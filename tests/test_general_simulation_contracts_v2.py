@@ -538,6 +538,16 @@ def test_staged_cognition_retains_assimilation_before_action_selection() -> None
     assert all(trace["model_call_count"] == 2 for trace in projected["traces"])
     assert all(trace["assimilation"] for trace in projected["traces"])
     assert all(trace["intent"] for trace in projected["traces"])
+    assert all(
+        trace["memory_after"]
+        == [*trace["memory_before"], "I retained the currently authorized evidence."]
+        for trace in projected["traces"]
+    )
+    assert all(
+        len(trace["attended_observations"])
+        == len(trace["assimilation"]["attended_observation_ids"])
+        for trace in projected["traces"]
+    )
 
 
 def test_waltzman_lens_does_not_count_rejected_operations_as_committed() -> None:

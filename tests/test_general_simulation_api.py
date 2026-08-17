@@ -1442,6 +1442,21 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     assert summary_payload["simulation_replay"]["scenes"][0]["title"] == "Your review question"
     replay_scenes = summary_payload["simulation_replay"]["scenes"]
     assert len([scene for scene in replay_scenes if scene["kind"] == "event"]) == 3
+    cognition_scenes = [
+        scene for scene in replay_scenes if scene["kind"] == "cognition"
+    ]
+    assert len(cognition_scenes) == 3
+    assert all(len(scene["facts"]) == 4 for scene in cognition_scenes)
+    assert all(
+        "Interpreted:" in fact["value"]
+        and "Memory changed:" in fact["value"]
+        and "Then attempted:" in fact["value"]
+        for scene in cognition_scenes
+        for fact in scene["facts"]
+    )
+    for cognition_scene in cognition_scenes:
+        cognition_index = replay_scenes.index(cognition_scene)
+        assert replay_scenes[cognition_index + 1]["kind"] == "event"
     assert not any(scene["kind"] == "decisions" for scene in replay_scenes)
     assert not any(
         fact["label"] == "Positions"

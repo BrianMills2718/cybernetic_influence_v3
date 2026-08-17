@@ -402,7 +402,9 @@ class SimulationReplayScene(BaseModel):
 
     scene_id: str
     sequence: int
-    kind: Literal["question", "setup", "information", "decisions", "event", "outcome"]
+    kind: Literal[
+        "question", "setup", "information", "cognition", "decisions", "event", "outcome"
+    ]
     title: str
     summary: str
     round_index: int | None = None
@@ -985,6 +987,7 @@ def _simulation_replay(
     network_nodes: list[dict[str, object]],
     network_edges: list[dict[str, object]],
     raw_moments: object,
+    cognitive_traces: object = None,
     general_world: bool = False,
     question_is_analyst_framing: bool = False,
     node_overrides_by_revision: dict[int, list[dict[str, str]]] | None = None,
@@ -1108,7 +1111,9 @@ def _simulation_replay(
     def add_scene(
         *,
         scene_id: str,
-        kind: Literal["question", "setup", "information", "decisions", "event", "outcome"],
+        kind: Literal[
+            "question", "setup", "information", "cognition", "decisions", "event", "outcome"
+        ],
         scene_title: str,
         scene_summary: str,
         visible_nodes: list[str],
@@ -1292,6 +1297,90 @@ def _simulation_replay(
                 for item in raw_participants
                 if isinstance(item, str) and item in node_ids
             ] if isinstance(raw_participants, list) else []
+            moment_minute = moment.get("minute")
+            moment_traces = [
+                trace
+                for trace in cognitive_traces
+                if isinstance(trace, dict)
+                and trace.get("moment") == moment_minute
+                and isinstance(trace.get("person"), str)
+            ] if isinstance(cognitive_traces, list) else []
+            cognition_facts: list[tuple[str, str]] = []
+            cognition_people: list[str] = []
+            for trace in moment_traces:
+                person_id = str(trace["person"])
+                cognition_people.append(person_id)
+                assimilation = trace.get("assimilation")
+                assimilation = assimilation if isinstance(assimilation, dict) else {}
+                attended = trace.get("attended_observations")
+                attended = attended if isinstance(attended, list) else []
+                sources = list(
+                    dict.fromkeys(
+                        str(item["apparent_source"])
+                        for item in attended
+                        if isinstance(item, dict)
+                        and isinstance(item.get("apparent_source"), str)
+                    )
+                )
+                interpretation = str(
+                    assimilation.get("interpretation") or "No interpretation retained."
+                )
+                additions = assimilation.get("memory_additions")
+                revisions = assimilation.get("memory_revisions")
+                memory_changes = [
+                    str(item) for item in additions if isinstance(item, str)
+                ] if isinstance(additions, list) else []
+                if isinstance(revisions, list):
+                    memory_changes.extend(
+                        str(item.get("revised_memory"))
+                        for item in revisions
+                        if isinstance(item, dict)
+                        and isinstance(item.get("revised_memory"), str)
+                    )
+                intent = trace.get("intent")
+                intent = intent if isinstance(intent, dict) else {}
+                cognition_facts.append(
+                    (
+                        node_label_by_id.get(person_id, person_id.replace("_", " ").title()),
+                        " · ".join(
+                            [
+                                (
+                                    f"Noticed {len(attended)} observation"
+                                    f"{'s' if len(attended) != 1 else ''}"
+                                    + (f" from {', '.join(sources)}" if sources else "")
+                                ),
+                                f"Interpreted: {interpretation}",
+                                (
+                                    f"Memory changed: {'; '.join(memory_changes)}"
+                                    if memory_changes
+                                    else "Memory unchanged"
+                                ),
+                                f"Then attempted: {intent.get('action') or 'No action retained.'}",
+                            ]
+                        ),
+                    )
+                )
+            if cognition_facts:
+                add_scene(
+                    scene_id=f"moment_{index}_cognition",
+                    kind="cognition",
+                    scene_title=f"Moment {index}: what each person noticed and retained",
+                    scene_summary=(
+                        "Each person first interpreted only their authorized context and "
+                        "updated natural-language memory. A separate model call then selected "
+                        "their action; these private records are not canonical world truth."
+                    ),
+                    visible_nodes=[
+                        person_id for person_id in cognition_people if person_id in node_ids
+                    ],
+                    visible_edges=[],
+                    focus_nodes=[
+                        person_id for person_id in cognition_people if person_id in node_ids
+                    ],
+                    facts=cognition_facts,
+                    round_index=index,
+                    state_revision=index - 1,
+                )
             execution_parent = moment.get("execution_parent")
             parent_revision = (
                 int(execution_parent.removeprefix("revision:"))
@@ -2208,6 +2297,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         network_nodes=network_nodes,
         network_edges=network_edges,
         raw_moments=raw_moments,
+        cognitive_traces=document.get("traces"),
         general_world=document.get("profile") in {"general_world_v1", "general_world_v2"},
         question_is_analyst_framing=(
             document.get("execution_contract") == "general_world_v2"

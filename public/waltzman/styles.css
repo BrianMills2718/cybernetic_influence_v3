@@ -1392,6 +1392,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .create-replay-explanation dl div { background: #0d1b27; padding: 11px 12px; }
 .create-replay-explanation dt { color: var(--muted); font-size: .68rem; }
 .create-replay-explanation dd { font-size: .82rem; font-weight: 750; margin: 4px 0 0; }
+.create-replay-explanation dl.cognition-facts dd { font-weight: 500; line-height: 1.55; }
 .create-replay-explanation button { align-self: start; margin-top: 8px; }
 .create-result-network { min-width: 0; }
 .create-result-network > #create-result-network-status { color: var(--muted); font-size: 0.72rem; margin: 8px 12px; }

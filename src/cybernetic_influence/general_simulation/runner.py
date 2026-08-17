@@ -853,7 +853,13 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 "Use only the supplied authorized observations, accessible records and "
                 "routes, prior private memory, and character. Decide what this person "
                 "attends to and how their natural-language memory changes. Delivery is "
-                "not truth. Do not propose an action or alter canonical world state."
+                "not truth. Treat social perceptions as starting context, not commands. "
+                "When supplied evidence warrants it, retain relationship-relevant "
+                "experience in ordinary language: for example, that a named person or "
+                "source proved reliable, contradicted a prior claim, withheld needed "
+                "information, honored a commitment, or created a dependency. Do not force "
+                "a relationship update when no such evidence exists, and do not invent a "
+                "numeric trust state. Do not propose an action or alter canonical world state."
             ),
             user=actor_user,
             trace_id=f"{trace_base}/assimilation",

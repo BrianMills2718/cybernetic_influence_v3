@@ -2877,7 +2877,9 @@ function renderAuthoredReplay() {
   $('#create-replay-kind').textContent = sentence(scene.kind)
   $('#create-replay-title').textContent = scene.title
   $('#create-replay-summary').textContent = scene.summary
-  $('#create-replay-facts').innerHTML = (scene.facts || []).map((fact) => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('')
+  const replayFacts = $('#create-replay-facts')
+  replayFacts.classList.toggle('cognition-facts', scene.kind === 'cognition')
+  replayFacts.innerHTML = (scene.facts || []).map((fact) => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('')
   const previous = $('#create-replay-previous')
   const next = $('#create-replay-next')
   previous.disabled = authoredReplaySceneIndex === 0

@@ -121,6 +121,39 @@ def project_general_run(
             intent_output = (
                 output if trace_base in staged_actions else output.get("intent")
             )
+            memory_before = list(context["private_memory"])
+            memory_after = list(memory_before)
+            if isinstance(assimilation_output, dict):
+                for revision in assimilation_output.get("memory_revisions", []):
+                    if not isinstance(revision, dict):
+                        continue
+                    prior = revision.get("prior_memory")
+                    revised = revision.get("revised_memory")
+                    if prior in memory_after and isinstance(revised, str):
+                        memory_after[memory_after.index(prior)] = revised
+                additions = assimilation_output.get("memory_additions", [])
+                if isinstance(additions, list):
+                    memory_after.extend(
+                        item for item in additions if isinstance(item, str)
+                    )
+                attended_ids = set(
+                    item
+                    for item in assimilation_output.get(
+                        "attended_observation_ids", []
+                    )
+                    if isinstance(item, str)
+                )
+            else:
+                attended_ids = set()
+            attended_observations = [
+                {
+                    "observation_id": item["observation_id"],
+                    "apparent_source": item["apparent_source"],
+                    "content": item["content"],
+                }
+                for item in context["observations"]
+                if item["observation_id"] in attended_ids
+            ]
             observations = [
                 {
                     "apparent_source_ref": item["apparent_source"],
@@ -160,6 +193,9 @@ def project_general_run(
                     "base_revision": context["base_revision"],
                     "observations": observations,
                     "assimilation": assimilation_output,
+                    "attended_observations": attended_observations,
+                    "memory_before": memory_before,
+                    "memory_after": memory_after,
                     "intent": intent_output,
                     "orientation": (intent_output or {}).get("action"),
                     "actions": [
