@@ -276,6 +276,19 @@ horizontal overflow. One remaining repair means first-pass authoring is not yet
 established; the bounded three-attempt stakeholder path is established for this
 canary.
 
+First-pass prompt-only canary observed 2026-08-16: build
+`d183368a5113e39a0fa5d4ef7b3b989342e75f8e` explicitly required each sensing
+output field to exist in its declared public output record. The exact retained
+request nevertheless produced draft `draft_bb374d180e72` only after five
+proposal generations and three dependency reviews. The rejected candidates
+omitted a sensing output field, supplied an invalid one-input transformation
+inventory mapping, and twice represented destination resource custody plus a
+separate delivery record as competing prerequisites. The fifth proposal passed.
+This rejects further prompt-only elaboration as the next latency fix. The
+follow-on owner is deterministic materialization for unambiguous contract
+cross-references plus dependency-review rules that recognize canonical resource
+custody without demanding redundant status guards.
+
 Public exact-transformation execution observed 2026-08-16: build
 `bc0c8a1d90a1ece81615c5f5a51845ae1fb52211` serves authentic Luna run
 `run_13807bbe9196` at
