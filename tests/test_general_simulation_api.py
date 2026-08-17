@@ -904,32 +904,36 @@ class _GeneralRuntimeFake:
         response_model = kwargs["response_model"]
         user = json.loads(args[1][1]["content"])
         self.supplied_inputs.append(user)
-        if response_model is ActorDecision:
+        if response_model is Assimilation:
+            context = user["actor_context"]
+            return Assimilation(
+                attended_observation_ids=[
+                    item["observation_id"] for item in context["observations"]
+                ],
+                memory_additions=["Retained one bounded interpretation."],
+                memory_revisions=[],
+                provenance_links=[
+                    item["observation_id"] for item in context["observations"]
+                ],
+                interpretation="Bounded fixture interpretation.",
+            ), SimpleNamespace(provider="fixture")
+        if response_model is SemanticActionIntent:
             self.actor_counter += 1
             context = user["actor_context"]
-            return ActorDecision(
-                assimilation=Assimilation(
-                    attended_observation_ids=[
-                        item["observation_id"] for item in context["observations"]
-                    ],
-                    memory_additions=[f"memory {self.actor_counter}"],
-                    memory_revisions=[],
-                    provenance_links=[
-                        item["observation_id"] for item in context["observations"]
-                    ],
-                    interpretation="Bounded fixture interpretation.",
-                ),
-                intent=SemanticActionIntent(
-                    intent_id=f"intent_{self.actor_counter}",
-                    actor_id=context["actor_id"],
-                    base_revision=context["base_revision"],
-                    action="Propose a bounded joint check.",
-                    target_refs=["relief_cargo"],
-                    purpose="Explore the configured question.",
-                    expected_effect="A joint proposal.",
-                    stated_rationale="Available evidence supports a bounded attempt.",
-                ),
+            assert user["retained_assimilation"]["interpretation"] == (
+                "Bounded fixture interpretation."
+            )
+            return SemanticActionIntent(
+                intent_id=f"intent_{self.actor_counter}",
+                actor_id=context["actor_id"],
+                base_revision=context["base_revision"],
+                action="Propose a bounded joint check.",
+                target_refs=["relief_cargo"],
+                purpose="Explore the configured question.",
+                expected_effect="A joint proposal.",
+                stated_rationale="Available evidence supports a bounded attempt.",
             ), SimpleNamespace(provider="fixture")
+        assert response_model is WorldTransactionProposal
         return WorldTransactionProposal(
             transaction_id=f"transaction_{user['moment']['moment_id']}",
             base_revision=user["requirements"]["base_revision"],
@@ -1401,7 +1405,7 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     assert reopened["authoring"]["proposal_kind"] == "general_world_v2"
     assert reopened["authoring"]["scenario_digest"]
     assert reopened["authoring"]["run_spec_digest"]
-    assert reopened["model_calls"] == 15
+    assert reopened["model_calls"] == 27
     assert reopened["general_simulation"]["run_id"] == run_id
     assert "question" not in reopened["general_simulation"]
     assert reopened["run_evidence_bundle"]["run_id"] == run_id
@@ -1427,7 +1431,8 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     assert summary_payload["evidence_bundle"]["evidence_record_count"] > 0
     assert len(summary_payload["analysis_results"]) == 1
     assert summary_payload["causal_moments"] == 3
-    assert summary_payload["participant_model_calls"] == 15
+    assert summary_payload["participant_model_calls"] == 27
+    assert all(trace["model_call_count"] == 2 for trace in reopened["traces"])
     assert summary_payload["simulation_replay"]["scenes"]
     assert not any(
         node["id"] == "collective_decision"

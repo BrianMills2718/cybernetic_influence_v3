@@ -36,6 +36,7 @@ from cybernetic_influence.general_simulation.models import (
     WorldTransactionProposal,
 )
 from cybernetic_influence.general_simulation.runner import run_general_simulation_v2
+from cybernetic_influence.general_simulation.projection import project_general_run
 from cybernetic_influence.general_simulation.contracts_v2 import (
     ScenarioSpecV2,
     adapt_general_proposal_v1,
@@ -448,6 +449,95 @@ def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
     assert unsupported.coverage_status == "unsupported"
     assert unsupported.missing_evidence == ["boundary_activity"]
     assert result.model_dump(mode="json") == retained_result
+
+
+def test_staged_cognition_retains_assimilation_before_action_selection() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    scenario, run_spec = adapt_general_proposal_v1(
+        proposal,
+        run_id="run_staged_cognition",
+        cognition_mode="staged",
+    )
+    compiled = compile_general_simulation_v2(scenario, run_spec)
+    call_sequence: list[tuple[str, str]] = []
+
+    def staged_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+        user = json.loads(args[1][1]["content"])
+        response_model = kwargs["response_model"]
+        if response_model is Assimilation:
+            context = user["actor_context"]
+            call_sequence.append((context["actor_id"], "assimilation"))
+            return Assimilation(
+                attended_observation_ids=[
+                    item["observation_id"] for item in context["observations"]
+                ],
+                memory_additions=["I retained the currently authorized evidence."],
+                memory_revisions=[],
+                provenance_links=[
+                    item["observation_id"] for item in context["observations"]
+                ],
+                interpretation="The evidence remains incomplete but actionable.",
+            ), SimpleNamespace(provider="fixture")
+        if response_model is SemanticActionIntent:
+            context = user["actor_context"]
+            call_sequence.append((context["actor_id"], "action"))
+            assert user["retained_assimilation"]["interpretation"] == (
+                "The evidence remains incomplete but actionable."
+            )
+            assert "I retained the currently authorized evidence." in user[
+                "assimilated_private_memory"
+            ]
+            return SemanticActionIntent(
+                intent_id=f"intent_{context['actor_id']}_{context['base_revision']}",
+                actor_id=context["actor_id"],
+                base_revision=context["base_revision"],
+                action="Request a bounded coordination check.",
+                target_refs=[],
+                purpose="Address the current phase responsibilities.",
+                expected_effect="Produce one reviewable attempt.",
+                stated_rationale="The retained assimilation supports a bounded check.",
+            ), SimpleNamespace(provider="fixture")
+        assert response_model is WorldTransactionProposal
+        return WorldTransactionProposal(
+            transaction_id=f"transaction_{user['moment']['moment_id']}",
+            base_revision=user["requirements"]["base_revision"],
+            authority_id=user["requirements"]["authority_id"],
+            intent_ids=user["requirements"]["intent_ids"],
+            operations=[],
+            preconditions=[],
+            consequences=[],
+            evidence_refs=user["requirements"]["intent_ids"],
+            stated_rationale="The bounded intents require no world mutation.",
+        ), SimpleNamespace(provider="fixture")
+
+    result = run_general_simulation_v2(
+        compiled,
+        call=staged_call,
+        max_additional_moments=1,
+    )
+
+    expected_actor_calls = len(proposal.people) * 2
+    assert len(result.model_calls) == expected_actor_calls + 1
+    assert len(call_sequence) == expected_actor_calls
+    for person in proposal.people:
+        assert [
+            phase for actor_id, phase in call_sequence if actor_id == person.entity_id
+        ] == ["assimilation", "action"]
+    assert sum(item.trace_id.endswith("/assimilation") for item in result.model_calls) == len(proposal.people)
+    assert sum(item.trace_id.endswith("/action") for item in result.model_calls) == len(proposal.people)
+    projected = project_general_run(
+        compiled,
+        result,
+        run_id=run_spec.run_id,
+        created_at="2026-08-16T00:00:00Z",
+        execution="live",
+    )
+    assert len(projected["traces"]) == len(proposal.people)
+    assert all(trace["model_call_count"] == 2 for trace in projected["traces"])
+    assert all(trace["assimilation"] for trace in projected["traces"])
+    assert all(trace["intent"] for trace in projected["traces"])
 
 
 def test_waltzman_lens_does_not_count_rejected_operations_as_committed() -> None:

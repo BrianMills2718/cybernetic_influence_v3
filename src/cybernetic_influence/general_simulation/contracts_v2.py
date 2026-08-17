@@ -126,6 +126,7 @@ class RunSpecV2(_StrictModel):
     run_id: str = Field(pattern=_ID)
     scenario_digest: str = Field(pattern=_DIGEST)
     execution_mode: Literal["reference", "live", "replay"]
+    cognition_mode: Literal["integrated", "staged"] = "integrated"
     model: str | None = Field(default=None, min_length=1)
     reasoning_effort: str | None = Field(default=None, min_length=1)
     per_call_budget: float | None = Field(default=None, gt=0)
@@ -178,6 +179,7 @@ def adapt_general_proposal_v1(
     reasoning_effort: str | None = None,
     per_call_budget: float | None = None,
     per_run_budget: float | None = None,
+    cognition_mode: Literal["integrated", "staged"] = "integrated",
 ) -> tuple[ScenarioSpecV2, RunSpecV2]:
     """Translate one retained V1 proposal into the separated execution inputs.
 
@@ -220,6 +222,7 @@ def adapt_general_proposal_v1(
         run_id=run_id,
         scenario_digest=scenario.digest,
         execution_mode=execution_mode,
+        cognition_mode=cognition_mode,
         model=model,
         reasoning_effort=reasoning_effort,
         per_call_budget=per_call_budget,

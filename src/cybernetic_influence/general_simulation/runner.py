@@ -44,6 +44,7 @@ from .concordia_runtime import (
 from .models import (
     ActorContext,
     ActorDecision,
+    Assimilation,
     AdoptionReceipt,
     GeneralGroupSimulationResult,
     GeneralGroupSimulationResultV2,
@@ -750,12 +751,14 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
         trace_prefix: str,
         model: str,
         reasoning_effort: str,
+        cognition_mode: str = "integrated",
     ) -> None:
         self._call = call
         self._person = person.model_copy(deep=True)
         self._trace_prefix = trace_prefix
         self._model = model
         self._reasoning_effort = reasoning_effort
+        self._cognition_mode = cognition_mode
         self.receipts: list[ModelCallReceipt] = []
         self.activation_count = 0
 
@@ -834,6 +837,84 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                     "private memory"
                 )
 
+    def _produce_staged_decision(
+        self, actor_context: ActorContext, actor_user: str, call_number: int
+    ) -> ActorDecision:
+        assimilation_output, assimilation_receipt = _call_model(
+            self._call,
+            role="actor",
+            response_model=Assimilation,
+            system=(
+                "You are the perception and memory stage for one synthetic person. "
+                "Use only the supplied authorized observations, accessible records and "
+                "routes, prior private memory, and character. Decide what this person "
+                "attends to and how their natural-language memory changes. Delivery is "
+                "not truth. Do not propose an action or alter canonical world state."
+            ),
+            user=actor_user,
+            trace_id=(
+                f"{self._trace_prefix}/moment/{call_number}/actor/"
+                f"{self._person.entity_id}/assimilation"
+            ),
+            model=self._model,
+            reasoning_effort=self._reasoning_effort,
+        )
+        assimilation = Assimilation.model_validate(assimilation_output)
+        validation_shell = ActorDecision(
+            assimilation=assimilation,
+            intent=SemanticActionIntent(
+                intent_id=f"validation_{self._person.entity_id}_{call_number}",
+                actor_id=actor_context.actor_id,
+                base_revision=actor_context.base_revision,
+                action="No action; validate assimilation only.",
+                target_refs=[],
+                purpose="Validate the separate cognition stage.",
+                expected_effect="No world change.",
+                stated_rationale="This placeholder is never emitted.",
+            ),
+        )
+        self._validate_decision(validation_shell, actor_context)
+        assimilated_memory = list(actor_context.private_memory)
+        for revision in assimilation.memory_revisions:
+            index = assimilated_memory.index(revision.prior_memory)
+            assimilated_memory[index] = revision.revised_memory
+        assimilated_memory.extend(assimilation.memory_additions)
+        action_output, action_receipt = _call_model(
+            self._call,
+            role="actor",
+            response_model=SemanticActionIntent,
+            system=(
+                "You are the action-selection stage for one synthetic person. The prior "
+                "perception stage is retained and cannot be revised here. Using that exact "
+                "assimilation, the updated private memory, character, and available transition "
+                "contracts, return one coherent bounded semantic action intent against the "
+                "supplied world revision. A capability or contract permits an attempt; it does "
+                "not guarantee authorization or success."
+            ),
+            user=json.dumps(
+                {
+                    "person": self._person.model_dump(mode="json"),
+                    "actor_context": actor_context.model_dump(mode="json"),
+                    "retained_assimilation": assimilation.model_dump(mode="json"),
+                    "assimilated_private_memory": assimilated_memory,
+                },
+                sort_keys=True,
+            ),
+            trace_id=(
+                f"{self._trace_prefix}/moment/{call_number}/actor/"
+                f"{self._person.entity_id}/action"
+            ),
+            model=self._model,
+            reasoning_effort=self._reasoning_effort,
+        )
+        decision = ActorDecision(
+            assimilation=assimilation,
+            intent=SemanticActionIntent.model_validate(action_output),
+        )
+        self._validate_decision(decision, actor_context)
+        self.receipts.extend([assimilation_receipt, action_receipt])
+        return decision
+
     def _produce_action_attempt(
         self,
         context: entity_component.ComponentContextMapping,
@@ -850,33 +931,42 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             },
             sort_keys=True,
         )
-        parsed, receipt = _call_model(
-            self._call,
-            role="actor",
-            response_model=ActorDecision,
-            system=(
-                "You are one synthetic person in an exploratory causal simulation. "
-                "Use only the supplied authorized observations, accessible world records, "
-                "private memory, and character. Delivery is not truth and an attempted action "
-                "is not guaranteed to succeed. Return an assimilation record and one coherent, "
-                "bounded open-ended semantic action intent against the supplied world revision. "
-                "The phase responsibilities describe the requested work, not a dictated outcome. "
-                "When several supplied transition contracts are jointly necessary and you are "
-                "authorized to attempt them, one coherent intent may select all of their exact "
-                "contract IDs. Otherwise select only the contracts you actually attempt. Selecting "
-                "a contract permits only an attempt; it does not guarantee authorization or success."
-            ),
-            user=actor_user,
-            trace_id=f"{self._trace_prefix}/moment/{call_number}/actor/{self._person.entity_id}",
-            model=self._model,
-            reasoning_effort=self._reasoning_effort,
-        )
-        decision = ActorDecision.model_validate(parsed)
-        try:
-            self._validate_decision(decision, actor_context)
-        except ValueError as validation_error:
-            self.receipts.append(receipt)
-            repaired, repair_receipt = _call_model(
+        if self._cognition_mode == "staged":
+            decision = self._produce_staged_decision(
+                actor_context, actor_user, call_number
+            )
+            receipt = None
+        else:
+            parsed, receipt = _call_model(
+                self._call,
+                role="actor",
+                response_model=ActorDecision,
+                system=(
+                    "You are one synthetic person in an exploratory causal simulation. "
+                    "Use only the supplied authorized observations, accessible world records, "
+                    "private memory, and character. Delivery is not truth and an attempted action "
+                    "is not guaranteed to succeed. Return an assimilation record and one coherent, "
+                    "bounded open-ended semantic action intent against the supplied world revision. "
+                    "The phase responsibilities describe the requested work, not a dictated outcome. "
+                    "When several supplied transition contracts are jointly necessary and you are "
+                    "authorized to attempt them, one coherent intent may select all of their exact "
+                    "contract IDs. Otherwise select only the contracts you actually attempt. Selecting "
+                    "a contract permits only an attempt; it does not guarantee authorization or success."
+                ),
+                user=actor_user,
+                trace_id=(
+                    f"{self._trace_prefix}/moment/{call_number}/actor/"
+                    f"{self._person.entity_id}"
+                ),
+                model=self._model,
+                reasoning_effort=self._reasoning_effort,
+            )
+            decision = ActorDecision.model_validate(parsed)
+            try:
+                self._validate_decision(decision, actor_context)
+            except ValueError as validation_error:
+                self.receipts.append(receipt)
+                repaired, repair_receipt = _call_model(
                 self._call,
                 role="actor",
                 response_model=ActorDecision,
@@ -902,9 +992,9 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                 model=self._model,
                 reasoning_effort=self._reasoning_effort,
             )
-            decision = ActorDecision.model_validate(repaired)
-            receipt = repair_receipt
-            self._validate_decision(decision, actor_context)
+                decision = ActorDecision.model_validate(repaired)
+                receipt = repair_receipt
+                self._validate_decision(decision, actor_context)
         context_component = self.get_entity().get_component(
             ACTOR_CONTEXT_COMPONENT, type_=ActorContextComponent
         )
@@ -917,7 +1007,8 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             context_component.context.private_memory.extend(
                 decision.assimilation.memory_additions
             )
-        self.receipts.append(receipt)
+        if receipt is not None:
+            self.receipts.append(receipt)
         return decision.intent.model_dump_json()
 
     def get_action_attempt(
@@ -1470,6 +1561,7 @@ class GeneralPersonPrefab(prefab.Prefab):  # type: ignore[misc]
     trace_prefix: str = "general-simulation"
     model: str = CODEX_LUNA_MODEL
     reasoning_effort: str = "medium"
+    cognition_mode: str = "integrated"
 
     def build(
         self,
@@ -1487,6 +1579,7 @@ class GeneralPersonPrefab(prefab.Prefab):  # type: ignore[misc]
                 trace_prefix=self.trace_prefix,
                 model=self.model,
                 reasoning_effort=self.reasoning_effort,
+                cognition_mode=self.cognition_mode,
             ),
             context_components={
                 ACTOR_CONTEXT_COMPONENT: ActorContextComponent(),
@@ -1551,6 +1644,7 @@ def _build_simulation(
     trace_prefix: str,
     model: str,
     reasoning_effort: str,
+    cognition_mode: str = "integrated",
 ) -> generic.Simulation:
     scenario = _compiled_scenario(compiled)
     schedule = _compiled_schedule(compiled)
@@ -1561,6 +1655,7 @@ def _build_simulation(
             trace_prefix=trace_prefix,
             model=model,
             reasoning_effort=reasoning_effort,
+            cognition_mode=cognition_mode,
         )
         for person in scenario.people
     }
@@ -1608,6 +1703,7 @@ def _run_compiled_general_simulation(
     max_additional_moments: int | None = None,
     model: str = CODEX_LUNA_MODEL,
     reasoning_effort: str = "medium",
+    cognition_mode: str = "integrated",
 ) -> GeneralGroupSimulationResult | GeneralGroupSimulationResultV2:
     scenario = _compiled_scenario(compiled)
     schedule = _compiled_schedule(compiled)
@@ -1619,6 +1715,7 @@ def _run_compiled_general_simulation(
         trace_prefix,
         model=model,
         reasoning_effort=reasoning_effort,
+        cognition_mode=cognition_mode,
     )
     restored_checkpoint: dict[str, Any] | None = None
     if checkpoint is not None:
@@ -1755,6 +1852,7 @@ def run_general_simulation_v2(
         max_additional_moments=max_additional_moments,
         model=model,
         reasoning_effort=reasoning_effort,
+        cognition_mode=run_spec.cognition_mode,
     )
     if not isinstance(result, GeneralGroupSimulationResultV2):
         raise AssertionError("V2 runner returned the wrong result contract")

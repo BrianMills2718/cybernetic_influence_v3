@@ -3683,6 +3683,7 @@ def create_app(
                         "reasoning_effort": effective_llm.agent_reasoning_effort,
                         "per_call_budget": effective_llm.participant_per_call_ceiling,
                         "per_run_budget": effective_llm.max_total_cost,
+                        "cognition_mode": "staged",
                     }
                 )
                 presentation_question = authored_bundle.analyst_question
@@ -3697,6 +3698,7 @@ def create_app(
                     reasoning_effort=effective_llm.agent_reasoning_effort,
                     per_call_budget=effective_llm.participant_per_call_ceiling,
                     per_run_budget=effective_llm.max_total_cost,
+                    cognition_mode="staged",
                 )
                 authored_bundle = adapt_authored_bundle_v1(
                     approved_general.proposal, run_id=run_id
@@ -3795,7 +3797,7 @@ def create_app(
                         "live_progress": [*retained_history, {**update, "sequence": sequence}],
                         "progress_sequence": sequence,
                         "model_calls": completed_moment_count
-                        * (len(scenario_v2.people) + 1),
+                        * ((len(scenario_v2.people) * 2) + 1),
                         "general_checkpoint": checkpoint,
                     }
                 )

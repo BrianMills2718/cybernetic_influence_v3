@@ -2153,7 +2153,7 @@ function renderAuthoringBrief(proposal) {
     const representations = proposal.information_extension?.representations || []
     const peopleById = new Map(proposal.people.map((person) => [person.entity_id, person.label]))
     const recipients = representations.reduce((total, item) => total + item.recipient_ids.length, 0)
-    const plannedCalls = proposal.schedule.length * (proposal.people.length + 1)
+    const plannedCalls = proposal.schedule.length * ((proposal.people.length * 2) + 1)
     const maximumCalls = proposal.schedule.length * ((proposal.people.length * 2) + 2)
     $('#create-brief-question').innerHTML = proposal.analyst_question
       ? `<strong>Optional review question</strong><p>${escapeHtml(proposal.analyst_question)}</p>`
@@ -2162,7 +2162,7 @@ function renderAuthoringBrief(proposal) {
     $('#create-brief-influences').innerHTML = representations.length
       ? `<strong>${representations.length} information ${representations.length === 1 ? 'item' : 'items'} · ${recipients} explicit deliveries</strong><ol>${representations.map((item) => `<li><strong>${escapeHtml(item.apparent_source)} → ${escapeHtml(item.recipient_ids.map((id) => peopleById.get(id) || id).join(', '))}</strong><span>${escapeHtml(item.content)}</span></li>`).join('')}</ol>`
       : '<strong>No information paths are configured.</strong>'
-    $('#create-brief-rule').innerHTML = `<strong>${proposal.schedule.length} scheduled ${proposal.schedule.length === 1 ? 'moment' : 'moments'} · ${plannedCalls} planned model calls</strong><p>Up to ${maximumCalls} calls if every typed output needs one repair.<br>${proposal.schedule.map((item) => `Minute ${escapeHtml(item.minute)} · ${escapeHtml(item.description)}`).join('<br>')}</p>`
+    $('#create-brief-rule').innerHTML = `<strong>${proposal.schedule.length} scheduled ${proposal.schedule.length === 1 ? 'moment' : 'moments'} · ${plannedCalls} planned model calls</strong><p>Each person first assimilates authorized evidence, then chooses an action in a separate call. Up to ${maximumCalls} calls including one adjudication repair per moment.<br>${proposal.schedule.map((item) => `Minute ${escapeHtml(item.minute)} · ${escapeHtml(item.description)}`).join('<br>')}</p>`
     $('#create-brief-analysis-card').hidden = false
     $('#create-brief-analysis').innerHTML = proposal.analysis_spec
       ? `<strong>${escapeHtml(sentence(proposal.analysis_spec.profile))}</strong><p>${escapeHtml(proposal.analysis_spec.purpose)}</p>`

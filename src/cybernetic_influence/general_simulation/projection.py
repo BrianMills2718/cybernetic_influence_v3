@@ -77,8 +77,15 @@ def project_general_run(
         for receipt in result.model_calls
         if receipt.role == "actor" and receipt.trace_id.endswith("/repair/1")
     }
+    staged_assimilations = {
+        receipt.trace_id.removesuffix("/assimilation"): receipt
+        for receipt in result.model_calls
+        if receipt.role == "actor" and receipt.trace_id.endswith("/assimilation")
+    }
     for receipt in result.model_calls:
         if receipt.role == "actor":
+            if receipt.trace_id.endswith("/assimilation"):
+                continue
             if receipt.trace_id in repaired_actor_trace_ids:
                 continue
             supplied = json.loads(receipt.input_context)
@@ -86,6 +93,17 @@ def project_general_run(
                 supplied = supplied["original_input"]
             context = supplied["actor_context"]
             output = receipt.structured_output
+            staged_assimilation = staged_assimilations.get(
+                receipt.trace_id.removesuffix("/action")
+            )
+            assimilation_output = (
+                staged_assimilation.structured_output
+                if staged_assimilation is not None
+                else output.get("assimilation")
+            )
+            intent_output = (
+                output if receipt.trace_id.endswith("/action") else output.get("intent")
+            )
             observations = [
                 {
                     "apparent_source_ref": item["apparent_source"],
@@ -124,17 +142,17 @@ def project_general_run(
                     "moment": context["current_minute"],
                     "base_revision": context["base_revision"],
                     "observations": observations,
-                    "assimilation": output.get("assimilation"),
-                    "intent": output.get("intent"),
-                    "orientation": output.get("intent", {}).get("action"),
+                    "assimilation": assimilation_output,
+                    "intent": intent_output,
+                    "orientation": (intent_output or {}).get("action"),
                     "actions": [
                         {
-                            "public_summary": output.get("intent", {}).get("action"),
+                            "public_summary": (intent_output or {}).get("action"),
                             "output_port_id": "semantic_action_intent",
-                            "payload": output.get("intent"),
+                            "payload": intent_output,
                         }
                     ],
-                    "model_call_count": 1,
+                    "model_call_count": 2 if staged_assimilation is not None else 1,
                     "model": receipt.model,
                     "provider": receipt.provider,
                 }
