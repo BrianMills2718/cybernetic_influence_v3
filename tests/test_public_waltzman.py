@@ -89,7 +89,7 @@ def test_authoring_progress_uses_retained_backend_stages() -> None:
     assert "job.detail" in script
     assert "proposal attempt ${attempt}" in script
     assert "Still compiling the typed world" not in script
-    assert "assets/app.js?v=authoring22" in page
+    assert "assets/app.js?v=authoring23" in page
 
 
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
@@ -264,7 +264,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=authoring22",
+        "assets/app.js?v=authoring23",
     ]
     assert {
         "overview-view",
@@ -562,6 +562,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "caseSystemProjection",
         "caseExactProjection",
         "renderCaseNetworkGraph",
+        "renderCaseNetworkSelection(item, projection",
+        "exact_member_count",
         "ensureCaseNetwork",
         "window.CyberneticGraph.render",
         "guideRunId",

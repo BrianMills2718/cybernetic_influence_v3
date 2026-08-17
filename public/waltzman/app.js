@@ -923,7 +923,11 @@ function selectionInspectorHtml({item, relationship = false, nodes = [], edges =
       ['Invariants', state.invariant_ids],
       ['Uses', state.substrate_refs],
     ]
+    const handledStateKeys = new Set(['mode', 'implementation_id', 'input_port_ids', 'output_port_ids', 'observation_target_ids', 'read_fact_ids', 'read_representation_ids', 'read_spatial_link_ids', 'write_fact_ids', 'write_carrier_ids', 'write_placement_entity_ids', 'invariant_ids', 'substrate_refs', 'canonical_id', 'canonical_label', 'canonical_kind'])
     for (const [label, value] of preferred) if (value !== undefined && (!Array.isArray(value) || value.length)) rows.push([label, value])
+    for (const [key, value] of Object.entries(state)) {
+      if (!handledStateKeys.has(key) && key !== 'fidelity' && value !== undefined) rows.push([sentence(key), value])
+    }
     const connected = edges.filter((edge) => edge.source === identity || edge.target === identity)
     if (connected.length) {
       rows.push(['Connected paths', connected.slice(0, 8).map((edge) => {
@@ -1060,7 +1064,10 @@ function caseSystemProjection(raw) {
     ['pressure_sources', 'Four local pressure sources', 'Technical, legal, logistics, and community sources emit bounded exogenous signals. This node is an analytical grouping over four exact source agents.'],
     ['national_networks', 'Four national response networks', 'Twenty people participate through Alba, Borin, Cyrenia, and Darsia. This node groups their exact local information and stance routes.'],
     ['regional_network', 'Regional coordination network', 'Six people coordinating science, logistics, law, finance, public legitimacy, and the shared decision.'],
-  ].map(([id, label, description]) => ({id, label, description, kind:'analytical_boundary', state:{projection:'analytical_group'}}))
+  ].map(([id, label, description], index) => ({
+    id, label, description, kind:'analytical_boundary',
+    state:{projection:'analytical group', exact_member_count:[4, 20, 6][index], executor:false},
+  }))
   const edges = []
   const addEdge = (source, target, description) => edges.push({
     id:`case_${source}_to_${target}`,
@@ -1088,9 +1095,9 @@ function caseExactProjection(raw) {
   }
 }
 
-function renderCaseNetworkSelection(item, relationship = false) {
+function renderCaseNetworkSelection(item, projection, relationship = false) {
   const inspector = $('#case-network-inspector')
-  inspector.innerHTML = `<strong>${escapeHtml(item.label || sentence(item.id))}</strong><span>${escapeHtml(relationship ? `${sentence(item.kind)} · ${item.description || 'Retained connection.'}` : `${sentence(item.kind)} · ${item.description || 'Retained entity.'}`)}</span>`
+  inspector.innerHTML = selectionInspectorHtml({item, relationship, nodes:projection.nodes, edges:projection.edges})
 }
 
 function renderCaseNetworkGraph() {
@@ -1131,10 +1138,11 @@ function renderCaseNetworkGraph() {
     collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
       const node = projection.nodes.find((candidate) => candidate.id === nodeId)
-      if (node) renderCaseNetworkSelection(node)
+      if (node) renderCaseNetworkSelection(node, projection)
     },
-    onSelectEdge:(edge) => renderCaseNetworkSelection(edge, true),
+    onSelectEdge:(edge) => renderCaseNetworkSelection(edge, projection, true),
   })
+  if (projection.nodes[0]) renderCaseNetworkSelection(projection.nodes[0], projection)
   $('#case-network-status').textContent = caseGraphMode === 'exact'
     ? `${projection.nodes.length} exact entities · ${projection.edges.length} exact routes · drag, zoom, or select any item.`
     : `${projection.nodes.length} visible groups, sources, and mechanisms · analytical grouping over ${caseNetworkRun.nodes.length} exact entities and ${caseNetworkRun.edges.length} routes.`
