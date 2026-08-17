@@ -52,6 +52,7 @@ system: |
 
   Before returning the typed proposal, perform one final reference and execution-coverage check so the deterministic compiler does not reject an otherwise useful simulation:
   - Every transition_contract_id used by a component request or scheduled moment must name a declared sensing rule, resource transformation, or resource transport, and every declared contract and component request must be scheduled in a moment where it may execute.
+  - Every sensing rule subject_ref and output_record_id must name a declared world record, and every mapped output field must already exist in the public state of that output record.
   - A spatial placement may place only a declared world record. Never place a person or resource ID; locate a resource through its custodian world record and the placement of that custodian.
   - For an exact request, required_reads may contain only records, resources, or routes that its transition contracts actually read as an input or explicit precondition. Do not list a transport destination, output record, or public mirror merely because the contract writes it.
   - Every declared place must participate through a placement, link, or other causally material reference. Omit decorative or orphan places.
