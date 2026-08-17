@@ -1785,11 +1785,19 @@ def _run_compiled_general_simulation(
         retained = json.loads(json.dumps(checkpoint))
         checkpoints.append(retained)
         if progress_observer is not None:
+            retained_model_calls = len(gm_act.receipts)
+            for actor in simulation.get_entities():
+                assert isinstance(actor, entity_agent.EntityAgent)
+                actor_act = cast(
+                    GeneralActorActingComponent, actor.get_act_component()
+                )
+                retained_model_calls += len(actor_act.receipts)
             progress_observer(
                 {
                     "stage": "commit",
                     "completed_moments": len(checkpoints),
                     "total_moments": len(schedule),
+                    "model_calls": retained_model_calls,
                 },
                 retained,
             )

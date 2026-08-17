@@ -532,7 +532,7 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
 
     assert "planned model calls" in script
     assert "first assimilates authorized evidence" in script
-    assert "including one adjudication repair per moment" in script
+    assert "validator-guided repair calls are retained" in script
     assert "Causal moments" in script
     assert "Retained model decisions" in script
     assert "function resetAuthoringWorkspace()" in script

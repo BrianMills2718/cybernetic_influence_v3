@@ -3796,8 +3796,10 @@ def create_app(
                         **current,
                         "live_progress": [*retained_history, {**update, "sequence": sequence}],
                         "progress_sequence": sequence,
-                        "model_calls": completed_moment_count
-                        * ((len(scenario_v2.people) * 2) + 1),
+                        "model_calls": update.get(
+                            "model_calls",
+                            completed_moment_count * ((len(scenario_v2.people) * 2) + 1),
+                        ),
                         "general_checkpoint": checkpoint,
                     }
                 )
