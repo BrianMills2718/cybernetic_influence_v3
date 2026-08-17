@@ -327,6 +327,23 @@ requests, or horizontal overflow. Fast deterministic stages remain retained in
 the job progress history even when a one-second browser poll does not display
 them long enough to be seen.
 
+Exact-request dependency materialization observed 2026-08-16: build
+`af8f5570f34f940f39da502aeb436a668dd79427` copies only the declared read
+dependencies of an already selected exact transition contract into its bound
+component request. A focused integration supplied a proposal missing the one
+route fixed by its selected transport contract; the retained proposal added the
+route and passed after one provider generation plus one dependency review.
+
+The exact two-message outage request was also repeated authentically as draft
+`draft_70f1bc61bbe0`. Its first Luna proposal passed deterministic
+materialization and compilation without a second proposal. Dependency review
+then required a substantive repair: the scenario said delivery depended on
+safe fuel handling and contained a canonical safety field, but the transport
+contract did not guard that field. Luna added the missing causal guard on
+attempt 2 and the draft became ready for review. This demonstrates the intended
+boundary: mechanical cross-reference closure is deterministic; a semantically
+new precondition remains model-reviewed and cannot be silently invented.
+
 Public exact-transformation execution observed 2026-08-16: build
 `bc0c8a1d90a1ece81615c5f5a51845ae1fb52211` serves authentic Luna run
 `run_13807bbe9196` at
