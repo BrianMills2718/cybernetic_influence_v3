@@ -778,12 +778,12 @@ const guideSteps = [
   {
     kicker:'Learn the picture language',
     title:'A configured route shows what can happen—not what did happen.',
-    body:'Here the official audit source holds a message representation. A directed route can carry it to an exact delivery rule, which may create an observation for Mara. These configured arrows describe possible paths and permissions. The next step switches to the events that actually occurred.',
+    body:'This is a four-node focus view of the official-audit path from the previous ten-node map; the other six items still exist and are only hidden for this explanation. Here the source holds a message representation. A directed route can carry it to an exact delivery rule, which may create an observation for Mara. These arrows describe possible paths and permissions. The next step switches to the events that actually occurred.',
     mode:'causal',
     nodeIds:['official_audit_bulletin_source', 'audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_delivery', 'election_director_mara_chen'],
     edgeIds:['location_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'lineage_official_audit_bulletin_source_to_audit_bulletin_to_all_participants_representation', 'audit_bulletin_to_all_participants_election_director_mara_chen_route', 'observation_audit_bulletin_to_all_participants_election_director_mara_chen_delivery_to_election_director_mara_chen'],
     focus:['audit_bulletin_to_all_participants_election_director_mara_chen_delivery'],
-    facts:[['Source → message','Where the content came from'], ['Source → delivery','Possible directed route'], ['Delivery → Mara','Authorized observation target'], ['No event yet','Nothing is claimed to have moved']],
+    facts:[['Focus view','4 of the prior 10 nodes'], ['Source → message','Where the content came from'], ['Delivery → Mara','Authorized observation target'], ['No event yet','Nothing is claimed to have moved']],
     language:[['Configured structure','The entities, records, mechanisms, and possible routes present before execution.'], ['Realized trajectory','The retained sequence of attempts and accepted world changes during this execution.']],
     takeaway:'Separating possible structure from realized events prevents the visualization from pretending that every configured route was used.',
   },
@@ -878,13 +878,74 @@ function canonicalGuideTrajectory(step) {
   }
 }
 
+function inspectorValue(value) {
+  if (value === null || value === undefined || value === '') return 'None'
+  if (Array.isArray(value)) return value.length ? value.map((item) => typeof item === 'object' ? JSON.stringify(item) : String(item)).join(' · ') : 'None'
+  if (typeof value === 'object') {
+    if (Object.hasOwn(value, 'value')) return inspectorValue(value.value)
+    return Object.entries(value).map(([key, item]) => `${sentence(key)}: ${inspectorValue(item)}`).join(' · ')
+  }
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  return String(value)
+}
+
+function selectionInspectorHtml({item, relationship = false, nodes = [], edges = [], details = []}) {
+  const identity = item.event_id || item.id || 'unidentified'
+  const type = sentence(item.event_kind || item.kind || (relationship ? 'relation' : 'record'))
+  const nodeLabels = new Map(nodes.map((node) => [node.id, node.label || sentence(node.id)]))
+  const rows = [...details]
+  if (relationship) {
+    rows.push(
+      ['Direction', 'Directed'],
+      ['From', nodeLabels.get(item.source) || sentence(item.source)],
+      ['To', nodeLabels.get(item.target) || sentence(item.target)],
+      ['Enabled', item.enabled === false ? 'No' : 'Yes'],
+    )
+  } else if (item.event_id) {
+    rows.push(
+      ['Logical time', item.logical_time],
+      ['State revision', item.state_revision],
+      ['Transition source', sentence(item.variance_source || 'retained runtime')],
+    )
+    if (item.mechanism_id) rows.push(['Transition authority', sentence(item.mechanism_id)])
+    if (item.representation_id) rows.push(['Information representation', sentence(item.representation_id)])
+    if (item.causal_parent_event_ids?.length) rows.push(['Execution parents', item.causal_parent_event_ids.join(' · ')])
+  } else {
+    const state = item.state || {}
+    const preferred = [
+      ['Mode', state.mode],
+      ['Implementation', state.implementation_id],
+      ['Inputs', state.input_port_ids],
+      ['Outputs', state.output_port_ids],
+      ['Observation targets', state.observation_target_ids],
+      ['Reads', [...(state.read_fact_ids || []), ...(state.read_representation_ids || []), ...(state.read_spatial_link_ids || [])]],
+      ['Writes', [...(state.write_fact_ids || []), ...(state.write_carrier_ids || []), ...(state.write_placement_entity_ids || [])]],
+      ['Invariants', state.invariant_ids],
+      ['Uses', state.substrate_refs],
+    ]
+    for (const [label, value] of preferred) if (value !== undefined && (!Array.isArray(value) || value.length)) rows.push([label, value])
+    const connected = edges.filter((edge) => edge.source === identity || edge.target === identity)
+    if (connected.length) {
+      rows.push(['Connected paths', connected.slice(0, 8).map((edge) => {
+        const outgoing = edge.source === identity
+        const other = outgoing ? edge.target : edge.source
+        return `${outgoing ? '→' : '←'} ${sentence(edge.kind)} ${nodeLabels.get(other) || sentence(other)}`
+      })])
+    }
+  }
+  rows.unshift(['Canonical ID', identity], ['Type', type])
+  const description = guideEventPresentation[identity]
+    || guideNodePresentation[identity]?.description
+    || item.summary
+    || item.description
+    || 'Retained runtime record.'
+  return `<header><strong>${escapeHtml(guideNodePresentation[identity]?.label || item.label || sentence(identity))}</strong><span>${escapeHtml(description)}</span></header><dl>${rows.filter(([, value]) => value !== undefined).map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(inspectorValue(value))}</dd></div>`).join('')}</dl>`
+}
+
 function renderGuideSelection(item, relationship = false) {
-  const type = relationship ? sentence(item.kind || 'relation') : sentence(item.event_kind || item.kind || 'record')
-  const identity = item.event_id || item.id
-  const presentation = guideNodePresentation[identity]
-  const label = presentation?.label || item.label || sentence(identity)
-  const description = guideEventPresentation[identity] || presentation?.description || item.summary || item.description || 'Retained runtime record.'
-  $('#guide-selection').innerHTML = `<strong>${escapeHtml(label)} · ${escapeHtml(type)}:</strong> ${escapeHtml(description)}`
+  const person = !relationship ? guideRun.authoring?.people?.find((candidate) => candidate.entity_id === item.id) : null
+  const details = person ? [['Configured position', person.position]] : []
+  $('#guide-selection').innerHTML = selectionInspectorHtml({item, relationship, nodes:guideRun.nodes || [], edges:guideRun.edges || [], details})
 }
 
 function renderGuideGraph(step) {
@@ -950,6 +1011,9 @@ function renderGuide() {
     ? guideRun.events.find((event) => event.sequence === step.eventSequences[0])
     : canonicalGuideProjection(step).nodes[0]
   if (selected) renderGuideSelection(selected)
+  if (state.guideStep === 3) {
+    $('#guide-selection').innerHTML = `<header><strong>Focus view: no nodes were removed</strong><span>This step shows 4 of the 10 nodes from step 3 so one complete route can be read. The two sources, five delivery mechanisms, and three people remain in the simulation. Click any visible node or arrow for its retained configuration.</span></header>`
+  }
 }
 
 async function ensureGuideRun() {
@@ -1673,7 +1737,7 @@ function semanticGraphEdges(rawEdges, nodes) {
 }
 
 function generalDraftProjection(proposal, compiledGraph = null) {
-  const nodes = (compiledGraph?.nodes || []).map((item) => ({...item, kind:item.type || item.kind, description:item.description || item.content || item.label, state:{configured:true}}))
+  const nodes = (compiledGraph?.nodes || []).map((item) => ({...item, kind:item.type || item.kind, description:item.description || item.content || item.label, state:{...(item.state || {}), configured:true}}))
   const edges = (compiledGraph?.edges || []).map((item) => ({...item, description:item.description || item.label, enabled:true, routeIds:[item.id]}))
   const addNode = (id, kind, label, description) => {
     if (id && !nodes.some((item) => item.id === id)) nodes.push({id, kind, label, description, state:{configured:true}})
@@ -1710,6 +1774,34 @@ function generalDraftProjection(proposal, compiledGraph = null) {
   }
   const semanticNodes = nodes.map(semanticGraphNode)
   return {nodes:semanticNodes, edges:semanticGraphEdges(edges, semanticNodes)}
+}
+
+function configuredNodeDetails(proposal, nodeId) {
+  const details = []
+  const person = (proposal.people || []).find((item) => item.entity_id === nodeId)
+  if (person) {
+    details.push(['Position', person.position], ['Disposition', person.disposition])
+    if (person.memories?.length) details.push(['Starting memories', person.memories])
+    for (const [label, key] of [['Values', 'values'], ['Goals', 'goals'], ['Beliefs', 'beliefs'], ['Decision tendencies', 'decision_tendencies'], ['Capabilities', 'capabilities'], ['Limitations', 'limitations']]) {
+      if (person.behavioral_profile?.[key]?.length) details.push([label, person.behavioral_profile[key]])
+    }
+    return details
+  }
+  const record = (proposal.world_records || []).find((item) => item.record_id === nodeId)
+  if (record) {
+    for (const field of record.public_state || []) details.push([sentence(field.key), field.value])
+    if (record.visible_to_actor_ids?.length) details.push(['Visible to', record.visible_to_actor_ids])
+    return details
+  }
+  const representation = (proposal.information_extension?.representations || []).find((item) => item.representation_id === nodeId)
+  if (representation) return [['Content', representation.content], ['Apparent source', representation.apparent_source], ['Authorized recipients', representation.recipient_ids]]
+  const system = (proposal.active_systems || []).find((item) => item.system_id === nodeId)
+  if (system) return [['Representation strategy', sentence(system.representation_strategy)], ['Causal subjects', system.subject_refs], ['Responsibility', system.causal_responsibility_tags]]
+  const place = (proposal.spatial_extension?.places || []).find((item) => item.place_id === nodeId)
+  if (place) return [['Configured state', place.state]]
+  const moment = (proposal.schedule || []).find((item) => `moment:${item.moment_id}` === nodeId)
+  if (moment) return [['Minute', moment.minute], ['External information injected', moment.external_inject_representation_ids]]
+  return details
 }
 
 function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
@@ -1861,9 +1953,9 @@ function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
     selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
       const item = projection.nodes.find((candidate) => candidate.id === nodeId)
-      if (item) $('#create-draft-walkthrough-selection').innerHTML = `<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span>`
+      if (item) $('#create-draft-walkthrough-selection').innerHTML = selectionInspectorHtml({item, nodes:projection.nodes, edges:projection.edges, details:configuredNodeDetails(proposal, nodeId)})
     },
-    onSelectEdge:(item) => { $('#create-draft-walkthrough-selection').innerHTML = `<strong>${escapeHtml(sentence(item.kind))}</strong><span>${escapeHtml(item.description)}</span>` },
+    onSelectEdge:(item) => { $('#create-draft-walkthrough-selection').innerHTML = selectionInspectorHtml({item, relationship:true, nodes:projection.nodes, edges:projection.edges}) },
   })
 }
 
@@ -2749,10 +2841,10 @@ function renderAuthoredResultNetwork(result, scene = null) {
     selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
       const item = visibleNodes.find((candidate) => candidate.id === nodeId)
-      if (item) $('#create-result-network-inspector').innerHTML = `<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span>`
+      if (item) $('#create-result-network-inspector').innerHTML = selectionInspectorHtml({item, nodes:presentationNodes, edges:presentationEdges})
     },
     onSelectEdge:(item) => {
-      $('#create-result-network-inspector').innerHTML = `<strong>${escapeHtml(sentence(item.kind))}</strong><span>${escapeHtml(item.description)}</span>`
+      $('#create-result-network-inspector').innerHTML = selectionInspectorHtml({item, relationship:true, nodes:presentationNodes, edges:presentationEdges})
     },
   })
   $('#create-result-network-status').textContent = scene

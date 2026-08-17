@@ -1064,8 +1064,13 @@ tbody tr:last-child td { border-bottom: 0; }
 .guide-legend [data-guide-kind="information"] i { border-color: #ef79b7; }
 .guide-legend [data-guide-kind="mechanism"] i { border-color: #e8a84d; }
 .guide-legend b { color: var(--text); font-size: 0.7rem; }
-.guide-selection { color: var(--muted); font-size: 0.7rem; line-height: 1.5; margin: 0; min-height: 48px; padding: 10px 14px; }
-.guide-selection strong { color: var(--text); }
+.guide-selection { color: var(--muted); font-size: 0.7rem; line-height: 1.5; margin: 0; min-height: 48px; max-height: 250px; overflow: auto; padding: 12px 14px; }
+.guide-selection header, .create-result-network-inspector header { display: grid; gap: 3px; }
+.guide-selection strong, .create-result-network-inspector strong { color: var(--text); }
+.guide-selection dl, .create-result-network-inspector dl { display: grid; gap: 1px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 10px 0 0; }
+.guide-selection dl > div, .create-result-network-inspector dl > div { background: #08131c; min-width: 0; padding: 7px 9px; }
+.guide-selection dt, .create-result-network-inspector dt { color: var(--faint); font-size: .61rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.guide-selection dd, .create-result-network-inspector dd { color: var(--text); font-size: .68rem; margin: 2px 0 0; overflow-wrap: anywhere; }
 .guide-explanation { display: flex; flex-direction: column; padding: 24px; }
 .guide-progress-label { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
 .guide-progress-label span:first-child { color: var(--faint); font-size: 0.72rem; font-weight: 750; }
@@ -1394,8 +1399,7 @@ tbody tr:last-child td { border-bottom: 0; }
 #create-result-network-graph .cy-graph-shell { min-height: 560px; }
 #create-result-network-graph .cy-graph-canvas { min-height: 450px; }
 .create-result-no-graph { color: var(--muted); margin: auto; max-width: 30ch; text-align: center; }
-.create-result-network-inspector { border-left: 2px solid var(--accent); color: var(--muted); display: grid; font-size: 0.78rem; gap: 3px; line-height: 1.5; margin: 12px 0 0; padding-left: 12px; }
-.create-result-network-inspector strong { color: var(--text); }
+.create-result-network-inspector { border-left: 2px solid var(--accent); color: var(--muted); display: grid; font-size: 0.78rem; gap: 3px; line-height: 1.5; margin: 12px 0 0; max-height: 360px; overflow: auto; padding-left: 12px; }
 .create-result-analysis { border-top: 1px solid var(--line); margin-top: 32px; padding-top: 18px; }
 .create-result-lenses { border-top:1px solid var(--line); margin-top:24px; padding-top:18px; }
 .create-result-lenses > summary { align-items:center; cursor:pointer; display:flex; justify-content:space-between; list-style:none; }

@@ -89,7 +89,7 @@ def test_authoring_progress_uses_retained_backend_stages() -> None:
     assert "job.detail" in script
     assert "proposal attempt ${attempt}" in script
     assert "Still compiling the typed world" not in script
-    assert "assets/app.js?v=authoring21" in page
+    assert "assets/app.js?v=authoring22" in page
 
 
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
@@ -260,11 +260,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=ontology2",
-        "assets/styles.css?v=authoring10",
+        "assets/styles.css?v=authoring11",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=authoring21",
+        "assets/app.js?v=authoring22",
     ]
     assert {
         "overview-view",
@@ -569,6 +569,12 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "guideSteps",
         "canonicalGuideProjection",
         "canonicalGuideTrajectory",
+        "selectionInspectorHtml",
+        "Configured position",
+        "Execution parents",
+        "Connected paths",
+        "Focus view: no nodes were removed",
+        "4 of the prior 10 nodes",
         "ensureGuideRun",
         "renderGuideGraph",
         "renderGuide",

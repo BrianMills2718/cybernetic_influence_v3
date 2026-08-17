@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology2">
-  <link rel="stylesheet" href="assets/styles.css?v=authoring10">
+  <link rel="stylesheet" href="assets/styles.css?v=authoring11">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -112,7 +112,7 @@
           <section class="guide-visual" aria-labelledby="guide-visual-title">
             <header><span id="guide-visual-mode">Configured structure</span><strong id="guide-visual-title">Exact retained records</strong></header>
             <div id="guide-graph" class="guide-graph react-canvas-host" aria-label="Interactive retained simulation graph"><p>Loading retained execution…</p></div>
-            <p id="guide-selection" class="guide-selection"><strong>Loading:</strong> fetching the exact retained run used by this walkthrough.</p>
+            <div id="guide-selection" class="guide-selection"><strong>Loading:</strong> fetching the exact retained run used by this walkthrough.</div>
           </section>
 
           <aside class="guide-explanation" aria-live="polite">
@@ -290,7 +290,7 @@
                 <span id="create-draft-walkthrough-kind">Question</span>
                 <h3 id="create-draft-walkthrough-title">What is this simulation asking?</h3>
                 <p id="create-draft-walkthrough-summary"></p>
-                <p id="create-draft-walkthrough-selection" class="create-result-network-inspector">Select a visible item to inspect its configured meaning.</p>
+                <div id="create-draft-walkthrough-selection" class="create-result-network-inspector">Select a visible item to inspect its configured meaning.</div>
               </aside>
               <section aria-label="Configured simulation visualization">
                 <div id="create-draft-network-graph" class="react-canvas-host"></div>
@@ -370,7 +370,7 @@
                   <section class="create-result-network" aria-label="Replay visualization">
                     <div id="create-result-network-graph" class="react-canvas-host"></div>
                     <p id="create-result-network-status">Only evidence available by this step is shown.</p>
-                    <p id="create-result-network-inspector" class="create-result-network-inspector">Arrows show retained directions of issue, delivery, or contribution—not proof that a message was believed.</p>
+                    <div id="create-result-network-inspector" class="create-result-network-inspector">Arrows show retained directions of issue, delivery, or contribution—not proof that a message was believed.</div>
                   </section>
                 </div>
               </section>
@@ -753,6 +753,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=ontology2" defer></script>
-  <script src="assets/app.js?v=authoring21" defer></script>
+  <script src="assets/app.js?v=authoring22" defer></script>
 </body>
 </html>
