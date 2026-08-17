@@ -25,6 +25,7 @@ from cybernetic_influence.general_simulation.models import (
     ResourceTransportContract,
     SemanticActionIntent,
     SensingTransitionContract,
+    TransitionContractArguments,
     TypedTarget,
     WorldRecord,
     WorldTransaction,
@@ -665,10 +666,10 @@ def test_new_resource_contract_selection_requires_explicit_attempt_arguments() -
         actor._validate_decision(decision, context)
 
     decision.intent.transition_contract_arguments = {
-        contract.contract_id: {
-            "quantity": contract.argument_schema["quantity"]["maximum"],
-            "route_id": contract.argument_schema["route_id"]["enum"][0],
-        }
+        contract.contract_id: TransitionContractArguments(
+            quantity=contract.argument_schema["quantity"]["maximum"],
+            route_id=contract.argument_schema["route_id"]["enum"][0],
+        )
     }
     actor._validate_decision(decision, context)
 

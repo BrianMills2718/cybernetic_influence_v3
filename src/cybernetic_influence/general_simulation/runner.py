@@ -438,7 +438,7 @@ def _materialize_unambiguous_exact_transformations(
             arguments = intent.transition_contract_arguments.get(contract.contract_id)
             if not arguments:
                 continue
-            candidate_batches = arguments.get("batches")
+            candidate_batches = arguments.batches
             if isinstance(candidate_batches, int) and not isinstance(
                 candidate_batches, bool
             ):
@@ -580,8 +580,8 @@ def _materialize_unambiguous_exact_transports(
             arguments = intent.transition_contract_arguments.get(contract.contract_id)
             if not arguments:
                 continue
-            attempted_quantity = arguments.get("quantity")
-            attempted_route = arguments.get("route_id")
+            attempted_quantity = arguments.quantity
+            attempted_route = arguments.route_id
             if (
                 isinstance(attempted_quantity, (int, float))
                 and not isinstance(attempted_quantity, bool)
@@ -966,7 +966,10 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
             contract = available_by_id[contract_id]
             supplied = arguments.get(contract_id)
             if contract.contract_kind == "sensing":
-                if supplied not in (None, {}):
+                if supplied is not None and any(
+                    value is not None
+                    for value in supplied.model_dump(mode="python").values()
+                ):
                     raise ValueError(
                         f"sensing contract {contract_id} accepts no arguments"
                     )
@@ -977,7 +980,7 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                     "structured transition_contract_arguments"
                 )
             if contract.contract_kind == "resource_transformation":
-                batches = supplied.get("batches")
+                batches = supplied.batches
                 batches_schema = contract.argument_schema.get("batches")
                 maximum = (
                     batches_schema.get("maximum")
@@ -989,14 +992,15 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                     or not isinstance(batches, int)
                     or not isinstance(maximum, int)
                     or not 1 <= batches <= maximum
-                    or set(supplied) != {"batches"}
+                    or supplied.quantity is not None
+                    or supplied.route_id is not None
                 ):
                     raise ValueError(
                         f"contract {contract_id} requires integer batches from 1 to {maximum}"
                     )
             elif contract.contract_kind == "resource_transport":
-                quantity = supplied.get("quantity")
-                route_id = supplied.get("route_id")
+                quantity = supplied.quantity
+                route_id = supplied.route_id
                 quantity_schema = contract.argument_schema.get("quantity")
                 route_schema = contract.argument_schema.get("route_id")
                 maximum = (
@@ -1015,7 +1019,7 @@ class GeneralActorActingComponent(entity_component.ActingComponent):  # type: ig
                     or not isinstance(route_id, str)
                     or not isinstance(allowed_routes, list)
                     or route_id not in allowed_routes
-                    or set(supplied) != {"quantity", "route_id"}
+                    or supplied.batches is not None
                 ):
                     raise ValueError(
                         f"contract {contract_id} requires quantity in (0, {maximum}] and "

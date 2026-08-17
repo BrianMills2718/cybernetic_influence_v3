@@ -239,6 +239,14 @@ class Assimilation(StrictModel):
     interpretation: str
 
 
+class TransitionContractArguments(StrictModel):
+    """Small cross-domain parameter envelope for currently exact contracts."""
+
+    batches: int | None = Field(default=None, ge=1)
+    quantity: float | None = Field(default=None, gt=0)
+    route_id: str | None = None
+
+
 class SemanticActionIntent(StrictModel):
     intent_id: str
     actor_id: str
@@ -249,7 +257,7 @@ class SemanticActionIntent(StrictModel):
     expected_effect: str
     stated_rationale: str
     transition_contract_ids: list[str] = Field(default_factory=list)
-    transition_contract_arguments: dict[str, dict[str, JsonValue]] = Field(
+    transition_contract_arguments: dict[str, TransitionContractArguments] = Field(
         default_factory=dict,
         description=(
             "Structured parameters for each selected exact contract. These values, not "

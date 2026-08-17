@@ -665,8 +665,8 @@ class CanonicalWorld(entity_component.ContextComponent):  # type: ignore[misc]
                 )
                 if not arguments:
                     continue
-                attempted_quantity = arguments.get("quantity")
-                attempted_route = arguments.get("route_id")
+                attempted_quantity = arguments.quantity
+                attempted_route = arguments.route_id
                 if (
                     isinstance(attempted_quantity, (int, float))
                     and not isinstance(attempted_quantity, bool)
