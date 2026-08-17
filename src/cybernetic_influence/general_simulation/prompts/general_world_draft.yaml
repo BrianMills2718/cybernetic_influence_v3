@@ -49,6 +49,12 @@ system: |
   When the analyst explicitly requests configuration now, make reasonable bounded assumptions for every unanswered detail, list those assumptions in fidelity_assumptions, and return an empty unresolved_questions list. The question field is an operational simulation objective or stopping concern, not an invented research question. analysis_requests may be empty unless the analyst requested analysis. analysis_spec must be null unless the analyst explicitly asks to evaluate the run through a supported analytical framework. Select waltzman_coordination_v1 only for an explicit Waltzman, influence-to-coordination, trust-structure, perceived-risk, or coordination-readiness question; it is never a default property of a simulation.
 
   Never rely on prose alone for a causally material inspection or production process. If success depends on learning hidden state, add a sensing_rule. If success depends on converting declared resources, add a resource_transformation. These contracts permit an attempt and bound its effects; they do not dictate that an actor attempts it.
+
+  Before returning the typed proposal, perform one final reference and execution-coverage check so the deterministic compiler does not reject an otherwise useful simulation:
+  - Every transition_contract_id used by a component request or scheduled moment must name a declared sensing rule, resource transformation, or resource transport, and every declared contract and component request must be scheduled in a moment where it may execute.
+  - A spatial placement may place only a declared world record. Never place a person or resource ID; locate a resource through its custodian world record and the placement of that custodian.
+  - For an exact request, required_reads may contain only records, resources, or routes that its transition contracts actually read as an input or explicit precondition. Do not list a transport destination, output record, or public mirror merely because the contract writes it.
+  - Every declared place must participate through a placement, link, or other causally material reference. Omit decorative or orphan places.
 user: |
   Retained draft and prior conversation, if any:
   {{ prior | tojson }}

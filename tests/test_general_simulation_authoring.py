@@ -280,3 +280,8 @@ def test_general_authoring_prompt_defaults_to_a_short_editable_run() -> None:
     assert "sensing, permission, and action success must remain separate" in prompt
     assert "Each request must name one transition responsibility" in prompt
     assert "Do not combine a person's interpretation" in prompt
+    assert "perform one final reference and execution-coverage check" in prompt
+    assert "Every transition_contract_id used by a component request" in prompt
+    assert "A spatial placement may place only a declared world record" in prompt
+    assert "Do not list a transport destination, output record, or public mirror" in prompt
+    assert "Omit decorative or orphan places" in prompt
