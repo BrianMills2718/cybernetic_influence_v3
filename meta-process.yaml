@@ -1,0 +1,97 @@
+# Enforced Planning Configuration
+# Copy this to your project root as meta-process.yaml
+#
+# This is the minimal functional config surface: keys below have script effect
+# today or are consumed directly by generated CI/templates.
+#
+# For broader planned/advisory vocabulary that is not part of the minimum live
+# config contract, see templates/meta-process.future.yaml.example.
+
+meta_process:
+  version: "1.0"
+
+  # =============================================================================
+  # DEVELOPMENT DEFAULTS
+  #
+  # Start with the minimum local, reversible workflow. Enable coordination and
+  # blocking gates only when concurrent writers, a shared candidate, or a
+  # release creates the risk they protect.
+  # =============================================================================
+
+  plans:
+    enabled: true
+    # Require tests defined in plan's "Required Tests" section
+    require_tests: true
+    # Max lines for [Trivial] commits (no plan required)
+    plans_dir: "docs/plans"
+
+  claims:
+    enabled: true
+    require_for_worktree: true
+    # off | observe | enforce; promote only after measured observe-mode calibration
+    prewrite_mode: "off"
+
+  artifact_creation:
+    # off | observe | enforce. Start with observe on a bounded path class.
+    mode: "off"
+    policy_file: "scripts/artifact_directory_policy.yaml"
+    registry_file: "scripts/relationships.yaml"
+
+  worktrees:
+    enabled: true
+    protect_main: false
+
+  commits:
+    # Prefixes remain available for coordinated plans but are not required for
+    # ordinary development commits.
+    require_prefix: false
+    # Valid prefixes (regex patterns)
+    valid_prefixes:
+      - "\\[Plan #\\d+\\]"
+      - "\\[Trivial\\]"
+      - "\\[Unplanned\\]"  # Emergency escape hatch
+  # =============================================================================
+  # QUALITY GATES (Configurable strictness)
+  # =============================================================================
+
+  quality:
+    doc_coupling:
+      enabled: false
+      # Mapping file location
+      config_file: "scripts/relationships.yaml"
+
+    dead_code:
+      enabled: false          # opt-in per repo
+      strict: false           # false = warn only, true = block commit
+      min_confidence: 80      # vulture confidence threshold (60-100)
+      paths: []               # specific paths to check (empty = project root)
+      whitelist: ".vulture_whitelist.py"
+      audit_file: "dead_code_audit.json"
+
+  # =============================================================================
+  # CI CONFIGURATION
+  # =============================================================================
+
+  ci:
+    # Skip CI with .github/ci-disabled file
+    allow_disable_file: true
+    # Jobs to include
+    jobs:
+      test: true
+      mypy: true
+      fast_checks: true
+      plan_checks: true
+      post_merge_sync: true
+    # Change detection (skip jobs for docs-only changes)
+    change_detection: true
+
+# Additional project-specific settings normally live in separate files:
+#
+# scripts/relationships.yaml:
+#   - sources: ["src/core/*.py"]
+#     docs: ["docs/architecture/core.md"]
+#
+# scripts/governance.yaml:
+#   - adr: "ADR-0001"
+#     applies_to: ["src/models/*.py"]
+#
