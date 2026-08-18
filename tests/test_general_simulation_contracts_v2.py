@@ -42,6 +42,7 @@ from cybernetic_influence.general_simulation.contracts_v2 import (
     adapt_general_proposal_v1,
 )
 from cybernetic_influence.general_simulation.study_models import (
+    AuthoredSimulationBundleV2,
     adapt_authored_bundle_v1,
 )
 
@@ -109,6 +110,14 @@ def test_legacy_scenario_digest_survives_optional_transport_completion_fields() 
     restored = ScenarioSpecV2.model_validate(legacy_payload)
 
     assert restored.digest == scenario.digest
+
+    run = adapt_authored_bundle_v1(proposal, run_id="run_legacy_bundle")
+    legacy_bundle_payload = run.model_dump(mode="json")
+    for transport in legacy_bundle_payload["scenario"]["resource_transports"]:
+        transport.pop("arrival_status_key", None)
+        transport.pop("arrival_status_value", None)
+    restored_bundle = AuthoredSimulationBundleV2.model_validate(legacy_bundle_payload)
+    assert restored_bundle.digest == run.digest
 
 
 def test_exact_request_blocks_when_declared_dependency_is_not_read_by_contract() -> None:

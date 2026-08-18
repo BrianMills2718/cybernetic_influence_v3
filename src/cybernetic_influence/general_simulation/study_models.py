@@ -43,7 +43,16 @@ class AuthoredSimulationBundleV2(BaseModel):
 
     @property
     def digest(self) -> str:
-        return contract_digest(self)
+        # Keep retained pre-extension bundle identities readable.  This mirrors
+        # ScenarioSpecV2.digest: absent transport completion fields have no
+        # semantic effect, while populated fields remain part of the bundle.
+        payload = self.model_dump(mode="json")
+        for transport in payload["scenario"]["resource_transports"]:
+            if transport.get("arrival_status_key") is None:
+                transport.pop("arrival_status_key", None)
+            if transport.get("arrival_status_value") is None:
+                transport.pop("arrival_status_value", None)
+        return contract_digest(payload)
 
 
 class AuthoringRunProposalV2(BaseModel):
