@@ -1,9 +1,9 @@
 ---
 doc_role: implementation_handoff
 authority: bounded_design
-status: ready_awaiting_execution_authorization
+status: implemented_through_slice_28
 created: 2026-07-31
-updated: 2026-08-11
+updated: 2026-08-18
 depends_on:
   - docs/adr/013-generalized-simulator-foundation.md
   - docs/research/027-concordia-architecture-revisit.md
@@ -15,9 +15,12 @@ supersedes: physical-access parity proof previously specified in this file
 ## Gate
 
 ADR-013 is adopted and its 2026-08-11 boundary clarification is accepted. This
-handoff defines the first production implementation slice; it does not claim
-that the disposable research probe is product adoption. Begin only after an
-explicit instruction to implement Slice 27.
+handoff defined the first production implementation slice; per
+[docs/ROADMAP.md](../ROADMAP.md)'s Artifact Dispositions table, it is
+implemented through Slice 28 — the general bridge/port vertical exercises the
+adopted world-transition seam without the old runtime as a hidden executor.
+This handoff is retained for its original design rationale, not as a pending
+gate.
 
 ## Outcome
 

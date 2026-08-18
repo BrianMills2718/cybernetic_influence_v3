@@ -262,7 +262,7 @@ class DraftMessageRequest(BaseModel):
 
 
 AUTHORING_PHASE_LABELS = {
-    "queued": "Starting Luna",
+    "queued": "Starting the authoring model",
     "discussion": "Understanding the simulation",
     "proposal_generation": "Drafting people and world",
     "contract_materialization": "Resolving exact references",

@@ -457,7 +457,7 @@ class GeneralDraftAuthoringService:
         _report_progress(
             progress,
             "discussion",
-            "Luna is identifying the few choices that materially change this simulation.",
+            "The model is identifying the few choices that materially change this simulation.",
             1,
         )
         with structured_backend_options(model) as backend_options:
@@ -791,7 +791,7 @@ class GeneralDraftAuthoringService:
                 _report_progress(
                     progress,
                     "proposal_generation",
-                    "Luna is composing the people, world, information paths, and run conditions.",
+                    "The model is composing the people, world, information paths, and run conditions.",
                     attempt_number,
                 )
                 with structured_backend_options(model) as backend_options:
@@ -869,7 +869,7 @@ class GeneralDraftAuthoringService:
                     _report_progress(
                         progress,
                         "dependency_review",
-                        "Luna is checking whether consequential prerequisites were omitted.",
+                        "The model is checking whether consequential prerequisites were omitted.",
                         attempt_number,
                     )
                     with structured_backend_options(model) as review_backend_options:
@@ -1019,7 +1019,7 @@ class GeneralDraftAuthoringService:
                         _report_progress(
                             progress,
                             "repairing",
-                            "The dependency review found a material omission; Luna will revise the proposal.",
+                            "The dependency review found a material omission; the model will revise the proposal.",
                             attempt_number,
                         )
                         continue
@@ -1058,7 +1058,7 @@ class GeneralDraftAuthoringService:
                 _report_progress(
                     progress,
                     "repairing",
-                    "The compiler found an invalid or unsupported reference; Luna will revise the proposal.",
+                    "The compiler found an invalid or unsupported reference; the model will revise the proposal.",
                     attempt_number,
                 )
             except (ValueError, GeneralCompilationError) as exc:
@@ -1071,7 +1071,7 @@ class GeneralDraftAuthoringService:
                 _report_progress(
                     progress,
                     "repairing",
-                    "The typed proposal did not validate; Luna will revise it from the retained error.",
+                    "The typed proposal did not validate; the model will revise it from the retained error.",
                     attempt_number,
                 )
             except Exception as exc:
@@ -1092,7 +1092,7 @@ class GeneralDraftAuthoringService:
                 _report_progress(
                     progress,
                     "repairing",
-                    "The model response was incomplete; Luna will return one complete typed proposal.",
+                    "The response was incomplete; the model will return one complete typed proposal.",
                     attempt_number,
                 )
 
