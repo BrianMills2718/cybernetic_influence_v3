@@ -103,6 +103,17 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;')
 }
 
+function authoredRunFailureMessage(error) {
+  const detail = String(error?.message || error || '')
+  if (/hit your usage limit|usage limit/i.test(detail)) {
+    return 'Luna is temporarily unavailable because this account has reached its usage limit. No additional causal step was committed. Try this retained configuration again when Luna is available.'
+  }
+  if (/authoring model route is not currently certified/i.test(detail)) {
+    return 'Luna is not currently certified for this authoring route. The configuration remains saved; certify the route, then run it again.'
+  }
+  return detail || 'The simulation stopped before completing. The retained configuration is still editable.'
+}
+
 function sentence(value) {
   return String(value || '').replaceAll('_', ' ')
 }
@@ -3326,18 +3337,20 @@ async function pollAuthoredRun(runId) {
     }
     $('#create-run-heading').textContent = `Simulation ${sentence(run.status)}`
     $('#create-run-detail').textContent = `${Number(run.model_calls || 0)} model decisions retained. The world is still advancing.`
-    if (['failed', 'interrupted', 'stopped'].includes(run.status)) throw new Error(run.error || `simulation ${run.status}`)
+    if (['failed', 'interrupted', 'stopped'].includes(run.status)) {
+      throw new Error(authoredRunFailureMessage(run.error || `simulation ${run.status}`))
+    }
     scheduleAuthoredRunPoll(runId)
   } catch (error) {
     authoredRunPollFailures += 1
     if (authoredRunPollFailures <= 3) {
       $('#create-run-heading').textContent = 'Reconnecting to the simulation…'
-      $('#create-run-detail').textContent = error.message
+      $('#create-run-detail').textContent = authoredRunFailureMessage(error)
       scheduleAuthoredRunPoll(runId, 2200)
       return
     }
     $('#create-run-heading').textContent = 'Simulation failed visibly'
-    $('#create-run-detail').textContent = error.message
+    $('#create-run-detail').textContent = authoredRunFailureMessage(error)
     $('#create-stop').hidden = true
     $('#create-run').disabled = false
   }
