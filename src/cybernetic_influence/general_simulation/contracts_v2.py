@@ -35,27 +35,7 @@ class _StrictModel(BaseModel):
 def contract_digest(value: BaseModel | dict[str, object]) -> str:
     """Return the stable identity of one versioned contract payload."""
     payload = value.model_dump(mode="json") if isinstance(value, BaseModel) else value
-    # V2 transport completion state was added after retained drafts already
-    # existed.  An absent optional completion state is semantically identical
-    # to the former contract, so omit only these two null compatibility fields
-    # from the digest.  Populated fields remain part of scenario identity.
-    def strip_transport_status_nulls(item: object) -> object:
-        if isinstance(item, list):
-            return [strip_transport_status_nulls(value) for value in item]
-        if not isinstance(item, dict):
-            return item
-        cleaned = {
-            key: strip_transport_status_nulls(entry)
-            for key, entry in item.items()
-            if not (
-                key in {"arrival_status_key", "arrival_status_value"}
-                and entry is None
-            )
-        }
-        return cleaned
-
-    canonical_payload = strip_transport_status_nulls(payload)
-    encoded = json.dumps(canonical_payload, sort_keys=True, separators=(",", ":"))
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode()).hexdigest()
 
 
@@ -136,7 +116,17 @@ class ScenarioSpecV2(_StrictModel):
 
     @property
     def digest(self) -> str:
-        return contract_digest(self)
+        # V2 transport completion state was added after retained drafts already
+        # existed.  Its absence is semantically identical to the prior scenario
+        # contract, so preserve only the pre-extension *scenario* identity.
+        # Other evidence and receipt digests intentionally remain byte-exact.
+        payload = self.model_dump(mode="json")
+        for transport in payload["resource_transports"]:
+            if transport.get("arrival_status_key") is None:
+                transport.pop("arrival_status_key", None)
+            if transport.get("arrival_status_value") is None:
+                transport.pop("arrival_status_value", None)
+        return contract_digest(payload)
 
 
 class RunSpecV2(_StrictModel):

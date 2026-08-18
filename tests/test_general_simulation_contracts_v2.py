@@ -96,6 +96,21 @@ def test_retained_port_proposal_adapts_to_independent_v2_contracts() -> None:
     assert compiled.coverage.approvable
 
 
+def test_legacy_scenario_digest_survives_optional_transport_completion_fields() -> None:
+    proposal = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    scenario, _ = adapt_general_proposal_v1(proposal, run_id="run_legacy_digest")
+    legacy_payload = scenario.model_dump(mode="json")
+    for transport in legacy_payload["resource_transports"]:
+        transport.pop("arrival_status_key", None)
+        transport.pop("arrival_status_value", None)
+
+    restored = ScenarioSpecV2.model_validate(legacy_payload)
+
+    assert restored.digest == scenario.digest
+
+
 def test_exact_request_blocks_when_declared_dependency_is_not_read_by_contract() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         FIXTURE.read_text(encoding="utf-8")
