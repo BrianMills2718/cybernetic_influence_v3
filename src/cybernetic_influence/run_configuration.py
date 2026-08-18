@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
     CODEX_TERRA_MODEL,
+    OPENROUTER_SOL_MODEL,
     OPENROUTER_TERRA_MODEL,
     codex_subscription_available,
     is_codex_subscription_model,
@@ -96,6 +97,20 @@ _ADVERTISEMENT: dict[str, _RouteAdvertisement] = {
         "coordination_certification_env": (
             "CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA"
         ),
+        # Eligible in principle, but a 2026-08-18 authoring certification probe
+        # reproduced the prior provider-boundary failure: the native OpenRouter
+        # structured response validated with an empty required list. Do not set
+        # this env var until that schema-compliance gap is actually resolved.
+        "authoring_certification_env": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_TERRA",
+        "narrator_reasoning_effort": "low",
+    },
+    OPENROUTER_SOL_MODEL: {
+        "label": "OpenAI GPT-5.6 Sol",
+        "certification_env": "CYBERNETIC_INFLUENCE_CERT_SOL",
+        "coordination_certification_env": (
+            "CYBERNETIC_INFLUENCE_CERT_COORDINATION_SOL"
+        ),
+        "authoring_certification_env": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_SOL",
         "narrator_reasoning_effort": "low",
     },
     "openrouter/deepseek/deepseek-v4-flash": {

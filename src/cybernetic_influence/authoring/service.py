@@ -42,6 +42,7 @@ from cybernetic_influence.authoring.store import AuthoringDraftStore, DraftConfl
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
     CODEX_TERRA_MODEL,
+    OPENROUTER_SOL_MODEL,
     OPENROUTER_TERRA_MODEL,
     structured_backend_options,
 )
@@ -72,7 +73,7 @@ AuthoringModel = Literal[
     "openrouter/openai/gpt-5.6-sol",
 ]
 AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
-AUTHORING_MODEL: AuthoringModel = CODEX_LUNA_MODEL
+AUTHORING_MODEL: AuthoringModel = OPENROUTER_SOL_MODEL
 AUTHORING_REASONING_EFFORT: AuthoringReasoningEffort = "medium"
 AUTHORING_MAX_ATTEMPTS = 3
 AUTHORING_MAX_TOKENS = 8000
@@ -123,6 +124,22 @@ class AuthoringModelOption(TypedDict):
 
 AUTHORING_MODEL_OPTIONS: tuple[AuthoringModelOption, ...] = (
     {
+        "model": OPENROUTER_SOL_MODEL,
+        "label": "Sol · OpenRouter",
+        "provider": "OpenRouter",
+        "billing_mode": "usage_based",
+        "reasoning_efforts": ("none", "low", "medium", "high", "xhigh", "max"),
+        "default_reasoning_effort": "medium",
+    },
+    {
+        "model": OPENROUTER_TERRA_MODEL,
+        "label": "Terra · OpenRouter",
+        "provider": "OpenRouter",
+        "billing_mode": "usage_based",
+        "reasoning_efforts": ("none", "low", "medium", "high", "xhigh", "max"),
+        "default_reasoning_effort": "medium",
+    },
+    {
         "model": CODEX_TERRA_MODEL,
         "label": "Terra · subscription",
         "provider": "ChatGPT Codex subscription",
@@ -136,22 +153,6 @@ AUTHORING_MODEL_OPTIONS: tuple[AuthoringModelOption, ...] = (
         "provider": "ChatGPT Codex subscription",
         "billing_mode": "subscription_included",
         "reasoning_efforts": ("low", "medium", "high"),
-        "default_reasoning_effort": "medium",
-    },
-    {
-        "model": OPENROUTER_TERRA_MODEL,
-        "label": "Terra · OpenRouter",
-        "provider": "OpenRouter",
-        "billing_mode": "usage_based",
-        "reasoning_efforts": ("none", "low", "medium", "high", "xhigh", "max"),
-        "default_reasoning_effort": "medium",
-    },
-    {
-        "model": "openrouter/openai/gpt-5.6-sol",
-        "label": "Sol",
-        "provider": "OpenRouter",
-        "billing_mode": "usage_based",
-        "reasoning_efforts": ("none", "low", "medium", "high", "xhigh", "max"),
         "default_reasoning_effort": "medium",
     },
 )

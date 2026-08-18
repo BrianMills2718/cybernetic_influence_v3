@@ -35,6 +35,7 @@ from cybernetic_influence.general_simulation.study_models import (
 from cybernetic_influence.llm_backend import (
     CODEX_LUNA_MODEL,
     CODEX_TERRA_MODEL,
+    OPENROUTER_SOL_MODEL,
     OPENROUTER_TERRA_MODEL,
     is_codex_subscription_model,
     structured_backend_options,
@@ -146,8 +147,19 @@ def _certify(
 
 def main() -> None:
     route = sys.argv[1] if len(sys.argv) > 1 else "luna"
-    if route == "luna-authoring":
-        model = CODEX_LUNA_MODEL
+    authoring_routes = {
+        "luna-authoring": (CODEX_LUNA_MODEL, "CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA"),
+        "openrouter-terra-authoring": (
+            OPENROUTER_TERRA_MODEL,
+            "CYBERNETIC_INFLUENCE_CERT_AUTHORING_TERRA",
+        ),
+        "sol-authoring": (
+            OPENROUTER_SOL_MODEL,
+            "CYBERNETIC_INFLUENCE_CERT_AUTHORING_SOL",
+        ),
+    }
+    if route in authoring_routes:
+        model, authoring_env = authoring_routes[route]
         revision = llm_client_revision()
         data_root = Path(
             os.environ.get("LLM_CLIENT_DATA_ROOT", "~/projects/data")
@@ -165,7 +177,7 @@ def main() -> None:
                 schema,
                 model=model,
                 trace_id=(
-                    "cybernetic-influence/certification/luna/authoring/"
+                    f"cybernetic-influence/certification/{route}/"
                     f"{schema.__name__}"
                 ),
                 store=store,
@@ -177,10 +189,7 @@ def main() -> None:
                 DependencyCompletenessReviewV1,
             )
         ]
-        print(
-            "CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA="
-            + ",".join(ids)
-        )
+        print(f"{authoring_env}=" + ",".join(ids))
         return
     routes = {
         "luna": (

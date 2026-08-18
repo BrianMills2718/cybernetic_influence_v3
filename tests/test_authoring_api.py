@@ -1216,13 +1216,15 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
     )
     config = api.get("/api/config").json()["authoring"]
     assert [(item["label"], item["model"]) for item in config["models"]] == [
+        ("Sol · OpenRouter", "openrouter/openai/gpt-5.6-sol"),
+        ("Terra · OpenRouter", "openrouter/openai/gpt-5.6-terra"),
         ("Terra · subscription", "codex/gpt-5.6-terra"),
         ("Luna · subscription", "codex/gpt-5.6-luna"),
-        ("Terra · OpenRouter", "openrouter/openai/gpt-5.6-terra"),
-        ("Sol", "openrouter/openai/gpt-5.6-sol"),
     ]
     assert config["reasoning_efforts"] == ["none", "low", "medium", "high", "xhigh", "max"]
-    assert config["models"][0]["reasoning_efforts"] == ["medium"]
+    assert config["models"][0]["reasoning_efforts"] == [
+        "none", "low", "medium", "high", "xhigh", "max",
+    ]
     assert config["models"][0]["default_reasoning_effort"] == "medium"
 
     draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
@@ -1630,7 +1632,7 @@ def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) ->
         )
     )
     config = api.get("/api/config").json()["authoring"]
-    assert config["model"] == "codex/gpt-5.6-luna"
+    assert config["model"] == "openrouter/openai/gpt-5.6-sol"
     assert config["reasoning_effort"] == "medium"
     draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     drafted = api.post(
