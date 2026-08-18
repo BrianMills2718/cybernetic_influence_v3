@@ -4,6 +4,7 @@ from html.parser import HTMLParser
 import json
 from pathlib import Path
 import plistlib
+from typing import cast
 
 from fastapi.testclient import TestClient
 
@@ -154,7 +155,7 @@ def test_completed_simulation_starts_with_outcome_and_keeps_analysis_optional() 
 
 
 def _dataset() -> dict[str, object]:
-    return json.loads(DATA.read_text(encoding="utf-8"))
+    return cast(dict[str, object], json.loads(DATA.read_text(encoding="utf-8")))
 
 
 def test_public_page_is_an_executable_evidence_workbench() -> None:

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import pytest
 from pydantic import ValidationError
 
+from cybernetic_influence.active_runtime import ActiveRuntimeResult
 from cybernetic_influence.analysis import (
     FrameworkFindingV1,
     FrameworkReadoutConsumerV1,
@@ -19,6 +22,7 @@ from cybernetic_influence.analysis import (
 )
 from cybernetic_influence.authoring import (
     AuthoringCompilationError,
+    CompiledScenario,
     ScenarioDraftProposal,
     compile_scenario,
 )
@@ -141,12 +145,12 @@ def _proposal_payload() -> dict[str, object]:
                 "description": "Physical-network adjacency to the registry.",
             },
         ],
-        "placements": {
+        "placements": cast(dict[str, object], {
             **{person_id: "partnership_hub" for person_id in PERSON_IDS},
             "technical_pressure_source": "source_operations_site",
             "policy_pressure_source": "source_operations_site",
             "local_pressure_source": "source_operations_site",
-        },
+        }),
         "timing_assumptions": [
             {
                 "name": "technical_source_route_delivery",
@@ -272,7 +276,7 @@ def _proposal_payload() -> dict[str, object]:
     }
 
 
-def _compiled_reference():
+def _compiled_reference() -> tuple[CompiledScenario, ActiveRuntimeResult, RunEvidenceBundleV1]:
     proposal = ScenarioDraftProposal.model_validate(_proposal_payload())
     compiled = compile_scenario(proposal)
     result = compiled.run_scripted(run_id="run_configured_theory")
@@ -304,7 +308,7 @@ def test_configured_coordination_compiles_runs_and_produces_dual_readouts() -> N
     assert compiled.proposal.workflow.template_id == "coordination_decision_v1"
     assert compiled.scenario.description.startswith("Five people decide")
     assert (
-        state.entities["mission_coordinator"].attributes["assumptions"].value[
+        cast(dict[str, Any], state.entities["mission_coordinator"].attributes["assumptions"].value)[
             "position"
         ]
         == "Coordinates the partnership decision."
@@ -318,7 +322,8 @@ def test_configured_coordination_compiles_runs_and_produces_dual_readouts() -> N
     assert result.total_observed_cost == 0.0
     assert result.completion is not None
     assert result.completion.reason == "terminal_condition_met"
-    assert bundle.scenario_spec["workflow"]["template_id"] == (
+    workflow_spec = cast(dict[str, Any], bundle.scenario_spec["workflow"])
+    assert workflow_spec["template_id"] == (
         "coordination_decision_v1"
     )
     assert {item.framework for item in bundle.analysis_specs} == {
@@ -328,7 +333,7 @@ def test_configured_coordination_compiles_runs_and_produces_dual_readouts() -> N
     assert len(waltzman.findings) == 16
     assert any(
         item.finding_id == "waltzman_authority_divergence_scope"
-        and item.value["status"] == "not_computed"
+        and cast(dict[str, Any], item.value)["status"] == "not_computed"
         for item in waltzman.findings
     )
     assert any(
@@ -336,7 +341,7 @@ def test_configured_coordination_compiles_runs_and_produces_dual_readouts() -> N
     )
     assert any(
         item.construct_id == "unobserved_agency_dimensions"
-        and item.value["robustness"] == "not_tested"
+        and cast(dict[str, Any], item.value)["robustness"] == "not_tested"
         for item in levin.findings
     )
     validate_readout_against_bundle(waltzman, bundle)
@@ -366,7 +371,8 @@ def test_evidence_bundle_consumer_tolerates_additive_fields_without_losing_refs(
 
 def test_missing_candidate_goal_fails_typed_authoring() -> None:
     payload = _proposal_payload()
-    del payload["workflow"]["collective_goal"]
+    workflow = cast(dict[str, Any], payload["workflow"])
+    del workflow["collective_goal"]
 
     with pytest.raises(ValidationError, match="collective_goal"):
         ScenarioDraftProposal.model_validate(payload)
@@ -374,7 +380,9 @@ def test_missing_candidate_goal_fails_typed_authoring() -> None:
 
 def test_unknown_terminal_outcome_fails_typed_authoring() -> None:
     payload = _proposal_payload()
-    payload["workflow"]["terminal_outcomes"][0] = "whatever_the_coordinator_wants"
+    workflow = cast(dict[str, Any], payload["workflow"])
+    terminal_outcomes = cast(list[Any], workflow["terminal_outcomes"])
+    terminal_outcomes[0] = "whatever_the_coordinator_wants"
 
     with pytest.raises(ValidationError, match="literal"):
         ScenarioDraftProposal.model_validate(payload)
@@ -399,7 +407,9 @@ def test_collective_goal_cannot_count_every_terminal_outcome_as_success() -> Non
 @pytest.mark.parametrize("mutation", ["source", "recipient", "route"])
 def test_incompatible_message_referents_fail_compilation(mutation: str) -> None:
     payload = _proposal_payload()
-    message = payload["workflow"]["messages"][0]
+    workflow = cast(dict[str, Any], payload["workflow"])
+    messages = cast(list[Any], workflow["messages"])
+    message = cast(dict[str, Any], messages[0])
     if mutation == "source":
         message["source_id"] = "policy_pressure_source"
     elif mutation == "recipient":
@@ -415,7 +425,8 @@ def test_incompatible_message_referents_fail_compilation(mutation: str) -> None:
 @pytest.mark.parametrize("mutation", ["boundary", "goal"])
 def test_analysis_reference_outside_configuration_fails(mutation: str) -> None:
     payload = _proposal_payload()
-    analysis = payload["workflow"]["analysis"]
+    workflow = cast(dict[str, Any], payload["workflow"])
+    analysis = cast(dict[str, Any], workflow["analysis"])
     if mutation == "boundary":
         analysis["candidate_boundary_ref"] = "unknown_boundary"
     else:
@@ -428,7 +439,8 @@ def test_analysis_reference_outside_configuration_fails(mutation: str) -> None:
 
 def test_organization_executor_fails_compilation() -> None:
     payload = _proposal_payload()
-    payload["objects"].append(
+    objects = cast(list[Any], payload["objects"])
+    objects.append(
         {
             "entity_id": "partnership_executor",
             "entity_kind": "organization_executor",
@@ -444,7 +456,8 @@ def test_organization_executor_fails_compilation() -> None:
 
 def test_invented_mechanism_implementation_is_not_in_the_schema() -> None:
     payload = _proposal_payload()
-    payload["workflow"]["mechanism_implementation"] = "generated_python_handler"
+    workflow = cast(dict[str, Any], payload["workflow"])
+    workflow["mechanism_implementation"] = "generated_python_handler"
 
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         ScenarioDraftProposal.model_validate(payload)

@@ -845,7 +845,7 @@ def _canonical_replay_network(
 
 def _general_world_node_overrides(
     raw_general_simulation: object,
-) -> dict[int, list[dict[str, str]]]:
+) -> dict[int, list[SimulationReplayNodeOverride]]:
     """Project the retained canonical state at each committed revision."""
 
     if not isinstance(raw_general_simulation, dict):
@@ -864,10 +864,10 @@ def _general_world_node_overrides(
             return None
         return component if isinstance(component, dict) else None
 
-    def descriptions(state: object) -> list[dict[str, str]]:
+    def descriptions(state: object) -> list[SimulationReplayNodeOverride]:
         if not isinstance(state, dict):
             return []
-        projected: list[dict[str, str]] = []
+        projected: list[SimulationReplayNodeOverride] = []
         raw_records = state.get("records")
         if isinstance(raw_records, dict):
             for record_id, record in raw_records.items():
@@ -875,13 +875,13 @@ def _general_world_node_overrides(
                     continue
                 record_state = record.get("state")
                 projected.append(
-                    {
-                        "node_id": record_id,
-                        "description": json.dumps(
+                    SimulationReplayNodeOverride(
+                        node_id=record_id,
+                        description=json.dumps(
                             record_state if isinstance(record_state, dict) else {},
                             sort_keys=True,
                         ),
-                    }
+                    )
                 )
         raw_resources = state.get("resources")
         if isinstance(raw_resources, dict):
@@ -889,17 +889,17 @@ def _general_world_node_overrides(
                 if not isinstance(resource_id, str) or not isinstance(resource, dict):
                     continue
                 projected.append(
-                    {
-                        "node_id": resource_id,
-                        "description": (
+                    SimulationReplayNodeOverride(
+                        node_id=resource_id,
+                        description=(
                             f"quantity: {resource.get('quantity', 0)}; "
                             f"custodian: {str(resource.get('custodian_id') or 'unassigned').replace('_', ' ')}"
                         ),
-                    }
+                    )
                 )
         return projected
 
-    revisions: dict[int, list[dict[str, str]]] = {}
+    revisions: dict[int, list[SimulationReplayNodeOverride]] = {}
     first_component = canonical_component(checkpoints[0]) if checkpoints else None
     if first_component is not None:
         spec = first_component.get("spec")
@@ -990,7 +990,7 @@ def _simulation_replay(
     cognitive_traces: object = None,
     general_world: bool = False,
     question_is_analyst_framing: bool = False,
-    node_overrides_by_revision: dict[int, list[dict[str, str]]] | None = None,
+    node_overrides_by_revision: dict[int, list[SimulationReplayNodeOverride]] | None = None,
 ) -> dict[str, object]:
     """Build one small, evidence-backed walkthrough independent of page layout."""
 
@@ -1515,12 +1515,15 @@ def _simulation_replay(
                     and str(item["contract_id"]) in node_ids
                 )
             )
-            attribution_by_operation = {
-                int(item["operation_index"]): item
-                for item in raw_attributions
-                if isinstance(item.get("operation_index"), int)
-                and not isinstance(item.get("operation_index"), bool)
-            }
+            attribution_by_operation: dict[int, object] = {}
+            for item in raw_attributions:
+                if (
+                    isinstance(item, dict)
+                    and isinstance(item.get("operation_index"), int)
+                    and not isinstance(item.get("operation_index"), bool)
+                ):
+                    op_index = cast(int, item.get("operation_index"))
+                    attribution_by_operation[op_index] = item
             ranked_change_facts: list[tuple[int, int, tuple[str, str]]] = []
             changed_node_ids: list[str] = []
             changed_edge_ids: list[str] = []
@@ -1863,7 +1866,7 @@ def _simulation_replay(
             ]
         ),
         state_revision=(
-            int(outcome.get("final_revision", 0)) if general_world else None
+            int(cast(int | None, outcome.get("final_revision")) or 0) if general_world else None
         ),
     )
     return SimulationReplay(question=question, scenes=scenes).model_dump(mode="json")
@@ -2139,10 +2142,11 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
                 raw_moments, transition_evidence
             )
             committed_moments = sum(
-                isinstance(moment.get("resulting_revision"), int)
+                isinstance(moment, dict)
+                and isinstance(moment.get("resulting_revision"), int)
                 and isinstance(moment.get("execution_parent"), str)
                 and str(moment["execution_parent"]).removeprefix("revision:").isdigit()
-                and int(moment["resulting_revision"])
+                and int(cast(int, moment["resulting_revision"]))
                 > int(str(moment["execution_parent"]).removeprefix("revision:"))
                 for moment in raw_moments
             )
@@ -2362,7 +2366,7 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
             "agent_model_calls", document.get("model_calls", 0)
         ),
         "model": (
-            document.get("llm_configuration", {}).get("model")
+            cast(dict[str, object], document.get("llm_configuration", {})).get("model")
             if isinstance(document.get("llm_configuration"), dict)
             else None
         ),

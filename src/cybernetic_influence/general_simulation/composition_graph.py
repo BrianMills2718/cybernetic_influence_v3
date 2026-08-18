@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
+from typing import cast
 
 from .authoring_models import GeneralSimulationProposalV1
 from .contracts_v2 import ScenarioSpecV2
@@ -106,7 +107,7 @@ def project_configuration_graph(
         for route_id in transport.allowed_route_ids:
             edge(route_id, mechanism_id, "permitted_route", "may carry", f"transport-route:{mechanism_id}:{route_id}")
 
-    adjacency = {node_id: set() for node_id in nodes}
+    adjacency: dict[str, set[str]] = {node_id: set() for node_id in nodes}
     degree = {node_id: 0 for node_id in nodes}
     for item in edges:
         source, target = str(item["source"]), str(item["target"])
@@ -134,23 +135,29 @@ def project_configuration_graph(
             queue.extend(adjacency[current] - component)
         remaining -= component
         components.append(sorted(component))
-    diagnostics = [
-        {
-            "severity": "error",
-            "code": "isolated_configured_node",
-            "node_id": node_id,
-            "message": f"{nodes[node_id]['label']} has no configured path for information, action, resources, space, or causal execution.",
-        }
+    diagnostics: list[dict[str, object]] = [
+        cast(
+            dict[str, object],
+            {
+                "severity": "error",
+                "code": "isolated_configured_node",
+                "node_id": node_id,
+                "message": f"{nodes[node_id]['label']} has no configured path for information, action, resources, space, or causal execution.",
+            },
+        )
         for node_id in isolated
     ]
     if len(components) > 1 and not isolated:
         diagnostics.append(
-            {
-                "severity": "warning",
-                "code": "disconnected_configured_components",
-                "message": f"The configured world contains {len(components)} disconnected components; verify that this separation is intentional.",
-                "components": components,
-            }
+            cast(
+                dict[str, object],
+                {
+                    "severity": "warning",
+                    "code": "disconnected_configured_components",
+                    "message": f"The configured world contains {len(components)} disconnected components; verify that this separation is intentional.",
+                    "components": components,
+                },
+            )
         )
     return {
         "contract": "general-configuration-graph.v1",

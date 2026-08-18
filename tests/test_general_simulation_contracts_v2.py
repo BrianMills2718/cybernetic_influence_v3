@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pydantic import ValidationError
@@ -558,19 +558,20 @@ def test_staged_cognition_retains_assimilation_before_action_selection() -> None
         created_at="2026-08-16T00:00:00Z",
         execution="live",
     )
-    assert len(projected["traces"]) == len(proposal.people)
-    assert all(trace["model_call_count"] == 2 for trace in projected["traces"])
-    assert all(trace["assimilation"] for trace in projected["traces"])
-    assert all(trace["intent"] for trace in projected["traces"])
+    traces = cast(list[dict[str, object]], projected["traces"])
+    assert len(traces) == len(proposal.people)
+    assert all(cast(int, trace["model_call_count"]) == 2 for trace in traces)
+    assert all(trace["assimilation"] for trace in traces)
+    assert all(trace["intent"] for trace in traces)
     assert all(
-        trace["memory_after"]
-        == [*trace["memory_before"], "I retained the currently authorized evidence."]
-        for trace in projected["traces"]
+        cast(list[object], trace["memory_after"])
+        == [*cast(list[object], trace["memory_before"]), "I retained the currently authorized evidence."]
+        for trace in traces
     )
     assert all(
-        len(trace["attended_observations"])
-        == len(trace["assimilation"]["attended_observation_ids"])
-        for trace in projected["traces"]
+        len(cast(list[object], trace["attended_observations"]))
+        == len(cast(list[object], cast(dict[str, object], trace["assimilation"])["attended_observation_ids"]))
+        for trace in traces
     )
 
 

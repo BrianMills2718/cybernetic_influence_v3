@@ -1,9 +1,10 @@
 """Focused exact-plumbing checks for the authentic regional outbreak scenario."""
 
 import json
+from typing import Any, cast
 
 import pytest
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 
 from cybernetic_influence.active_runtime import (
     ActionIntent,
@@ -24,6 +25,7 @@ from cybernetic_influence.scenarios.regional_outbreak import (
     OutbreakAgentConfiguration,
     OutbreakCondition,
     OutbreakFixture,
+    RequiredStanceSystem,
     default_outbreak_configuration,
     outbreak_bindings,
     outbreak_fixture,
@@ -53,7 +55,7 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                         actions=[
                             ActionIntent(
                                 output_port_id="resource_allocation_out",
-                                payload={
+                                payload=cast(dict[str, JsonValue], {
                                     "commitments": outbreak_resource_commitments([
                                         "alba_mobile_lab", "borin_clinician_roster",
                                         "cyrenia_diagnostic_kits", "cyrenia_protective_equipment",
@@ -63,7 +65,7 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                                     "manifest_ref": "scripted-cso-allocation",
                                     "delivery_mode": "cso_stabilization",
                                     "intervention_action_id": request["action_id"],
-                                },
+                                }),
                                 public_summary="Committed the CSO-selected resources.",
                             )
                         ],
@@ -94,24 +96,25 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                         update_schedule=UpdateScheduleDirective(mode="dormant"),
                     )
                 )
+            payload: dict[str, JsonValue]
             if active_system_id == "cso_decision_environment_monitor":
-                payload = {
+                payload = cast(dict[str, JsonValue], {
                     "trust_structure": "conditional",
                     "perceived_risk": "high",
                     "coordination_readiness": "blocked",
                     "evidence": "Most coalition roles require unresolved verification or resources.",
-                }
+                })
                 output_port_id = "cso_detection_out"
             elif active_system_id == "cso_coordination_diagnostician":
-                payload = {
+                payload = cast(dict[str, JsonValue], {
                     "primary_dimension": "cross_dimension",
                     "mechanism": "incompatible_requirements",
                     "affected_groups": ["alba", "borin", "cyrenia", "darsia"],
                     "rationale": "Several locally valid requirements cannot be met together.",
-                }
+                })
                 output_port_id = "cso_diagnosis_out"
             elif active_system_id == "cso_stabilization_planner":
-                payload = {
+                payload = cast(dict[str, JsonValue], {
                     "action_id": "cross_domain_compact",
                     "target_dimensions": [
                         "trust_structure",
@@ -119,7 +122,7 @@ def _bindings(fixture: OutbreakFixture) -> dict[str, ActiveSystemBinding]:
                         "coordination_readiness",
                     ],
                     "rationale": "The diagnosis spans evidence, authority, and resources.",
-                }
+                })
                 output_port_id = "cso_intervention_out"
             else:
                 payload = {
@@ -185,7 +188,7 @@ def test_baseline_runs_the_cross_border_compact_for_three_rounds() -> None:
     assert readout["outcome"] == "joint_response_approved"
     assert readout["exercise_injects"] == []
     assert readout["stabilization_events"] == []
-    messages = readout["coordination_messages"]
+    messages = cast(list[Any], readout["coordination_messages"])
     assert len(messages) == len(AGENT_IDS) * 3
     assert {
         item["outcome"] for item in messages if item["round"] in {1, 2}
@@ -260,7 +263,7 @@ def test_exact_checkpoint_fork_can_withhold_one_targets_queued_messages() -> Non
     ).value
     withheld = [
         item
-        for item in messages
+        for item in cast(list[Any], messages)
         if item["outcome"] == "withheld_by_checkpoint_fork"
     ]
     assert len(withheld) == len(AGENT_IDS) - 1
@@ -318,14 +321,14 @@ def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy()
         for item in fixture.active_specs
         if item.active_system_id == "alba_epidemiologist"
     )
-    memories = [item["content"] for item in spec.initial_private_state["memory"]]
+    memories = [item["content"] for item in cast(list[Any], spec.initial_private_state["memory"])]
     bindings = outbreak_bindings(
         fixture,
         trace_id_prefix="configuration_test",
         model="codex/gpt-5.6-luna",
         reasoning_effort="medium",
     )
-    policy = bindings["alba_epidemiologist"].implementation.inner
+    policy = cast(RequiredStanceSystem, bindings["alba_epidemiologist"].implementation).inner
 
     assert fixture.configuration == changed
     assert changed.person_contract_id == "person_contract_v1"
@@ -371,7 +374,7 @@ def test_participant_policy_is_blind_to_experiment_condition() -> None:
             model="codex/gpt-5.6-terra",
             reasoning_effort="medium",
         )
-        personas[condition] = bindings["alba_epidemiologist"].implementation.inner.persona
+        personas[condition] = cast(RequiredStanceSystem, bindings["alba_epidemiologist"].implementation).inner.persona
 
     assert len(set(personas.values())) == 1
     assert "condition label" not in personas["baseline"]
@@ -389,8 +392,9 @@ def test_responsive_condition_delivers_complete_autonomous_source_bundles() -> N
         for attempt in result.attempts
     ] == [False, True, False, True, False]
 
-    assert len(readout["exercise_injects"]) == len(SOURCE_IDS) * 2
-    assert all("pressure_source" in item for item in readout["exercise_injects"])
+    exercise_injects = cast(list[Any], readout["exercise_injects"])
+    assert len(exercise_injects) == len(SOURCE_IDS) * 2
+    assert all("pressure_source" in item for item in exercise_injects)
     inject_observations = [
         observation
         for observation in result.core_result.final_state.observations.values()
@@ -402,9 +406,10 @@ def test_responsive_condition_delivers_complete_autonomous_source_bundles() -> N
         for observation in inject_observations
         if observation.target_entity_id == "alba_epidemiologist"
     ]
+    round_history = cast(list[Any], readout["round_history"])
     assert [
         bundle["coalition_snapshot"]["stances"] for bundle in alba_bundles
-    ] == [round_document["stances"] for round_document in readout["round_history"][:2]]
+    ] == [round_document["stances"] for round_document in round_history[:2]]
     assert [
         {document["signal_id"] for document in bundle["documents"]}
         for bundle in alba_bundles
@@ -419,8 +424,10 @@ def test_responsive_condition_delivers_complete_autonomous_source_bundles() -> N
 def test_stabilization_adds_one_authoritative_fact_without_replacing_pressure() -> None:
     _, result, readout = _run("capacity_inject_replay_with_stabilization")
 
-    assert len(readout["exercise_injects"]) == len(SOURCE_IDS) * 2
-    assert readout["stabilization_events"] == [
+    exercise_injects_2 = cast(list[Any], readout["exercise_injects"])
+    assert len(exercise_injects_2) == len(SOURCE_IDS) * 2
+    stabilization_events = cast(list[Any], readout["stabilization_events"])
+    assert stabilization_events == [
         "round_2_verified_minimum_capacity_package"
     ]
     stabilization_observations = [
@@ -444,21 +451,23 @@ def test_adaptive_cso_cell_detects_diagnoses_and_selects_before_round_three() ->
     fixture, result, readout = _run("adaptive_cso_stabilization")
 
     assert len(fixture.active_specs) == len(AGENT_IDS) + len(SOURCE_IDS) + len(CSO_IDS) + 1
-    assert [record["stage"] for record in readout["cso_records"]] == [
+    cso_records = cast(list[Any], readout["cso_records"])
+    assert [record["stage"] for record in cso_records] == [
         "detection",
         "diagnosis",
         "intervention",
     ]
-    assert [record["actor_id"] for record in readout["cso_records"]] == list(
+    assert [record["actor_id"] for record in cso_records] == list(
         CSO_IDS
     )
-    assert readout["cso_records"][-1]["payload"]["action_id"] == "cross_domain_compact"
-    assert readout["cso_records"][0]["payload"]["evidence_summary"].startswith(
+    assert cso_records[-1]["payload"]["action_id"] == "cross_domain_compact"
+    assert cso_records[0]["payload"]["evidence_summary"].startswith(
         "Most coalition roles"
     )
-    assert readout["cso_records"][1]["payload"]["affected_scope"] == "multiple_groups"
-    assert readout["cso_records"][2]["payload"]["target_dimension"] == "cross_dimension"
-    assert readout["stabilization_events"] == ["world_cross_domain_compact"]
+    assert cso_records[1]["payload"]["affected_scope"] == "multiple_groups"
+    assert cso_records[2]["payload"]["target_dimension"] == "cross_dimension"
+    stabilization_events_2 = cast(list[Any], readout["stabilization_events"])
+    assert stabilization_events_2 == ["world_cross_domain_compact"]
     assert [attempt.logical_time for attempt in result.attempts] == [
         *range(8),
         7,
@@ -496,13 +505,13 @@ def test_resource_allocation_moves_conserved_objects_and_publishes_manifest() ->
             action_id="verified_partial_allocation",
             actor_entity_id="regional_allocation_authority",
             output_port_id="resource_allocation_out",
-            payload={
+            payload=cast(dict[str, JsonValue], {
                 "commitments": outbreak_resource_commitments(
                     ["alba_mobile_lab", "borin_clinician_roster"]
                 ),
                 "manifest_claim_status": "claimed_verified",
                 "manifest_ref": "manifest-48h-001",
-            },
+            }),
             logical_time=0,
             public_summary="Committed two named operational resources.",
         )
@@ -550,13 +559,13 @@ def test_contradicted_resource_claim_does_not_move_world_custody() -> None:
             action_id="contradicted_allocation_manifest",
             actor_entity_id="regional_allocation_authority",
             output_port_id="resource_allocation_out",
-            payload={
+            payload=cast(dict[str, JsonValue], {
                 "commitments": outbreak_resource_commitments(
                     ["darsia_fuel_lot"], falsified_ids=frozenset({"darsia_fuel_lot"})
                 ),
                 "manifest_claim_status": "claimed_verified",
                 "manifest_ref": "manifest-false-001",
-            },
+            }),
             logical_time=0,
             public_summary="Audited a claimed allocation whose evidence was contradicted.",
         )

@@ -4,7 +4,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 import pytest
 
@@ -85,7 +85,7 @@ def test_transient_provider_failure_retries_general_authoring(tmp_path: Path) ->
 
     assert calls == 2
     assert drafted["status"] == "ready_for_review"
-    assert [attempt["status"] for attempt in drafted["attempts"]] == [
+    assert [cast(dict[str, object], attempt)["status"] for attempt in cast(list[object], drafted["attempts"])] == [
         "provider_error",
         "accepted",
     ]

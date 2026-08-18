@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import time
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
@@ -19,9 +19,11 @@ from cybernetic_influence.analysis.theory_analysis import AnalysisSpecV2
 from cybernetic_influence.general_simulation.authoring_models import (
     AnalysisSpecV1,
     DependencyCompletenessReviewV1,
+    ExactGuardRepairV1,
     GeneralAuthoringDiscussionV1,
     GeneralSimulationProposalV1,
     MissingDependencyFindingV1,
+    TransitionPreconditionProposalV1,
 )
 from cybernetic_influence.general_simulation.authoring import (
     _suppress_redundant_custody_findings,
@@ -331,16 +333,16 @@ def test_dependency_review_can_apply_a_narrow_transport_guard_patch() -> None:
                 evidence="The action claims it moves fuel along the route.",
                 required_resolution="exact_guard",
                 guard_repairs=[
-                    {
-                        "transition_contract_id": "deliver_fuel",
-                        "precondition": {
-                            "record_type": "route",
-                            "record_id": "temporary_route",
-                            "field": "operational",
-                            "comparison": "equals",
-                            "expected": True,
-                        },
-                    }
+                    ExactGuardRepairV1(
+                        transition_contract_id="deliver_fuel",
+                        precondition=TransitionPreconditionProposalV1(
+                            record_type="route",
+                            record_id="temporary_route",
+                            field="operational",
+                            comparison="equals",
+                            expected=True,
+                        ),
+                    )
                 ],
             )
         ],
@@ -492,8 +494,8 @@ def test_general_world_replay_retains_state_by_revision() -> None:
         {"checkpoints": [checkpoint(1, 0), checkpoint(2, 500)]}
     )
 
-    initial = {item["node_id"]: item["description"] for item in revisions[0]}
-    final = {item["node_id"]: item["description"] for item in revisions[2]}
+    initial = {item.node_id: item.description for item in revisions[0]}
+    final = {item.node_id: item.description for item in revisions[2]}
     assert initial["inventory"] == '{"quantity": 0}'
     assert final["inventory"] == '{"quantity": 500}'
     assert initial["cargo"] == "quantity: 0; custodian: operator"
@@ -559,24 +561,29 @@ def test_general_replay_focuses_changed_nodes_and_edges() -> None:
         general_world=True,
     )
 
-    assert replay["scenes"][0]["title"] == "Who and what begin in the system"
-    event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
-    assert event["focus_node_ids"] == ["floor"]
-    assert event["focus_edge_ids"] == ["storage_route"]
-    assert "storage_route" in event["visible_edge_ids"]
+    scenes = cast(list[dict[str, object]], replay["scenes"])
+    scene_0 = scenes[0]
+    assert scene_0["title"] == "Who and what begin in the system"
+    event = next(scene for scene in scenes if scene.get("kind") == "event")
+    assert cast(list[object], event["focus_node_ids"]) == ["floor"]
+    assert cast(list[object], event["focus_edge_ids"]) == ["storage_route"]
+    assert "storage_route" in cast(list[object], event["visible_edge_ids"])
 
 
 def test_general_replay_prioritizes_exact_resource_chain_after_earlier_changes() -> None:
     network_nodes: list[dict[str, object]] = [
         {"id": "operator", "kind": "person", "label": "Operator"},
-        *[
-            {
-                "id": f"finding_{index}",
-                "kind": "information",
-                "label": f"Finding {index}",
-            }
-            for index in range(5)
-        ],
+        *cast(
+            list[dict[str, object]],
+            [
+                {
+                    "id": f"finding_{index}",
+                    "kind": "information",
+                    "label": f"Finding {index}",
+                }
+                for index in range(5)
+            ],
+        ),
         {"id": "graphite", "kind": "resource", "label": "Graphite cores"},
         {"id": "cedar", "kind": "resource", "label": "Cedar slats"},
         {"id": "pencils", "kind": "resource", "label": "Finished pencils"},
@@ -621,18 +628,21 @@ def test_general_replay_prioritizes_exact_resource_chain_after_earlier_changes()
         },
     ]
     operations: list[dict[str, object]] = [
-        *[
-            {
-                "operation": "replace",
-                "target": {
-                    "record_type": "record",
-                    "record_id": f"finding_{index}",
-                    "field": "state.status",
-                },
-                "value": "confirmed",
-            }
-            for index in range(5)
-        ],
+        *cast(
+            list[dict[str, object]],
+            [
+                {
+                    "operation": "replace",
+                    "target": {
+                        "record_type": "record",
+                        "record_id": f"finding_{index}",
+                        "field": "state.status",
+                    },
+                    "value": "confirmed",
+                }
+                for index in range(5)
+            ],
+        ),
         {
             "operation": "replace",
             "target": {
@@ -706,14 +716,15 @@ def test_general_replay_prioritizes_exact_resource_chain_after_earlier_changes()
         general_world=True,
     )
 
-    event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
-    assert event["visible_node_ids"][:4] == [
+    scenes = cast(list[dict[str, object]], replay["scenes"])
+    event = next(scene for scene in scenes if scene.get("kind") == "event")
+    assert cast(list[object], event["visible_node_ids"])[:4] == [
         "make_pencils",
         "graphite",
         "cedar",
         "pencils",
     ]
-    assert event["focus_node_ids"][:4] == [
+    assert cast(list[object], event["focus_node_ids"])[:4] == [
         "make_pencils",
         "graphite",
         "cedar",
@@ -724,8 +735,8 @@ def test_general_replay_prioritizes_exact_resource_chain_after_earlier_changes()
         "make:cedar",
         "make:pencils",
         "make:inventory",
-    } <= set(event["visible_edge_ids"])
-    fact_values = [item["value"] for item in event["facts"]]
+    } <= set(cast(list[object], event["visible_edge_ids"]))
+    fact_values = [cast(dict[str, object], item)["value"] for item in cast(list[object], event["facts"])]
     assert "Graphite cores · quantity: 100" in fact_values
     assert "Cedar slats · quantity: 100" in fact_values
     assert "Finished pencils · quantity: 500" in fact_values
@@ -766,17 +777,20 @@ def test_general_replay_groups_repairs_with_their_causal_moment() -> None:
         }
 
     grouped = _attach_transitions_to_causal_moments(
-        moments,
-        [
-            transition("moment_0_inspection", "inspect"),
-            transition("moment_30_reservation", "reserve"),
-            transition("moment_30_reservation", "reserve"),
-            transition("moment_75_movement", "move"),
-            transition("moment_150_update", "update"),
-        ],
+        cast(list[object], moments),
+        cast(
+            list[object],
+            [
+                transition("moment_0_inspection", "inspect"),
+                transition("moment_30_reservation", "reserve"),
+                transition("moment_30_reservation", "reserve"),
+                transition("moment_75_movement", "move"),
+                transition("moment_150_update", "update"),
+            ],
+        ),
     )
 
-    assert [len(item["transitions"]) for item in grouped] == [1, 2, 1, 1]
+    assert [len(cast(list[object], item["transitions"])) for item in grouped] == [1, 2, 1, 1]
 
 
 def test_general_replay_exposes_rejected_attempt_before_no_op_repair() -> None:
@@ -859,8 +873,9 @@ def test_general_replay_exposes_rejected_attempt_before_no_op_repair() -> None:
         general_world=True,
     )
 
-    event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
-    facts = {item["label"]: item["value"] for item in event["facts"]}
+    scenes = cast(list[dict[str, object]], replay["scenes"])
+    event = next(scene for scene in scenes if scene.get("kind") == "event")
+    facts = {cast(dict[str, object], item)["label"]: cast(dict[str, object], item)["value"] for item in cast(list[object], event["facts"])}
     assert facts["Transaction attempts"] == "2"
     assert facts["Rejected attempts"] == (
         "1 · 2 proposed world changes did not commit"
@@ -868,12 +883,12 @@ def test_general_replay_exposes_rejected_attempt_before_no_op_repair() -> None:
     assert facts["World change"] == (
         "No canonical fields changed in this committed moment."
     )
-    assert "conversion succeeded" not in event["summary"].lower()
+    assert "conversion succeeded" not in cast(str, event["summary"]).lower()
     assert all(
-        "conversion succeeded" not in item["value"].lower()
-        for item in event["facts"]
+        "conversion succeeded" not in cast(str, cast(dict[str, object], item)["value"]).lower()
+        for item in cast(list[object], event["facts"])
     )
-    assert event["focus_node_ids"] == ["operator"]
+    assert cast(list[object], event["focus_node_ids"]) == ["operator"]
 
 
 def test_general_replay_does_not_present_rejected_operations_as_world_changes() -> None:
@@ -924,13 +939,14 @@ def test_general_replay_does_not_present_rejected_operations_as_world_changes() 
         general_world=True,
     )
 
-    event = next(scene for scene in replay["scenes"] if scene["kind"] == "event")
+    scenes = cast(list[dict[str, object]], replay["scenes"])
+    event = next(scene for scene in scenes if scene.get("kind") == "event")
     assert event["summary"] == (
         "Canonical validation rejected the joint attempt, so none of its 1 "
         "proposed world change committed. 2 required preconditions were not met."
     )
-    assert event["focus_node_ids"] == ["operator"]
-    assert {item["label"]: item["value"] for item in event["facts"]} == {
+    assert cast(list[object], event["focus_node_ids"]) == ["operator"]
+    assert {cast(dict[str, object], item)["label"]: cast(dict[str, object], item)["value"] for item in cast(list[object], event["facts"])} == {
         "Moment": "1",
         "People acting": "1",
         "Attempt": "Rejected · 1 proposed world change",
@@ -1180,16 +1196,16 @@ def test_dependency_review_applies_reviewer_guard_without_regenerating_world(
                             evidence="The request says fuel must move on the temporary route.",
                             required_resolution="exact_guard",
                             guard_repairs=[
-                                {
-                                    "transition_contract_id": "deliver_fuel",
-                                    "precondition": {
-                                        "record_type": "route",
-                                        "record_id": "temporary_route",
-                                        "field": "operational",
-                                        "comparison": "equals",
-                                        "expected": True,
-                                    },
-                                }
+                                ExactGuardRepairV1(
+                                    transition_contract_id="deliver_fuel",
+                                    precondition=TransitionPreconditionProposalV1(
+                                        record_type="route",
+                                        record_id="temporary_route",
+                                        field="operational",
+                                        comparison="equals",
+                                        expected=True,
+                                    ),
+                                )
                             ],
                         )
                     ],

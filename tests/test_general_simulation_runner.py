@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -17,6 +17,7 @@ from cybernetic_influence.general_simulation.models import (
     ActorDecision,
     Assimilation,
     Consequence,
+    MemoryRevision,
     PatchGrammar,
     PatchOperation,
     Precondition,
@@ -635,7 +636,7 @@ def test_new_resource_contract_selection_requires_explicit_attempt_arguments() -
     ]
     person = next(item for item in proposal.people if item.entity_id == actor_id)
     actor = GeneralActorActingComponent(
-        lambda **_: None,
+        lambda **_: (None, SimpleNamespace()),
         person=person,
         trace_prefix="argument_validation",
         model="codex/gpt-test",
@@ -674,8 +675,8 @@ def test_new_resource_contract_selection_requires_explicit_attempt_arguments() -
     decision.intent.transition_contract_arguments = [
         TransitionContractSelection(
             contract_id=contract.contract_id,
-            quantity=contract.argument_schema["quantity"]["maximum"],
-            route_id=contract.argument_schema["route_id"]["enum"][0],
+            quantity=cast(float, cast(dict[str, Any], contract.argument_schema)["quantity"]["maximum"]),
+            route_id=cast(str, cast(dict[str, Any], cast(dict[str, Any], contract.argument_schema)["route_id"])["enum"][0]),
         )
     ]
     actor._validate_decision(decision, context)
@@ -850,7 +851,7 @@ def test_whole_sensing_state_is_expanded_and_unauthorized_delivery_is_omitted() 
                     record_id=output_record.record_id,
                     field="state",
                 ),
-                value=values,
+                value=cast(dict[str, Any], values),
             )
         ],
         preconditions=[],
@@ -947,8 +948,9 @@ def test_actor_output_gets_one_bounded_validation_repair() -> None:
         created_at="2026-08-13T00:00:00Z",
         execution="live",
     )
-    assert len(projected["traces"]) == len(proposal.schedule) * len(proposal.people)
-    assert all("/repair/1" in trace["trace_id"] or "/repair/" not in trace["trace_id"] for trace in projected["traces"])
+    traces = cast(list[dict[str, object]], projected["traces"])
+    assert len(traces) == len(proposal.schedule) * len(proposal.people)
+    assert all("/repair/1" in cast(str, trace["trace_id"]) or "/repair/" not in cast(str, trace["trace_id"]) for trace in traces)
     assert projected["theory_analysis"] is None
 
     proposal.analysis_spec = AnalysisSpecV1(
@@ -963,10 +965,13 @@ def test_actor_output_gets_one_bounded_validation_repair() -> None:
         created_at="2026-08-13T00:00:00Z",
         execution="live",
     )
-    assert analyzed["theory_analysis"]["framework"] == (
+    theory_analysis = cast(dict[str, object], analyzed["theory_analysis"])
+    authoring = cast(dict[str, object], analyzed["authoring"])
+    analysis_spec = cast(dict[str, object], authoring["analysis_spec"])
+    assert theory_analysis["framework"] == (
         "Waltzman-informed diagnostic projection"
     )
-    assert analyzed["authoring"]["analysis_spec"]["profile"] == (
+    assert analysis_spec["profile"] == (
         "waltzman_coordination_v1"
     )
 
@@ -991,10 +996,10 @@ def test_authored_person_memories_are_adopted_as_mutable_runtime_memory() -> Non
                     attended_observation_ids=[],
                     memory_additions=[],
                     memory_revisions=[
-                        {
-                            "prior_memory": prior,
-                            "revised_memory": f"Reassessed: {prior}",
-                        }
+                        MemoryRevision(
+                            prior_memory=prior,
+                            revised_memory=f"Reassessed: {prior}",
+                        )
                     ],
                     provenance_links=[],
                     interpretation="Reassess one retained memory.",
@@ -1220,8 +1225,9 @@ def test_general_group_runner_uses_frozen_revisions_and_stock_concordia() -> Non
     assert technical_recipients == {"port_coordinator", "customs_officer"}
     assert all(item.checkpoint_hash != "pending" for item in result.moments)
     analysis = project_waltzman_analysis(compiled, result)
-    assert len(analysis["findings"]) == 5
-    for finding in analysis["findings"]:
+    findings = cast(list[dict[str, object]], analysis["findings"])
+    assert len(findings) == 5
+    for finding in findings:
         assert finding["method"]
         assert finding["evidence_refs"]
         assert finding["uncertainty"]

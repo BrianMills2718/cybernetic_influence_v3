@@ -1968,13 +1968,16 @@ def _apply_resource_allocation(context: MechanismContext) -> MechanismOutcome:
         audit_status, mismatch_fields = _audit_resource_commitment(context, commitment)
         if audit_status == "contradicted":
             resources.append(
-                {
-                    **resource_record,
-                    "audit_status": audit_status,
-                    "audit_mismatch_fields": mismatch_fields,
-                    "assigned_to": "unassigned",
-                    "world_outcome": "claim_rejected_no_custody_change",
-                }
+                cast(
+                    dict[str, JsonValue],
+                    {
+                        **resource_record,
+                        "audit_status": audit_status,
+                        "audit_mismatch_fields": mismatch_fields,
+                        "assigned_to": "unassigned",
+                        "world_outcome": "claim_rejected_no_custody_change",
+                    },
+                )
             )
             continue
         availability = context.read(f"{resource_id}.availability")
