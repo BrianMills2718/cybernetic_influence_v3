@@ -396,9 +396,13 @@ def test_experimental_deepseek_effort_is_resolved_without_claiming_certification
     assert resolved.narrator_reasoning_effort == "none"
 
 
-def test_server_default_prefers_luna_and_falls_back_when_unavailable(
+def test_server_default_prefers_terra_and_falls_back_when_unavailable(
     monkeypatch: MonkeyPatch,
 ) -> None:
+    """PREFERRED_MODEL is Terra while Luna's Codex subscription quota is
+    exhausted (see run_configuration.py); falls back to whatever remains in
+    the catalog when Terra itself is unavailable."""
+
     def choice(model: str, billing_mode: str) -> dict[str, object]:
         return {
             "model": model,
@@ -412,14 +416,14 @@ def test_server_default_prefers_luna_and_falls_back_when_unavailable(
     terra = choice(MODEL, "usage_based")
     monkeypatch.setattr(
         "cybernetic_influence.run_configuration.model_catalog",
-        lambda: [terra, luna],
-    )
-    assert resolve_live_configuration(None).model == "codex/gpt-5.6-luna"
-    assert live_options_contract()["defaults"]["model"] == "codex/gpt-5.6-luna"  # type: ignore[index]
-
-    monkeypatch.setattr(
-        "cybernetic_influence.run_configuration.model_catalog",
-        lambda: [terra],
+        lambda: [luna, terra],
     )
     assert resolve_live_configuration(None).model == MODEL
     assert live_options_contract()["defaults"]["model"] == MODEL  # type: ignore[index]
+
+    monkeypatch.setattr(
+        "cybernetic_influence.run_configuration.model_catalog",
+        lambda: [luna],
+    )
+    assert resolve_live_configuration(None).model == "codex/gpt-5.6-luna"
+    assert live_options_contract()["defaults"]["model"] == "codex/gpt-5.6-luna"  # type: ignore[index]
