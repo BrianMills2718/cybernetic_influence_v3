@@ -1389,6 +1389,7 @@ def test_live_general_authoring_runs_as_pollable_background_job(
             "message_id": "background_discussion",
             "message": "Help me define relief cargo coordination after a bridge failure.",
             "mode": "discuss",
+            "model": "codex/gpt-5.6-luna",
         },
     )
     assert discussion_started.status_code == 202
@@ -1418,6 +1419,7 @@ def test_live_general_authoring_runs_as_pollable_background_job(
             "expected_revision": 1,
             "message_id": "background_generation",
             "message": "Model relief cargo coordination after a bridge failure.",
+            "model": "codex/gpt-5.6-luna",
         },
     )
 
