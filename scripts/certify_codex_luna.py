@@ -207,6 +207,11 @@ def main() -> None:
             "CYBERNETIC_INFLUENCE_CERT_TERRA",
             "CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA",
         ),
+        "sol": (
+            OPENROUTER_SOL_MODEL,
+            "CYBERNETIC_INFLUENCE_CERT_SOL",
+            "CYBERNETIC_INFLUENCE_CERT_COORDINATION_SOL",
+        ),
     }
     try:
         model, global_env, coordination_env = routes[route]

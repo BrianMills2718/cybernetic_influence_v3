@@ -28,6 +28,7 @@ from cybernetic_influence.run_configuration import (
 )
 
 MODEL = "openrouter/openai/gpt-5.6-terra"
+SOL_MODEL = "openrouter/openai/gpt-5.6-sol"
 CODEX_MODEL = "codex/gpt-5.6-terra"
 CODEX_LUNA_MODEL = "codex/gpt-5.6-luna"
 ROOT = Path(__file__).resolve().parents[1]
@@ -396,12 +397,12 @@ def test_experimental_deepseek_effort_is_resolved_without_claiming_certification
     assert resolved.narrator_reasoning_effort == "none"
 
 
-def test_server_default_prefers_terra_and_falls_back_when_unavailable(
+def test_server_default_prefers_sol_and_falls_back_when_unavailable(
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """PREFERRED_MODEL is Terra while Luna's Codex subscription quota is
+    """PREFERRED_MODEL is Sol while Luna's Codex subscription quota is
     exhausted (see run_configuration.py); falls back to whatever remains in
-    the catalog when Terra itself is unavailable."""
+    the catalog when Sol itself is unavailable."""
 
     def choice(model: str, billing_mode: str) -> dict[str, object]:
         return {
@@ -413,13 +414,13 @@ def test_server_default_prefers_terra_and_falls_back_when_unavailable(
         }
 
     luna = choice("codex/gpt-5.6-luna", "subscription_included")
-    terra = choice(MODEL, "usage_based")
+    sol = choice(SOL_MODEL, "usage_based")
     monkeypatch.setattr(
         "cybernetic_influence.run_configuration.model_catalog",
-        lambda: [luna, terra],
+        lambda: [luna, sol],
     )
-    assert resolve_live_configuration(None).model == MODEL
-    assert live_options_contract()["defaults"]["model"] == MODEL  # type: ignore[index]
+    assert resolve_live_configuration(None).model == SOL_MODEL
+    assert live_options_contract()["defaults"]["model"] == SOL_MODEL  # type: ignore[index]
 
     monkeypatch.setattr(
         "cybernetic_influence.run_configuration.model_catalog",

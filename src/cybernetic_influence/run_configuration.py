@@ -26,13 +26,15 @@ from cybernetic_influence.scenarios.coordination_decision import (
 )
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh"]
-DEFAULT_MODEL = OPENROUTER_TERRA_MODEL
+DEFAULT_MODEL = OPENROUTER_SOL_MODEL
 # Luna's Codex subscription quota is exhausted (observed 2026-08-18, resets
 # ~2026-08-23); it remains certified so it stays selectable, but preferring
 # it here would keep sending live runs into a route that currently always
-# fails. Prefer Terra (OpenRouter, usage-based, unaffected) until quota
-# resets. See _preferred_catalog_choice.
-PREFERRED_MODEL = OPENROUTER_TERRA_MODEL
+# fails. Prefer Sol (OpenRouter, usage-based, unaffected, and already the
+# authoring default) until quota resets -- one model across the whole
+# authoring+execution pipeline instead of splitting between Sol and Terra.
+# See _preferred_catalog_choice.
+PREFERRED_MODEL = OPENROUTER_SOL_MODEL
 DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium"
 NARRATOR_REASONING_EFFORT: Literal["medium"] = "medium"
 PARTICIPANT_PER_CALL_CEILING = 0.05

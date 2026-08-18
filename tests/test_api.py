@@ -113,8 +113,10 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA": "test-canary-luna",
                 "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA": "test-canary-codex-terra",
                 "CYBERNETIC_INFLUENCE_CERT_TERRA": "test-canary-terra",
+                "CYBERNETIC_INFLUENCE_CERT_SOL": "test-canary-sol",
                 "CYBERNETIC_INFLUENCE_CERT_DEEPSEEK_V4_FLASH": "test-canary-deepseek",
                 "CYBERNETIC_INFLUENCE_CERT_COORDINATION_TERRA": "test-coordination-terra",
+                "CYBERNETIC_INFLUENCE_CERT_COORDINATION_SOL": "test-coordination-sol",
                 "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_LUNA": "test-coordination-luna",
                 "CYBERNETIC_INFLUENCE_CERT_COORDINATION_CODEX_TERRA": "test-coordination-codex-terra",
                 "CYBERNETIC_INFLUENCE_CERT_COORDINATION_DEEPSEEK_V4_FLASH": "test-coordination-deepseek",
@@ -138,7 +140,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert config.status_code == 200
     assert config.json()["version"] == "0.13.0"
     assert config.json()["build_commit"] == "development"
-    assert config.json()["model"] == "openrouter/openai/gpt-5.6-terra"
+    assert config.json()["model"] == "openrouter/openai/gpt-5.6-sol"
     assert config.json()["reasoning_effort"] == "medium"
     assert config.json()["profiles"] == ["position_context", "procedural_control"]
     assert set(config.json()["scenarios"]) == {
@@ -159,6 +161,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "codex/gpt-5.6-terra",
         "codex/gpt-5.6-luna",
         "openrouter/openai/gpt-5.6-terra",
+        "openrouter/openai/gpt-5.6-sol",
     ]
     assert {item["id"] for item in coordination["arms"]} == {
         "baseline",
@@ -189,6 +192,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "codex/gpt-5.6-terra",
         "codex/gpt-5.6-luna",
         "openrouter/openai/gpt-5.6-terra",
+        "openrouter/openai/gpt-5.6-sol",
     ]
     terra = config.json()["live_options"]["models"][0]
     assert terra["agent_reasoning_efforts"] == ["medium"]
