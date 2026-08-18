@@ -106,10 +106,10 @@ function escapeHtml(value) {
 function authoredRunFailureMessage(error) {
   const detail = String(error?.message || error || '')
   if (/hit your usage limit|usage limit/i.test(detail)) {
-    return 'Luna is temporarily unavailable because this account has reached its usage limit. No additional causal step was committed. Try this retained configuration again when Luna is available.'
+    return 'The selected model is temporarily unavailable because this account has reached its usage limit. No additional causal step was committed. Reload this page to pick up the current default model, or try again once the limit resets.'
   }
-  if (/authoring model route is not currently certified/i.test(detail)) {
-    return 'Luna is not currently certified for this authoring route. The configuration remains saved; certify the route, then run it again.'
+  if (/authoring model route is not currently certified|model is not currently advertised/i.test(detail)) {
+    return 'The selected model route is not currently available. Reload this page to pick up the current default model, then try again.'
   }
   return detail || 'The simulation stopped before completing. The retained configuration is still editable.'
 }
@@ -2455,6 +2455,11 @@ function authoringProgressText(job) {
 }
 
 async function advanceAuthoringDraft(message, mode = 'configure') {
+  try {
+    runtimeConfig = await apiRequest('api/config')
+  } catch (error) {
+    console.warn(`config refresh before authoring failed, using last known config: ${error.message}`)
+  }
   const author = authoringModel()
   if (!author) throw new Error('The structured authoring model is unavailable')
   if (!authoringDraft) authoringDraft = await apiRequest('api/authoring/drafts', {method:'POST'})
@@ -2480,7 +2485,7 @@ async function advanceAuthoringDraft(message, mode = 'configure') {
       job = await apiRequest(`api/authoring/jobs/${encodeURIComponent(response.job_id)}`)
       if (job.status === 'generating') $('#create-status').textContent = authoringProgressText(job)
     }
-    if (job.status === 'failed') throw new Error(job.error || 'Simulation generation failed')
+    if (job.status === 'failed') throw new Error(authoredRunFailureMessage(job.error || 'Simulation generation failed'))
     if (job.status !== 'completed' || !job.draft) {
       throw new Error('Simulation generation is still running. Reload this draft shortly.')
     }
@@ -2509,7 +2514,7 @@ async function discussAuthoringDraft() {
     $('#create-prompt').value = ''
     $('#create-prompt').focus()
   } catch (error) {
-    $('#create-status').textContent = error.message
+    $('#create-status').textContent = authoredRunFailureMessage(error)
   } finally {
     setAuthoringBusy(false)
     $('#create-generate').disabled = !authoringModel()
@@ -2526,7 +2531,7 @@ async function configureAuthoringDraft() {
     $('#create-prompt').value = ''
     focusAuthoringReview()
   } catch (error) {
-    $('#create-status').textContent = error.message
+    $('#create-status').textContent = authoredRunFailureMessage(error)
   } finally {
     setAuthoringBusy(false)
   }
@@ -2545,7 +2550,7 @@ async function reviseAuthoringDraft() {
     $('#create-revision-prompt').value = ''
     focusAuthoringReview()
   } catch (error) {
-    $('#create-status').textContent = error.message
+    $('#create-status').textContent = authoredRunFailureMessage(error)
   } finally {
     setAuthoringBusy(false)
   }
