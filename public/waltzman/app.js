@@ -3235,6 +3235,7 @@ async function removeResultAnalysis(analysisId) {
 }
 
 function renderAuthoredResult(result) {
+  const sameRunRerender = authoredResult?.run_id && authoredResult.run_id === result.run_id
   authoredResult = result
   rememberCompletedSimulation(result)
   authoredResultRoundIndex = 0
@@ -3304,7 +3305,7 @@ function renderAuthoredResult(result) {
     return `<li><strong>Round ${escapeHtml(step.round_index || '?')} · ${escapeHtml(step.person_label)}</strong><span>${escapeHtml(sentence(payload?.stance || 'no stated position'))}</span><p>${escapeHtml(payload?.reason || step.orientation || '')}</p></li>`
   }).join('')
   $('#create-result').hidden = false
-  $('#create-result-lenses').open = false
+  if (!sameRunRerender) $('#create-result-lenses').open = false
   renderResultAnalysisLenses(result)
   renderAuthoredResultRound()
   renderAuthoredReplay()
