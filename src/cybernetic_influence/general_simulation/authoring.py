@@ -54,8 +54,17 @@ AuthoringProgress = Callable[[str, str, int | None], None]
 GENERAL_AUTHORING_TASK = "cybernetic_influence_v3_general_world_draft"
 GENERAL_AUTHORING_PROMPT_VERSION = "general_world_draft.v2"
 GENERAL_AUTHORING_MAX_ATTEMPTS = 5
-GENERAL_AUTHORING_MAX_BUDGET = 0.10
-GENERAL_AUTHORING_MAX_TOKENS = 8000
+# Both ceilings were set below what this call actually needs, which is why
+# roughly half of all configure attempts died as "Provider response could not
+# be parsed as valid JSON": the model ran out of output budget mid-object and
+# the truncated body is not parseable. Retained llm_client observability over
+# 2026-08-19 shows completions landing at 7464-7894 tokens against the old
+# 8000 ceiling -- 93-99% of it -- with 35 of 40 received responses failing
+# json_invalid, while costed completions ran $0.24-$0.36 against a declared
+# $0.10 budget. Reasoning alone takes 2.3-2.8k of those tokens. These give the
+# call real headroom instead of leaving it to land on the line.
+GENERAL_AUTHORING_MAX_BUDGET = 0.60
+GENERAL_AUTHORING_MAX_TOKENS = 16000
 GENERAL_AUTHORING_CALL_TIMEOUT_S = 300
 GENERAL_AUTHORING_MODELS = {
     CODEX_LUNA_MODEL,
