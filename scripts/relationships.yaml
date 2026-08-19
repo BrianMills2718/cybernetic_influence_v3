@@ -5,7 +5,19 @@ required_reading:
     - CLAUDE.md
 
 governance: []
-couplings: []
+couplings:
+  - sources:
+      - frontend/src/**
+      - web/**
+      - public/waltzman/**
+      - src/cybernetic_influence/api.py
+    docs:
+      - ui/registry.yaml
+    description: >-
+      A UI-serving file is about to be created or changed. Read
+      ui/registry.yaml first -- this repo has two real surfaces
+      (operator-review-app, public-waltzman-demo); a change is very unlikely
+      to need a third one.
 architecture: []
 adrs: {}
 requirements: []

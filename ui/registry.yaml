@@ -1,0 +1,48 @@
+schema_version: ui-registry/v1
+project_id: cybernetic_influence_v3
+ui_status: active
+surfaces:
+  - id: operator-review-app
+    lifecycle: canonical
+    source_path: frontend/src
+    purpose: >-
+      Local operator/researcher app for configuring, running, and replaying
+      simulations, and reviewing per-run evidence (review dossier,
+      simulation trace).
+    entrypoints:
+      local: http://127.0.0.1:8620
+    run_commands:
+      build: make ui-build
+      server: make serve
+      focused_tests: make ui-smoke
+    data_boundary:
+      source: Live local simulation runs and their persisted artifacts.
+      served: Vite-built static output committed to web/; frontend/src is
+        the real source, web/ is generated -- edit frontend/src, not web/
+        directly.
+    provenance:
+      - frontend/vite.config.ts (build.outDir points at ../web)
+      - src/cybernetic_influence/api.py (mounts web/ at /, /review,
+        /review/trace, /assets)
+  - id: public-waltzman-demo
+    lifecycle: canonical
+    source_path: public/waltzman
+    purpose: >-
+      Separately-deployed public-facing Waltzman-analysis demo: case
+      walkthrough, comprehension-tested narrative, and the Experimentation UI.
+    entrypoints:
+      production: https://brian-mac-mini.tail9c321e.ts.net/waltzman
+    run_commands:
+      deploy: scripts/deploy_public_waltzman.sh
+      build_dataset: python scripts/build_public_waltzman_dataset.py
+      capture: python scripts/capture_waltzman_demo.py
+      verify: python scripts/verify_demo_ui.py
+    data_boundary:
+      deployment: Deployed to a separate host (Mac Mini) from the local
+        operator app; deploy_public_waltzman.sh refuses to deploy over a
+        dirty working tree or a run in flight on the host.
+      audience: Public/external, unlike operator-review-app which is
+        local-only.
+    provenance:
+      - scripts/deploy_public_waltzman.sh
+      - docs/ROADMAP.md (Slice 30 Artifact Disposition row)
