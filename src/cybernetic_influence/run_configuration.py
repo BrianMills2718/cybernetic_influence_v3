@@ -295,8 +295,14 @@ def model_catalog() -> list[dict[str, object]]:
 
 
 def _model_justification(model: str) -> str | None:
-    if model.endswith("deepseek-v4-flash"):
-        return None
+    # No route in _ADVERTISEMENT is llm_client's own DEFAULT_EXECUTION_MODEL
+    # (openrouter/openai/gpt-5.6-luna, not this app's codex/gpt-5.6-luna or
+    # any deepseek route), so every advertised model needs a real
+    # justification. deepseek-v4-flash previously returned None here from a
+    # time when it matched that shared default; it no longer does, and the
+    # unconditional None silently emptied it out of model_catalog() via
+    # evaluate_model_execution_policy's "allowed non-default models require
+    # model_justification" check.
     return "Operator selected an advertised simulator route."
 
 
