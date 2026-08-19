@@ -278,8 +278,21 @@ currently no data to drive them.
 
 ## Status
 
-- Design A (Experimentation, Slice A1): specified above, ready to implement.
-- Design B (Levin analysis profile): specified above, ready to implement.
+- Design A (Experimentation, Slice A1): implemented
+  (`ExperimentConditionV2`/`ExperimentRequestV2`/`ExperimentResultV2`/
+  `ExperimentConditionResultV2` in `experiment_store.py`,
+  `POST /api/authoring/drafts/{draft_id}/experiments` and
+  `GET /api/experiments/{experiment_id}` in `api.py`). Conditions execute
+  sequentially by calling `run_approved_draft`'s own single-live-run codepath
+  once per condition x repetition, so experimentation carries no duplicated
+  compile/execution logic. Verified with the positive/negative fixtures
+  specified above (`tests/test_general_simulation_api.py`); not yet exercised
+  against the live deployment with a real paid model call (mocked-provider
+  fixtures only so far) — pending explicit authorization for the spend.
+- Design B (Levin analysis profile): implemented and deployed; verified live
+  against `run_adb0f3e326ee` on the production Mac Mini deployment, including
+  the UI lens card (attach, correct findings, correct title, isolation
+  receipt with `simulation_unchanged: true`).
 - Design A Slice A2 (perturbation conditions): named, not specified.
 - Design C (graph projection/collapse): blocked on a human decision, not
   specified further.

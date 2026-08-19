@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from copy import deepcopy
 from pathlib import Path
 from threading import Event, Lock, Thread, local
+from time import sleep
 from typing import Literal, cast
 from uuid import uuid4
 
@@ -141,6 +142,14 @@ from cybernetic_influence.run_configuration import (
     llm_client_revision,
     model_catalog,
     resolve_live_configuration,
+)
+from cybernetic_influence.experiment_store import (
+    ExperimentConditionResultV2,
+    ExperimentNotFoundError,
+    ExperimentRequestV2,
+    ExperimentResultV2,
+    ExperimentStore,
+    InvalidExperimentIdError,
 )
 from cybernetic_influence.experiments.composite_agency import (
     PerturbationRowId,
@@ -2519,6 +2528,7 @@ def create_app(
     )
     runs.mark_incomplete_interrupted()
     drafts = AuthoringDraftStore(authoring_root or runs.root.parent / "authoring_drafts")
+    experiments = ExperimentStore(runs.root.parent / "experiments")
     authoring = DraftAuthoringService(drafts, call=authoring_call)
     authoring_lock = Lock()
     authoring_job_lock = Lock()
@@ -4374,6 +4384,207 @@ def create_app(
         finally:
             if lock_acquired:
                 live_lock.release()
+
+    @app.post("/api/authoring/drafts/{draft_id}/experiments", response_model=None)
+    def create_draft_experiment(
+        draft_id: str, body: ExperimentRequestV2, request: Request
+    ) -> Response:
+        """Re-execute an already-approved draft under controlled RunLlmOptions.
+
+        Never accepts a scenario-shaped field (ADR-014's Experiment/Scenario
+        authority separation): the only per-condition input is RunLlmOptions.
+        Conditions execute sequentially in a background thread, each one
+        reusing run_approved_draft's own single-live-run codepath unchanged,
+        so experimentation carries no duplicated compile/execution logic and
+        cannot diverge from a normal single run's behavior.
+        """
+        _require_access(request)
+        if os.getenv("CYBERNETIC_INFLUENCE_LIVE") != "1":
+            raise HTTPException(
+                status_code=403,
+                detail="live execution requires CYBERNETIC_INFLUENCE_LIVE=1",
+            )
+        try:
+            draft_document = drafts.get(draft_id)
+        except DraftNotFoundError as error:
+            raise HTTPException(
+                status_code=404, detail="authoring draft not found"
+            ) from error
+        if draft_document.get("status") != "approved":
+            raise HTTPException(
+                status_code=422,
+                detail="draft must be approved before experimentation",
+            )
+        if draft_document.get("target_kind") not in {
+            "general_world_v1",
+            "general_world_v2",
+        }:
+            raise HTTPException(
+                status_code=422,
+                detail="experimentation requires a general-world simulation",
+            )
+        for condition in body.conditions:
+            try:
+                resolve_live_configuration(condition.run_overrides)
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"condition {condition.condition_id!r}: {error}",
+                ) from error
+
+        experiment_id = experiments.new_id()
+        created_at = now_iso()
+        initial_record = ExperimentResultV2(
+            experiment_id=experiment_id,
+            draft_id=draft_id,
+            base_scenario_digest=None,
+            status="running",
+            conditions=[],
+            created_at=created_at,
+            updated_at=created_at,
+        )
+        experiments.save(initial_record.model_dump(mode="json"))
+
+        def execute_experiment() -> None:
+            base_scenario_digest: str | None = None
+            results: list[ExperimentConditionResultV2] = []
+
+            def persist(status: Literal["running", "completed"]) -> None:
+                experiments.save(
+                    ExperimentResultV2(
+                        experiment_id=experiment_id,
+                        draft_id=draft_id,
+                        base_scenario_digest=base_scenario_digest,
+                        status=status,
+                        conditions=results,
+                        created_at=created_at,
+                        updated_at=now_iso(),
+                    ).model_dump(mode="json")
+                )
+
+            for condition in body.conditions:
+                for repetition_index in range(body.repetitions_per_condition):
+                    run_body = AuthoredRunRequest(
+                        execution="live", llm_options=condition.run_overrides
+                    )
+                    try:
+                        # The previous condition's worker thread releases
+                        # live_lock a few instructions after it saves the
+                        # "completed" run document, so a 409 immediately
+                        # after our own completion poll is a brief, expected
+                        # race rather than a real conflicting run.
+                        response = None
+                        for attempt in range(10):
+                            try:
+                                response = run_approved_draft(
+                                    draft_id, run_body, request
+                                )
+                                break
+                            except HTTPException as error:
+                                if error.status_code != 409 or attempt == 9:
+                                    raise
+                                sleep(0.2)
+                        assert response is not None
+                    except HTTPException as error:
+                        results.append(
+                            ExperimentConditionResultV2(
+                                condition_id=condition.condition_id,
+                                repetition_index=repetition_index,
+                                run_id="",
+                                status="failed",
+                                error=str(error.detail),
+                            )
+                        )
+                        persist("running")
+                        continue
+                    started = (
+                        json.loads(bytes(response.body))
+                        if isinstance(response, Response)
+                        else response
+                    )
+                    run_id = str(started["run_id"])
+                    while True:
+                        current_run = runs.get(run_id)
+                        if current_run.get("status") in {"completed", "failed"}:
+                            break
+                        sleep(1.0)
+                    if current_run.get("status") == "completed":
+                        evidence = current_run.get("run_evidence_bundle")
+                        run_scenario_digest = (
+                            evidence.get("scenario_digest")
+                            if isinstance(evidence, dict)
+                            else None
+                        )
+                        if base_scenario_digest is None:
+                            base_scenario_digest = (
+                                str(run_scenario_digest)
+                                if isinstance(run_scenario_digest, str)
+                                else None
+                            )
+                        if (
+                            base_scenario_digest is not None
+                            and run_scenario_digest != base_scenario_digest
+                        ):
+                            results.append(
+                                ExperimentConditionResultV2(
+                                    condition_id=condition.condition_id,
+                                    repetition_index=repetition_index,
+                                    run_id=run_id,
+                                    status="failed",
+                                    error=(
+                                        "run scenario_digest diverged from this "
+                                        "experiment's base_scenario_digest"
+                                    ),
+                                )
+                            )
+                        else:
+                            results.append(
+                                ExperimentConditionResultV2(
+                                    condition_id=condition.condition_id,
+                                    repetition_index=repetition_index,
+                                    run_id=run_id,
+                                    run_evidence_bundle_digest=(
+                                        evidence.get("record_digest")
+                                        if isinstance(evidence, dict)
+                                        else None
+                                    ),
+                                    status="completed",
+                                )
+                            )
+                    else:
+                        results.append(
+                            ExperimentConditionResultV2(
+                                condition_id=condition.condition_id,
+                                repetition_index=repetition_index,
+                                run_id=run_id,
+                                status="failed",
+                                error=str(current_run.get("error", "run failed")),
+                            )
+                        )
+                    persist("running")
+            persist("completed")
+
+        Thread(
+            target=execute_experiment,
+            name=f"cybernetic-experiment-{experiment_id}",
+            daemon=True,
+        ).start()
+        return JSONResponse(
+            status_code=202,
+            content={"experiment_id": experiment_id, "job_id": experiment_id},
+        )
+
+    @app.get("/api/experiments/{experiment_id}")
+    def get_experiment(experiment_id: str, request: Request) -> dict[str, object]:
+        _require_access(request)
+        try:
+            return experiments.get(experiment_id)
+        except InvalidExperimentIdError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except ExperimentNotFoundError as error:
+            raise HTTPException(
+                status_code=404, detail="experiment not found"
+            ) from error
 
     @app.get("/api/scenarios/{scenario}/preview")
     def scenario_preview(

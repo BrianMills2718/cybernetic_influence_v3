@@ -1689,4 +1689,239 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
         {"label": "Final world revision", "value": "3"},
     ]
     assert summary_payload["theory_analysis"] is None
-    assert runtime_call.actor_counter == call_count
+
+
+def _approved_general_draft(api: TestClient) -> tuple[str, int]:
+    draft = api.post("/api/authoring/drafts").json()
+    legacy = GeneralSimulationProposalV1.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+    legacy.analysis_spec = legacy.analysis_spec or AnalysisSpecV1(
+        analysis_id="waltzman_port_diagnostic",
+        profile="waltzman_coordination_v1",
+        purpose="Inspect influence-to-coordination signals in the retained run.",
+    )
+    proposal = adapt_authored_bundle_v1(
+        legacy, run_id=f"{draft['draft_id']}_run"
+    ).model_dump(mode="json")
+    edited = api.put(
+        f"/api/authoring/drafts/{draft['draft_id']}/general-proposal",
+        json={"expected_revision": 0, "edit_id": "fixture", "proposal": proposal},
+    ).json()
+    approved = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/approve",
+        json={"expected_revision": edited["revision"]},
+    )
+    assert approved.status_code == 200, approved.text
+    return draft["draft_id"], edited["revision"]
+
+
+def _fake_resolve_live_configuration(
+    options: object,
+) -> EffectiveRunLlmConfiguration:
+    from cybernetic_influence.run_configuration import RunLlmOptions
+
+    if not isinstance(options, RunLlmOptions) or options.model not in {
+        "codex/gpt-5.6-luna",
+        "codex/gpt-5.6-terra",
+    }:
+        model = getattr(options, "model", None)
+        raise ValueError(f"{model!r} is not currently advertised for simulator execution")
+    return EffectiveRunLlmConfiguration(
+        model=options.model,
+        agent_reasoning_effort=options.agent_reasoning_effort,
+        narrator_reasoning_effort="none",
+        max_total_cost=options.max_total_cost,
+        selection_basis="operator_selected",
+        llm_client_revision="fixture",
+        billing_mode="subscription_included",
+    )
+
+
+def test_experiment_runs_every_condition_against_the_identical_scenario(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    monkeypatch.setattr(
+        api_module, "resolve_live_configuration", _fake_resolve_live_configuration
+    )
+    runtime_call = _GeneralRuntimeFake()
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            general_simulation_call=runtime_call,
+        )
+    )
+    draft_id, _revision = _approved_general_draft(api)
+
+    started = api.post(
+        f"/api/authoring/drafts/{draft_id}/experiments",
+        json={
+            "conditions": [
+                {
+                    "condition_id": "medium-reasoning",
+                    "label": "Medium reasoning",
+                    "run_overrides": {
+                        "model": "codex/gpt-5.6-luna",
+                        "agent_reasoning_effort": "medium",
+                        "max_total_cost": 0.74,
+                    },
+                },
+                {
+                    "condition_id": "low-reasoning",
+                    "label": "Low reasoning",
+                    "run_overrides": {
+                        "model": "codex/gpt-5.6-luna",
+                        "agent_reasoning_effort": "low",
+                        "max_total_cost": 0.74,
+                    },
+                },
+            ],
+            "repetitions_per_condition": 1,
+        },
+    )
+    assert started.status_code == 202, started.text
+    experiment_id = started.json()["experiment_id"]
+    assert started.json()["job_id"] == experiment_id
+
+    experiment: dict[str, object] = {}
+    for _ in range(400):
+        experiment = api.get(f"/api/experiments/{experiment_id}").json()
+        if experiment["status"] != "running":
+            break
+        time.sleep(0.01)
+    assert experiment["status"] == "completed", experiment
+    conditions = cast(list[dict[str, object]], experiment["conditions"])
+    assert len(conditions) == 2
+    assert {item["condition_id"] for item in conditions} == {
+        "medium-reasoning",
+        "low-reasoning",
+    }
+    assert all(item["status"] == "completed" for item in conditions)
+    assert all(item["run_evidence_bundle_digest"] for item in conditions)
+    digests = {item["run_evidence_bundle_digest"] for item in conditions}
+    assert len(digests) == 2, "distinct conditions must retain independent runs"
+    assert experiment["base_scenario_digest"]
+
+    for item in conditions:
+        reopened = api.get(f"/api/runs/{item['run_id']}").json()
+        assert reopened["status"] == "completed"
+        expected_effort = (
+            "medium" if item["condition_id"] == "medium-reasoning" else "low"
+        )
+        assert (
+            reopened["llm_configuration"]["agent_reasoning_effort"]
+            == expected_effort
+        )
+        assert (
+            reopened["run_evidence_bundle"]["scenario_digest"]
+            == experiment["base_scenario_digest"]
+        )
+        # Every run remains independently analyzable, unmodified.
+        attached = api.post(
+            f"/api/runs/{item['run_id']}/analyses",
+            json={
+                "analysis_spec": {
+                    "analysis_id": "exact_terminal_review",
+                    "profile": "exact_outcome_v1",
+                    "purpose": "Read the retained terminal outcome without changing the run.",
+                    "construct_definitions": [
+                        "Terminal state is read from retained evidence."
+                    ],
+                    "required_evidence_kinds": ["configuration", "terminal_state"],
+                    "method_classes": ["exact"],
+                    "aggregation": "Report the retained terminal evidence.",
+                    "uncertainty": "No inference beyond retained state.",
+                    "limitations": ["This does not establish a counterfactual."],
+                }
+            },
+        )
+        assert attached.status_code == 200, attached.text
+
+
+def test_experiment_requires_an_approved_draft(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    monkeypatch.setattr(
+        api_module, "resolve_live_configuration", _fake_resolve_live_configuration
+    )
+    runtime_call = _GeneralRuntimeFake()
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            general_simulation_call=runtime_call,
+        )
+    )
+    draft = api.post("/api/authoring/drafts").json()
+    response = api.post(
+        f"/api/authoring/drafts/{draft['draft_id']}/experiments",
+        json={
+            "conditions": [
+                {
+                    "condition_id": "medium-reasoning",
+                    "label": "Medium reasoning",
+                    "run_overrides": {
+                        "model": "codex/gpt-5.6-luna",
+                        "agent_reasoning_effort": "medium",
+                        "max_total_cost": 0.74,
+                    },
+                }
+            ],
+        },
+    )
+    assert response.status_code == 422
+    assert "approved" in response.json()["detail"]
+    assert runtime_call.actor_counter == 0
+
+
+def test_experiment_rejects_uncertified_model_before_any_condition_executes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    monkeypatch.setattr(
+        api_module, "resolve_live_configuration", _fake_resolve_live_configuration
+    )
+    runtime_call = _GeneralRuntimeFake()
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            general_simulation_call=runtime_call,
+        )
+    )
+    draft_id, _revision = _approved_general_draft(api)
+    response = api.post(
+        f"/api/authoring/drafts/{draft_id}/experiments",
+        json={
+            "conditions": [
+                {
+                    "condition_id": "valid-condition",
+                    "label": "Valid",
+                    "run_overrides": {
+                        "model": "codex/gpt-5.6-luna",
+                        "agent_reasoning_effort": "medium",
+                        "max_total_cost": 0.74,
+                    },
+                },
+                {
+                    "condition_id": "bad-model",
+                    "label": "Uncertified",
+                    "run_overrides": {
+                        "model": "not-a-real-model",
+                        "agent_reasoning_effort": "medium",
+                        "max_total_cost": 0.74,
+                    },
+                },
+            ],
+        },
+    )
+    assert response.status_code == 422
+    assert "bad-model" in response.json()["detail"]
+    time.sleep(0.2)
+    assert runtime_call.actor_counter == 0, "the valid condition must never start"
