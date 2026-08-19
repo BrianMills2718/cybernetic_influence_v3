@@ -90,7 +90,7 @@ def test_authoring_progress_uses_retained_backend_stages() -> None:
     assert "job.detail" in script
     assert "proposal attempt ${attempt}" in script
     assert "Still compiling the typed world" not in script
-    assert "assets/app.js?v=authoring28" in page
+    assert "assets/app.js?v=authoring29" in page
 
 
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
@@ -171,7 +171,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Understand the purpose" in page
     assert "Read a simulation" in page
     assert "Create your own" in page
-    assert ">Simulations</button>" in page
+    assert ">Your simulations</button>" in page
     assert "Methodology" in page
     assert "Each simulation you run here remains retained on the server" in page
     assert "Historical development runs stay out of this list" in page
@@ -261,11 +261,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=ontology2",
-        "assets/styles.css?v=authoring12",
+        "assets/styles.css?v=authoring13",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=authoring28",
+        "assets/app.js?v=authoring29",
     ]
     assert {
         "overview-view",

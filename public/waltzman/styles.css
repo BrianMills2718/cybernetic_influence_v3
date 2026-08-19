@@ -1160,7 +1160,10 @@ tbody tr:last-child td { border-bottom: 0; }
 .guided-result #simulations-view { margin: 0 auto; max-width: 1480px; }
 .simulation-library { display: grid; gap: 28px; }
 .simulation-library-hero { max-width: 920px; }
-.simulation-library-hero h2 { font-size: clamp(2.3rem, 5vw, 4.4rem); letter-spacing: -.05em; line-height: 1.02; margin: 12px 0 18px; max-width: 16ch; }
+/* This is a personal workspace, empty for every first-time visitor, so it gets
+   a workspace heading rather than a landing-page hero. At the old size the
+   largest type on the page announced that there was nothing on it. */
+.simulation-library-hero h2 { font-size: clamp(1.6rem, 3vw, 2.3rem); letter-spacing: -.03em; line-height: 1.12; margin: 10px 0 14px; max-width: 28ch; }
 .simulation-library-hero > p { color: var(--muted); line-height: 1.7; max-width: 75ch; }
 .simulation-library-hero > div { display: flex; gap: 10px; margin-top: 20px; }
 .simulation-library-layout { align-items: start; display: grid; gap: 22px; grid-template-columns: 290px minmax(0, 1fr); }

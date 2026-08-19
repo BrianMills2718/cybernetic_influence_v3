@@ -340,6 +340,8 @@ function readStateFromUrl() {
   if (['overview', 'guide', 'case', 'simulations', 'create', 'run', 'compare', 'mechanism', 'inspect', 'method'].includes(requestedView)) state.view = requestedView
   const requestedGuideStep = Number(params.get('guide_step'))
   if (Number.isInteger(requestedGuideStep) && requestedGuideStep >= 1 && requestedGuideStep <= 7) state.guideStep = requestedGuideStep - 1
+  const requestedCaseStep = Number(params.get('case_step'))
+  if (Number.isInteger(requestedCaseStep) && requestedCaseStep >= 1 && requestedCaseStep <= 6) caseStudyStep = requestedCaseStep - 1
   const requestedRun = params.get('run')
   if (requestedRun) state.runId = requestedRun
   const requestedRound = Number(params.get('round'))
@@ -371,8 +373,11 @@ function applyRunScopeFromUrl() {
 function syncUrl() {
   const url = new URL(window.location.href)
   url.searchParams.set('view', state.view)
-  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section', 'draft', 'authored_run', 'simulation', 'guide_step']) url.searchParams.delete(key)
+  for (const key of ['run', 'round', 'person', 'group', 'mechanism_person', 'section', 'draft', 'authored_run', 'simulation', 'guide_step', 'case_step']) url.searchParams.delete(key)
   if (state.view === 'guide') url.searchParams.set('guide_step', String(state.guideStep + 1))
+  // The case study is the surface most likely to be reloaded or deep-linked
+  // partway through, so it keeps its place the same way the guide does.
+  if (state.view === 'case') url.searchParams.set('case_step', String(caseStudyStep + 1))
   if (state.view === 'inspect') {
     url.searchParams.set('run', state.runId)
     url.searchParams.set('round', String(state.round))
@@ -1264,6 +1269,7 @@ function renderResearchCase() {
   $('#case-open-comparison').onclick = () => {
     caseStudyStep = 4
     renderCaseChapter()
+    syncUrl()
     window.requestAnimationFrame(() => {
       all('#case-evidence-records details').forEach((item) => { item.open = true })
     })
@@ -1379,10 +1385,12 @@ function configureControls() {
   $('#case-walkthrough-previous').onclick = () => {
     caseStudyStep = Math.max(0, caseStudyStep - 1)
     renderCaseChapter()
+    syncUrl()
   }
   $('#case-walkthrough-next').onclick = () => {
     caseStudyStep = Math.min(5, caseStudyStep + 1)
     renderCaseChapter()
+    syncUrl()
   }
   $('#guide-previous').onclick = () => advanceGuide(-1)
   $('#guide-next').onclick = () => advanceGuide(1)
@@ -2285,9 +2293,17 @@ function renderCreateSimulation() {
   }
   const author = authoringModel()
   const conversationOnly = Boolean(authoringDraft && !authoringDraft.proposal)
+  // The panel's own identity comes first; which route is answering is
+  // provenance and lives in the authoring-boundary disclosure below.
   $('.create-composer > header span').textContent = author
-    ? `${author.label} · medium thinking`
+    ? 'Simulation builder'
     : 'Simulation builder unavailable'
+  const routeNote = $('#create-route-note')
+  if (routeNote) {
+    routeNote.textContent = author
+      ? `Answering now: ${author.label}, medium thinking.`
+      : 'No authoring route is currently certified, so the builder cannot compose a simulation.'
+  }
   $('#create-view').classList.toggle('has-draft', Boolean(authoringDraft))
   $('#create-title').textContent = authoringDraft?.proposal
     ? 'Review and run this simulation.'

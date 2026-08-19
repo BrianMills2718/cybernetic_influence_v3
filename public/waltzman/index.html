@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology2">
-  <link rel="stylesheet" href="assets/styles.css?v=authoring12">
+  <link rel="stylesheet" href="assets/styles.css?v=authoring13">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -23,7 +23,7 @@
       <button type="button" data-view="case">Case study</button>
       <button type="button" data-view="create">New simulation</button>
       <span class="view-tabs-divider" aria-hidden="true"></span>
-      <button type="button" data-view="simulations">Simulations</button>
+      <button type="button" data-view="simulations">Your simulations</button>
       <button type="button" class="view-tab-secondary" data-view="method">Methodology</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
@@ -230,11 +230,11 @@
       <section id="simulations-view" class="workspace-view simulation-library" aria-labelledby="simulations-title" hidden>
         <header class="simulation-library-hero">
           <span class="case-label">Saved simulation workspace</span>
-          <h2 id="simulations-title">Review simulations created in this browser.</h2>
+          <h2 id="simulations-title">Your simulations</h2>
           <p>Each simulation you run here remains retained on the server and appears in this browser’s workspace. Direct links remain shareable. Historical development runs stay out of this list; the selected Waltzman demonstration remains in the Case study tab.</p>
           <div>
             <button class="primary-cta" type="button" data-view="case">Open the flagship case study</button>
-            <button class="quiet-button" type="button" data-view="create">Create a new simulation</button>
+            <button class="quiet-button" type="button" data-view="create">Create your own simulation</button>
           </div>
         </header>
         <div class="simulation-library-layout">
@@ -252,7 +252,7 @@
 
       <section id="create-view" class="workspace-view create-simulation" aria-labelledby="create-title" hidden>
         <header class="create-hero">
-          <span class="case-label">Create a simulation</span>
+          <span class="case-label">New simulation</span>
           <h2 id="create-title">Describe a world. Build an editable simulation.</h2>
           <p>Tell us what exists, what can change, and what you want to explore. Refine it in conversation or ask the model to make explicit assumptions now.</p>
         </header>
@@ -260,7 +260,7 @@
         <nav class="create-flow" aria-label="Simulation workflow"><span class="active">1 · Describe</span><span>2 · Review</span><span>3 · Run</span><span>4 · Replay</span></nav>
 
         <section class="create-composer" aria-labelledby="create-prompt-title">
-          <header><span>Simulation builder · medium thinking</span><h3 id="create-prompt-title">What do you want to simulate?</h3><p>Describe it naturally. The model can ask only the questions that materially change the simulation, or make disclosed assumptions and build it now.</p></header>
+          <header><span>Simulation builder</span><h3 id="create-prompt-title">What do you want to simulate?</h3><p>Describe it naturally. Clarifying questions come back in about a minute. Configuring a full simulation from assumptions is a much longer job — expect several minutes, and leave the tab open while it runs.</p></header>
           <div id="create-chat" class="create-chat" aria-live="polite"><article class="assistant"><strong>Simulation builder</strong><p>Describe the situation in your own words. I can ask a few material questions, or configure an editable draft immediately.</p></article></div>
           <label for="create-prompt"><span>Your message</span><textarea id="create-prompt" rows="4" placeholder="For example: simulate a pencil production and logistics chain from raw materials through delivery to a school."></textarea></label>
           <div class="create-chat-actions"><button id="create-generate" class="primary-cta" type="button">Ask clarifying questions</button><button id="create-configure-now" type="button">Configure now with assumptions</button></div>
@@ -405,7 +405,7 @@
           </section>
         </section>
 
-        <details class="create-boundary"><summary>Current authoring boundary</summary><p>Natural-language authoring can compose people, canonical world records, places, finite resources, information routes, scheduled moments, and coarse LLM-adjudicated transition systems. Registered exact mechanisms remain limited; every requested behavior is labeled exact, coarse, descriptive, or unsupported before approval, and unsupported material behavior blocks the run.</p><button type="button" data-open-lab>Open the earlier outbreak-specific lab</button></details>
+        <details class="create-boundary"><summary>Current authoring boundary</summary><p id="create-route-note" class="create-route-note">Answering now: the certified authoring route.</p><p>Natural-language authoring can compose people, canonical world records, places, finite resources, information routes, scheduled moments, and coarse LLM-adjudicated transition systems. Registered exact mechanisms remain limited; every requested behavior is labeled exact, coarse, descriptive, or unsupported before approval, and unsupported material behavior blocks the run.</p><button type="button" data-open-lab>Open the earlier outbreak-specific lab</button></details>
       </section>
 
       <section id="run-view" class="workspace-view" aria-labelledby="run-title" hidden>
@@ -760,6 +760,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=ontology2" defer></script>
-  <script src="assets/app.js?v=authoring28" defer></script>
+  <script src="assets/app.js?v=authoring29" defer></script>
 </body>
 </html>
