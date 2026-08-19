@@ -994,7 +994,7 @@ def test_failed_authored_live_run_is_retained_with_provider_evidence(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    monkeypatch.delenv("CYBERNETIC_INFLUENCE_LIVE", raising=False)
     effective = EffectiveRunLlmConfiguration(
         model="openrouter/deepseek/deepseek-v3.2",
         agent_reasoning_effort="none",
@@ -1056,6 +1056,7 @@ def test_failed_authored_live_run_is_retained_with_provider_evidence(
         json={"expected_revision": drafted["revision"]},
     )
 
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
     failed = api.post(
         f"/api/authoring/drafts/{draft_id}/runs",
         json={

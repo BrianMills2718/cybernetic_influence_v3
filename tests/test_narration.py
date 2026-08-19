@@ -229,7 +229,7 @@ def test_reference_narration_names_no_decision_instead_of_generic_success() -> N
         )
     )
 
-    assert "no deployment decision had been approved" in detailed
+    assert "no collective decision had been approved" in detailed
     assert "passed the exact support and review gate" not in detailed
 
 
