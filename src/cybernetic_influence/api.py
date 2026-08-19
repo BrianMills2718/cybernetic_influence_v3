@@ -2350,6 +2350,9 @@ def _compact_run_result(document: dict[str, object]) -> dict[str, object]:
         "run_id": document.get("run_id"),
         "created_at": document.get("created_at"),
         "status": document.get("status"),
+        # A failed run already retains why it failed; without projecting it here
+        # the reader sees an empty result with no explanation at all.
+        "error": document.get("error"),
         "scenario": document.get("scenario"),
         "arm": document.get("arm"),
         "execution": document.get("execution"),
