@@ -95,6 +95,18 @@ if [[ -n "$running" ]]; then
   echo "--force given; proceeding and losing the above." >&2
 fi
 
+# --- is there anything to do at all? -----------------------------------------
+# Reloading is the destructive part: it kills whatever the service is executing.
+# Doing it when the host already serves this commit buys nothing and cost one
+# live run, so a no-op deploy must stay a no-op.
+already="$(curl -fsS --max-time 10 "$PUBLIC_URL/api/config" 2>/dev/null \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["build_commit"])' 2>/dev/null || true)"
+host_head="$(ssh -o BatchMode=yes "$HOST" 'cd ~/code/cybernetic_influence_v3 && git rev-parse --short HEAD' 2>/dev/null || true)"
+if [[ "$already" == "$commit" && "$host_head" == "$commit" ]]; then
+  echo "host already serves $commit; nothing to deploy and no reason to reload"
+  exit 0
+fi
+
 # --- transfer (the host has no GitHub credentials) ---------------------------
 bundle="$(mktemp -t ci3-XXXX).bundle"
 trap 'rm -f "$bundle"' EXIT
@@ -115,6 +127,29 @@ d = plistlib.load(open(p, 'rb'))
 d['EnvironmentVariables']['CYBERNETIC_INFLUENCE_BUILD_COMMIT'] = '$commit'
 plistlib.dump(d, open(p, 'wb'))
 PY
+  # last look before the destructive step: work can start between the gate
+  # check and here, and the reload kills whatever is executing
+  if python3 -c \"
+import json, os, sys, time
+store = os.path.expanduser('~/Library/Application Support/cybernetic-influence-waltzman')
+runs = os.path.join(store, 'runs')
+now = time.time()
+for name in (os.listdir(runs) if os.path.isdir(runs) else []):
+    if not name.endswith('.json'):
+        continue
+    path = os.path.join(runs, name)
+    if now - os.path.getmtime(path) > 3600:
+        continue
+    try:
+        doc = json.load(open(path))
+    except Exception:
+        continue
+    if doc.get('status') in ('running', 'narrating', 'pause_requested'):
+        print(name); sys.exit(3)
+\"; then :; else
+    echo 'a run started between the gate check and the reload; aborting' >&2
+    exit 4
+  fi
   # a changed plist needs bootout+bootstrap; kickstart -k keeps the loaded one
   launchctl bootout \"gui/\$U/$LABEL\" 2>/dev/null || true
   sleep 3
