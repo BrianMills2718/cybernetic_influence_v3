@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-08-16
+updated: 2026-08-19
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -263,6 +263,25 @@ conditions, not evidence of hostile attribution or an operational detector.
   `run_8924342b56ce`, `run_946a10a820fc`, and `run_05acbaea1137` produced
   baseline approval, pressure non-approval, and restored approval respectively.
   The exact run-scoped public comparison excludes incompatible historical rows.
+- The retained 26-agent cross-border compact experiment
+  `outbreak_resource_forks_20260810214211` supplies the current
+  stakeholder-facing case. One execution reached a shared checkpoint
+  (`390dd408…`, 56 model calls, 23 conditional and 3 defer) and continued four
+  ways under an identical world, agent set, memory, prompt, model, and coalition
+  gate, varying only the arriving resource package: none, two verified, six
+  verified, and six claimed-but-contradicted. All four continuations ended
+  `no_joint_response` with zero support positions. The informative contrast is
+  compositional rather than terminal: the named top risk moves from capacity
+  (24 of 26 with no package) to a mixed evidence-quality, sovereignty, and
+  legitimacy profile with the complete package (capacity 9, evidence quality 9,
+  sovereignty 5), and requested next steps move from resources (14 to 3) to
+  safeguards (0 to 12). The contradicted false-claim branch returns to the
+  no-package profile exactly. 160 total model calls on `codex/gpt-5.6-luna` at
+  medium reasoning, observed cost $0. This is a candidate mechanism about
+  layered constraint structure, not an effect estimate. It was produced by
+  `scripts/probe_outbreak_resource_forks.py` and published through
+  `scripts/build_resource_fork_public.py` as static evidence; the product's own
+  `ExperimentSpec` authority cannot yet express a checkpoint fork.
 
 ### Process progress
 
@@ -327,12 +346,15 @@ There are five explicit tracks rather than one blended implementation queue:
 4. **V1 retirement — bounded cleanup after V2 stability.** Preserve immutable
    historical artifacts and their reader, but remove or quarantine remaining
    V1 new-execution branches once the public V2 consumer checks pass.
-5. **Stakeholder readout — separate retained MVP boundary.** Review current
-   public run `run_702e57f9accc` and decide whether its described world,
-   six-step trajectory, rejected guarded attempt, detachable Waltzman readout,
-   evidence, and limitations are understandable without raw JSON. This
-   judgment closes the current demo boundary but does not establish
-   cross-domain generality or decide the generalized product architecture.
+5. **Stakeholder readout — separate retained MVP boundary.** The operator
+   selected the 26-agent resource-fork case as the stakeholder-facing demo on
+   2026-08-19. Review `?view=case` and decide whether its described world,
+   shared checkpoint, four continuations, uniform non-approval, shifted
+   constraint profile, evidence, and limitations are understandable without raw
+   JSON. Retained public run `run_702e57f9accc` remains available as the general
+   V2 parity exemplar for the same judgment about the authoring path. Neither
+   judgment establishes cross-domain generality or decides the generalized
+   product architecture.
 
 Detailed MVP implementation authority:
 [Slice 24](plans/024-configurable-theory-analysis-mvp.md).
@@ -372,6 +394,7 @@ calibration, causal attribution, or operational detection.
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |
 | [Waltzman source note](research/001-from-minds-to-coordination.md) | amend | Separates scenario inputs, per-run measurements, and experiments |
+| [Coordination lab note](WALTZMAN_COORDINATION_LAB_NOTE.md) and [outreach draft](WALTZMAN_OUTREACH_DRAFT.md) | update/active | Rewritten 2026-08-19 around the selected 26-agent resource-fork case; the earlier source-pressure quartet is retained below as prior evidence |
 
 Historical commits, runs, traces, comparison artifacts, and operations records
 remain evidence. They do not own current direction.
@@ -436,11 +459,13 @@ not silently recreate the old runtime as a universal invariant set.
 - **Decision:** reset the foundation to Concordia while retaining the current
   product as parity evidence. Retain useful CI mechanisms and surfaces; replace
   its foundational runtime authority; clear the obsolete Candidate C handoff.
-- **Continue:** use the retained public relief-port run as the stable demo while
-  soliciting first-time stakeholder comprehension. The complete
-  author→review→run→replay path, post-run Waltzman attachment, and isolation
-  boundary have been exercised; the remaining decision is usefulness, not
-  first execution or defect discovery.
+- **Continue:** use the retained 26-agent resource-fork case
+  (`outbreak_resource_forks_20260810214211`, rendered at `?view=case`) as the
+  stable stakeholder-facing demo, selected by the operator on 2026-08-19. The
+  retained relief-port run `run_702e57f9accc` remains the parity exemplar for
+  the general author→review→run→replay path and its post-run Waltzman
+  attachment, but it is no longer the nominated demo. The remaining decision on
+  the fork case is usefulness, not first execution or defect discovery.
 - **Reset:** at the earliest of roughly 45 minutes, two consecutive non-outcome
   increments, or user concern about pace, compare the current path with the most
   valuable reversible next move. Reset immediately if configuration requires
