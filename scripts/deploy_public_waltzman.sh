@@ -70,12 +70,15 @@ if os.path.isdir(drafts):
             doc = json.load(open(path))
         except Exception:
             continue
-        # a draft with no proposal yet, touched minutes ago, is very likely a
-        # configure job still running in the service process
-        if not doc.get("proposal"):
+        # A draft that has resolved -- either way -- is not in flight: it moves
+        # off "draft" status and records its attempts. A recently touched draft
+        # still sitting at "draft" with nothing recorded is the one that is
+        # probably mid-generation in the service process.
+        resolved = doc.get("status") != "draft" or (doc.get("attempts") or [])
+        if not doc.get("proposal") and not resolved:
             busy.append(
-                "draft " + name + " touched " + str(int(age)) + "s ago with no"
-                " proposal yet (possible authoring job in flight)"
+                "draft " + name + " touched " + str(int(age)) + "s ago, still"
+                " status=draft with no attempts (probable authoring job in flight)"
             )
 print("\n".join(busy))
 PY' || true)"
