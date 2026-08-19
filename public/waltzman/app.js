@@ -3116,6 +3116,22 @@ function builtInAnalysisSpec(profile) {
     limitations:['One execution does not establish an invariant or causal effect.', 'Model outputs are audit records, not independent observations.', 'Correct refusal may be the appropriate coordinated outcome.'],
     subject_refs:[],
   }
+  if (profile === 'levin_collective_competence_v1') return {
+    analysis_spec_version:2,
+    analysis_id:'levin_collective_competence_review',
+    profile,
+    purpose:'Read generic goal-progress and coordination-activity signals from retained evidence, without a scenario-specific goal reference.',
+    construct_definitions:[
+      'Goal progress is read from retained transition acceptance and terminal-state presence, not a declared scenario-specific goal or acceptable-outcome set.',
+      'Coordination activity is the per-moment count of participating people and the world operations their accepted transitions actually committed.',
+    ],
+    required_evidence_kinds:['participant_activation', 'causal_event', 'terminal_state'],
+    method_classes:['exact', 'calculated'],
+    aggregation:'Preserve moment-level variation, then summarize the first and final observed activity without producing a scalar score.',
+    uncertainty:'This deterministic lens interprets one synthetic AI-agent execution; its counts are not calibrated measurements of people or institutions.',
+    limitations:['One execution does not establish an invariant or causal effect.', 'This first-slice construct does not yet report collective glue, error correction, persistence/adaptation, or untested-capacity signals.'],
+    subject_refs:[],
+  }
   return {
     analysis_spec_version:2,
     analysis_id:'exact_terminal_review',
@@ -3140,6 +3156,8 @@ const analysisFindingPresentation = {
   coordination_readiness_signals:{title:'How action readiness changed', description:'Holds, verification, exact attempts, shared dependencies, and committed world operations over time.'},
   retained_evidence_coverage:{title:'What evidence the lens inspected', description:'Exact retained-record counts; this is coverage, not a theory result.'},
   terminal_outcome:{title:'Exact terminal outcome', description:'Canonical state and accepted or rejected transitions at the configured boundary.'},
+  levin_goal_progress:{title:'Retained transition acceptance', description:'Accepted and rejected transitions, and whether terminal state was retained—generic goal-progress signals, not a scenario-specific goal.'},
+  levin_coordination_activity:{title:'How coordination activity changed', description:'Participating people and the world operations their accepted transitions actually committed, per scheduled moment.'},
 }
 
 function renderAnalysisValue(value, depth = 0) {
@@ -3203,8 +3221,10 @@ function renderResultAnalysisLenses(result) {
     : '<p><strong>No analysis attached.</strong> The retained execution is still available on its own.</p>'
   const profiles = new Set(specs.map((item) => item.profile))
   $('#create-add-waltzman-analysis').hidden = profiles.has('waltzman_coordination_v1')
+  $('#create-add-levin-analysis').hidden = profiles.has('levin_collective_competence_v1')
   $('#create-add-outcome-analysis').hidden = profiles.has('exact_outcome_v1')
   $('#create-add-waltzman-analysis').onclick = () => attachResultAnalysis('waltzman_coordination_v1')
+  $('#create-add-levin-analysis').onclick = () => attachResultAnalysis('levin_collective_competence_v1')
   $('#create-add-outcome-analysis').onclick = () => attachResultAnalysis('exact_outcome_v1')
   all('[data-remove-analysis]').forEach((button) => {
     button.onclick = () => removeResultAnalysis(button.dataset.removeAnalysis)

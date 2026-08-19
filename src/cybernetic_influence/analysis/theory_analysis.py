@@ -251,7 +251,9 @@ class AnalysisSpecV2(_ProducedModel):
 
     analysis_spec_version: Literal[2] = 2
     analysis_id: str = Field(pattern=_ID_PATTERN)
-    profile: Literal["waltzman_coordination_v1", "exact_outcome_v1"]
+    profile: Literal[
+        "waltzman_coordination_v1", "exact_outcome_v1", "levin_collective_competence_v1"
+    ]
     purpose: str = Field(min_length=1)
     construct_definitions: list[str] = Field(min_length=1)
     required_evidence_kinds: list[EvidenceKind] = Field(min_length=1)

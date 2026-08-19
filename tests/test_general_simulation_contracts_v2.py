@@ -69,6 +69,20 @@ def _waltzman_spec() -> AnalysisSpecV2:
     )
 
 
+def _levin_spec() -> AnalysisSpecV2:
+    return AnalysisSpecV2(
+        analysis_id="levin_lens",
+        profile="levin_collective_competence_v1",
+        purpose="Read generic goal-progress and coordination-activity signals after the run.",
+        construct_definitions=["Collective-competence constructs are derived from evidence."],
+        required_evidence_kinds=["participant_activation", "causal_event", "terminal_state"],
+        method_classes=["exact", "calculated"],
+        aggregation="Preserve moment-level variation.",
+        uncertainty="Synthetic model behavior only.",
+        limitations=["One execution does not establish an invariant."],
+    )
+
+
 def test_retained_port_proposal_adapts_to_independent_v2_contracts() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         FIXTURE.read_text(encoding="utf-8")
@@ -472,6 +486,24 @@ def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
     unsupported = analyze_run_evidence_v2(evidence_bundle, unsupported_spec)
     assert unsupported.coverage_status == "unsupported"
     assert unsupported.missing_evidence == ["boundary_activity"]
+    assert result.model_dump(mode="json") == retained_result
+
+    levin_analysis = analyze_run_evidence_v2(evidence_bundle, _levin_spec())
+    assert levin_analysis.coverage_status == "supported"
+    assert levin_analysis.model_call_receipts == []
+    assert levin_analysis.run_evidence_bundle_digest == evidence_bundle.record_digest
+    levin_findings = {item.construct_id: item for item in levin_analysis.findings}
+    assert set(levin_findings) == {
+        "retained_evidence_coverage",
+        "levin_goal_progress",
+        "levin_coordination_activity",
+    }
+    assert levin_findings["levin_goal_progress"].method_class == "exact"
+    activity = levin_findings["levin_coordination_activity"].value
+    assert isinstance(activity, dict)
+    assert isinstance(activity["first_moment"], dict)
+    assert isinstance(activity["last_moment"], dict)
+    # Isolation: attaching Levin evidence-only analysis must not touch the retained run.
     assert result.model_dump(mode="json") == retained_result
 
 

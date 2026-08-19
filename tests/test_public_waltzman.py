@@ -340,6 +340,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "create-result-lenses",
         "create-result-lens-list",
         "create-add-waltzman-analysis",
+        "create-add-levin-analysis",
         "create-add-outcome-analysis",
         "create-result-lens-status",
         "create-replay-progress",

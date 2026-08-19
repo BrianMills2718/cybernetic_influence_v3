@@ -12,6 +12,15 @@ updated: 2026-08-16
 
 ## Active execution
 
+[Slice 30: Unify the two frontends, add Experimentation, add a real Levin lens](030-unified-frontend-experimentation-and-levin-analysis.md)
+audited `web/` (the older, general surface) against `public/waltzman/` (the
+actively-developed one) and found two real, specifiable gaps — RunSpec-level
+experimentation and a genuine post-hoc Levin analysis profile — plus two
+explicitly blocked items (graph-projection/boundary-collapse pending a
+product decision; pause/resume pending an execution-loop exploration pass).
+Designs A and B are ready to implement; C is not silently dropped, just not
+yet unblocked.
+
 [Slice 29: Separate scenario, run, analysis, and experiment authority](029-separate-simulation-run-analysis.md)
 has completed its selected public V2 vertical and authentic isolation proof.
 Its active follow-up records the still-partial V1 retirement and the audited

@@ -699,6 +699,126 @@ def build_run_evidence_bundle_v2(
     )
 
 
+def _levin_findings(
+    by_kind: dict[EvidenceKind, list[EvidenceRecordV1]],
+    coverage_ref: str,
+) -> list[AnalysisFindingV2]:
+    """Generic, evidence-only collective-competence signals over one retained run.
+
+    Deliberately reads only generic evidence kinds (participant_activation,
+    causal_event, terminal_state) rather than scenario-specific event or fact
+    names, matching how _waltzman_findings stays scenario-agnostic. A thin
+    first slice: goal/terminal progress plus a per-moment coordination-
+    activity trajectory. The fuller V1 Levin construct set (collective glue,
+    error correction, persistence/adaptation, untested capacities) is a named
+    follow-up once this shape is proven against real runs.
+    """
+    actor_records = by_kind.get("participant_activation", [])
+    transition_records = by_kind.get("causal_event", [])
+    terminal_records = by_kind.get("terminal_state", [])
+    activations = _activation_rows(actor_records)
+    moment_by_intent_id = {
+        cast(str, row["intent_id"]): cast(int, row["moment"])
+        for row in activations
+        if isinstance(row.get("intent_id"), str)
+    }
+    transitions = _transition_rows(transition_records, moment_by_intent_id)
+    actor_refs = [item.evidence_ref for item in actor_records]
+    transition_refs = [item.evidence_ref for item in transition_records]
+    terminal_refs = [item.evidence_ref for item in terminal_records]
+
+    accepted_count = sum(bool(row["accepted"]) for row in transitions)
+    rejected_count = len(transitions) - accepted_count
+    goal_progress_value: JsonValue = cast(
+        JsonValue,
+        {
+            "accepted_transitions": accepted_count,
+            "rejected_transitions": rejected_count,
+            "terminal_state_retained": bool(terminal_records),
+        },
+    )
+
+    transitions_by_moment: dict[int, list[dict[str, object]]] = defaultdict(list)
+    for row in transitions:
+        transitions_by_moment[cast(int, row["moment"])].append(row)
+    activity_trajectory: list[dict[str, object]] = []
+    for moment in sorted({cast(int, row["moment"]) for row in activations}):
+        rows = [row for row in activations if row["moment"] == moment]
+        moment_transitions = transitions_by_moment.get(moment, [])
+        activity_trajectory.append(
+            {
+                "moment": moment,
+                "participating_people": len({row["actor_id"] for row in rows}),
+                "accepted_world_transitions": sum(
+                    bool(row["accepted"]) for row in moment_transitions
+                ),
+                "committed_world_operations": sum(
+                    cast(int, row["committed_operation_count"])
+                    for row in moment_transitions
+                ),
+            }
+        )
+
+    if activity_trajectory:
+        first_moment = activity_trajectory[0]
+        last_moment = activity_trajectory[-1]
+        activity_summary = (
+            "Within this retained simulation, committed world operations changed "
+            f"from {first_moment['committed_world_operations']} at the first "
+            f"observed moment to {last_moment['committed_world_operations']} at "
+            "the last, across "
+            f"{len(activity_trajectory)} scheduled moments."
+        )
+        activity_value: JsonValue = cast(
+            JsonValue,
+            {
+                "summary": activity_summary,
+                "first_moment": first_moment,
+                "last_moment": last_moment,
+            },
+        )
+    else:
+        activity_value = {
+            "summary": "No typed participant activations were available for a coordination-activity summary."
+        }
+
+    return [
+        AnalysisFindingV2(
+            finding_id="levin_goal_progress",
+            construct_id="levin_goal_progress",
+            method_class="exact",
+            value=goal_progress_value,
+            evidence_refs=sorted(set([*transition_refs, *terminal_refs]))
+            or [coverage_ref],
+            uncertainty=(
+                "Counts retained transitions and terminal-state presence. It does not "
+                "evaluate whether a specific declared collective goal was achieved."
+            ),
+            limitations=[
+                "This first-slice construct reports generic transition acceptance, not a "
+                "scenario-specific goal reference or acceptable-outcome set.",
+            ],
+        ),
+        AnalysisFindingV2(
+            finding_id="levin_coordination_activity",
+            construct_id="levin_coordination_activity",
+            method_class="calculated",
+            value=activity_value,
+            evidence_refs=sorted(set([*actor_refs, *transition_refs]))
+            or [coverage_ref],
+            uncertainty=(
+                "This summarizes observable changes inside one retained synthetic run. It "
+                "does not establish causation, a stable behavioral tendency, or a Levin invariant."
+            ),
+            limitations=[
+                "One execution does not establish an invariant or causal effect.",
+                "This first-slice construct does not yet report collective glue, error "
+                "correction, persistence/adaptation, or untested-capacity signals.",
+            ],
+        ),
+    ]
+
+
 def analyze_run_evidence_v2(
     bundle: RunEvidenceBundleV2,
     specification: AnalysisSpecV2,
@@ -725,6 +845,8 @@ def analyze_run_evidence_v2(
         )
         if specification.profile == "waltzman_coordination_v1":
             findings.extend(_waltzman_findings(by_kind, coverage_ref))
+        elif specification.profile == "levin_collective_competence_v1":
+            findings.extend(_levin_findings(by_kind, coverage_ref))
         else:
             terminal = by_kind["terminal_state"][0]
             transitions = by_kind.get("causal_event", [])
