@@ -1206,10 +1206,12 @@ function renderResearchCase() {
   if (!resourceFork?.branches?.length) {
     $('#research-case-runs').innerHTML = '<p class="case-data-error"><strong>Research case unavailable.</strong> The exact checkpoint evidence could not be loaded.</p>'
     $('#case-open-comparison').disabled = true
+    $('#case-download-evidence').disabled = true
     return
   }
 
   $('#case-open-comparison').disabled = false
+  $('#case-download-evidence').disabled = false
   const stories = {
     no_intervention:{label:'Nothing changes', short:'No new help arrives.', event:'No resource package enters the world.', result:'Without new capacity, most agents become less ready to proceed. Twenty-one defer the decision.', why:'The operational shortages remain, so the group has no executable path forward.'},
     partial:{label:'Two real resources', short:'Some shortages are fixed.', event:'Verified laboratory capacity and clinicians become available.', result:'Most agents become willing to proceed if their remaining conditions are met, but three still defer.', why:'The package resolves two capacity gaps, not the coalition’s other operational, legal, and scientific prerequisites.'},
@@ -1255,7 +1257,18 @@ function renderResearchCase() {
   all('[data-case-branch]').forEach((button) => { button.onclick = () => { state.caseBranch = button.dataset.caseBranch; renderBranch() } })
   renderBranch()
 
+  // The terminal call to action promises retained evidence, so it opens the
+  // agent-reasoning chapter rather than a raw JSON blob.  M7 requires a reader
+  // to reach every claim without opening raw JSON; the file stays available
+  // beside it under a label that says what it actually is.
   $('#case-open-comparison').onclick = () => {
+    caseStudyStep = 4
+    renderCaseChapter()
+    window.requestAnimationFrame(() => {
+      all('#case-evidence-records details').forEach((item) => { item.open = true })
+    })
+  }
+  $('#case-download-evidence').onclick = () => {
     window.open('assets/resource-fork.json', '_blank', 'noopener')
   }
 }

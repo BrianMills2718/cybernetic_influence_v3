@@ -90,7 +90,7 @@ def test_authoring_progress_uses_retained_backend_stages() -> None:
     assert "job.detail" in script
     assert "proposal attempt ${attempt}" in script
     assert "Still compiling the typed world" not in script
-    assert "assets/app.js?v=authoring27" in page
+    assert "assets/app.js?v=authoring28" in page
 
 
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
@@ -265,7 +265,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=authoring27",
+        "assets/app.js?v=authoring28",
     ]
     assert {
         "overview-view",
