@@ -279,7 +279,7 @@
             <button type="button" data-general-review-stage="run"><span>Run</span><small id="create-review-run-count"></small></button>
             <button type="button" data-general-review-stage="analysis"><span>Analysis</span><small>Optional</small></button>
           </nav>
-          <div class="create-actions"><div><strong id="create-action-heading">Ready for your decision</strong><span id="create-action-detail">Approve this exact configuration, then run it with the selected model.</span></div><button id="create-resolve-questions" class="primary-cta" type="button" hidden>Keep these choices inside the simulation</button><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation</button><button id="create-start-over" class="quiet-button" type="button">Change description</button></div>
+          <div class="create-actions"><div><strong id="create-action-heading">Ready for your decision</strong><span id="create-action-detail">Approve this exact configuration, then run it with the selected model.</span></div><button id="create-resolve-questions" class="primary-cta" type="button" hidden>Keep these choices inside the simulation</button><button id="create-approve" class="primary-cta" type="button">Approve this simulation</button><button id="create-run" class="primary-cta" type="button" hidden>Run simulation</button><button id="create-run-experiment" class="quiet-button" type="button" hidden>Run as an experiment</button><button id="create-start-over" class="quiet-button" type="button">Change description</button></div>
           <section id="create-draft-walkthrough" class="create-draft-walkthrough" data-general-review-panel="world" aria-labelledby="create-draft-walkthrough-title">
             <header class="create-draft-walkthrough-controls">
               <div><span>Configuration walkthrough</span><strong id="create-draft-walkthrough-progress">Step 1</strong></div>
@@ -339,6 +339,13 @@
           </details>
           <section class="create-revise"><label for="create-revision-prompt"><strong>Tell the authoring model what to change</strong><textarea id="create-revision-prompt" rows="4" placeholder="Make the technical reviewer more skeptical, clarify the legal constraint, and delay the local-health report until the third meeting."></textarea></label><button id="create-revise" type="button">Generate revised configuration</button></section>
           <details class="create-raw"><summary>Inspect complete typed configuration</summary><pre id="create-raw-configuration"></pre></details>
+          <section id="create-experiment-panel" class="create-experiment-panel" hidden aria-labelledby="create-experiment-title">
+            <header><div><span>Experiment</span><h3 id="create-experiment-title">Compare reasoning-effort conditions on the identical configuration</h3></div><p>Runs the same approved configuration once per checked condition, unchanged. Every resulting run is retained and independently analyzable, exactly like a single run.</p></header>
+            <fieldset id="create-experiment-conditions" class="create-experiment-conditions"><legend>Conditions to compare</legend></fieldset>
+            <button id="create-experiment-start" class="primary-cta" type="button">Start experiment</button>
+            <p id="create-experiment-status" class="create-status" aria-live="polite"></p>
+            <div id="create-experiment-results" class="create-experiment-results"></div>
+          </section>
           <section id="create-run-status" class="create-run-status" hidden aria-live="polite">
             <strong id="create-run-heading"></strong>
             <p id="create-run-detail"></p>
@@ -753,6 +760,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=ontology2" defer></script>
-  <script src="assets/app.js?v=authoring25" defer></script>
+  <script src="assets/app.js?v=authoring27" defer></script>
 </body>
 </html>

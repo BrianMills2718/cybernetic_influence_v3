@@ -18,8 +18,8 @@ actively-developed one) and found two real, specifiable gaps — RunSpec-level
 experimentation and a genuine post-hoc Levin analysis profile — plus two
 explicitly blocked items (graph-projection/boundary-collapse pending a
 product decision; pause/resume pending an execution-loop exploration pass).
-Designs A and B are ready to implement; C is not silently dropped, just not
-yet unblocked.
+Designs A and B are implemented, tested, and deployed; C is not silently
+dropped, just not yet unblocked.
 
 [Slice 29: Separate scenario, run, analysis, and experiment authority](029-separate-simulation-run-analysis.md)
 has completed its selected public V2 vertical and authentic isolation proof.

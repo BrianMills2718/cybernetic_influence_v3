@@ -1330,6 +1330,7 @@ function resetAuthoringWorkspace() {
   $('#create-run-status').hidden = true
   $('#create-run-provenance').hidden = true
   $('#create-result').hidden = true
+  $('#create-experiment-panel').hidden = true
   $('.create-composer').hidden = false
   $('.create-hero .case-label').textContent = 'Create a simulation'
   if (authoredRunPollHandle) window.clearTimeout(authoredRunPollHandle)
@@ -1424,6 +1425,8 @@ function configureControls() {
   $('#create-edit-configuration').onclick = showAuthoredConfiguration
   $('#create-approve').onclick = approveAuthoringDraft
   $('#create-run').onclick = runAuthoredSimulation
+  $('#create-run-experiment').onclick = openExperimentPanel
+  $('#create-experiment-start').onclick = startExperiment
   $('#create-stop').onclick = stopAuthoredSimulation
   $('#create-start-over').onclick = () => {
     resetAuthoringWorkspace()
@@ -2383,6 +2386,10 @@ function renderCreateSimulation() {
   $('#create-resolve-questions').hidden = !onlyOpenQuestions
   $('#create-approve').hidden = !ready
   $('#create-run').hidden = authoringDraft.status !== 'approved' || coverageBlocked
+  $('#create-run-experiment').hidden = (
+    authoringDraft.status !== 'approved' || coverageBlocked || !isGeneralProposal(authoringDraft.proposal)
+  )
+  if ($('#create-run-experiment').hidden) $('#create-experiment-panel').hidden = true
   $('#create-action-heading').textContent = authoringDraft.status === 'approved'
     ? coverageBlocked
       ? 'Approval needs revision'
@@ -3432,6 +3439,86 @@ async function runAuthoredSimulation() {
     $('#create-run-detail').textContent = error.message
     $('#create-run').disabled = false
   }
+}
+
+function experimentReasoningEffortLabel(effort) {
+  return effort === 'none' ? 'No extra reasoning' : `${sentence(effort)} reasoning`
+}
+
+function openExperimentPanel() {
+  if (!authoringDraft || authoringDraft.status !== 'approved') return
+  const models = runtimeConfig?.live_options?.models || []
+  const defaultModel = runtimeConfig?.live_options?.defaults?.model
+  const entry = models.find((item) => item.model === defaultModel) || models[0]
+  const efforts = entry?.agent_reasoning_efforts || []
+  $('#create-experiment-conditions').innerHTML = '<legend>Conditions to compare</legend>' + efforts.map((effort, index) => `<label><input type="checkbox" value="${escapeHtml(effort)}" ${index < 2 ? 'checked' : ''}> ${escapeHtml(experimentReasoningEffortLabel(effort))}</label>`).join('')
+  $('#create-experiment-status').textContent = efforts.length ? '' : 'No reasoning-effort conditions are available for the currently selected model.'
+  $('#create-experiment-results').innerHTML = ''
+  $('#create-experiment-panel').hidden = false
+  $('#create-experiment-panel').scrollIntoView({behavior:'smooth', block:'center'})
+}
+
+async function startExperiment() {
+  if (!authoringDraft || authoringDraft.status !== 'approved') return
+  const defaultModel = runtimeConfig?.live_options?.defaults?.model
+  const defaultCost = runtimeConfig?.live_options?.defaults?.max_total_cost || 0.74
+  const checked = all('#create-experiment-conditions input[type="checkbox"]:checked').map((input) => input.value)
+  if (!checked.length) {
+    $('#create-experiment-status').textContent = 'Check at least one condition to compare.'
+    return
+  }
+  $('#create-experiment-start').disabled = true
+  $('#create-experiment-status').textContent = 'Starting the experiment…'
+  $('#create-experiment-results').innerHTML = ''
+  try {
+    const started = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/experiments`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        conditions: checked.map((effort) => ({
+          condition_id: effort,
+          label: experimentReasoningEffortLabel(effort),
+          run_overrides: {model: defaultModel, agent_reasoning_effort: effort, max_total_cost: defaultCost},
+        })),
+        repetitions_per_condition: 1,
+      }),
+    })
+    $('#create-experiment-status').textContent = `Experiment ${started.experiment_id} started. Conditions run one at a time and are each independently retained.`
+    void pollExperiment(started.experiment_id)
+  } catch (error) {
+    $('#create-experiment-status').textContent = error.message
+    $('#create-experiment-start').disabled = false
+  }
+}
+
+async function pollExperiment(experimentId) {
+  try {
+    const experiment = await apiRequest(`api/experiments/${encodeURIComponent(experimentId)}`)
+    renderExperimentResults(experiment)
+    if (experiment.status !== 'completed') {
+      setTimeout(() => { void pollExperiment(experimentId) }, 2000)
+      return
+    }
+    $('#create-experiment-status').textContent = `Experiment ${experimentId} finished.`
+    $('#create-experiment-start').disabled = false
+  } catch (error) {
+    $('#create-experiment-status').textContent = error.message
+    $('#create-experiment-start').disabled = false
+  }
+}
+
+function renderExperimentResults(experiment) {
+  const byCondition = new Map((experiment.conditions || []).map((item) => [item.condition_id, item]))
+  const checkboxes = all('#create-experiment-conditions input[type="checkbox"]:checked')
+  const expected = checkboxes.length ? checkboxes.map((input) => input.value) : [...byCondition.keys()]
+  $('#create-experiment-results').innerHTML = expected.map((conditionId) => {
+    const result = byCondition.get(conditionId)
+    const status = result?.status || 'running'
+    const statusLabel = status === 'running' ? 'Running' : sentence(status)
+    const link = result?.status === 'completed'
+      ? `<a href="?view=create&authored_run=${encodeURIComponent(result.run_id)}">View this run</a>`
+      : result?.status === 'failed' ? `<span>${escapeHtml(result.error || 'This condition failed.')}</span>` : ''
+    return `<article class="create-experiment-condition-row" data-status="${escapeHtml(status)}"><strong>${escapeHtml(experimentReasoningEffortLabel(conditionId))}</strong><span>${escapeHtml(statusLabel)}</span>${link}</article>`
+  }).join('')
 }
 
 async function loadAuthoringDraftFromUrl() {
