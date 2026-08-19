@@ -117,6 +117,46 @@ trajectory, then reloads completed public runs after refresh. The public store
 currently adds a matched three-run custom triad. Its role-aligned comparison is
 <https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=mechanism&mechanism_person=alba_epidemiologist>.
 
+Demo-path deployment observed 2026-08-19: public build `9a0e7b909` serves the
+selected resource-fork case. Two defects were repaired against this build.
+
+The case study's terminal call to action, labelled "Open retained evidence",
+called `window.open('assets/resource-fork.json')`, so a first-time reader's
+last click opened raw JSON — the outcome M7 rules out. It now opens the
+agent-reasoning chapter with the three retained rationales expanded, and the
+file remains reachable beside it as "Download the evidence file (JSON)".
+
+`authoring.models` was empty, so the public Create surface rendered
+"Simulation builder unavailable" with both actions disabled. Both advertised
+authoring routes failed the same check: the recorded
+`AuthoredSimulationProposalEnvelopeV2` schema digest no longer matched the
+digest this build reproduces, while `DependencyCompletenessReviewV1` still
+matched on both. The schema class, the `llm_client` checkout (`f194028c`,
+clean), and the pinned `LLM_CLIENT_REVISION` were all unchanged, and the digest
+recomputes deterministically, so the recorded observations were taken against
+an earlier checkout state rather than a drifting environment. Codex Luna could
+not be re-certified: the ChatGPT subscription is at its usage limit until
+2026-08-23. Sol was re-certified against `9a0e7b909`
+(`CYBERNETIC_INFLUENCE_CERT_AUTHORING_SOL=routeobs1_971c9de80cf702b62c31813a,routeobs1_f241242662aa27c76057efee`)
+and the LaunchAgent was updated and reloaded.
+
+A LaunchAgent environment change requires `launchctl bootout` followed by
+`launchctl bootstrap`. `launchctl kickstart -k` restarts the process against
+the already-loaded plist and silently keeps the old values; the first attempt
+here reported the previous `build_commit` and an empty authoring catalog.
+
+Live browser verification against the deployment after the reload: the
+six-chapter case walkthrough, both network projections, node inspection, and
+all four continuations render with no console error, no uncaught page error,
+and no response at or above 400, at 1440 and 390 pixels wide. The repaired call
+to action opens the agent-reasoning chapter with three expanded records and no
+popup. `/api/config` reports `build_commit 9a0e7b909` and authoring model
+`openrouter/openai/gpt-5.6-sol`. One authentic authoring call through the
+public UI returned three relevant clarifying questions for a newly described
+shared-van scenario. Note that `scripts/verify_resource_fork_ui.py` is stale
+against this build: it asserts an overview headline the current copy no longer
+contains.
+
 Separated-authoring first deployment 2026-08-14: commit
 `c3a19e13682f9bca8164d772215903d18c280507` established that new drafts write
 native V2 scenario and run contracts rather than passing through the V1
