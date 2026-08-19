@@ -1842,6 +1842,40 @@ def test_experiment_runs_every_condition_against_the_identical_scenario(
         assert attached.status_code == 200, attached.text
 
 
+def test_experiment_rejects_a_malformed_draft_id(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
+    monkeypatch.setattr(
+        api_module, "resolve_live_configuration", _fake_resolve_live_configuration
+    )
+    api = TestClient(
+        create_app(
+            Path(__file__).resolve().parents[1] / "web",
+            tmp_path / "runs",
+            authoring_root=tmp_path / "drafts",
+            general_simulation_call=_GeneralRuntimeFake(),
+        )
+    )
+    response = api.post(
+        "/api/authoring/drafts/not-a-real-draft-id/experiments",
+        json={
+            "conditions": [
+                {
+                    "condition_id": "c1",
+                    "label": "C1",
+                    "run_overrides": {
+                        "model": "codex/gpt-5.6-luna",
+                        "agent_reasoning_effort": "medium",
+                        "max_total_cost": 0.74,
+                    },
+                }
+            ],
+        },
+    )
+    assert response.status_code == 422, response.text
+
+
 def test_experiment_requires_an_approved_draft(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
     monkeypatch.setattr(

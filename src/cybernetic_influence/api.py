@@ -4410,6 +4410,8 @@ def create_app(
             raise HTTPException(
                 status_code=404, detail="authoring draft not found"
             ) from error
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
         if draft_document.get("status") != "approved":
             raise HTTPException(
                 status_code=422,
