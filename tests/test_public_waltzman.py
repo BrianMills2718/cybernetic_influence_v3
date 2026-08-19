@@ -261,7 +261,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=ontology2",
-        "assets/styles.css?v=authoring11",
+        "assets/styles.css?v=authoring12",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",

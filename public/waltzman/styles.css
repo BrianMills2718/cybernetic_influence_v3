@@ -910,7 +910,11 @@ tbody tr:last-child td { border-bottom: 0; }
 
 /* Research case: explain the question before exposing the audit trail. */
 .guided-result #case-view { margin: 0 auto; max-width: 1120px; }
-.research-case { display: grid; gap: 46px; }
+/* minmax(0, 1fr) keeps the full-bleed .case-network breakout (which is wider
+   than this column by design) from widening the grid track and dragging every
+   sibling out with it. Without it the sticky walkthrough nav inherits the
+   breakout width and pushes "Next →" off-screen at 1280-1600px. */
+.research-case { display: grid; gap: 46px; grid-template-columns: minmax(0, 1fr); }
 .case-walkthrough-controls { align-items: center; background: rgba(9, 18, 27, .96); border: 1px solid var(--line); border-radius: 11px; display: flex; gap: 22px; justify-content: space-between; padding: 13px 16px; position: sticky; top: 72px; z-index: 20; }
 .case-walkthrough-controls > div { align-items: center; display: flex; gap: 12px; }
 .case-walkthrough-controls > div:first-child { align-items: start; display: grid; gap: 3px; }
