@@ -1444,6 +1444,15 @@ function configureControls() {
   }
   $('#create-resolve-questions').onclick = keepQuestionsInsideSimulation
   $('#create-edit-configuration').onclick = showAuthoredConfiguration
+  // The section review shows one concern at a time, so the complete contract
+  // needs its own way in; it was previously only reachable by finding one
+  // collapsed disclosure among thirteen.
+  $('#create-show-everything').onclick = () => {
+    const raw = $('#create-raw-configuration')?.closest('details')
+    if (!raw) return
+    raw.open = true
+    raw.scrollIntoView({behavior:'smooth', block:'start'})
+  }
   $('#create-approve').onclick = approveAuthoringDraft
   $('#create-run').onclick = runAuthoredSimulation
   $('#create-run-experiment').onclick = openExperimentPanel
@@ -1944,17 +1953,13 @@ function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
       nodeIds:scheduleIds,
       edgeKinds:new Set(['connection', 'scheduled_after']),
     },
-    {
-      kind:'Evaluation',
-      title:proposal.analysis_spec ? 'How will the completed run be analyzed?' : 'Is a theory-specific evaluation attached?',
-      summary:proposal.analysis_spec
-        ? `${proposal.analysis_spec.purpose} The ${sentence(proposal.analysis_spec.profile)} lens reads retained evidence after execution; it cannot change the world or any actor's decision.`
-        : 'No analytical framework is selected. The run will retain world changes, observations, action attempts, and evidence without applying Waltzman or another theory-specific lens.',
-      nodeIds:new Set(),
-      edgeKinds:new Set(),
-      informational:true,
-    },
-  ].filter((step) => step.informational || step.nodeIds.size > 0)
+    // Evaluation deliberately has no scene here. This walkthrough shows the
+    // world that will execute; analysis is a separate authority (ADR-014) that
+    // reads retained evidence afterwards and cannot change the world. It used
+    // to be appended as a final graph-less text card, which read as the
+    // configuration tour suddenly changing subject. It lives in the Analysis
+    // review section, and attaches to a completed run.
+  ].filter((step) => step.nodeIds.size > 0)
   authoredDraftWalkthroughStepCount = steps.length
   authoredDraftWalkthroughStep = Math.max(0, Math.min(authoredDraftWalkthroughStep, steps.length - 1))
   const step = steps[authoredDraftWalkthroughStep]
@@ -1967,25 +1972,9 @@ function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
   $('#create-draft-walkthrough-summary').textContent = step.summary
   $('#create-draft-walkthrough-previous').disabled = authoredDraftWalkthroughStep === 0
   $('#create-draft-walkthrough-next').textContent = authoredDraftWalkthroughStep === steps.length - 1 ? 'Review and approve ↓' : 'Next →'
-  $('#create-draft-walkthrough-selection').textContent = step.informational
-    ? 'Analysis is a read-only projection over retained evidence.'
-    : 'Select a visible item or path to inspect its configured meaning.'
+  $('#create-draft-walkthrough-selection').textContent = 'Select a visible item or path to inspect its configured meaning.'
   $('#create-draft-network-status').textContent = `${visibleNodes.length} configured items · ${visibleEdges.length} configured paths · no runtime event is implied`
   const graph = $('#create-draft-network-graph')
-  if (step.informational) {
-    window.CyberneticGraph?.clear?.(graph)
-    graph.innerHTML = `<div class="analysis-boundary-diagram">
-      <article><span>1</span><strong>Simulation executes</strong><small>Actors and transition authorities may change canonical world state.</small></article>
-      <i aria-hidden="true">→</i>
-      <article><span>2</span><strong>Evidence is retained</strong><small>Observations, attempts, validations, commits, and outcomes remain auditable.</small></article>
-      <i aria-hidden="true">→</i>
-      <article><span>3</span><strong>${escapeHtml(proposal.analysis_spec ? sentence(proposal.analysis_spec.profile) : 'No selected lens')}</strong><small>${escapeHtml(proposal.analysis_spec ? 'Reads evidence after the run. Cannot write world state.' : 'Raw evidence remains available without a theory-specific score.')}</small></article>
-    </div>`
-    $('#create-draft-network-status').textContent = proposal.analysis_spec
-      ? 'Selected analysis reads retained evidence after execution · it has no transition authority'
-      : 'No theory-specific analysis is attached · execution evidence is still retained'
-    return
-  }
   if (!visibleNodes.length || !window.CyberneticGraph) {
     graph.innerHTML = '<p class="create-result-no-graph">No configured graph items are available for this step.</p>'
     return
@@ -2436,7 +2425,7 @@ function renderCreateSimulation() {
       ? 'These questions can remain endogenous: the modeled people decide them during the run instead of you deciding them in advance.'
       : ready
         ? dependencyReviewPassed
-          ? 'The generated configuration passed a separate dependency-completeness review. Approve this exact retained configuration, then run it with the selected model.'
+          ? 'The generated configuration passed a separate dependency-completeness review. Approve this exact retained configuration, then either run it once or run it as an experiment across several run conditions.'
           : 'Direct edits passed typed compiler checks, but no semantic dependency review has run on this revision. You may inspect and approve it or ask the authoring model to review the revision.'
         : 'Unsupported material behavior or invalid configuration must be corrected before approval.'
   const showingResult = document.body.classList.contains('authored-result')

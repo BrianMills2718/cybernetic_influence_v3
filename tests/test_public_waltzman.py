@@ -68,8 +68,14 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     assert all(f'data-case-chapter="{index}"' in page for index in range(6))
     assert "authoredDraftWalkthroughStepCount - 1" in script
     assert "How can “${node.label}” enter the simulation?" in script
-    assert "No theory-specific analysis is attached" in script
-    assert "analysis-boundary-diagram" in script
+    # The configuration walkthrough shows the world that will execute. Analysis
+    # is a separate authority (ADR-014) that reads retained evidence after the
+    # run, so it must not appear as a step in this tour; it stays in the
+    # Analysis review section and attaches to a completed run.
+    assert "No theory-specific analysis is attached" not in script
+    assert "informational:true" not in script
+    assert 'data-general-review-stage="analysis"' in page
+    assert "create-add-waltzman-analysis" in page
     assert "${closureCounts.partial || 0} partial" in script
     assert "Not read by an exact contract" in script
     assert "Review causal-closure labels before approval" in script
@@ -90,7 +96,7 @@ def test_authoring_progress_uses_retained_backend_stages() -> None:
     assert "job.detail" in script
     assert "proposal attempt ${attempt}" in script
     assert "Still compiling the typed world" not in script
-    assert "assets/app.js?v=authoring29" in page
+    assert "assets/app.js?v=authoring30" in page
 
 
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
@@ -265,7 +271,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=authoring29",
+        "assets/app.js?v=authoring30",
     ]
     assert {
         "overview-view",
