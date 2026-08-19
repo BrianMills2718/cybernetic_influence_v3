@@ -1711,3 +1711,13 @@ tbody tr:last-child td { border-bottom: 0; }
   .analysis-trajectory-summary { grid-template-columns:1fr; }
   .analysis-trajectory-summary article > div { justify-content:space-between; }
 }
+
+/* Pre-registered analysis selection, shown in the Analysis review stage. */
+.create-analysis-lead { color: var(--muted); line-height: 1.6; margin: 0 0 14px; }
+.create-analysis-choice { align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; display: grid; gap: 12px; grid-template-columns: auto minmax(0, 1fr); margin-bottom: 10px; padding: 14px 16px; }
+.create-analysis-choice:hover { border-color: var(--accent); }
+.create-analysis-choice input { margin-top: 3px; }
+.create-analysis-choice span { display: grid; gap: 5px; }
+.create-analysis-choice strong { font-size: .95rem; }
+.create-analysis-choice small { color: var(--muted); line-height: 1.5; }
+.create-analysis-note { color: var(--muted); font-size: .82rem; margin: 12px 0 0; }

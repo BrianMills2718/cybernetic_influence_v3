@@ -2068,9 +2068,22 @@ function renderGeneralStageSummaries(proposal) {
   $('#create-run-list').innerHTML = proposal.schedule.length
     ? [...proposal.schedule].sort((left, right) => left.minute - right.minute).map((item, index) => `<article><span>Moment ${index + 1} · minute ${escapeHtml(item.minute)}</span><strong>${escapeHtml(sentence(item.moment_id))}</strong><p>${escapeHtml(item.description)}</p><small>${item.external_inject_representation_ids?.length ? `Introduces ${escapeHtml(item.external_inject_representation_ids.map(sentence).join(', '))}` : 'No external information injected at this moment'}</small></article>`).join('')
     : '<p class="create-stage-empty">No scheduled moments are configured.</p>'
-  $('#create-analysis-detail').innerHTML = proposal.analysis_spec
-    ? `<article><span>Post-run lens</span><strong>${escapeHtml(sentence(proposal.analysis_spec.profile))}</strong><p>${escapeHtml(proposal.analysis_spec.purpose)}</p><small>Reads retained evidence only · cannot affect execution</small></article>`
-    : `<article><span>No selected lens</span><strong>Raw retained evidence remains available</strong><p>${escapeHtml(proposal.analyst_question || 'No analysis question is required to execute this simulation.')}</p><small>You can attach an analysis after the run without changing the simulated world.</small></article>`
+  // Declaring the lens before the run is pre-registration: it fixes what will
+  // be measured before the trajectory is visible. The selection is carried on
+  // the proposal's `analyses`, which execution applies automatically once the
+  // run completes. It changes nothing about the run itself -- analysis still
+  // only reads retained evidence afterwards (ADR-014) -- and any further lens
+  // can still be attached to the finished run.
+  const chosenProfiles = new Set((proposal.analyses || []).map((item) => item.profile))
+  $('#create-analysis-detail').innerHTML = `
+    <p class="create-analysis-lead">Choose now what will be measured, before you can see how the run turns out. Selected lenses are applied automatically when the run completes; you can still attach others afterwards.</p>
+    ${ANALYSIS_LENS_CHOICES.map((choice) => {
+      const spec = builtInAnalysisSpec(choice.profile)
+      return `<label class="create-analysis-choice"><input type="checkbox" data-analysis-profile="${escapeHtml(choice.profile)}"${chosenProfiles.has(choice.profile) ? ' checked' : ''}><span><strong>${escapeHtml(choice.label)}</strong><small>${escapeHtml(spec.purpose)}</small></span></label>`
+    }).join('')}
+    <p class="create-analysis-note">${chosenProfiles.size
+      ? `${chosenProfiles.size} lens${chosenProfiles.size === 1 ? '' : 'es'} pre-registered · reads retained evidence only, cannot affect execution`
+      : 'No lens selected · the run still retains world changes, observations, attempts and evidence for later analysis'}</p>`
   $('#create-review-world-count').textContent = `${proposal.world_records.length} records`
   $('#create-review-people-count').textContent = `${proposal.people.length} people`
   $('#create-review-information-count').textContent = `${representations.length} items`
@@ -2640,6 +2653,16 @@ async function saveGeneralProposal() {
       if (!Number.isInteger(minute) || minute < 0) throw new Error('The scheduled minute must be a non-negative whole number.')
       moment.minute = minute
     }
+    // Pre-registered lenses ride on the proposal; generalProposalForSave
+    // carries `analyses` through to the V2 bundle, and execution applies them
+    // once the run completes.
+    const lensInputs = [...document.querySelectorAll('[data-analysis-profile]')]
+    if (lensInputs.length) {
+      proposal.analyses = lensInputs
+        .filter((input) => input.checked)
+        .map((input) => builtInAnalysisSpec(input.dataset.analysisProfile))
+        .filter(Boolean)
+    }
   } catch (error) {
     $('#create-general-status').textContent = error.message
     return
@@ -3121,6 +3144,12 @@ async function openSimulationReplay(runId) {
     simulationLoadingRunId = null
   }
 }
+
+const ANALYSIS_LENS_CHOICES = [
+  {profile:'waltzman_coordination_v1', label:'Waltzman · coordination environment'},
+  {profile:'levin_collective_competence_v1', label:'Levin · collective competence'},
+  {profile:'exact_outcome_v1', label:'Exact terminal outcome'},
+]
 
 function builtInAnalysisSpec(profile) {
   if (profile === 'waltzman_coordination_v1') return {
