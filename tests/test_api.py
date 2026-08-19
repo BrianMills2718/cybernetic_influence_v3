@@ -162,6 +162,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "codex/gpt-5.6-luna",
         "openrouter/openai/gpt-5.6-terra",
         "openrouter/openai/gpt-5.6-sol",
+        "openrouter/deepseek/deepseek-v4-flash",
     ]
     assert {item["id"] for item in coordination["arms"]} == {
         "baseline",
@@ -193,6 +194,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
         "codex/gpt-5.6-luna",
         "openrouter/openai/gpt-5.6-terra",
         "openrouter/openai/gpt-5.6-sol",
+        "openrouter/deepseek/deepseek-v4-flash",
     ]
     terra = config.json()["live_options"]["models"][0]
     assert terra["agent_reasoning_efforts"] == ["medium"]
