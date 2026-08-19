@@ -99,10 +99,14 @@ fi
 # Reloading is the destructive part: it kills whatever the service is executing.
 # Doing it when the host already serves this commit buys nothing and cost one
 # live run, so a no-op deploy must stay a no-op.
+# Compare full SHAs: the host's `git rev-parse --short` yields a different
+# abbreviation length than this machine's, so short-form equality silently
+# never matched and the no-op path never fired.
+full_commit="$(git rev-parse HEAD)"
 already="$(curl -fsS --max-time 10 "$PUBLIC_URL/api/config" 2>/dev/null \
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["build_commit"])' 2>/dev/null || true)"
-host_head="$(ssh -o BatchMode=yes "$HOST" 'cd ~/code/cybernetic_influence_v3 && git rev-parse --short HEAD' 2>/dev/null || true)"
-if [[ "$already" == "$commit" && "$host_head" == "$commit" ]]; then
+host_head="$(ssh -o BatchMode=yes "$HOST" 'cd ~/code/cybernetic_influence_v3 && git rev-parse HEAD' 2>/dev/null || true)"
+if [[ -n "$already" && "$full_commit" == "$already"* && "$host_head" == "$full_commit" ]]; then
   echo "host already serves $commit; nothing to deploy and no reason to reload"
   exit 0
 fi
