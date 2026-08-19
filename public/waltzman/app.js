@@ -3214,7 +3214,12 @@ function renderResultAnalysisLenses(result) {
       const findings = analysis?.findings || []
       const order = ['coordination_pattern_summary', 'information_exposure_topology', 'trust_structure_proxies', 'perceived_risk_signals', 'coordination_dependencies', 'coordination_readiness_signals', 'terminal_outcome', 'retained_evidence_coverage']
       const orderedFindings = [...findings].sort((left, right) => order.indexOf(left.construct_id) - order.indexOf(right.construct_id))
-      const title = spec.profile === 'waltzman_coordination_v1' ? 'Waltzman coordination lens' : 'Exact outcome readout'
+      const lensTitles = {
+        waltzman_coordination_v1: 'Waltzman coordination lens',
+        levin_collective_competence_v1: 'Levin coordination lens',
+        exact_outcome_v1: 'Exact outcome readout',
+      }
+      const title = lensTitles[spec.profile] || sentence(spec.profile)
       const coverage = analysis?.coverage_status === 'supported' ? 'Evidence available' : sentence(analysis?.coverage_status || 'attached')
       return `<article class="analysis-lens"><header><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(coverage)}</span></div><p>${escapeHtml(spec.purpose)}</p></header>${orderedFindings.length ? `<section class="analysis-findings">${orderedFindings.map(renderAnalysisFinding).join('')}</section>` : '<p>No supported findings were produced.</p>'}<details class="analysis-lens-method"><summary>Method, uncertainty, and scope</summary><p><strong>Aggregation</strong>${escapeHtml(spec.aggregation)}</p><p><strong>Uncertainty</strong>${escapeHtml(spec.uncertainty)}</p><ul>${(spec.construct_definitions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}${(spec.limitations || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></details><button class="quiet-button" type="button" data-remove-analysis="${escapeHtml(spec.analysis_id)}">Remove lens</button></article>`
     }).join('')
