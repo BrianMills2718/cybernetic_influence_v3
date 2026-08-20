@@ -2020,7 +2020,10 @@ function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
   window.CyberneticGraph.render(graph, {
     nodes:visibleNodes, edges:visibleEdges, legendNodes:visibleNodes, legendEdges:visibleEdges,
     boundaries:[], world:null, trajectory:{nodes:[], edges:[]}, graphDiagnostics:{nodeClassification:{}, edgeClassification:{}, warnings:[]},
-    viewMode:'causal', event:isFinalStep ? null : {focus_ids:newThisStep}, initialRevision:authoringDraft?.revision || 0, title:step.title, subtitle:isFinalStep ? 'the complete configured world' : 'highlighted items are what this step adds', showLegend:true, showMiniMap:false,
+    // focus_edges must be present: the renderer guards a null event but then
+    // reads event.focus_edges.includes(...) unguarded, so an event object
+    // missing it throws during edge classification.
+    viewMode:'causal', event:isFinalStep ? null : {focus_ids:newThisStep, focus_edges:[]}, initialRevision:authoringDraft?.revision || 0, title:step.title, subtitle:isFinalStep ? 'the complete configured world' : 'highlighted items are what this step adds', showLegend:true, showMiniMap:false,
     selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
       const item = projection.nodes.find((candidate) => candidate.id === nodeId)
