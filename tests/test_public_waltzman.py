@@ -96,7 +96,7 @@ def test_authoring_progress_uses_retained_backend_stages() -> None:
     assert "job.detail" in script
     assert "proposal attempt ${attempt}" in script
     assert "Still compiling the typed world" not in script
-    assert "assets/app.js?v=authoring31" in page
+    assert "assets/app.js?v=authoring32" in page
 
 
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
@@ -271,7 +271,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=authoring31",
+        "assets/app.js?v=authoring32",
     ]
     assert {
         "overview-view",
@@ -556,7 +556,13 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
     assert "Causal moments" in script
     assert "Retained model decisions" in script
     assert "function resetAuthoringWorkspace()" in script
-    assert "if (button.dataset.view === 'create') resetAuthoringWorkspace()" in script
+    assert "resetAuthoringWorkspace()" in script
+    # Entering the create view must also re-check whether an authoring route is
+    # certified. runtimeConfig is read once at page load and the builder's
+    # controls are disabled from it, so without this a tab opened while no route
+    # was available keeps both actions dead until a manual reload.
+    assert "async function refreshAuthoringAvailability()" in script
+    assert "void refreshAuthoringAvailability()" in script
     assert "LOCAL_SIMULATION_IDS_KEY" in script
     assert "rememberLocalSimulationId(run.run_id)" in script
 

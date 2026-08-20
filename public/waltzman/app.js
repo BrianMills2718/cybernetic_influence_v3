@@ -1372,7 +1372,15 @@ function configureControls() {
   $('#run-select').onchange = (event) => openRun(event.target.value)
   all('[data-view]').forEach((button) => {
     button.onclick = () => {
-      if (button.dataset.view === 'create') resetAuthoringWorkspace()
+      if (button.dataset.view === 'create') {
+        resetAuthoringWorkspace()
+        // runtimeConfig is fetched once at page load, and the builder's
+        // controls are disabled from it. A tab opened while no authoring route
+        // was certified therefore kept both actions dead forever, with no way
+        // back except a manual reload -- which reads exactly like a button that
+        // does not work. Re-check on entry so the view recovers by itself.
+        void refreshAuthoringAvailability()
+      }
       if (button.dataset.view === 'case') caseStudyStep = 0
       state.view = button.dataset.view
       renderView()
@@ -2279,6 +2287,18 @@ function setCreateFlow(step) {
   })
 }
 
+async function refreshAuthoringAvailability() {
+  const before = authoringModel()?.model || null
+  try {
+    runtimeConfig = await apiRequest('api/config')
+  } catch (error) {
+    console.warn(`could not re-check the authoring route: ${error.message}`)
+    return
+  }
+  const after = authoringModel()?.model || null
+  if (after !== before && state.view === 'create') renderCreateSimulation()
+}
+
 function renderCreateSimulation() {
   const runStatus = $('#create-run-status')
   const review = $('#create-review')
@@ -2484,22 +2504,42 @@ function renderAuthoringChat() {
   $('#create-chat').scrollTop = $('#create-chat').scrollHeight
 }
 
+// Composing a full world takes minutes -- measured at 111s and 177s on
+// completed runs. Without elapsed time the same sentence sits unchanged for
+// three minutes and reads as a hung button, which is how this was first
+// reported. Showing the clock costs nothing and makes waiting legible.
+let authoringStartedAt = 0
+
 function authoringProgressText(job) {
   const label = job.phase_label || 'Building the simulation'
   const attempt = Number(job.attempt || 0)
   const attemptLabel = attempt > 1 ? ` · proposal attempt ${attempt}` : ''
   const detail = String(job.detail || '').trim()
-  return `${label}${attemptLabel}${detail ? ` — ${detail}` : ''}`
+  let elapsed = ''
+  if (authoringStartedAt) {
+    const seconds = Math.round((Date.now() - authoringStartedAt) / 1000)
+    elapsed = ` · ${seconds < 90 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`} elapsed, typically 2–3 minutes`
+  }
+  return `${label}${attemptLabel}${detail ? ` — ${detail}` : ''}${elapsed}`
 }
 
 async function advanceAuthoringDraft(message, mode = 'configure') {
+  authoringStartedAt = Date.now()
   try {
     runtimeConfig = await apiRequest('api/config')
   } catch (error) {
     console.warn(`config refresh before authoring failed, using last known config: ${error.message}`)
   }
   const author = authoringModel()
-  if (!author) throw new Error('The structured authoring model is unavailable')
+  if (!author) {
+    // The controls are disabled from a config read at page load, so a stale tab
+    // can reach here with no route even though one is now certified. Say what
+    // to do rather than leaving a dead button.
+    throw new Error(
+      'No authoring route is currently certified. Reload this page to pick up '
+      + 'the current model configuration, then try again.'
+    )
+  }
   if (!authoringDraft) authoringDraft = await apiRequest('api/authoring/drafts', {method:'POST'})
   const messageId = crypto.randomUUID()
   const response = await apiRequest(`api/authoring/drafts/${encodeURIComponent(authoringDraft.draft_id)}/messages`, {
