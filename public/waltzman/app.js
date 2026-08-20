@@ -1350,6 +1350,8 @@ function resetAuthoringWorkspace() {
   $('#create-run-provenance').hidden = true
   $('#create-result').hidden = true
   $('#create-experiment-panel').hidden = true
+  $('#create-run').textContent = 'Run simulation'
+  authoredRunStartedAt = 0
   $('.create-composer').hidden = false
   $('.create-hero .case-label').textContent = 'Create a simulation'
   if (authoredRunPollHandle) window.clearTimeout(authoredRunPollHandle)
@@ -3479,7 +3481,7 @@ function renderAuthoredResult(result) {
   $('#create-run-evidence').hidden = false
   $('#create-edit-configuration').hidden = state.view === 'simulations'
   $('#create-stop').hidden = true
-  $('#create-run').disabled = false
+  $('#create-run').disabled = false; $('#create-run').textContent = 'Run simulation'
 }
 
 async function pollAuthoredRun(runId) {
@@ -3494,7 +3496,7 @@ async function pollAuthoredRun(runId) {
       return
     }
     $('#create-run-heading').textContent = `Simulation ${sentence(run.status)}`
-    $('#create-run-detail').textContent = `${Number(run.model_calls || 0)} model decisions retained. The world is still advancing.`
+    $('#create-run-detail').textContent = `${Number(run.model_calls || 0)} model decisions retained. The world is still advancing.${authoredRunElapsedText()}`
     if (['failed', 'interrupted', 'stopped'].includes(run.status)) {
       throw new Error(authoredRunFailureMessage(run.error || `simulation ${run.status}`))
     }
@@ -3510,7 +3512,7 @@ async function pollAuthoredRun(runId) {
     $('#create-run-heading').textContent = 'Simulation failed visibly'
     $('#create-run-detail').textContent = authoredRunFailureMessage(error)
     $('#create-stop').hidden = true
-    $('#create-run').disabled = false
+    $('#create-run').disabled = false; $('#create-run').textContent = 'Run simulation'
   }
 }
 
@@ -3527,12 +3529,30 @@ async function stopAuthoredSimulation() {
   }
 }
 
+// A live run takes minutes -- 535s end to end on a four-person world -- so the
+// call count alone does not tell the reader whether to keep waiting.
+let authoredRunStartedAt = 0
+
+function authoredRunElapsedText() {
+  if (!authoredRunStartedAt) return ''
+  const seconds = Math.round((Date.now() - authoredRunStartedAt) / 1000)
+  const shown = seconds < 90 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+  return ` · ${shown} elapsed, typically 5–10 minutes`
+}
+
 async function runAuthoredSimulation() {
   if (!authoringDraft || authoringDraft.status !== 'approved') return
+  authoredRunStartedAt = Date.now()
+  // The Run control sits near the bottom of a tall review page and the status
+  // block unhides below it, so without scrolling nothing on screen changed when
+  // it was clicked -- the only indicator was off-screen for a run that takes
+  // minutes. Change the button itself, then bring the status into view.
   $('#create-run').disabled = true
+  $('#create-run').textContent = 'Running…'
   $('#create-run-status').hidden = false
   $('#create-run-heading').textContent = 'Starting the authored simulation…'
   $('#create-run-detail').textContent = 'Validating the approved configuration and selected model route.'
+  $('#create-run-status').scrollIntoView({behavior:'smooth', block:'center'})
   $('#create-run-provenance').hidden = true
   $('#create-result').hidden = true
   authoredResult = null
@@ -3557,7 +3577,7 @@ async function runAuthoredSimulation() {
   } catch (error) {
     $('#create-run-heading').textContent = 'Simulation did not start'
     $('#create-run-detail').textContent = error.message
-    $('#create-run').disabled = false
+    $('#create-run').disabled = false; $('#create-run').textContent = 'Run simulation'
   }
 }
 
