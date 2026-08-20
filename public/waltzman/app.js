@@ -1971,17 +1971,47 @@ function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
   authoredDraftWalkthroughStepCount = steps.length
   authoredDraftWalkthroughStep = Math.max(0, Math.min(authoredDraftWalkthroughStep, steps.length - 1))
   const step = steps[authoredDraftWalkthroughStep]
-  const visibleNodes = projection.nodes.filter((item) => step.nodeIds.has(item.id))
+
+  // Each step used to render only its own slice, so nothing accumulated: the
+  // whole world was never on screen, and consecutive steps of the same kind
+  // looked like unrelated fragments rather than one world being assembled.
+  // Steps are cumulative now -- everything introduced so far stays visible,
+  // this step's additions are highlighted through the graph's focus_ids, and
+  // the final step shows the complete configured world including anything no
+  // individual step happened to introduce.
+  const isFinalStep = authoredDraftWalkthroughStep === steps.length - 1
+  const shownNodeIds = new Set()
+  const shownEdgeKinds = new Set()
+  for (let index = 0; index <= authoredDraftWalkthroughStep; index += 1) {
+    for (const id of steps[index].nodeIds) shownNodeIds.add(id)
+    for (const kind of steps[index].edgeKinds) shownEdgeKinds.add(kind)
+  }
+  if (isFinalStep) {
+    for (const item of projection.nodes) shownNodeIds.add(item.id)
+    for (const item of projection.edges) shownEdgeKinds.add(item.kind)
+  }
+  const newThisStep = [...step.nodeIds]
+  const visibleNodes = projection.nodes.filter((item) => shownNodeIds.has(item.id))
   const visibleIds = new Set(visibleNodes.map((item) => item.id))
-  const visibleEdges = projection.edges.filter((item) => step.edgeKinds.has(item.kind) && visibleIds.has(item.source) && visibleIds.has(item.target))
+  const visibleEdges = projection.edges.filter((item) => shownEdgeKinds.has(item.kind) && visibleIds.has(item.source) && visibleIds.has(item.target))
   $('#create-draft-walkthrough-progress').textContent = `Step ${authoredDraftWalkthroughStep + 1} of ${steps.length}`
-  $('#create-draft-walkthrough-kind').textContent = step.kind
+  // Several steps can share a kind -- one per transition system, one per pair
+  // of exact contracts -- and with only the kind shown they read as the same
+  // screen repeating with different content. Number them within their kind so
+  // the sequence is legible.
+  const sameKind = steps.filter((item) => item.kind === step.kind)
+  const kindIndex = sameKind.indexOf(step) + 1
+  $('#create-draft-walkthrough-kind').textContent = sameKind.length > 1
+    ? `${step.kind} ${kindIndex} of ${sameKind.length}`
+    : step.kind
   $('#create-draft-walkthrough-title').textContent = step.title
   $('#create-draft-walkthrough-summary').textContent = step.summary
   $('#create-draft-walkthrough-previous').disabled = authoredDraftWalkthroughStep === 0
   $('#create-draft-walkthrough-next').textContent = authoredDraftWalkthroughStep === steps.length - 1 ? 'Review and approve ↓' : 'Next →'
   $('#create-draft-walkthrough-selection').textContent = 'Select a visible item or path to inspect its configured meaning.'
-  $('#create-draft-network-status').textContent = `${visibleNodes.length} configured items · ${visibleEdges.length} configured paths · no runtime event is implied`
+  $('#create-draft-network-status').textContent = isFinalStep
+    ? `The complete configured world · ${visibleNodes.length} items · ${visibleEdges.length} paths · no runtime event is implied`
+    : `${visibleNodes.length} of ${projection.nodes.length} configured items so far · ${newThisStep.length} added at this step (highlighted) · no runtime event is implied`
   const graph = $('#create-draft-network-graph')
   if (!visibleNodes.length || !window.CyberneticGraph) {
     graph.innerHTML = '<p class="create-result-no-graph">No configured graph items are available for this step.</p>'
@@ -1990,7 +2020,7 @@ function renderGeneralDraftWalkthrough(proposal, compiledGraph = null) {
   window.CyberneticGraph.render(graph, {
     nodes:visibleNodes, edges:visibleEdges, legendNodes:visibleNodes, legendEdges:visibleEdges,
     boundaries:[], world:null, trajectory:{nodes:[], edges:[]}, graphDiagnostics:{nodeClassification:{}, edgeClassification:{}, warnings:[]},
-    viewMode:'causal', event:null, initialRevision:authoringDraft?.revision || 0, title:step.title, subtitle:'configured before execution', showLegend:true, showMiniMap:false,
+    viewMode:'causal', event:isFinalStep ? null : {focus_ids:newThisStep}, initialRevision:authoringDraft?.revision || 0, title:step.title, subtitle:isFinalStep ? 'the complete configured world' : 'highlighted items are what this step adds', showLegend:true, showMiniMap:false,
     selectedNodeId:null, selectedEdgeId:null, boundary:null, collapsedBoundaryId:null,
     onSelectNode:(nodeId) => {
       const item = projection.nodes.find((candidate) => candidate.id === nodeId)
