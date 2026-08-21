@@ -141,6 +141,7 @@ make check        # typecheck (mypy --strict) + test (pytest -q tests) + ui-buil
 make test          # pytest -q tests
 make typecheck     # mypy --strict
 make ui-smoke       # scripts/verify_demo_ui.py against a running server
+make ui-visibility  # every primary control is inside the viewport, at ten widths
 
 # Worktree and session lifecycle (governed-repo tooling)
 make worktree BRANCH=... TASK="..." SESSION_GOAL="..." SESSION_PHASE="..." [PLAN=N]

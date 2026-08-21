@@ -4,7 +4,7 @@ LLM_CLIENT_ROOT ?= ../active/llm_client
 HOST ?= 127.0.0.1
 PORT ?= 8620
 
-.PHONY: install ui-install ui-build ui-smoke test typecheck deploy-check check serve
+.PHONY: install ui-install ui-build ui-smoke ui-visibility test typecheck deploy-check check serve
 
 install: ui-install
 	python3 -m venv $(VENV) || virtualenv --clear $(VENV)
@@ -24,6 +24,13 @@ ui-build:
 
 ui-smoke:
 	$(PYTHON) scripts/verify_demo_ui.py --base-url http://$(HOST):$(PORT)
+
+# Fails when a primary control is not where a human can see or reach it.
+# Exists because three defects of that exact shape shipped in three days, each
+# found by the operator: every one satisfied "exists and is not hidden", which
+# is what automation asserts and is not what matters.
+ui-visibility:
+	$(PYTHON) scripts/check_primary_controls_visible.py --base-url http://$(HOST):$(PORT)
 
 test:
 	$(PYTHON) -m pytest -q tests

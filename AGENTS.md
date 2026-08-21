@@ -4,7 +4,7 @@
 <!-- generated_by: scripts/meta/render_agents_md.py -->
 <!-- canonical_claude: CLAUDE.md -->
 <!-- canonical_relationships: scripts/relationships.yaml -->
-<!-- canonical_relationships_sha256: a7a6badb84a5 -->
+<!-- canonical_relationships_sha256: 926e29ad529a -->
 <!-- sync_check: python scripts/meta/check_agents_sync.py --check -->
 
 This file is a generated Codex-oriented projection of repo governance.
@@ -33,6 +33,7 @@ make check        # typecheck (mypy --strict) + test (pytest -q tests) + ui-buil
 make test          # pytest -q tests
 make typecheck     # mypy --strict
 make ui-smoke       # scripts/verify_demo_ui.py against a running server
+make ui-visibility  # every primary control is inside the viewport, at ten widths
 
 # Worktree and session lifecycle (governed-repo tooling)
 make worktree BRANCH=... TASK="..." SESSION_GOAL="..." SESSION_PHASE="..." [PLAN=N]
