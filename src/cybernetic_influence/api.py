@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
 import re
@@ -2510,6 +2512,33 @@ def _scenario_preview(
     }
 
 
+_INLINE_SCRIPT = re.compile(r"<script>(.*?)</script>", re.DOTALL)
+
+
+def _inline_script_csp_hashes(index_html: Path) -> str:
+    """CSP source expressions for the inline scripts the served page contains.
+
+    The page carries one inline script, the redirect that makes the shared link
+    work without its trailing slash. Under `script-src 'self'` the browser
+    refuses to run it, which is how that fix silently did nothing the first time
+    it was deployed. Allowing it by hash keeps the policy exact -- no
+    'unsafe-inline' -- and deriving the hash from the file that is actually
+    served means editing the script cannot leave the policy behind.
+
+    Returns an empty string when the page has no inline script, so the policy is
+    unchanged for surfaces that do not use one.
+    """
+    try:
+        markup = index_html.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    digests = [
+        base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii")
+        for body in _INLINE_SCRIPT.findall(markup)
+    ]
+    return "".join(f" 'sha256-{digest}'" for digest in digests)
+
+
 def create_app(
     web_root: Path | None = None,
     run_root: Path | None = None,
@@ -2524,6 +2553,7 @@ def create_app(
     """Create the visibility-safe API without any legacy workbench."""
     app = FastAPI(title="Cybernetic Influence Simulator", version=__version__)
     root = web_root or Path(__file__).resolve().parents[2] / "web"
+    inline_script_hashes = _inline_script_csp_hashes(root / "index.html")
     configured_run_root = os.getenv("CYBERNETIC_INFLUENCE_RUNS_DIR")
     runs = RunStore(
         run_root
@@ -2909,7 +2939,7 @@ def create_app(
             else "style-src 'self'; "
         )
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self'; " + style_policy +
+            f"default-src 'self'; script-src 'self'{inline_script_hashes}; " + style_policy +
             "connect-src 'self'; img-src 'self' data:; object-src 'none'; "
             "base-uri 'none'; frame-ancestors 'none'"
         )

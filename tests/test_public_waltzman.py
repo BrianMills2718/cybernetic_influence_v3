@@ -790,3 +790,43 @@ def test_public_launch_agent_runs_the_typed_simulator() -> None:
     assert "__CERT_CODEX_TERRA__" in plist
     assert "__CERT_COORDINATION_CODEX_TERRA__" in plist
     assert "__PUBLIC_RUN_ROOT__" in plist
+
+
+def test_inline_boot_script_is_allowed_by_the_content_security_policy(
+    tmp_path: Path,
+) -> None:
+    """The trailing-slash redirect must actually be allowed to run.
+
+    The page carries one inline script: the redirect that makes the shared link
+    work when someone opens it without a trailing slash. Deployed under
+    `script-src 'self'` the browser refused to execute it, so the fix was live
+    and did nothing, and the public link stayed broken while every check passed.
+
+    The policy must therefore carry the hash of the script the page actually
+    contains -- computed from the file, so editing the script cannot leave the
+    policy behind -- and must still refuse blanket inline execution.
+    """
+    import base64
+    import hashlib
+    import re
+
+    markup = (PUBLIC_ROOT / "index.html").read_text(encoding="utf-8")
+    bodies = re.compile(r"<script>(.*?)</script>", re.DOTALL).findall(markup)
+    assert bodies, "the page no longer has an inline script; drop this test or the CSP hash"
+
+    client = TestClient(
+        create_app(
+            web_root=PUBLIC_ROOT,
+            run_root=tmp_path / "runs",
+            allow_inline_styles=True,
+        )
+    )
+    policy = client.get("/").headers["content-security-policy"]
+
+    for body in bodies:
+        digest = base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode()
+        assert f"'sha256-{digest}'" in policy, "an inline script the page serves is not allowed"
+
+    assert "'unsafe-inline'" not in policy.split("style-src")[0], (
+        "script-src must not fall back to blanket inline execution"
+    )
