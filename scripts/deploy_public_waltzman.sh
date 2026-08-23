@@ -11,6 +11,11 @@ set -euo pipefail
 HOST="${WALTZMAN_DEPLOY_HOST:-100.109.41.60}"
 LABEL="com.cybernetic-influence.waltzman-public"
 PUBLIC_URL="${WALTZMAN_PUBLIC_URL:-https://brian-mac-mini.tail9c321e.ts.net/waltzman}"
+# The trailing slash is not cosmetic. The page references its assets relatively,
+# so a browser resolving them from ".../waltzman" drops the last segment and asks
+# for /assets/*, which belongs to another service and 404s -- the visitor gets an
+# unstyled page with no working navigation. Share PAGE_URL, never PUBLIC_URL.
+PAGE_URL="$PUBLIC_URL/"
 FORCE=0
 [[ "${1:-}" == "--force" ]] && FORCE=1
 
@@ -126,3 +131,14 @@ if [[ "$reported" != "$commit" ]]; then
   exit 3
 fi
 echo "deployed and serving $reported"
+
+# A 200 from the page and a working API both pass while the page is visibly
+# broken, because neither resolves the page's own asset references. This does,
+# against the exact URL a reader will be given.
+echo "checking the shareable URL loads its assets..."
+if ! python3 "$(dirname "$0")/check_public_assets.py" "$PAGE_URL"; then
+  echo "the shareable URL is serving a broken page" >&2
+  exit 5
+fi
+echo
+echo "share this URL, with the trailing slash: $PAGE_URL"

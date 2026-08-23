@@ -31,7 +31,7 @@ surfaces:
       Separately-deployed public-facing Waltzman-analysis demo: case
       walkthrough, comprehension-tested narrative, and the Experimentation UI.
     entrypoints:
-      production: https://brian-mac-mini.tail9c321e.ts.net/waltzman
+      production: https://brian-mac-mini.tail9c321e.ts.net/waltzman/
     run_commands:
       deploy: scripts/deploy_public_waltzman.sh
       build_dataset: python scripts/build_public_waltzman_dataset.py

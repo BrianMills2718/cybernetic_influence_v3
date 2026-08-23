@@ -2,6 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>
+    // Must stay the first script in the document. This page is mounted behind a
+    // path prefix and references its assets relatively, so a visitor who opens
+    // ".../waltzman" (no trailing slash) makes the browser resolve every asset
+    // one level too high: the stylesheet and this application's script 404, and
+    // the page renders unstyled with no working navigation. Nothing server-side
+    // can tell the two cases apart, because the proxy strips the prefix before
+    // the request arrives. Redirecting here is what makes the shared link work
+    // whichever form someone pastes.
+    (function () {
+      var path = location.pathname
+      if (path.slice(-1) !== '/' && !/\.[a-zA-Z0-9]+$/.test(path)) {
+        location.replace(path + '/' + location.search + location.hash)
+      }
+    })()
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Build and explore sociotechnical simulations of influence and coordination.">
   <link rel="icon" href="data:,">
