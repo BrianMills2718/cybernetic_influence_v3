@@ -26,62 +26,14 @@ commit="$(git rev-parse --short HEAD)"
 echo "deploying $commit from $repo_root"
 
 # --- the gate: is anything running that a restart would destroy? -------------
+# The detection logic lives in scripts/host_busy_check.py so the deploy path and
+# the certification-refresh path cannot drift apart; the copy that drifts is the
+# one that eats a live run. Piped over stdin rather than invoked from the host's
+# checkout, so the gate is always this commit's version, not the deployed one.
 echo "checking for work in flight on the host..."
-# A simulation run persists its status, so those are detected exactly. An
-# authoring job does NOT: while it is generating, its draft on disk still reads
-# status "draft" with no attempts, because the job lives in the service
-# process. Recent draft mtime is the only disk-visible signal, so that half is
-# a deliberate over-approximation -- it would rather block a safe deploy than
-# silently destroy a 15-minute authoring job again.
-running="$(ssh -o BatchMode=yes "$HOST" '
-  store="$HOME/Library/Application Support/cybernetic-influence-waltzman"
-  python3 - "$store" <<PY
-import json, os, sys, time
-store = sys.argv[1]
-busy = []
-now = time.time()
-
-runs = os.path.join(store, "runs")
-if os.path.isdir(runs):
-    for name in os.listdir(runs):
-        if not name.endswith(".json"):
-            continue
-        path = os.path.join(runs, name)
-        if now - os.path.getmtime(path) > 3600:
-            continue
-        try:
-            doc = json.load(open(path))
-        except Exception:
-            continue
-        status = doc.get("status")
-        if status in ("running", "narrating", "pause_requested"):
-            busy.append("run " + name + " is " + str(status))
-
-drafts = os.path.join(store, "authoring_drafts")
-if os.path.isdir(drafts):
-    for name in os.listdir(drafts):
-        if not name.endswith(".json"):
-            continue
-        path = os.path.join(drafts, name)
-        age = now - os.path.getmtime(path)
-        if age > 1200:
-            continue
-        try:
-            doc = json.load(open(path))
-        except Exception:
-            continue
-        # A draft that has resolved -- either way -- is not in flight: it moves
-        # off "draft" status and records its attempts. A recently touched draft
-        # still sitting at "draft" with nothing recorded is the one that is
-        # probably mid-generation in the service process.
-        resolved = doc.get("status") != "draft" or (doc.get("attempts") or [])
-        if not doc.get("proposal") and not resolved:
-            busy.append(
-                "draft " + name + " touched " + str(int(age)) + "s ago, still"
-                " status=draft with no attempts (probable authoring job in flight)"
-            )
-print("\n".join(busy))
-PY' || true)"
+running="$(ssh -o BatchMode=yes "$HOST" \
+  'python3 - "$HOME/Library/Application Support/cybernetic-influence-waltzman"' \
+  < "$(dirname "$0")/host_busy_check.py" || true)"
 
 if [[ -n "$running" ]]; then
   echo "WORK IN FLIGHT on the deployment:" >&2

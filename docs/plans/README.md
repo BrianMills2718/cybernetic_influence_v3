@@ -12,6 +12,16 @@ updated: 2026-08-16
 
 ## Active execution
 
+[Slice 32: The authoring route stays certified without a human](032-authoring-route-stays-certified.md)
+closes the gap that has repeatedly taken the public Create surface dark.
+Producing a route certification was automated; installing one was not, so the
+ids had to be pasted into the service plist by hand and the service restarted by
+hand. Nothing reported a problem until the button was already disabled. The
+refresh now certifies when the margin is short, installs it, restarts, and
+re-checks that the margin grew — preferring the free subscription route, and
+falling back to the metered one only inside two days rather than going dark. It
+shares the deploy path's in-flight-work gate rather than keeping a second copy.
+
 [Slice 31: Make the flagship the run that exercises the paper's framework](031-cso-stabilization-flagship.md)
 points the public case study at `run_5010214f2466`, the adaptive-CSO
 stabilization run, instead of the four-way resource fork. Two reviews in fresh

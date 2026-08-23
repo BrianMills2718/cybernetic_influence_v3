@@ -4,7 +4,7 @@ LLM_CLIENT_ROOT ?= ../active/llm_client
 HOST ?= 127.0.0.1
 PORT ?= 8620
 
-.PHONY: install ui-install ui-build ui-smoke ui-visibility authoring-route-health test typecheck deploy-check check serve
+.PHONY: install ui-install ui-build ui-smoke ui-visibility authoring-route-health authoring-route-refresh test typecheck deploy-check check serve
 
 install: ui-install
 	python3 -m venv $(VENV) || virtualenv --clear $(VENV)
@@ -36,6 +36,12 @@ ui-visibility:
 # environment, so it is normally run on the deployment host.
 authoring-route-health:
 	$(PYTHON) scripts/check_authoring_route_health.py
+
+# Re-certifies and installs the authoring route when its margin is short, so a
+# lapsed certification never has to be noticed as a disabled button. Reads the
+# service environment from the launchd plist itself; deployment host only.
+authoring-route-refresh:
+	$(PYTHON) scripts/refresh_authoring_certification.py $(REFRESH_ARGS)
 
 test:
 	$(PYTHON) -m pytest -q tests
