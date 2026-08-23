@@ -31,6 +31,8 @@ import re
 import shutil
 import subprocess
 import sys
+import time
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -45,6 +47,7 @@ VENV_PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
 FREE_ROUTE = "luna-authoring"
 PAID_ROUTE = "sol-authoring"
 PLIST_BACKUPS_KEPT = 5
+BOOTOUT_SETTLE_SECONDS = 3
 CERT_LINE = re.compile(r"^(?P<key>CYBERNETIC_INFLUENCE_CERT_[A-Z0-9_]+)=(?P<ids>[\w,]+)$")
 
 
@@ -129,17 +132,61 @@ def install(assignments: dict[str, str]) -> None:
         log(f"pruned {len(stale)} old certification backup(s)")
 
 
+def service_port() -> int:
+    """The port the service is configured to serve on, from its own plist."""
+    with plist_path().open("rb") as handle:
+        document = plistlib.load(handle)
+    args = [str(item) for item in document.get("ProgramArguments", [])]
+    if "--port" in args:
+        return int(args[args.index("--port") + 1])
+    raise ValueError("no --port in the service plist ProgramArguments")
+
+
+def wait_until_serving(port: int, timeout_seconds: int = 60) -> bool:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as response:
+                if response.status == 200:
+                    return True
+        except Exception:
+            pass
+        time.sleep(2)
+    return False
+
+
 def restart() -> None:
-    """A changed plist needs bootout+bootstrap; kickstart keeps the old one loaded."""
+    """Reload the service and prove it came back.
+
+    A changed plist needs bootout+bootstrap; kickstart keeps the loaded plist,
+    so it would restart the service with the old certification ids. The settle
+    time between the two is not optional: bootstrapping while launchd is still
+    tearing the job down fails with "Input/output error", which on 2026-08-23
+    left the public surface down for four minutes because nothing checked.
+
+    Bootstrap returning non-zero is therefore not trusted either way -- the only
+    evidence that counts is the service answering on its port.
+    """
     uid = os.getuid()
     target = f"gui/{uid}"
-    log("restarting the service (bootout + bootstrap)")
+    port = service_port()
+    log("restarting the service (bootout, settle, bootstrap)")
     subprocess.run(["launchctl", "bootout", f"{target}/{SERVICE_LABEL}"], capture_output=True)
+    time.sleep(BOOTOUT_SETTLE_SECONDS)
     completed = subprocess.run(
         ["launchctl", "bootstrap", target, str(plist_path())], capture_output=True, text=True
     )
     if completed.returncode != 0:
-        raise RuntimeError(f"bootstrap failed: {completed.stderr.strip() or completed.stdout.strip()}")
+        # Can mean "already loaded", which is fine, or a real failure, which is
+        # not. The port check below is what distinguishes them.
+        log(f"bootstrap reported: {(completed.stderr or completed.stdout).strip() or completed.returncode}")
+
+    if not wait_until_serving(port):
+        raise RuntimeError(
+            f"the service is not answering on port {port} after the restart; "
+            "the public surface is DOWN and needs attention now"
+        )
+    log(f"service is answering on port {port}")
 
 
 def main() -> int:
