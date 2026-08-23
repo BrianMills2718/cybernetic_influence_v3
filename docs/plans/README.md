@@ -12,6 +12,18 @@ updated: 2026-08-16
 
 ## Active execution
 
+[Slice 31: Make the flagship the run that exercises the paper's framework](031-cso-stabilization-flagship.md)
+points the public case study at `run_5010214f2466`, the adaptive-CSO
+stabilization run, instead of the four-way resource fork. Two reviews in fresh
+contexts converged that the fork was the weakest of three available results: it
+varies a package delivered identically to all 26 officials, which is the
+broadcast logic the source paper defines adaptive interaction against, and its
+four arms end identically. The stabilization run instead moves 26 support → 20
+conditional → 26 support with no false claim in it, and carries a
+detect/diagnose/stabilize chain that implements the paper's section 6 by name.
+Public projection only: no runtime, scenario, prompt or execution change, and
+no new model calls.
+
 [Slice 30: Unify the two frontends, add Experimentation, add a real Levin lens](030-unified-frontend-experimentation-and-levin-analysis.md)
 audited `web/` (the older, general surface) against `public/waltzman/` (the
 actively-developed one) and found two real, specifiable gaps — RunSpec-level
