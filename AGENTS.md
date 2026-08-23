@@ -34,6 +34,7 @@ make test          # pytest -q tests
 make typecheck     # mypy --strict
 make ui-smoke       # scripts/verify_demo_ui.py against a running server
 make ui-visibility  # every primary control is inside the viewport, at ten widths
+make authoring-route-health  # days left before the authoring certification lapses
 
 # Worktree and session lifecycle (governed-repo tooling)
 make worktree BRANCH=... TASK="..." SESSION_GOAL="..." SESSION_PHASE="..." [PLAN=N]

@@ -4,7 +4,7 @@ LLM_CLIENT_ROOT ?= ../active/llm_client
 HOST ?= 127.0.0.1
 PORT ?= 8620
 
-.PHONY: install ui-install ui-build ui-smoke ui-visibility test typecheck deploy-check check serve
+.PHONY: install ui-install ui-build ui-smoke ui-visibility authoring-route-health test typecheck deploy-check check serve
 
 install: ui-install
 	python3 -m venv $(VENV) || virtualenv --clear $(VENV)
@@ -31,6 +31,11 @@ ui-smoke:
 # is what automation asserts and is not what matters.
 ui-visibility:
 	$(PYTHON) scripts/check_primary_controls_visible.py --base-url http://$(HOST):$(PORT)
+
+# Warns before the authoring route's certification lapses. Needs the service
+# environment, so it is normally run on the deployment host.
+authoring-route-health:
+	$(PYTHON) scripts/check_authoring_route_health.py
 
 test:
 	$(PYTHON) -m pytest -q tests
