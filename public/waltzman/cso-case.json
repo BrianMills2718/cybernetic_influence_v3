@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "source_run_id": "run_5010214f2466",
+  "condition": "adaptive_cso_stabilization",
+  "agent_count": 26,
+  "model_calls": 89,
+  "rounds_completed": 3,
+  "outcome": "joint_response_approved",
+  "rounds": [
+    {
+      "round": 1,
+      "decisions": {
+        "support": 26
+      },
+      "risks": {
+        "capacity": 15,
+        "evidence_quality": 2,
+        "legitimacy": 4,
+        "none": 3,
+        "sovereignty": 2
+      },
+      "requests": {
+        "none": 5,
+        "resources": 13,
+        "safeguards": 6,
+        "validation": 2
+      }
+    },
+    {
+      "round": 2,
+      "decisions": {
+        "conditional": 20,
+        "support": 6
+      },
+      "risks": {
+        "capacity": 16,
+        "evidence_quality": 2,
+        "legitimacy": 6,
+        "sovereignty": 2
+      },
+      "requests": {
+        "resources": 15,
+        "safeguards": 7,
+        "validation": 4
+      }
+    },
+    {
+      "round": 3,
+      "decisions": {
+        "support": 26
+      },
+      "risks": {
+        "capacity": 14,
+        "evidence_quality": 4,
+        "legitimacy": 6,
+        "sovereignty": 2
+      },
+      "requests": {
+        "none": 1,
+        "resources": 13,
+        "safeguards": 8,
+        "validation": 4
+      }
+    }
+  ],
+  "final_decisions": {
+    "support": 26
+  },
+  "final_risks": {
+    "capacity": 14,
+    "evidence_quality": 4,
+    "legitimacy": 6,
+    "sovereignty": 2
+  },
+  "final_requests": {
+    "none": 1,
+    "resources": 13,
+    "safeguards": 8,
+    "validation": 4
+  },
+  "source_injects": [
+    "round_1:community_pressure_source:verify",
+    "round_1:legal_pressure_source:verify",
+    "round_1:logistics_pressure_source:verify",
+    "round_1:technical_pressure_source:verify",
+    "round_2:community_pressure_source:escalate",
+    "round_2:legal_pressure_source:verify",
+    "round_2:logistics_pressure_source:verify",
+    "round_2:technical_pressure_source:verify"
+  ],
+  "cso_chain": [
+    {
+      "actor_id": "cso_decision_environment_monitor",
+      "payload": {
+        "coordination_readiness": "blocked",
+        "evidence_summary": "Most national and regional participants condition operational release on unresolved, interdependent checks: a verified 48-hour resource matrix, protected staffing and corridor capacity, written custody/audit protocol, visible reciprocal receipts, and blinded reproducibility validation. Support for the compact remains, but no single assurance currently satisfies these demands.",
+        "perceived_risk": "expanding",
+        "trust_structure": "conditional"
+      }
+    },
+    {
+      "actor_id": "cso_coordination_diagnostician",
+      "payload": {
+        "affected_scope": "coalition_wide",
+        "mechanism": "incompatible_requirements",
+        "primary_dimension": "cross_dimension",
+        "rationale": "Most national and regional participants require interdependent assurances\u2014resource verification, protected capacity, custody/audit rules, reciprocal receipts, and blinded validation\u2014while no single assurance satisfies all demands. This jointly sustains conditional trust, expanding risk concerns, and blocked operational readiness."
+      }
+    },
+    {
+      "actor_id": "cso_stabilization_planner",
+      "payload": {
+        "action_id": "cross_domain_compact",
+        "rationale": "Interdependent assurance demands across resource verification, protected capacity, custody/audit, reciprocal receipts, and blinded validation require a single coordinated compact rather than isolated interventions.",
+        "target_dimension": "cross_dimension"
+      }
+    }
+  ],
+  "paired_rationales": [
+    {
+      "actor_id": "alba_community_liaison",
+      "under_pressure": {
+        "decision": "conditional",
+        "risk": "legitimacy",
+        "request": "safeguards",
+        "rationale": "The compact's custody, export, audit, reciprocity, and local-validation provisions remain adequate. However, Alba communities have specifically requested a public implementation note before launch. A plain-language confirmation of national clinical command, national custody of line-level records, bounded and logged foreign access, and a channel for concerns is a feasible pre-launch safeguard that makes those protections visible rather than merely promised."
+      },
+      "after_stabilization": {
+        "decision": "support",
+        "risk": "legitimacy",
+        "request": "safeguards",
+        "rationale": "Support activation. The verified 48-hour package makes Alba\u2019s required protections real and visible: national authorities retain command; line-level records remain nationally held; raw export is barred; foreign access is purpose-limited, escorted, and logged; and independent monitors audit without taking identifiable data. Alba\u2019s domestic confirmation capacity is protected, while public receipts identify national command, reciprocal protections, deliveries, cost shares, and the 72-hour review. The remaining risk is whether communities actually receive and can use this information, so local dissemination and concern channels must operate from launch."
+      }
+    },
+    {
+      "actor_id": "borin_community_liaison",
+      "under_pressure": {
+        "decision": "conditional",
+        "risk": "legitimacy",
+        "request": "safeguards",
+        "rationale": "The compact\u2019s data controls, local endorsement, reciprocal aid, and national clinical command remain sufficient in principle. However, Borin cannot credibly ask communities or parliament to absorb hub-related strain on assurances alone. Before activation is defended locally, regional cost shares and the expected surge burden on Borin\u2019s hub must be published in a plain, accountable form, showing the reciprocal protection rather than implying an open-ended local contribution."
+      },
+      "after_stabilization": {
+        "decision": "support",
+        "risk": "legitimacy",
+        "request": "safeguards",
+        "rationale": "The verified package supplies the protections Borin needed to defend activation: 24 clinicians before hub surge, protected national clinical command and record custody, purpose-limited logged matching, and public receipts naming cost shares, deliveries, reciprocal protections, and review. These make regional assistance visible rather than an open-ended local draw. Implementation must keep those receipts and safeguards intelligible to affected communities."
+      }
+    },
+    {
+      "actor_id": "cyrenia_policy_delegate",
+      "under_pressure": {
+        "decision": "conditional",
+        "risk": "legitimacy",
+        "request": "safeguards",
+        "rationale": "Cyrenia supports the compact and its national-control safeguards, but field deployment requires visible completion of locally requested verification: independently observed/blinded validation involving Cyrenian laboratories, auditable access that does not transfer custody of identifiable records, and public receipts confirming reciprocal diagnostics and protective equipment. These measures distinguish this response from the prior false alarm and make release defensible to local boards and communities."
+      },
+      "after_stabilization": {
+        "decision": "support",
+        "risk": "legitimacy",
+        "request": "safeguards",
+        "rationale": "Cyrenia supports field deployment. The verified package meets the locally required safeguards: the joint panel reproduced and published the outbreak finding; the emergency protocol preserves national custody, bars raw export, permits independently audited purpose-limited access, and retains national command; and named diagnostics and protective equipment are delivered before release. Public receipts make reciprocal protection and costs visible. The remaining risk is legitimacy if these facts are not communicated beyond the capital and reviewed independently at 72 hours."
+      }
+    },
+    {
+      "actor_id": "darsia_supply_lead",
+      "under_pressure": {
+        "decision": "conditional",
+        "risk": "capacity",
+        "request": "resources",
+        "rationale": "Darsia supports the compact\u2019s overall launch safeguards and reciprocal commitments, but its remote corridor must not be treated as available on paper. Before committing corridor capacity, the allocation cell should complete a 48-hour audit confirming named custody, route and delivery timing, cold-chain continuity, protected return fuel for remote clinics, competing draws, and replenishment triggers. This is a concrete, near-term condition that protects the first operational window without rejecting regional deployment."
+      },
+      "after_stabilization": {
+        "decision": "support",
+        "risk": "capacity",
+        "request": "resources",
+        "rationale": "Support. The verified 48-hour package now provides Darsia protected cold-chain transport and fuel for the remote corridor, reciprocal public receipts, national-command safeguards, and a ten-percent reserve. These measures convert the corridor commitment from a paper allocation into an executable protected deployment. The remaining task is operational tracking of custody, route, ETA, and replenishment through the first window, not a launch blocker."
+      }
+    },
+    {
+      "actor_id": "regional_legal_oversight_lead",
+      "under_pressure": {
+        "decision": "conditional",
+        "risk": "sovereignty",
+        "request": "safeguards",
+        "rationale": "The signed compact supplies core limits\u2014national clinical command and line-level custody, no unapproved export, access logs, public receipts, and 72-hour review\u2014but should not begin cross-border data handling until one written protocol specifies purpose-limited contact matching, custody boundaries, audit access, retention, and contestable review. This is a practicable pre-launch clarification, not a reason to abandon the compact."
+      },
+      "after_stabilization": {
+        "decision": "support",
+        "risk": "sovereignty",
+        "request": "safeguards",
+        "rationale": "Support. The verified 48-hour package supplies the required written, time-bounded protocol: line-level custody remains national; raw export is barred; foreign teams require national escorts; contact matching is purpose-limited and logged; and independent monitors receive audit access without identifiable-data custody. Court and border approval make these limits enforceable. The independent 72-hour review must determine whether authority ends, is revised, or is lawfully renewed."
+      }
+    },
+    {
+      "actor_id": "regional_scientific_advisor",
+      "under_pressure": {
+        "decision": "support",
+        "risk": "evidence_quality",
+        "request": "validation",
+        "rationale": "Launch remains proportionate: the signal has cross-laboratory validation, all countries retain line-level record control, and diagnostic and investigation inputs are precommitted. The remaining risk is comparability drift in case definitions, sampling, and laboratory workflows, which could make pooled trends misleading. The joint panel's blinded reproducibility check is an essential continuation-quality control, but it is a specific validation task for the scheduled 72-hour review rather than an unmet launch prerequisite."
+      },
+      "after_stabilization": {
+        "decision": "support",
+        "risk": "evidence_quality",
+        "request": "validation",
+        "rationale": "The verified package resolves the key comparability prerequisite: a joint panel reproduced the common outbreak finding from comparable samples and published methods and signed results. National custody and operational protections are also verified. Launch should continue, while the independent 72-hour review monitors assay performance, case definitions, sampling and missingness, geographic coverage, and any discordant findings so pooled trends remain interpretable."
+      }
+    }
+  ],
+  "stabilization_events": [
+    "cso_cross_domain_compact"
+  ],
+  "nonclaims": [
+    "One retained execution is not a statistical sample or an effect estimate.",
+    "The pressure sources and the stabilization action are scenario-authored controls, not discovered behaviour.",
+    "Model sampling is not seeded, so a rerun would not reproduce these exact stances.",
+    "Derived trust, risk and readiness readings are analyst views over retained evidence. They are not calibrated measures of real trust, risk or readiness, and they never governed the simulated people."
+  ]
+}

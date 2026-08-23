@@ -33,6 +33,7 @@ let dataset = null
 let runtimeConfig = null
 let autonomousProbe = null
 let resourceFork = null
+let csoCase = null
 let caseNetworkRun = null
 let caseNetworkLoad = null
 let caseNetworkError = null
@@ -1190,9 +1191,9 @@ function renderCaseChapter() {
     {kind:'The world', title:'Inspect the simulated response network.'},
     {kind:'The coordination problem', title:'See who depends on whom.'},
     {kind:'Pressure and experiment', title:'See what changed and what stayed fixed.'},
-    {kind:'Result', title:'Compare four continuations of one saved moment.'},
-    {kind:'Agent reasoning', title:'Inspect why the remaining agents deferred.'},
-    {kind:'Waltzman analysis', title:'Connect retained behavior to the coordination theory.'},
+    {kind:'Result', title:'Watch the coalition break and come back.'},
+    {kind:'Agent reasoning', title:'Read the same officials before and after.'},
+    {kind:'Cognitive Security Operations', title:'See what detected the problem and what fixed it.'},
   ]
   caseStudyStep = Math.max(0, Math.min(caseStudyStep, chapters.length - 1))
   const chapter = chapters[caseStudyStep]
@@ -1208,74 +1209,114 @@ function renderCaseChapter() {
 
 function renderResearchCase() {
   renderCaseChapter()
-  if (!resourceFork?.branches?.length) {
-    $('#research-case-runs').innerHTML = '<p class="case-data-error"><strong>Research case unavailable.</strong> The exact checkpoint evidence could not be loaded.</p>'
-    $('#case-open-comparison').disabled = true
-    $('#case-download-evidence').disabled = true
+  if (!csoCase?.rounds?.length) {
+    $('#case-round-trajectory').innerHTML = '<p class="case-data-error"><strong>Case evidence unavailable.</strong> The retained stabilization run could not be loaded.</p>'
     return
   }
 
-  $('#case-open-comparison').disabled = false
-  $('#case-download-evidence').disabled = false
-  const stories = {
-    no_intervention:{label:'Nothing changes', short:'No new help arrives.', event:'No resource package enters the world.', result:'Without new capacity, most agents become less ready to proceed. Twenty-one defer the decision.', why:'The operational shortages remain, so the group has no executable path forward.'},
-    partial:{label:'Two real resources', short:'Some shortages are fixed.', event:'Verified laboratory capacity and clinicians become available.', result:'Most agents become willing to proceed if their remaining conditions are met, but three still defer.', why:'The package resolves two capacity gaps, not the coalition’s other operational, legal, and scientific prerequisites.'},
-    complete:{label:'Six real resources', short:'Every named shortage is fixed.', event:'All six requested resources are verified, assigned, and committed.', result:'Twenty-four agents become conditionally ready. Two still defer, so the group does not approve the response.', why:'Capacity is no longer the main blocker. Legal authority and the comparability of the scientific evidence remain unresolved.'},
-    false_claim:{label:'Six false claims', short:'The audit catches them.', event:'Six resources are announced, but the simulated audit finds that none has a valid custodian.', result:'The claims change no real capacity. Twenty-one agents defer—the same final distribution as when nothing is provided.', why:'The intervention is not credible because the world model cannot verify that the resources exist or can be used.'},
+  // Direction, not an end state. The paper's whole analytic move (section 4) is
+  // that the signal is a consistent change across rounds, so every round is
+  // shown rather than only the final tally.
+  const rounds = csoCase.rounds
+  const total = csoCase.agent_count || 26
+  const roundCaption = {
+    1: 'Before any pressure',
+    2: 'After four sources raise locally relevant concerns',
+    3: 'After the coordinated compact',
   }
-  const blockerSummaries = {
-    no_intervention:{regional_logistics_coordinator:'The required resources still have no verified owners, release authority, or delivery sequence.', regional_coordinator:'Operational capacity, legal authority, and comparable evidence all remain unresolved.', regional_scientific_advisor:'The available datasets still cannot support one shared operational conclusion.'},
-    partial:{regional_logistics_coordinator:'Several deployment resources and their delivery sequence remain unresolved.', regional_coordinator:'The partial package does not resolve legal authority or the evidence gap.', regional_scientific_advisor:'The available datasets still need a documented comparability assessment.'},
-    complete:{regional_logistics_coordinator:'Remaining deployment dependencies need named owners and a timed release sequence.', regional_coordinator:'National data custody and independent audit authority still need a written protocol.', regional_scientific_advisor:'The three datasets still need a documented comparability and actionability assessment.'},
-    false_claim:{regional_logistics_coordinator:'The announced resources have no verified custody or release authority.', regional_coordinator:'The resource claims fail audit and leave every operational dependency unresolved.', regional_scientific_advisor:'The allocation claims contradict the audit and cannot count as usable capacity.'},
-  }
-  const renderBranch = () => {
-    const branch = resourceFork.branches.find((item) => item.id === state.caseBranch) || resourceFork.branches[0]
-    state.caseBranch = branch.id
-    all('[data-case-branch]').forEach((button) => button.classList.toggle('active', button.dataset.caseBranch === branch.id))
-    const resources = branch.resource_commitments || []
-    const verified = resources.filter((item) => item.audit_status === 'verified').length
-    const contradicted = resources.filter((item) => item.audit_status === 'contradicted').length
-    const support = Number(branch.final_decisions.support || 0)
-    const ready = support + Number(branch.final_decisions.conditional || 0)
-    const story = stories[branch.id]
-    const gateText = support >= resourceFork.gate.minimum_support
-      ? 'The group approves the response.'
-      : `The group does not approve: ${support} agents give an unconditional yes, and the rule requires ${resourceFork.gate.minimum_support}.`
-    $('#case-branch-detail').innerHTML = `<div class="fork-explanation">
-      <div><span>What changed</span><strong>${escapeHtml(story.event)}</strong></div>
-      <div><span>How the agents responded</span><strong>${escapeHtml(story.result)}</strong></div>
-      <div><span>Why</span><strong>${escapeHtml(story.why)}</strong></div>
-      <div class="fork-verdict"><span>Collective result</span><strong>${escapeHtml(gateText)}</strong><small>${verified} verified resource${verified === 1 ? '' : 's'}${contradicted ? ` · ${contradicted} rejected by the audit` : ''} · ${ready} agents ready only conditionally or fully</small></div>
-    </div>`
-    const evidenceIds = ['regional_logistics_coordinator', 'regional_coordinator', 'regional_scientific_advisor']
-    $('#case-evidence-records').innerHTML = evidenceIds.map((personId) => {
-      const stance = branch.final_stances[personId]
-      return `<article><header><span>${escapeHtml(labelPerson(personId))}</span>${decisionPill(stance.decision)}</header><strong>${escapeHtml(blockerSummaries[branch.id][personId])}</strong><details><summary>Read the agent's exact reasoning</summary><p>${escapeHtml(stance.rationale)}</p></details></article>`
-    }).join('')
-  }
-  $('#research-case-runs').innerHTML = resourceFork.branches.map((branch) => `<button type="button" class="research-case-run ${branch.id === state.caseBranch ? 'active' : ''}" data-case-branch="${escapeHtml(branch.id)}">
-    <header><span>${escapeHtml(stories[branch.id].short)}</span><h4>${escapeHtml(stories[branch.id].label)}</h4></header>
-    ${stackedBar(branch.final_decisions, 'case-result-bar', resourceFork.agent_count)}
-    <strong>${escapeHtml(countsText(branch.final_decisions))}</strong><small>${branch.outcome === 'joint_response_approved' ? 'Group approves' : 'Group remains blocked'}</small>
-  </button>`).join('')
-  all('[data-case-branch]').forEach((button) => { button.onclick = () => { state.caseBranch = button.dataset.caseBranch; renderBranch() } })
-  renderBranch()
+  $('#case-round-trajectory').innerHTML = rounds.map((entry) => {
+    const support = Number(entry.decisions.support || 0)
+    const conditional = Number(entry.decisions.conditional || 0)
+    const defer = Number(entry.decisions.defer || 0)
+    const parts = [
+      support ? `${support} will proceed` : '',
+      conditional ? `${conditional} will proceed only on conditions` : '',
+      defer ? `${defer} not ready` : '',
+    ].filter(Boolean).join(' · ')
+    return `<article class="case-round">
+      <header><span>Round ${entry.round}</span><h4>${escapeHtml(roundCaption[entry.round] || '')}</h4></header>
+      ${stackedBar(entry.decisions, 'case-result-bar', total)}
+      <strong>${escapeHtml(parts)}</strong>
+    </article>`
+  }).join('')
 
-  // The terminal call to action promises retained evidence, so it opens the
-  // agent-reasoning chapter rather than a raw JSON blob.  M7 requires a reader
-  // to reach every claim without opening raw JSON; the file stays available
-  // beside it under a label that says what it actually is.
+  const first = rounds[0]?.decisions || {}
+  const mid = rounds[1]?.decisions || {}
+  const last = rounds[rounds.length - 1]?.decisions || {}
+  $('#case-trajectory-note').textContent =
+    `${Number(first.support || 0)} of ${total} officials would proceed before the pressure, `
+    + `${Number(mid.conditional || 0)} would proceed only on conditions after it, and `
+    + `${Number(last.support || 0)} would proceed once the compact was in place. `
+    + `The run ended ${sentence(csoCase.outcome || '')}. No claim made in this run was false.`
+
+  // The three named conditions, as derived readings over retained evidence.
+  const pressured = rounds[1] || {}
+  const recovered = rounds[rounds.length - 1] || {}
+  const namedRisks = (tally) => Object.keys(tally || {}).filter((key) => key !== 'none').length
+  const askedFor = (tally, key) => Number((tally || {})[key] || 0)
+  const variables = [
+    {
+      name: 'Trust structure',
+      reading: 'implicit → conditional → restored',
+      detail: `Everyone would simply proceed at the start. Under pressure ${Number(pressured.decisions?.conditional || 0)} would proceed only once named requirements were met, and requests for independent validation rose to ${askedFor(pressured.requests, 'validation')}.`,
+    },
+    {
+      name: 'Perceived risk',
+      reading: 'widened at the margin',
+      detail: `Concerns spanned ${namedRisks(pressured.risks)} kinds under pressure, and the officials carrying no named concern at all fell from ${askedFor(rounds[0]?.risks, 'none')} to ${askedFor(pressured.risks, 'none')}. Requests for safeguards stood at ${askedFor(pressured.requests, 'safeguards')}.`,
+    },
+    {
+      name: 'Coordination readiness',
+      reading: 'blocked → released',
+      detail: `The joint response could not be activated while requirements were interdependent and unmet. After one compact addressing them together, it was.`,
+    },
+  ]
+  $('#case-state-variables').innerHTML = variables.map((item) => `<article>
+    <span>${escapeHtml(item.reading)}</span>
+    <strong>${escapeHtml(item.name)}</strong>
+    <p>${escapeHtml(item.detail)}</p>
+  </article>`).join('')
+
+  // The same official, before and after, in retained words.
+  $('#case-evidence-records').innerHTML = (csoCase.paired_rationales || []).map((pair) => `<article>
+    <header><span>${escapeHtml(labelPerson(pair.actor_id))}</span></header>
+    <div class="case-pair">
+      <div><span>While coordination was blocked</span>${decisionPill(pair.under_pressure.decision)}<p>${escapeHtml(pair.under_pressure.rationale || '')}</p></div>
+      <div><span>After the compact</span>${decisionPill(pair.after_stabilization.decision)}<p>${escapeHtml(pair.after_stabilization.rationale || '')}</p></div>
+    </div>
+  </article>`).join('') || '<p class="create-stage-empty">No paired reasoning was retained.</p>'
+
+  // Detect, diagnose, stabilize -- the paper's own cycle, in its own order.
+  const chainLabel = {
+    cso_decision_environment_monitor: ['Detect', 'Watches the conditions for deciding'],
+    cso_coordination_diagnostician: ['Diagnose', 'Interprets which condition is moving'],
+    cso_stabilization_planner: ['Stabilize', 'Proposes one action'],
+  }
+  $('#case-cso-chain').innerHTML = (csoCase.cso_chain || []).map((record, index) => {
+    const [step, role] = chainLabel[record.actor_id] || ['Step', '']
+    const payload = record.payload || {}
+    const headline = payload.coordination_readiness
+      ? `Coordination readiness: ${sentence(payload.coordination_readiness)}`
+      : payload.mechanism
+        ? `${sentence(payload.mechanism)} across ${sentence(payload.affected_scope || '')}`
+        : sentence(payload.action_id || '')
+    const body = payload.evidence_summary || payload.rationale || ''
+    return `<article>
+      <header><span>${index + 1} · ${escapeHtml(step)}</span><h4>${escapeHtml(headline)}</h4><small>${escapeHtml(role)}</small></header>
+      <p>${escapeHtml(body)}</p>
+    </article>`
+  }).join('')
+
   $('#case-open-comparison').onclick = () => {
     caseStudyStep = 4
     renderCaseChapter()
     syncUrl()
     window.requestAnimationFrame(() => {
-      all('#case-evidence-records details').forEach((item) => { item.open = true })
+      all('#case-evidence-records p').forEach(() => {})
     })
   }
   $('#case-download-evidence').onclick = () => {
-    window.open('assets/resource-fork.json', '_blank', 'noopener')
+    window.open('assets/cso-case.json', '_blank', 'noopener')
   }
 }
 
@@ -3846,6 +3887,12 @@ async function loadWorkbench() {
       if (!probeResponse.ok) throw new Error(`autonomous probe request failed with ${probeResponse.status}`)
       autonomousProbe = await probeResponse.json()
     } catch (error) { console.warn(`autonomous probe unavailable: ${error.message}`) }
+    try {
+      const csoResponse = await fetch('assets/cso-case.json', {cache:'no-store'})
+      if (!csoResponse.ok) throw new Error(`cso case request failed with ${csoResponse.status}`)
+      csoCase = await csoResponse.json()
+      if (csoCase.schema_version !== 1 || !Array.isArray(csoCase.rounds)) throw new Error('cso case contract is invalid')
+    } catch (error) { console.warn(`cso case unavailable: ${error.message}`) }
     try {
       const forkResponse = await fetch('assets/resource-fork.json', {cache:'no-store'})
       if (!forkResponse.ok) throw new Error(`resource fork request failed with ${forkResponse.status}`)

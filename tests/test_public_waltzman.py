@@ -96,7 +96,7 @@ def test_authoring_progress_uses_retained_backend_stages() -> None:
     assert "job.detail" in script
     assert "proposal attempt ${attempt}" in script
     assert "Still compiling the typed world" not in script
-    assert "assets/app.js?v=authoring35" in page
+    assert "assets/app.js?v=cso1" in page
 
 
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
@@ -209,10 +209,14 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Complete network" in page
     assert "People participate through five interdependent response networks" in page
     assert "Should these networks activate one joint outbreak response?" in page
-    assert "After those pressures stall coordination" in page
-    assert "The experiment in three steps" in page
-    assert "What the resource package did not solve" in page
-    assert "Shared intent is not enough for collective action" in page
+    assert "Coordination stalls without anyone saying anything false" in page
+    assert "How the run is built" in page
+    # Slice 31: the flagship reports the run whose network it displays, and
+    # shows direction across rounds rather than one end state.
+    assert "What changed in their own words" in page
+    assert "Detect, diagnose, stabilize" in page
+    assert "What the pressure did, and what the intervention undid" in page
+    assert "Which conditions for deciding changed" in page
     assert "From Minds to Coordination · autonomous influence probe" in page
     assert "Influence agents cannot vote or edit participants" in page
     assert "Run this condition again" in page
@@ -267,11 +271,11 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=ontology2",
-        "assets/styles.css?v=authoring14",
+        "assets/styles.css?v=cso1",
     ]
     assert shape.scripts == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=authoring35",
+        "assets/app.js?v=cso1",
     ]
     assert {
         "overview-view",
@@ -304,8 +308,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
         "method-architecture",
         "method-limits",
         "case-view",
-        "research-case-runs",
-        "case-branch-detail",
+        "case-round-trajectory",
+        "case-state-variables",
+        "case-cso-chain",
         "case-evidence-records",
         "case-network-graph",
         "case-network-status",
@@ -647,7 +652,8 @@ def test_public_client_runs_and_inspects_the_real_typed_contract() -> None:
         "Messages received before this decision",
         "Message attempt → delivery outcome",
         "data-message-target",
-        "data-case-branch",
+        "csoCase.cso_chain",
+        "paired_rationales",
         "api/authoring/drafts",
         "codex/gpt-5.6-luna",
     ):
