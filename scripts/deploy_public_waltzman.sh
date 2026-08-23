@@ -22,8 +22,19 @@ FORCE=0
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "refusing to deploy: working tree is dirty" >&2
+# Only committed work ships -- the transfer is a bundle of main -- so the risk
+# this guards against is deploying while believing uncommitted changes are
+# included. That is about tracked modifications. Untracked files cannot ship,
+# and other sessions leave them in this shared checkout, so they are reported
+# rather than treated as a blocker.
+untracked="$(git ls-files --others --exclude-standard)"
+if [[ -n "$untracked" ]]; then
+  echo "note: untracked files present (they will NOT be deployed):" >&2
+  echo "$untracked" | sed 's/^/  /' >&2
+fi
+
+if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+  echo "refusing to deploy: tracked files have uncommitted changes" >&2
   git status --short >&2
   exit 1
 fi
