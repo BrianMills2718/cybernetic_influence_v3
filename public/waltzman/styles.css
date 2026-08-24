@@ -1842,3 +1842,17 @@ tbody tr:last-child td { border-bottom: 0; }
 .hero-result-track span { font-size: .93rem; }
 .hero-result-track em { font-style: normal; font-size: .82rem; opacity: .74; line-height: 1.45; }
 .hero-result > p { margin: 0; max-width: 82ch; line-height: 1.6; font-size: .95rem; opacity: .88; }
+
+/* Third hero action: quieter than the two real journeys, but present where a
+   first-time reader arrives rather than at the foot of the page. */
+.quiet-cta {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: inherit;
+  opacity: .82;
+  padding: 11px 16px;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+}
+.quiet-cta:hover { opacity: 1; border-style: solid; }
