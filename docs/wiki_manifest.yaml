@@ -1,0 +1,27 @@
+version: 1
+project: cybernetic_influence_v3
+publish:
+  - path: README.md
+    type: ProjectOverview
+    title: Cybernetic Influence V3 Overview
+    tags: [portfolio]
+  - path: docs/ROADMAP.md
+    type: ArchitectureDoc
+    title: Cybernetic Influence V3 Roadmap
+    tags: [portfolio]
+  - path: docs/GOAL.md
+    type: PortfolioGuide
+    title: Cybernetic Influence V3 Goal
+    tags: [portfolio]
+  - path: docs/REGIONAL_OUTBREAK_COORDINATION_PROBE.md
+    type: PortfolioGuide
+    title: Cybernetic Influence V3 Regional Outbreak Coordination Probe
+    tags: [portfolio]
+  - path: docs/WALTZMAN_COORDINATION_LAB_NOTE.md
+    type: PortfolioGuide
+    title: Cybernetic Influence V3 Waltzman Coordination Lab Note
+    tags: [portfolio]
+  - path: docs/WALTZMAN_OUTREACH_DRAFT.md
+    type: PortfolioGuide
+    title: Cybernetic Influence V3 Waltzman Outreach Draft
+    tags: [portfolio]

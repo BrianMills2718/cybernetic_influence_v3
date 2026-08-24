@@ -4,7 +4,7 @@ LLM_CLIENT_ROOT ?= ../active/llm_client
 HOST ?= 127.0.0.1
 PORT ?= 8620
 
-.PHONY: install ui-install ui-build ui-smoke ui-visibility authoring-route-health authoring-route-refresh test typecheck deploy-check check serve
+.PHONY: install ui-install ui-build ui-smoke ui-visibility claims-check authoring-route-health authoring-route-refresh test typecheck deploy-check check serve
 
 install: ui-install
 	python3 -m venv $(VENV) || virtualenv --clear $(VENV)
@@ -34,6 +34,12 @@ ui-visibility:
 
 # Warns before the authoring route's certification lapses. Needs the service
 # environment, so it is normally run on the deployment host.
+# Fails when the page states something the retained runs do not support. The
+# worst defect this demo had was well-rendered prose describing an experiment it
+# was not running, which every element-level check passed over.
+claims-check:
+	$(PYTHON) scripts/check_page_claims_match_evidence.py
+
 authoring-route-health:
 	$(PYTHON) scripts/check_authoring_route_health.py
 

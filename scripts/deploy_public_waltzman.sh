@@ -41,6 +41,15 @@ fi
 commit="$(git rev-parse --short HEAD)"
 echo "deploying $commit from $repo_root"
 
+# A page can render perfectly and still tell the reader something the run does
+# not support. That failure is invisible to every other check here, and it is
+# the one that would cost most with an expert reader.
+echo "checking the page's claims against the retained evidence..."
+if ! python3 "$(dirname "$0")/check_page_claims_match_evidence.py"; then
+  echo "refusing to deploy: the page claims something the runs do not support" >&2
+  exit 6
+fi
+
 # --- the gate: is anything running that a restart would destroy? -------------
 # The detection logic lives in scripts/host_busy_check.py so the deploy path and
 # the certification-refresh path cannot drift apart; the copy that drifts is the

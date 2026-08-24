@@ -12,6 +12,16 @@ updated: 2026-08-16
 
 ## Active execution
 
+[Slice 34: Keep the demo correct without anyone watching it](034-demo-quality-system.md)
+installs the review system the demo has been missing. Every defect found on
+2026-08-23 got past every check in place, because each check confirmed a
+mechanism worked and none confirmed the result was true: a chapter described an
+experiment the run was not performing, in well-rendered prose, and nothing
+noticed. A claims-versus-evidence check now fails the deploy when the page
+states something the retained runs do not support, and a nightly audit runs it
+alongside asset resolution, control visibility and certification margin. No
+model calls, so the cadence costs nothing to keep.
+
 [Slice 33: Show detection failing under evasion](033-evasion-space-case.md)
 covers the one substantive section of the source paper the demo does not touch.
 Section 7 names six ways influence keeps its directional pressure while changing
