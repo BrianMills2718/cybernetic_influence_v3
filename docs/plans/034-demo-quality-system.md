@@ -60,7 +60,12 @@ nothing and can run as often as is useful.**
 
 - **Every deploy:** claims, assets, deployed-commit match. Automatic; blocking.
 - **Nightly:** the full audit, including control visibility across widths and
-  the authoring certification margin. Automatic; logged; non-zero on failure.
+  the authoring certification margin. Automatic; logged; non-zero on failure;
+  and the verdict is written into the demo's card on the project deck, so a
+  failure is visible on the page that actually gets opened rather than in a
+  log on the deployment host. A failing audit names the failing checks and
+  says not to share the demo until they are fixed. Both the passing and the
+  failing rendering were exercised on the live deck.
 - **Before sharing with anyone new:** one human walk of the seven-step case
   study and one Create run. Not automatable — comprehension is the thing being
   tested, and an agent reviewing its own work is the weakest possible reviewer.
