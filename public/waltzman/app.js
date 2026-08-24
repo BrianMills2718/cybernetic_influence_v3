@@ -42,6 +42,9 @@ let guideRunLoad = null
 let guideRunError = null
 let caseGraphMode = 'system'
 let caseStudyStep = 0
+// One place that knows how many chapters the case study has, so adding one
+// cannot leave a Next button bounded to the previous last index.
+const chapterCount = 7
 let defaultConfiguration = null
 let editableConfiguration = null
 let selectedConfigurationPerson = 'alba_epidemiologist'
@@ -342,7 +345,7 @@ function readStateFromUrl() {
   const requestedGuideStep = Number(params.get('guide_step'))
   if (Number.isInteger(requestedGuideStep) && requestedGuideStep >= 1 && requestedGuideStep <= 7) state.guideStep = requestedGuideStep - 1
   const requestedCaseStep = Number(params.get('case_step'))
-  if (Number.isInteger(requestedCaseStep) && requestedCaseStep >= 1 && requestedCaseStep <= 6) caseStudyStep = requestedCaseStep - 1
+  if (Number.isInteger(requestedCaseStep) && requestedCaseStep >= 1 && requestedCaseStep <= chapterCount) caseStudyStep = requestedCaseStep - 1
   const requestedRun = params.get('run')
   if (requestedRun) state.runId = requestedRun
   const requestedRound = Number(params.get('round'))
@@ -1198,6 +1201,7 @@ function renderCaseChapter() {
     {kind:'Result', title:'Watch the coalition break and come back.'},
     {kind:'Agent reasoning', title:'Read the same officials before and after.'},
     {kind:'Cognitive Security Operations', title:'See what detected the problem and what fixed it.'},
+    {kind:'Evasion', title:'See the same pressure go unread by the same watchers.'},
   ]
   caseStudyStep = Math.max(0, Math.min(caseStudyStep, chapters.length - 1))
   const chapter = chapters[caseStudyStep]
@@ -1208,7 +1212,83 @@ function renderCaseChapter() {
   $('#case-walkthrough-next').hidden = caseStudyStep === chapters.length - 1
   $('#case-walkthrough-next').textContent = 'Next →'
   if (caseStudyStep === 0) window.requestAnimationFrame(() => renderCaseNetworkGraph())
+  if (caseStudyStep === 6) renderEvasionComparison()
   window.scrollTo({top:Math.max(0, $('#case-view').offsetTop - 70), behavior:'smooth'})
+}
+
+let evasionCase = null
+
+const READABLE_DETECTOR = {
+  blocked: 'blocked',
+  degrading: 'degrading',
+  ready: 'ready',
+  incompatible_requirements: 'incompatible requirements',
+  process_delay: 'process delay',
+  risk_expansion: 'risk expansion',
+  authority_fragmentation: 'authority fragmentation',
+  no_material_shift: 'no material shift',
+  conditional: 'conditional',
+  expanding: 'expanding',
+  cross_domain_compact: 'one cross-domain compact',
+}
+
+function readable(value) {
+  return READABLE_DETECTOR[value] || String(value || '').replace(/_/g, ' ')
+}
+
+function stanceLine(decisions) {
+  // Support first, then the rest, so the eye compares the same quantity across
+  // arms rather than whichever key happened to sort first.
+  const order = ['support', 'conditional', 'defer', 'oppose']
+  return order
+    .filter((key) => decisions[key])
+    .map((key) => `${decisions[key]} ${key}`)
+    .join(' · ')
+}
+
+function renderEvasionComparison() {
+  const host = $('#case-evasion-compare')
+  if (!host) return
+  if (!evasionCase) {
+    host.innerHTML = '<p class="case-loading">Loading the retained comparison…</p>'
+    return
+  }
+  const arms = [
+    {key:'overt', label:'Pressure applied openly', data:evasionCase.overt},
+    {key:'evasion', label:'The same pressure, kept inside ordinary variation', data:evasionCase.evasion},
+  ]
+  host.innerHTML = arms.map(({key, label, data}) => {
+    const rounds = (data.rounds || []).map((entry) => `<li><span>Round ${entry.round}</span><strong>${escapeHtml(stanceLine(entry.decisions))}</strong></li>`).join('')
+    const d = data.detector || {}
+    return `<article class="case-evasion-arm case-evasion-${escapeHtml(key)}">
+      <header><span>${escapeHtml(label)}</span></header>
+      <ol class="case-evasion-rounds">${rounds}</ol>
+      <dl class="case-evasion-detector">
+        <div><dt>The watchers called readiness</dt><dd class="case-evasion-verdict">${escapeHtml(readable(d.coordination_readiness))}</dd></div>
+        <div><dt>and the cause</dt><dd class="case-evasion-verdict">${escapeHtml(readable(d.mechanism))}</dd></div>
+        <div><dt>then proposed</dt><dd>${escapeHtml(readable(d.action_id))}</dd></div>
+      </dl>
+    </article>`
+  }).join('')
+
+  const note = $('#case-evasion-reading')
+  if (!note) return
+  const overtWorst = worstRound(evasionCase.overt)
+  const evasionWorst = worstRound(evasionCase.evasion)
+  const overtFinal = evasionCase.overt.final_decisions || {}
+  const evasionFinal = evasionCase.evasion.final_decisions || {}
+  note.innerHTML = `<strong>Read the two together.</strong> Under the shaped pressure the coalition went further &mdash; ${evasionWorst} at its worst against ${overtWorst} &mdash; and the same watchers, at the same thresholds, called it <em>${escapeHtml(readable(evasionCase.evasion.detector.coordination_readiness))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.coordination_readiness))}</em>, and blamed <em>${escapeHtml(readable(evasionCase.evasion.detector.mechanism))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.mechanism))}</em>. The intervention still fired, but against the wrong reading: the coalition ended ${escapeHtml(stanceLine(evasionFinal))} instead of ${escapeHtml(stanceLine(overtFinal))}. The pressure did not become weaker. It became harder to see, and the response was worse for it.`
+}
+
+function worstRound(arm) {
+  // The round in which the fewest participants would proceed outright.
+  const rounds = arm.rounds || []
+  let worst = null
+  for (const entry of rounds) {
+    const support = entry.decisions.support || 0
+    if (worst === null || support < worst.support) worst = {support, entry}
+  }
+  return worst ? stanceLine(worst.entry.decisions) : 'no rounds recorded'
 }
 
 function renderResearchCase() {
@@ -1470,7 +1550,7 @@ function configureControls() {
     revealCaseStep()
   }
   $('#case-walkthrough-next').onclick = () => {
-    caseStudyStep = Math.min(5, caseStudyStep + 1)
+    caseStudyStep = Math.min(chapterCount - 1, caseStudyStep + 1)
     renderCaseChapter()
     syncUrl()
     revealCaseStep()
@@ -3993,6 +4073,12 @@ async function loadWorkbench() {
       autonomousProbe = await probeResponse.json()
     } catch (error) { console.warn(`autonomous probe unavailable: ${error.message}`) }
     try {
+      try {
+        const evasionResponse = await fetch('assets/evasion-case.json', {cache:'no-store'})
+        if (evasionResponse.ok) evasionCase = await evasionResponse.json()
+      } catch (error) {
+        console.warn(`evasion comparison unavailable: ${error.message}`)
+      }
       const csoResponse = await fetch('assets/cso-case.json', {cache:'no-store'})
       if (!csoResponse.ok) throw new Error(`cso case request failed with ${csoResponse.status}`)
       csoCase = await csoResponse.json()

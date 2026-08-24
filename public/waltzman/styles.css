@@ -1856,3 +1856,55 @@ tbody tr:last-child td { border-bottom: 0; }
   font: inherit;
 }
 .quiet-cta:hover { opacity: 1; border-style: solid; }
+
+/* The evasion comparison. Two arms side by side so the reader compares the same
+   quantity across them; the detector's own words are given equal weight to the
+   stance counts, because the finding is the gap between the two. */
+.case-evasion-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  margin-top: 6px;
+}
+.case-evasion-arm {
+  display: grid;
+  gap: 14px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(9, 18, 27, .5);
+}
+.case-evasion-arm > header > span {
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.case-evasion-evasion { border-left: 3px solid rgba(255, 190, 110, .8); }
+.case-evasion-overt { border-left: 3px solid rgba(120, 220, 170, .7); }
+.case-evasion-rounds { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.case-evasion-rounds li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+.case-evasion-rounds span { opacity: .68; font-size: .9rem; }
+.case-evasion-rounds strong { font-size: .93rem; text-align: right; }
+.case-evasion-detector { margin: 0; display: grid; gap: 8px; }
+.case-evasion-detector > div { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+.case-evasion-detector dt { opacity: .7; font-size: .88rem; }
+.case-evasion-detector dd { margin: 0; font-size: .95rem; text-align: right; }
+.case-evasion-verdict { font-weight: 700; }
+.case-evasion-reading {
+  margin: 18px 0 0;
+  padding: 16px 20px;
+  max-width: 96ch;
+  line-height: 1.65;
+  border-left: 3px solid var(--accent);
+  background: rgba(120, 190, 255, .06);
+  border-radius: 0 11px 11px 0;
+}
+.case-evasion-reading em { font-style: normal; font-weight: 700; }

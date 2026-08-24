@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "overt": {
+    "run_id": "run_5010214f2466",
+    "condition": "adaptive_cso_stabilization",
+    "rounds": [
+      {
+        "round": 1,
+        "decisions": {
+          "support": 26
+        },
+        "risks": {
+          "capacity": 15,
+          "evidence_quality": 2,
+          "legitimacy": 4,
+          "none": 3,
+          "sovereignty": 2
+        }
+      },
+      {
+        "round": 2,
+        "decisions": {
+          "conditional": 20,
+          "support": 6
+        },
+        "risks": {
+          "capacity": 16,
+          "evidence_quality": 2,
+          "legitimacy": 6,
+          "sovereignty": 2
+        }
+      },
+      {
+        "round": 3,
+        "decisions": {
+          "support": 26
+        },
+        "risks": {
+          "capacity": 14,
+          "evidence_quality": 4,
+          "legitimacy": 6,
+          "sovereignty": 2
+        }
+      }
+    ],
+    "final_decisions": {
+      "support": 26
+    },
+    "outcome": "joint_response_approved",
+    "detector": {
+      "trust_structure": "conditional",
+      "perceived_risk": "expanding",
+      "coordination_readiness": "blocked",
+      "mechanism": "incompatible_requirements",
+      "primary_dimension": "cross_dimension",
+      "affected_scope": "coalition_wide",
+      "action_id": "cross_domain_compact"
+    },
+    "model_calls": 89
+  },
+  "evasion": {
+    "run_id": "run_76dae6d4a9a7",
+    "condition": "threshold_managed_evasion",
+    "rounds": [
+      {
+        "round": 1,
+        "decisions": {
+          "conditional": 2,
+          "support": 24
+        },
+        "risks": {
+          "capacity": 14,
+          "legitimacy": 5,
+          "none": 6,
+          "sovereignty": 1
+        }
+      },
+      {
+        "round": 2,
+        "decisions": {
+          "conditional": 26
+        },
+        "risks": {
+          "capacity": 21,
+          "legitimacy": 4,
+          "sovereignty": 1
+        }
+      },
+      {
+        "round": 3,
+        "decisions": {
+          "conditional": 11,
+          "defer": 1,
+          "support": 14
+        },
+        "risks": {
+          "capacity": 11,
+          "evidence_quality": 2,
+          "legitimacy": 8,
+          "none": 2,
+          "sovereignty": 3
+        }
+      }
+    ],
+    "final_decisions": {
+      "conditional": 11,
+      "defer": 1,
+      "support": 14
+    },
+    "outcome": "joint_response_approved",
+    "detector": {
+      "trust_structure": "conditional",
+      "perceived_risk": "expanding",
+      "coordination_readiness": "degrading",
+      "mechanism": "process_delay",
+      "primary_dimension": "cross_dimension",
+      "affected_scope": "coalition_wide",
+      "action_id": "cross_domain_compact"
+    },
+    "model_calls": 89
+  },
+  "shared": {
+    "detection_cell": [
+      "cso_decision_environment_monitor",
+      "cso_coordination_diagnostician",
+      "cso_stabilization_planner"
+    ],
+    "held_identical": "The four sources, the coalition, the decision gate, and the whole detection cell -- personas, thresholds and trigger -- are the same in both runs. Only how each source expresses its signal differs."
+  },
+  "nonclaims": [
+    "Two retained executions are not a sample, and one pair cannot establish how often a detector would miss this.",
+    "The evasion is authored, not discovered: the sources were instructed to keep each signal inside ordinary variation.",
+    "A detector missing an authored pattern is evidence about that detector at that threshold, and nothing more. A threshold that caught this one might produce false alarms elsewhere; that is not answered here.",
+    "Model sampling is not seeded, so a rerun would not reproduce these exact stances."
+  ]
+}
