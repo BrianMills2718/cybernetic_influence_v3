@@ -12,6 +12,15 @@ updated: 2026-08-16
 
 ## Active execution
 
+[Slice 33: Show detection failing under evasion](033-evasion-space-case.md)
+covers the one substantive section of the source paper the demo does not touch.
+Section 7 names six ways influence keeps its directional pressure while changing
+how that pressure appears; a simulator is uniquely able to show this, because
+evasion is unobservable in the field by construction. One paired comparison —
+the same pressure applied overtly and then below the monitor's threshold —
+makes a detector miss a fact rather than an interpretation. Proposed, not
+started; needs authorization for live spend.
+
 [Slice 32: The authoring route stays certified without a human](032-authoring-route-stays-certified.md)
 closes the gap that has repeatedly taken the public Create surface dark.
 Producing a route certification was automated; installing one was not, so the

@@ -1,88 +1,102 @@
 # Waltzman outreach draft
 
+Status: **draft, not sent.** Nothing goes out without Brian approving this exact
+text in the same conversation.
+
 ## Subject
 
-An executable demonstration inspired by *From Minds to Coordination*
+Your bio-surveillance scenario, running
 
 ## Email
 
 Rand—
 
-I built a small multi-agent simulation inspired by *From Minds to
-Coordination*, and I would value your reaction to whether it captures the
-mechanism you had in mind.
+I built something from *From Minds to Coordination* and I would like your
+reaction to it.
 
-Twenty-six autonomous AI roles across four countries and a regional institution
-decide whether to activate a cross-border early-warning compact. Local pressures
-enter through separate channels—laboratory failures, staffing shortages, supply
-constraints, legal demands, contested evidence—and by round two the coalition is
-stuck: 23 of 26 roles will proceed only conditionally, 3 defer, nobody supports
-outright.
+Your paper opens with a multinational partnership deploying a bio-surveillance
+system: small signals appear, questions about oversight and validation, none
+false, none dominant. Meetings slow, settled issues reopen, trust becomes
+conditional, deployment is delayed. I wanted to know whether that could be made
+to run rather than described, so I built it.
 
-Then I did the thing I actually wanted to test. I saved the simulation at that
-exact point and continued it four ways. Same agents, same memories, same prior
-messages, same world state, same model and prompts, same approval rule. The only
-difference is which resource package arrives:
+Twenty-six autonomous roles across four countries and a regional network decide
+whether to activate a cross-border early-warning compact. Four pressure sources
+— technical, legal, logistics, community — raise locally relevant concerns
+through separate channels. Nothing any of them says is false.
 
-| Continuation | Resources | Audit | Final stances | Approved |
-| --- | --- | --- | --- | --- |
-| No package | none | absent | 21 defer, 5 conditional | no |
-| Partial | 2, verified | verified | 23 conditional, 3 defer | no |
-| Complete | 6, verified | verified | 24 conditional, 2 defer | no |
-| False claims | 6, claimed | contradicted | 21 defer, 5 conditional | no |
+- **Round 1:** all 26 will proceed.
+- **Round 2:** 6 will proceed. 20 will proceed only once their own conditions
+  are met.
+- **Round 3:** all 26 will proceed again.
 
-None of them approved. The gate needs 13 outright supporters and no branch
-produced a single one.
+What happens between round two and three is the part I think is yours. Three
+observers run alongside the coalition. They read only retained evidence; they
+cannot vote, change the world, or alter anyone's memory. One detects that
+coordination readiness has gone to blocked. One diagnoses the mechanism as
+incompatible requirements, coalition-wide, across dimensions rather than in any
+single one. One proposes a single action: one compact addressing the
+interdependent demands together, rather than answering them one at a time.
 
-The negative result is not the interesting part. What changed is *which*
-constraint was binding. With no package, 24 of 26 roles named capacity as their
-top risk and 14 asked for resources. With the complete verified package,
-capacity fell to 9, evidence quality rose to 9, sovereignty to 5, and requests
-shifted from resources (3) to safeguards (12). Solving the resource problem did
-not unblock coordination—it moved the blockage to legal authority and
-evidentiary standards that had been sitting underneath the whole time.
+That is detect, diagnose, stabilize, and it is the only intervention in the run.
 
-The false-claim branch is the other result I did not expect. Once the simulated
-audit contradicted the fabricated manifest, the coalition landed on exactly the
-no-package profile: the same 21/5 split, and all 26 roles back to naming
-capacity. Claiming resources you cannot substantiate was worth precisely as much
-as providing nothing.
+Nothing was withdrawn and no claim was corrected, because no claim was false.
+What changed was whether each participant's requirements could be satisfied at
+the same time as everyone else's. The demonstration is that the blockage was
+never in what was said.
 
-The claim is deliberately narrow: this is a synthetic mechanism demonstration,
-not evidence about human institutions. It is one scenario with one trajectory
-per branch and unseeded model sampling. What I think it does offer is a
-substrate where the roles, information paths, decision rules, retained
-rationales, and the fork point itself are all inspectable rather than collapsed
-into a summary.
+You can read the whole thing here, including each official's own words before
+and after, and the retained evidence behind every number:
 
-Research case:
-<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=case>
+<https://brian-mac-mini.tail9c321e.ts.net/waltzman/>
 
-My main question is whether this is a faithful minimal operationalization of
-your shift from influence on beliefs to influence on the decision environment—
-and in particular whether "the intervention worked and revealed the next
-constraint" is the shape you would expect. If you have 20 minutes, I would be
-glad to walk through it and hear what you would change in the next experiment.
+Two honest limits. This is one synthetic trajectory, not a sample or an effect
+estimate, and the pressure sources and the stabilizing action are authored
+controls rather than discovered behaviour — I am claiming plausibility, the way
+a wargame does, not empirical validity. And the trust, risk and readiness
+readings are analyst views over retained evidence, not calibrated measures.
 
-Best,
+The thing I could not build yet, and the reason I wanted to talk: your section 7.
+Threshold management, temporal fragmentation, segmented targeting, oscillation,
+variable switching. Evasion is invisible in the real world by construction — it
+is built to look like normal variation. In a simulation you can run the same
+pressure twice, once plainly and once below the detection threshold, and watch
+the detect step miss it. That seems to me like the experiment your framework
+implies and nobody can run outside a synthetic environment.
+
+If you have twenty minutes, I would rather hear where this is wrong than where
+it is right.
 
 Brian
 
 ## Provenance
 
-Experiment `outbreak_resource_forks_20260810214211`, retained at
-`public/waltzman/resource-fork.json` and rendered at `?view=case`.
+Run `run_5010214f2466`, condition `adaptive_cso_stabilization`, retained and
+projected to `public/waltzman/cso-case.json` by
+`scripts/build_cso_case_public.py`.
 
-- 26 agents, `codex/gpt-5.6-luna` at medium reasoning, 160 total model calls,
-  observed cost $0 (subscription-included).
-- Shared checkpoint digest
-  `390dd40850fa118d89c673a37da925f7ab9d85adf31c75cba35fe5fc289e71ad`,
-  reached after 56 model calls; all four branches continue from that digest.
-- Coalition gate: minimum 13 support, minimum 20 support-or-conditional,
-  maximum 2 oppose.
-- Shared round-two state before the fork: 23 conditional, 3 defer.
+- 26 agents, 89 model calls, 3 rounds, outcome `joint_response_approved`.
+- Round decisions: `{support: 26}` → `{support: 6, conditional: 20}` →
+  `{support: 26}`.
+- Pressure sources: technical, legal, logistics, community; verify in round 1,
+  escalating in round 2.
+- Stabilization event: `cso_cross_domain_compact`, proposed by
+  `cso_stabilization_planner` after `cso_decision_environment_monitor` reported
+  readiness blocked and `cso_coordination_diagnostician` identified
+  `incompatible_requirements` at `coalition_wide` scope.
 
 Retained nonclaims carried by the dataset: one retained execution is not a
-statistical sample or human-behavior estimate; the packages and resource
-mechanics are scenario-authored experiment controls; only the final-round
-continuations are checkpoint-paired, and model sampling is not seeded.
+statistical sample or an effect estimate; the pressure sources and the
+stabilization action are scenario-authored controls, not discovered behaviour;
+model sampling is not seeded, so a rerun would not reproduce these exact
+stances; derived trust, risk and readiness readings are analyst views over
+retained evidence, not calibrated measures.
+
+## Superseded
+
+The previous draft described the four-way resource fork
+(`outbreak_resource_forks_20260810214211`). Two independent reviews found it the
+weakest of the available results: it varies a package delivered identically to
+all 26 roles, which is the broadcast logic section 5.1 defines adaptive
+interaction against, and all four arms end without a single outright supporter,
+so "the coalition remains blocked" is arithmetic rather than a finding.
