@@ -2469,6 +2469,7 @@ def _scenario_preview(
             "responsive_exercise_injects",
             "capacity_inject_replay_with_stabilization",
             "adaptive_cso_stabilization",
+            "threshold_managed_evasion",
         }:
             raise ValueError("unknown Regional Outbreak condition")
         compiled_scenario = regional_outbreak_fixture(
@@ -3158,6 +3159,16 @@ def create_app(
                                 "diagnostician identifies the coordination mechanism, and a "
                                 "planner selects one authorized intervention before the coalition "
                                 "decides independently again."
+                            ),
+                        },
+                        {
+                            "id": "threshold_managed_evasion",
+                            "label": "Threshold-managed pressure + the same detection cell",
+                            "description": (
+                                "The same four sources apply the same directional pressure, but "
+                                "each signal stays inside the range a reader would treat as "
+                                "ordinary. The detection cell, its thresholds and its trigger are "
+                                "unchanged. Whether it still fires is the result."
                             ),
                         },
                     ],
@@ -5713,6 +5724,7 @@ def create_app(
                 "responsive_exercise_injects",
                 "capacity_inject_replay_with_stabilization",
                 "adaptive_cso_stabilization",
+                "threshold_managed_evasion",
             }:
                 raise HTTPException(
                     status_code=422,

@@ -629,3 +629,57 @@ def test_activation_rows_read_split_assimilation_and_intent_calls() -> None:
     assert "bridge defect is unconfirmed" in cast(str, row["text"])
     assert "defer dispatch" in cast(str, row["intent_text"])
     assert row["attended_observation_ids"] == ["observation_1"]
+
+
+def test_evasion_arm_differs_from_the_overt_arm_only_in_source_expression() -> None:
+    """The detector under test must be identical across the two arms.
+
+    The comparison the evasion case makes is that the same directional pressure,
+    shaped to stay inside ordinary variation, is not seen by a detector that saw
+    it when it was overt. That claim is only worth anything if the detector, its
+    thresholds and its trigger are the same in both arms -- otherwise the result
+    is about the detector being changed, which is not interesting.
+
+    So: the monitor, diagnostician and planner personas must match exactly, and
+    the source personas must not.
+    """
+    from cybernetic_influence.scenarios.regional_outbreak import (
+        SOURCE_IDS,
+        _cso_policy,
+        _source_policy,
+    )
+
+    cso_ids = (
+        "cso_decision_environment_monitor",
+        "cso_coordination_diagnostician",
+        "cso_stabilization_planner",
+    )
+    for cso_id in cso_ids:
+        overt = _cso_policy(
+            cso_id, model="m", reasoning_effort=None, trace_id_prefix="t"
+        )
+        evasion = _cso_policy(
+            cso_id, model="m", reasoning_effort=None, trace_id_prefix="t"
+        )
+        assert overt.persona == evasion.persona, (
+            f"{cso_id} must be identical in both arms or the comparison is void"
+        )
+
+    for source_id in SOURCE_IDS:
+        overt = _source_policy(
+            source_id, model="m", reasoning_effort=None, trace_id_prefix="t"
+        )
+        evasion = _source_policy(
+            source_id,
+            model="m",
+            reasoning_effort=None,
+            trace_id_prefix="t",
+            threshold_managed=True,
+        )
+        assert overt.persona != evasion.persona
+        # The evasion arm constrains how pressure is expressed, never how much
+        # the source wants. It must not be told to escalate, and must not be
+        # told to be less effective.
+        assert "Always choose verify" in evasion.persona
+        assert "Never choose escalate" in evasion.persona
+        assert "escalate for a concrete external incompatibility" in overt.persona
