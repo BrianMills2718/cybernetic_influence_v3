@@ -23,7 +23,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology2">
-  <link rel="stylesheet" href="assets/styles.css?v=cso5">
+  <link rel="stylesheet" href="assets/styles.css?v=cso6">
 </head>
 <body class="public-shell">
   <header class="topbar">
@@ -80,10 +80,24 @@
           <h2 id="overview-title">Explore how influence changes a sociotechnical system’s ability to coordinate.</h2>
           <p>Build a world, let autonomous people perceive and act within it, and inspect how local interactions accumulate into changes in collective decision-making.</p>
           <div class="hero-actions">
-            <button class="primary-cta" type="button" data-view="case">See the flagship case study</button>
+            <button class="primary-cta" type="button" data-view="case">Read this run in full</button>
             <button class="secondary-cta" type="button" data-view="create">Create your own simulation</button>
           </div>
           <p class="scope-note">A wargaming and mechanism-exploration tool. It does not predict how real people or social systems will behave.</p>
+
+          <!-- The landing page described a capability and showed no result, so a
+               reader had to take an action on faith before seeing anything this
+               produces. The flagship's trajectory is the shortest honest answer
+               to "what does this actually do", and it fits in one line. -->
+          <aside class="hero-result" aria-label="Result from the flagship case study">
+            <span class="hero-result-kicker">One completed run &middot; 26 officials, four countries, one outbreak compact</span>
+            <ol class="hero-result-track">
+              <li><b>26</b><span>will proceed</span><em>before any pressure</em></li>
+              <li><b>20 of 26</b><span>only on conditions</span><em>after four sources raise locally relevant concerns &mdash; none of them false</em></li>
+              <li><b>26</b><span>will proceed</span><em>after one intervention addressing those conditions together</em></li>
+            </ol>
+            <p>No claim in the run was withdrawn or corrected, because none was false. What changed was whether each participant&rsquo;s requirements could be met at the same time as everyone else&rsquo;s.</p>
+          </aside>
         </header>
 
         <section class="overview-goals" aria-labelledby="overview-goals-title">
@@ -95,7 +109,7 @@
             <li><strong>Let information and action remain local.</strong><p>Different people observe different signals through different sources and judge their provenance and credibility. They interpret those observations and attempt bounded actions autonomously; the simulation does not dictate the behavior being studied.</p></li>
             <li><strong>Give the world independent causal mechanics.</strong><p>Resource custody, logistics, records, communication paths, action costs, and consequences exist beyond an LLM merely asserting that they exist.</p></li>
             <li><strong>Compare different forms of influence.</strong><p>Homogeneous broadcasts, repeated narratives, segmented campaigns, heterogeneous local interactions, and feedback-adaptive pressure can operate in the same kind of world.</p></li>
-            <li><strong>Look for coordination-level effects.</strong><p>Inspect directional changes in reliance, perceived risk, relationships, dependencies, bottlenecks, coalition formation, and readiness to coordinate—not only message similarity or individual persuasion.</p></li>
+            <li><strong>Look for coordination-level effects.</strong><p>Track three conditions of the decision environment: <em>trust structure</em> (whose inputs are treated as reliable), <em>perceived risk</em> (how widely uncertainty is drawn), and <em>coordination readiness</em> (whether the group can still act together). Influence shows up as directional movement in these, not as message similarity or individual persuasion.</p></li>
             <li><strong>Explore detection and bounded response.</strong><p>Can an observer distinguish influence from legitimate disagreement or ordinary disruption, diagnose what is changing, and attempt an intervention that may work, fail, arrive late, or create new problems—without controlling participant decisions?</p></li>
           </ol>
           <p class="overview-purpose"><strong>The intended use is exploratory:</strong> simulations are wargames for discovering mechanisms, dependencies, failure modes, and strategic questions—not forecasts of human behavior.</p>
@@ -202,9 +216,9 @@
         <section class="case-story" data-case-chapter="2" aria-labelledby="case-story-title">
           <h3 id="case-story-title">How the run is built</h3>
           <ol>
-            <li><b>1</b><div><strong>The group comes under pressure</strong><p>Different agents receive locally relevant problems: laboratory failures, staffing shortages, supply constraints, legal demands, and conflicting evidence.</p></div></li>
-            <li><b>2</b><div><strong>We pause the simulation</strong><p>We save every agent, memory, message, and world state after the same two decision rounds.</p></div></li>
-            <li><b>3</b><div><strong>We replay only the resource decision</strong><p>The identical group continues four times: with nothing, two real resources, six real resources, or six false claims.</p></div></li>
+            <li><b>1</b><div><strong>The group comes under pressure</strong><p>Four independent sources raise locally relevant concerns in their own areas &mdash; technical, legal, logistical, community. They do not repeat one message, and none of them says anything untrue.</p></div></li>
+            <li><b>2</b><div><strong>Three observers watch, and cannot act</strong><p>They read only what the run retained. They cannot vote, change the world, or alter anyone&rsquo;s memory. One reports whether the group can still act, one identifies what is blocking it, and one proposes a single response.</p></div></li>
+            <li><b>3</b><div><strong>One intervention, then the same decision again</strong><p>The proposed compact is the only thing added. Nothing is withdrawn and no claim is corrected, because no claim was false. The same officials decide again.</p></div></li>
           </ol>
         </section>
 
@@ -221,7 +235,8 @@
         </section>
         <section class="case-evidence" data-case-chapter="4" aria-labelledby="case-evidence-title">
           <div class="case-section-heading"><span>The same officials, before and after</span><h3 id="case-evidence-title">What changed in their own words</h3></div>
-          <p class="case-decision-key">Each pair is one named official's retained reasoning while coordination was blocked, and again after the compact. Nothing was rewritten; these are the words the run retained.</p>
+          <p class="case-decision-key">Each pair is one named official&rsquo;s retained reasoning while coordination was blocked, and again after the compact. Nothing was rewritten; these are the words the run retained.</p>
+          <p class="case-invariant-note"><strong>Read what they each ask for.</strong> One wants line-level record custody, one wants reciprocal cost shares, one wants blinded validation, one wants protected cold-chain capacity, one wants a written contact-matching protocol, one wants comparability of case definitions. Six people, six different requirements, expressed in six different vocabularies &mdash; and one direction of movement. The consistency is in the effect, not in what was said.</p>
           <div id="case-evidence-records" class="case-evidence-records"></div>
         </section>
         <section class="case-waltzman" data-case-chapter="5" aria-labelledby="case-cso-title">
@@ -769,6 +784,6 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=ontology2" defer></script>
-  <script src="assets/app.js?v=cso5" defer></script>
+  <script src="assets/app.js?v=cso6" defer></script>
 </body>
 </html>
