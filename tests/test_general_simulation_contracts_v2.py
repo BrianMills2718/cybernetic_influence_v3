@@ -389,6 +389,45 @@ def test_analysis_contract_rejects_execution_authority_fields() -> None:
         AnalysisSpecV2.model_validate(payload)
 
 
+def _bounded_fixture_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
+    user = json.loads(args[1][1]["content"])
+    if kwargs["response_model"] is ActorDecision:
+        context = user["actor_context"]
+        return ActorDecision(
+            assimilation=Assimilation(
+                attended_observation_ids=[],
+                memory_additions=[],
+                memory_revisions=[],
+                provenance_links=[],
+                interpretation="Retain the authorized situation without adding facts.",
+            ),
+            intent=SemanticActionIntent(
+                intent_id=(
+                    f"intent_{context['actor_id']}_{context['base_revision']}"
+                ),
+                actor_id=context["actor_id"],
+                base_revision=context["base_revision"],
+                action="Request a bounded coordination check.",
+                target_refs=[],
+                purpose="Address the current phase responsibilities.",
+                expected_effect="Produce one reviewable attempt.",
+                stated_rationale="Only authorized context is available.",
+            ),
+        ), SimpleNamespace(provider="fixture")
+    assert kwargs["response_model"] is WorldTransactionProposal
+    return WorldTransactionProposal(
+        transaction_id=f"transaction_{user['moment']['moment_id']}",
+        base_revision=user["requirements"]["base_revision"],
+        authority_id=user["requirements"]["authority_id"],
+        intent_ids=user["requirements"]["intent_ids"],
+        operations=[],
+        preconditions=[],
+        consequences=[],
+        evidence_refs=user["requirements"]["intent_ids"],
+        stated_rationale="The bounded intents do not require a world mutation.",
+    ), SimpleNamespace(provider="fixture")
+
+
 def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
     proposal = GeneralSimulationProposalV1.model_validate_json(
         FIXTURE.read_text(encoding="utf-8")
@@ -399,43 +438,7 @@ def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
     )
     compiled = compile_general_simulation_v2(scenario, run_spec)
 
-    def isolated_call(*args: Any, **kwargs: Any) -> tuple[object, object]:
-        user = json.loads(args[1][1]["content"])
-        if kwargs["response_model"] is ActorDecision:
-            context = user["actor_context"]
-            return ActorDecision(
-                assimilation=Assimilation(
-                    attended_observation_ids=[],
-                    memory_additions=[],
-                    memory_revisions=[],
-                    provenance_links=[],
-                    interpretation="Retain the authorized situation without adding facts.",
-                ),
-                intent=SemanticActionIntent(
-                    intent_id=(
-                        f"intent_{context['actor_id']}_{context['base_revision']}"
-                    ),
-                    actor_id=context["actor_id"],
-                    base_revision=context["base_revision"],
-                    action="Request a bounded coordination check.",
-                    target_refs=[],
-                    purpose="Address the current phase responsibilities.",
-                    expected_effect="Produce one reviewable attempt.",
-                    stated_rationale="Only authorized context is available.",
-                ),
-            ), SimpleNamespace(provider="fixture")
-        assert kwargs["response_model"] is WorldTransactionProposal
-        return WorldTransactionProposal(
-            transaction_id=f"transaction_{user['moment']['moment_id']}",
-            base_revision=user["requirements"]["base_revision"],
-            authority_id=user["requirements"]["authority_id"],
-            intent_ids=user["requirements"]["intent_ids"],
-            operations=[],
-            preconditions=[],
-            consequences=[],
-            evidence_refs=user["requirements"]["intent_ids"],
-            stated_rationale="The bounded intents do not require a world mutation.",
-        ), SimpleNamespace(provider="fixture")
+    isolated_call = _bounded_fixture_call
 
     result = run_general_simulation_v2(
         compiled,
@@ -447,6 +450,7 @@ def test_v2_runtime_contexts_exclude_analyst_question_and_analysis() -> None:
     assert result.run_spec_digest == run_spec.digest
     retained_result = result.model_dump(mode="json")
     evidence_bundle = build_run_evidence_bundle_v2(compiled, result)
+
     analysis = analyze_run_evidence_v2(evidence_bundle, _waltzman_spec())
     assert analysis.coverage_status == "supported"
     assert analysis.model_call_receipts == []
@@ -706,3 +710,73 @@ def test_waltzman_lens_does_not_count_rejected_operations_as_committed() -> None
             "committed_world_operations": 0,
         }
     ]
+
+
+def test_sensing_rules_are_retained_as_information_lineage() -> None:
+    """A sensing rule is information lineage, not an unrecorded detail.
+
+    Who may know what is expressed two ways: a representation names an item and
+    its authorized recipients, and a sensing rule names an observer permitted to
+    read otherwise hidden state plus the recipients of the resulting finding.
+    Only representations produced evidence, so a scenario expressing its whole
+    information asymmetry as sensing rules retained no information lineage at
+    all, and every lens requiring that evidence declared itself unsupported --
+    on a run that had modelled the asymmetry exactly as asked. Observed on a
+    generated simulation on 2026-08-23.
+    """
+    document = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    record = document["world_records"][0]
+    subject = record["record_id"]
+    observer = document["people"][0]["entity_id"]
+    record.setdefault("hidden_state", []).append({"key": "sealed", "value": "true"})
+    # The rule publishes its finding into a public field, which must already exist.
+    record.setdefault("public_state", []).append({"key": "sealed", "value": "unknown"})
+    # A sensing rule is a transition contract: it must belong to a component
+    # request and be scheduled in a moment, exactly as any other contract is.
+    document["component_requests"].append(
+        {
+            "request_id": "probe_sensing_request",
+            "subject_refs": [subject],
+            "behavior_description": "Reveal one hidden key to a permitted observer.",
+            "required_reads": [subject],
+            "desired_effects": ["Represent an authorized observation."],
+            "fidelity_need": "exact",
+            "material_to_question": True,
+            "transition_contract_ids": ["probe_hidden_key_sensing"],
+        }
+    )
+    document["schedule"][0]["active_component_request_ids"].append(
+        "probe_sensing_request"
+    )
+    document["schedule"][0]["active_transition_contract_ids"].append(
+        "probe_hidden_key_sensing"
+    )
+    document.setdefault("sensing_rules", []).append(
+        {
+            "rule_id": "probe_hidden_key_sensing",
+            "subject_ref": subject,
+            "observer_ids": [observer],
+            "reveal_hidden_keys": ["sealed"],
+            "output_record_id": subject,
+            "result_recipient_ids": [observer],
+        }
+    )
+
+    proposal = GeneralSimulationProposalV1.model_validate(document)
+    scenario, run_spec = adapt_general_proposal_v1(proposal, run_id="run_sensing_v2")
+    compiled = compile_general_simulation_v2(scenario, run_spec)
+    assert compiled.scenario.sensing_rules
+
+    result = run_general_simulation_v2(
+        compiled,
+        call=_bounded_fixture_call,
+        max_additional_moments=1,
+    )
+    bundle = build_run_evidence_bundle_v2(compiled, result)
+
+    lineage = {
+        record.evidence_ref
+        for record in bundle.evidence_records
+        if record.evidence_kind == "information_lineage"
+    }
+    assert "information:probe_hidden_key_sensing" in lineage

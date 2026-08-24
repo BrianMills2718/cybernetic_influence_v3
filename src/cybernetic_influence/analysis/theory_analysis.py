@@ -47,6 +47,24 @@ EvidenceKind: TypeAlias = Literal[
     "boundary_activity",
     "completion",
 ]
+# Every evidence kind a completed run can actually retain. "boundary_activity"
+# is declared in EvidenceKind but no execution path emits a record of that kind,
+# so an analysis requiring it can never be satisfied by any run. An authored
+# analysis that asked for it produced a lens that reported itself unsupported
+# forever, which reads to the analyst as their run being deficient rather than
+# as a request that was never satisfiable.
+RETAINABLE_EVIDENCE_KINDS: frozenset[str] = frozenset(
+    {
+        "configuration",
+        "initial_state",
+        "terminal_state",
+        "causal_event",
+        "information_lineage",
+        "participant_activation",
+        "mechanism_decision",
+        "completion",
+    }
+)
 FrameworkId: TypeAlias = Literal["waltzman", "levin"]
 AnalysisId: TypeAlias = Literal[
     "waltzman_decision_environment_v1",
@@ -272,6 +290,15 @@ class AnalysisSpecV2(_ProducedModel):
         ):
             if len(values) != len(set(values)):
                 raise ValueError(f"{label} must be unique")
+        unsatisfiable = sorted(
+            set(self.required_evidence_kinds) - RETAINABLE_EVIDENCE_KINDS
+        )
+        if unsatisfiable:
+            raise ValueError(
+                "required evidence kinds that no run can retain: "
+                + ", ".join(unsatisfiable)
+                + "; an analysis requiring them can never produce a finding"
+            )
         return self
 
     @property

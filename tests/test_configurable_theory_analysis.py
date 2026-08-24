@@ -509,3 +509,43 @@ def test_narrator_prose_cannot_be_measurement_evidence() -> None:
     corrupt = readout.model_copy(update={"findings": [narrative_finding]})
     with pytest.raises(ValueError, match="unknown evidence"):
         validate_readout_against_bundle(corrupt, bundle)
+
+
+def test_analysis_cannot_require_evidence_no_run_can_retain() -> None:
+    """An unsatisfiable requirement must fail here, not silently at read time.
+
+    "boundary_activity" is a declared EvidenceKind that no execution path emits.
+    An authored analysis asked for it, so its lens reported itself unsupported
+    on a run that was perfectly good -- which reads to the analyst as their
+    simulation being deficient, rather than as a request that could never have
+    been satisfied by any run at all.
+    """
+    from cybernetic_influence.analysis.theory_analysis import (
+        RETAINABLE_EVIDENCE_KINDS,
+        AnalysisSpecV2,
+    )
+
+    base = {
+        "analysis_id": "probe_analysis",
+        "profile": "waltzman_coordination_v1",
+        "purpose": "purpose",
+        "construct_definitions": ["construct"],
+        "method_classes": ["exact"],
+        "aggregation": "aggregation",
+        "uncertainty": "uncertainty",
+        "limitations": ["limitation"],
+    }
+
+    accepted = AnalysisSpecV2(
+        required_evidence_kinds=["configuration", "terminal_state"],
+        **cast(Any, base),
+    )
+    assert accepted.required_evidence_kinds == ["configuration", "terminal_state"]
+
+    with pytest.raises(ValidationError, match="never produce a finding"):
+        AnalysisSpecV2(
+            required_evidence_kinds=["configuration", "boundary_activity"],
+            **cast(Any, base),
+        )
+
+    assert "boundary_activity" not in RETAINABLE_EVIDENCE_KINDS

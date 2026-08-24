@@ -617,6 +617,26 @@ def build_run_evidence_bundle_v2(
                 payload=representation.model_dump(mode="json"),
             )
         )
+    # Who may know what is expressed two ways. A representation names an item of
+    # information and its authorized recipients; a sensing rule names an observer
+    # permitted to read a hidden key and the recipients of the resulting finding.
+    # Only the first produced evidence, so a scenario whose entire information
+    # asymmetry was expressed as sensing rules retained no information lineage at
+    # all and every lens requiring it reported itself unsupported -- on a run that
+    # did model the asymmetry correctly. Both are information lineage.
+    for rule in compiled.scenario.sensing_rules or []:
+        records.append(
+            EvidenceRecordV1(
+                evidence_ref=f"information:{rule.rule_id}",
+                evidence_kind="information_lineage",
+                summary=(
+                    "Configured sensing rule: which observers may read otherwise "
+                    "hidden state, and who receives the resulting finding."
+                ),
+                source_refs=[f"configuration:{compiled.scenario.scenario_id}"],
+                payload=rule.model_dump(mode="json"),
+            )
+        )
     for index, receipt in enumerate(result.model_calls, start=1):
         records.append(
             EvidenceRecordV1(
