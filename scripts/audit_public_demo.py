@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -38,6 +39,44 @@ DEFAULT_PAGE_URL = "https://brian-mac-mini.tail9c321e.ts.net/waltzman/"
 def log(message: str) -> None:
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     print(f"[{stamp}] {message}", flush=True)
+
+
+
+# The deck is the page Brian actually opens. A verdict that lives only in a log
+# on the deployment host is a verdict nobody reads, and an audit nobody reads is
+# not a control. This rewrites exactly the text between two sentinels inside the
+# demo's existing card -- never the surrounding file, which carries every other
+# project's card too.
+STATUS_START = "<!--demo-audit-status-->"
+STATUS_END = "<!--/demo-audit-status-->"
+
+
+def write_status(target: Path, ok: bool, failures: list[str], checked: int) -> None:
+    if not target.exists():
+        log(f"status target not found, leaving it alone: {target}")
+        return
+    markup = target.read_text(encoding="utf-8")
+    if STATUS_START not in markup or STATUS_END not in markup:
+        log(f"status sentinels absent in {target.name}; not modifying a shared page")
+        return
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    if ok:
+        text = f"Audited {stamp}Z &middot; {checked} checks passed"
+    else:
+        text = (
+            f"NEEDS ATTENTION {stamp}Z &middot; "
+            f"{', '.join(failures)} failing &mdash; do not share until fixed"
+        )
+    updated = re.sub(
+        re.escape(STATUS_START) + ".*?" + re.escape(STATUS_END),
+        STATUS_START + text + STATUS_END,
+        markup,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if updated != markup:
+        target.write_text(updated, encoding="utf-8")
+        log(f"wrote verdict to {target.name}")
 
 
 def run(name: str, argv: list[str], env: dict[str, str] | None = None) -> tuple[str, bool, str]:
@@ -56,6 +95,12 @@ def run(name: str, argv: list[str], env: dict[str, str] | None = None) -> tuple[
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--page-url", default=DEFAULT_PAGE_URL)
+    parser.add_argument(
+        "--status-target",
+        type=Path,
+        default=None,
+        help="page carrying demo-audit-status sentinels; its verdict line is rewritten",
+    )
     parser.add_argument(
         "--skip-route",
         action="store_true",
@@ -104,6 +149,9 @@ def main() -> int:
         log(f"  {check_name:9s} {'ok  ' if ok else 'FAIL'}  {tail[:150]}")
         if not ok:
             failures.append(check_name)
+
+    if args.status_target:
+        write_status(args.status_target, not failures, failures, len(checks))
 
     if failures:
         print(

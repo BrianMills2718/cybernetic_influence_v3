@@ -30,6 +30,8 @@ cat > "$PLIST" <<PLIST
   <array>
     <string>$REPO/.venv/bin/python</string>
     <string>$REPO/scripts/audit_public_demo.py</string>
+    <string>--status-target</string>
+    <string>$HOME/Sites/project-launcher/index.html</string>
   </array>
   <key>WorkingDirectory</key><string>$REPO</string>
   <key>EnvironmentVariables</key>
