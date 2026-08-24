@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 import pytest
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 
 from cybernetic_influence.active_runtime import ActiveRuntimeResult
 from cybernetic_influence.analysis import (
@@ -549,3 +549,83 @@ def test_authored_proposal_rejects_analysis_no_run_can_satisfy() -> None:
         **cast(Any, spec_fields),
     )
     assert "boundary_activity" in retained.required_evidence_kinds
+
+
+def test_activation_rows_read_split_assimilation_and_intent_calls() -> None:
+    """The runtime's two-call actor shape must reach the analysis.
+
+    Originally one model call produced a combined decision carrying both
+    `assimilation` and `intent`. The runtime now issues two calls per actor and
+    retains each as its own record. Reading only the combined shape skipped
+    every record of both new shapes, so a run holding 32 retained activations
+    produced no rows and every coordination measure reported zero -- "0 of 0
+    people", "no typed participant activations were available" -- on a run where
+    four people deliberated across four moments and committed seven operations.
+
+    One row per acting person per moment: the standalone assimilation record's
+    content reaches the analysis through the intent it fed, and emitting both
+    would double-count a person who acted once.
+    """
+    from cybernetic_influence.analysis.theory_analysis import EvidenceRecordV1
+    from cybernetic_influence.general_simulation.analysis_service import (
+        _activation_rows,
+    )
+
+    actor_context: dict[str, JsonValue] = {
+        "actor_id": "mara_ellis",
+        "base_revision": 0,
+        "current_minute": 15,
+    }
+    assimilation_record = EvidenceRecordV1(
+        evidence_ref="call:1:actor",
+        evidence_kind="participant_activation",
+        summary="assimilation",
+        payload={
+            "input_context": {"actor_context": actor_context},
+            "structured_output": {
+                "attended_observation_ids": ["observation_1"],
+                "interpretation": "The bridge defect is unconfirmed.",
+                "memory_additions": [],
+                "memory_revisions": [],
+                "provenance_links": ["record_1"],
+            },
+        },
+    )
+    intent_record = EvidenceRecordV1(
+        evidence_ref="call:2:actor",
+        evidence_kind="participant_activation",
+        summary="intent",
+        payload={
+            "input_context": {
+                "actor_context": actor_context,
+                "retained_assimilation": {
+                    "attended_observation_ids": ["observation_1"],
+                    "interpretation": "The bridge defect is unconfirmed.",
+                    "provenance_links": ["record_1"],
+                },
+            },
+            "structured_output": {
+                "actor_id": "mara_ellis",
+                "base_revision": 0,
+                "intent_id": "intent_mara_ellis_0",
+                "action": "Defer dispatch until the defect is confirmed.",
+                "purpose": "Avoid unsafe infrastructure.",
+                "expected_effect": "No cargo movement this moment.",
+                "target_refs": ["damaged_bridge_record"],
+                "transition_contract_ids": ["bridge_defect_sensing_contract"],
+            },
+        },
+    )
+
+    rows = _activation_rows([assimilation_record, intent_record])
+
+    assert len(rows) == 1, "one acting person at one moment is one row"
+    row = rows[0]
+    assert row["actor_id"] == "mara_ellis"
+    assert row["moment"] == 15
+    assert row["target_refs"] == ["damaged_bridge_record"]
+    assert row["transition_contract_ids"] == ["bridge_defect_sensing_contract"]
+    # The assimilation the intent was given must reach the text the lens reads.
+    assert "bridge defect is unconfirmed" in cast(str, row["text"])
+    assert "defer dispatch" in cast(str, row["intent_text"])
+    assert row["attended_observation_ids"] == ["observation_1"]

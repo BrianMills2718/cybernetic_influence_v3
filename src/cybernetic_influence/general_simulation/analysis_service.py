@@ -108,17 +108,54 @@ def _string_items(value: JsonValue) -> list[str]:
 def _activation_rows(
     records: list[EvidenceRecordV1],
 ) -> list[dict[str, object]]:
+    """Project retained actor calls into one row per acting person per moment.
+
+    A participant activation arrives in one of two shapes. Originally one call
+    produced a combined decision carrying both `assimilation` and `intent`. The
+    runtime now issues two calls per actor -- an assimilation, then an intent --
+    and retains each as its own record, with the intent record carrying the
+    assimilation it was given as `retained_assimilation`.
+
+    Reading only the combined shape silently skipped every record of both new
+    shapes, so a run with 32 retained activations produced no rows at all and
+    every coordination measure reported zero: "0 of 0 people", "no typed
+    participant activations were available". That reads as a simulation in which
+    nobody did anything, on a run where four people deliberated across four
+    moments and committed seven world operations.
+
+    Identity comes from `input_context.actor_context`, which both shapes carry,
+    rather than from the structured output, which they do not share. Rows are
+    built from intent-bearing records only: the standalone assimilation record's
+    content is already attached to the intent it fed, and emitting both would
+    double-count people who acted once.
+    """
     rows: list[dict[str, object]] = []
     for record in records:
         output = _json_mapping(record.payload.get("structured_output"))
-        assimilation = _json_mapping(output.get("assimilation"))
-        intent = _json_mapping(output.get("intent"))
-        actor_id = intent.get("actor_id")
-        base_revision = intent.get("base_revision")
-        if not isinstance(actor_id, str) or not isinstance(base_revision, int):
-            continue
         input_context = _json_mapping(record.payload.get("input_context"))
         actor_context = _json_mapping(input_context.get("actor_context"))
+
+        combined_intent = _json_mapping(output.get("intent"))
+        if combined_intent:
+            intent = combined_intent
+            assimilation = _json_mapping(output.get("assimilation"))
+        elif isinstance(output.get("actor_id"), str):
+            intent = output
+            assimilation = _json_mapping(input_context.get("retained_assimilation"))
+        else:
+            # A standalone assimilation record: its content reaches the analysis
+            # through the intent record it fed.
+            continue
+
+        actor_id = intent.get("actor_id")
+        if not isinstance(actor_id, str):
+            actor_id = actor_context.get("actor_id")
+        base_revision = intent.get("base_revision")
+        if not isinstance(base_revision, int) or isinstance(base_revision, bool):
+            base_revision = actor_context.get("base_revision")
+        if not isinstance(actor_id, str) or not isinstance(base_revision, int):
+            continue
+
         causal_minute = actor_context.get("current_minute")
         if not isinstance(causal_minute, int) or isinstance(causal_minute, bool):
             causal_minute = base_revision + 1
