@@ -203,7 +203,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Terminal decision gate" in page
     assert "Open method" in page
     assert "AI coordination simulation workbench" in page
-    assert "Explore how influence changes a sociotechnical system’s ability to coordinate" in page
+    assert "Influence that changes what a group can decide, not what it believes" in page
     assert "What this workbench is for" in page
     assert "Model people as people—not as role labels" in page
     assert "Let information and action remain local" in page
