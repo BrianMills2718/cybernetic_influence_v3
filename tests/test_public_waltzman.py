@@ -96,7 +96,7 @@ def test_authoring_progress_uses_retained_backend_stages() -> None:
     assert "job.detail" in script
     assert "proposal attempt ${attempt}" in script
     assert "Still compiling the typed world" not in script
-    assert "assets/app.js?v=cso1" in page
+    assert f"assets/app.js?v={_cache_version(page, 'assets/app.js')}" in page
 
 
 def test_product_walkthrough_leads_with_the_simulation_and_explains_bookkeeping() -> None:
@@ -162,6 +162,21 @@ def test_completed_simulation_starts_with_outcome_and_keeps_analysis_optional() 
 
 def _dataset() -> dict[str, object]:
     return cast(dict[str, object], json.loads(DATA.read_text(encoding="utf-8")))
+
+
+def _cache_version(page: str, asset: str) -> str:
+    """The cache-busting version stamped on an asset in the served page.
+
+    The application script and stylesheet must carry a version and must carry
+    the same one, or a returning visitor gets one half of a change. Which
+    version is current is not a property worth pinning: doing so turned every
+    deliberate cache bump into a test failure that said nothing about the page.
+    """
+    import re
+
+    match = re.search(re.escape(asset) + r"\?v=([A-Za-z0-9._-]+)", page)
+    assert match, f"{asset} is not cache-busted in the served page"
+    return match.group(1)
 
 
 def test_public_page_is_an_executable_evidence_workbench() -> None:
@@ -269,13 +284,18 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Derived constructs are legitimate when operationalized" in page
     assert "A simulator becomes an experimental instrument only through a declared comparison" in page
     assert "snapshot → independent proposals → conflict resolution → atomic commit" in page
+    app_version = _cache_version(page, "assets/app.js")
     assert shape.stylesheets == [
         "assets/graph-canvas.css?v=ontology2",
-        "assets/styles.css?v=cso1",
+        f"assets/styles.css?v={app_version}",
     ]
-    assert shape.scripts == [
+    # The page also carries one deliberate inline script -- the redirect that
+    # makes the shared link work without its trailing slash -- which the shape
+    # parser records with an empty src. Its presence and its CSP hash are
+    # asserted by test_inline_boot_script_is_allowed_by_the_content_security_policy.
+    assert [item for item in shape.scripts if item] == [
         "assets/graph-canvas.js?v=ontology2",
-        "assets/app.js?v=cso1",
+        f"assets/app.js?v={app_version}",
     ]
     assert {
         "overview-view",

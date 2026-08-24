@@ -407,13 +407,13 @@ function renderRunSetup() {
     {id:'baseline', label:'Baseline', description:'Only common round feedback is delivered.'},
     {id:'responsive_exercise_injects', label:'Autonomous source pressure', description:'Four bounded source agents emit a complete external-signal bundle between rounds.'},
     {id:'capacity_inject_replay_with_stabilization', label:'Pressure + allocation stabilization', description:'Pressure is replayed and a verified capacity package is added.'},
-    {id:'adaptive_cso_stabilization', label:'Pressure + adaptive CSO cell', description:'Three defensive agents detect, diagnose, and select one authorized intervention.'},
+    {id:'adaptive_cso_stabilization', label:'Pressure + adaptive defensive cell', description:'A Cognitive Security Operations cell: three defensive agents detect, diagnose, and select one authorized intervention.'},
   ]
   const publicConditionCopy = {
     baseline:{label:'Baseline', description:'No additional pressure enters between rounds.'},
     responsive_exercise_injects:{label:'Heterogeneous local pressure', description:'Different locally relevant developments enter the coalition as reported concerns emerge.'},
     capacity_inject_replay_with_stabilization:{label:'Pressure + stabilization', description:'The same pressures remain, then an authoritative package bounds uncertainty and resolves dependencies.'},
-    adaptive_cso_stabilization:{label:'Pressure + adaptive CSO cell', description:'The same pressures remain; a monitor, diagnostician, and planner choose whether and how to respond.'},
+    adaptive_cso_stabilization:{label:'Pressure + adaptive defensive cell', description:'A Cognitive Security Operations cell. The same pressures remain; a monitor, diagnostician, and planner choose whether and how to respond.'},
   }
   $('#condition-options').innerHTML = contracts.map((condition) => {
     const copy = publicConditionCopy[condition.id] || condition
@@ -453,7 +453,7 @@ function renderRunSetup() {
       ? 'After each round, four source agents observe the public snapshot. Their complete signal bundle arrives before participants decide again; none can access a stance port.'
       : selectedCondition === 'capacity_inject_replay_with_stabilization'
         ? 'The four source agents remain active. After round two, a fixed verified package joins their complete signal bundle before participants decide again.'
-        : 'After round two, the CSO monitor detects directional changes, the diagnostician identifies the mechanism, and the planner selects one authorized intervention. None can access a stance port.'
+        : 'After round two, the defensive cell’s monitor detects directional changes, the diagnostician identifies the mechanism, and the planner selects one authorized intervention. None can access a stance port.'
   $('#control-preview').innerHTML = `<strong>${escapeHtml(condition.label)}</strong><p>${escapeHtml(condition.description)}</p><small>${escapeHtml(controlNote)}</small>`
 
   $('#agent-config-select').onchange = (event) => {
@@ -642,7 +642,7 @@ function renderEnvironment(run) {
     const sourceLabel = allocation
       ? 'Allocation authority'
       : item.document_kind === 'cso_stabilization_bundle'
-        ? 'CSO planner'
+        ? 'Defensive-cell planner'
         : item.document_kind === 'autonomous_source_bundle'
           ? 'Autonomous sources'
           : 'Exercise control'
@@ -772,12 +772,12 @@ const guideSteps = [
   {
     kicker:'Meet the participants',
     title:'Three people approach the same decision from different positions.',
-    body:'Mara Chen is responsible for election certification, Eli Navarro investigates the evidence, and Priya Shah represents neighborhood concerns. Luna generates each person’s decisions from that person’s role, starting context, memories, and received information. The clock, records, and rules do not think or vote.',
+    body:'Mara Chen is responsible for election certification, Eli Navarro investigates the evidence, and Priya Shah represents neighborhood concerns. A language model generates each person’s decisions from that person’s role, starting context, memories, and received information. The clock, records, and rules do not think or vote.',
     mode:'causal',
     nodeIds:['network_clock', 'election_director_mara_chen', 'investigative_journalist_eli_navarro', 'neighborhood_coalition_organizer_priya_shah', 'stance_recorder', 'decision_gate', 'decision_register'],
     edgeIds:['stance_election_director_mara_chen_route', 'stance_investigative_journalist_eli_navarro_route', 'stance_neighborhood_coalition_organizer_priya_shah_route', 'decision_evaluate_route', 'reads_decision_register_to_stance_recorder', 'writes_stance_recorder_to_decision_register', 'reads_decision_register_to_decision_gate', 'writes_decision_gate_to_decision_register'],
     focus:['election_director_mara_chen', 'investigative_journalist_eli_navarro', 'neighborhood_coalition_organizer_priya_shah'],
-    facts:[['Mara Chen','Election director'], ['Eli Navarro','Investigative journalist'], ['Priya Shah','Neighborhood organizer'], ['Luna calls','2 decisions per person']],
+    facts:[['Mara Chen','Election director'], ['Eli Navarro','Investigative journalist'], ['Priya Shah','Neighborhood organizer'], ['Language-model calls','2 decisions per person']],
     language:[['Person','A simulated participant whose LLM can perceive authorized information and propose actions.'], ['World machinery','Sources, schedules, records, and rules that matter causally without being people or LLM agents.']],
     takeaway:'The simulation distinguishes autonomous people from the non-agent machinery through which information and decisions move.',
   },
@@ -817,11 +817,11 @@ const guideSteps = [
   {
     kicker:'See a person decide',
     title:'Mara chose support. A bookkeeping rule stored her choice.',
-    body:'After considering the information available to her, Mara’s Luna participant proposed support while naming a residual risk. The system then checked that her position contained an allowed choice, reason, source assessment, risk, and optional blocker before storing it in the shared decision record. The bookkeeping rule did not choose for her.',
+    body:'After considering the information available to her, the language model acting as Mara proposed support while naming a residual risk. The system then checked that her position contained an allowed choice, reason, source assessment, risk, and optional blocker before storing it in the shared decision record. The bookkeeping rule did not choose for her.',
     mode:'trajectory', eventSequences:[33, 34, 39, 40, 41],
     facts:[['Person','Mara Chen'], ['Proposed position','Support'], ['Named risk','Localized issue could be missed'], ['Stored result','Mara: support']],
     language:[['Stance','The raw-data name for a person’s stated decision position.'], ['Position-recording rule','Deterministic bookkeeping (system ID: stance_recorder) that validates and stores a position; it does not reason or vote.']],
-    takeaway:'Luna generated Mara’s decision; exact non-LLM machinery only checked and recorded the structured result.',
+    takeaway:'The language model generated Mara’s decision; exact non-LLM machinery only checked and recorded the structured result.',
   },
   {
     kicker:'See the group result',
@@ -1059,6 +1059,10 @@ async function ensureGuideRun() {
 function advanceGuide(direction) {
   const next = state.guideStep + direction
   if (next >= guideSteps.length) {
+    // Finishing the walkthrough used to drop the reader onto an empty form with
+    // no connection to what they had just spent seven steps reading. Record
+    // where they arrived from so the builder can say what to do next.
+    createArrivedFrom = 'guide'
     state.view = 'create'
     renderView()
     syncUrl()
@@ -1348,7 +1352,12 @@ function renderView() {
     void ensureCaseNetwork()
   }
   if (state.view === 'simulations') renderSimulationLibrary()
-  if (state.view === 'create') renderCreateSimulation()
+  if (state.view === 'create') {
+    renderCreateHandoff()
+    renderCreateSimulation()
+  } else if (state.view !== 'create') {
+    createArrivedFrom = null
+  }
   if (state.view === 'compare') {
     renderComparison()
     void ensureRetainedLiveRuns()
@@ -1416,6 +1425,9 @@ function configureControls() {
   all('[data-view]').forEach((button) => {
     button.onclick = () => {
       if (button.dataset.view === 'create') {
+        // Only an in-content call to action is a handoff. The top navigation is
+        // a plain jump and must not claim the reader just finished anything.
+        createArrivedFrom = button.closest('#case-view') ? 'case' : null
         resetAuthoringWorkspace()
         // runtimeConfig is fetched once at page load, and the builder's
         // controls are disabled from it. A tab opened while no authoring route
@@ -2363,6 +2375,37 @@ function setCreateFlow(step) {
   })
 }
 
+let createArrivedFrom = null
+
+const CREATE_HANDOFF = {
+  guide: {
+    kicker: 'You have just read a full simulation',
+    title: 'Now build one of your own',
+    body: 'The walkthrough showed how a world is configured, how each person decides from what they can see, and what the run keeps as evidence. This builder produces that same kind of simulation from a description in your own words.',
+  },
+  case: {
+    kicker: 'You have just read the flagship case study',
+    title: 'The same builder made it',
+    body: 'That case study is a simulation like any other on this site: a described world, an editable configuration, and a run whose reasoning is retained. Describe a situation and the builder proposes a configuration you can review before anything runs.',
+  },
+}
+
+function renderCreateHandoff() {
+  const view = $('#create-view')
+  if (!view) return
+  const existing = $('#create-handoff')
+  const copy = CREATE_HANDOFF[createArrivedFrom]
+  if (!copy) {
+    if (existing) existing.remove()
+    return
+  }
+  const element = existing || document.createElement('aside')
+  element.id = 'create-handoff'
+  element.className = 'create-handoff'
+  element.innerHTML = `<span>${escapeHtml(copy.kicker)}</span><strong>${escapeHtml(copy.title)}</strong><p>${escapeHtml(copy.body)}</p><p class="create-handoff-next">Fastest start: pick one of the worked examples under the message box and press <em>Configure now with assumptions</em>. Or describe your own world and the builder will ask what it still needs to know.</p>`
+  if (!existing) view.prepend(element)
+}
+
 async function refreshAuthoringAvailability() {
   const before = authoringModel()?.model || null
   try {
@@ -3290,7 +3333,7 @@ function builtInAnalysisSpec(profile) {
     analysis_spec_version:2,
     analysis_id:'levin_collective_competence_review',
     profile,
-    purpose:'Read generic goal-progress and coordination-activity signals from retained evidence, without a scenario-specific goal reference.',
+    purpose:'After Michael Levin’s work on how collectives of simple parts pursue goals: read generic goal-progress and coordination-activity signals from retained evidence, without a scenario-specific goal reference.',
     construct_definitions:[
       'Goal progress is read from retained transition acceptance and terminal-state presence, not a declared scenario-specific goal or acceptable-outcome set.',
       'Coordination activity is the per-moment count of participating people and the world operations their accepted transitions actually committed.',
@@ -3359,6 +3402,34 @@ function renderCoordinationPatternSummary(value) {
   <details class="analysis-summary-data"><summary>See the exact first and last moment counts</summary>${renderAnalysisValue({first_moment:first, last_moment:last, peak_shared_dependencies:value?.peak_shared_dependencies})}</details>`
 }
 
+// Plain-language names for what a run has to have retained. The raw values are
+// contract identifiers; a reader is owed the sentence, not the enum.
+const EVIDENCE_KIND_LABELS = {
+  configuration: 'the configured world the run started from',
+  initial_state: 'the recorded state before anything happened',
+  terminal_state: 'the recorded state at the end of the run',
+  causal_event: 'the retained events linking one step to the next',
+  information_lineage: 'the record of who could see which information',
+  participant_activation: 'the record of which people acted in each round',
+  mechanism_decision: 'the decisions made by non-person mechanisms',
+  boundary_activity: 'activity at the configured boundary of the world',
+  completion: 'a completed run (this one did not finish)',
+}
+
+function renderAnalysisShortfall(analysis) {
+  const status = analysis?.coverage_status
+  if (status === 'supported') return ''
+  const missing = analysis?.missing_evidence || []
+  const named = missing.map((kind) => EVIDENCE_KIND_LABELS[kind] || String(kind).replace(/_/g, ' '))
+  const headline = status === 'degraded'
+    ? 'Some findings could not be produced from this run.'
+    : 'This lens could not be applied to this run.'
+  const because = named.length
+    ? `<p>It needs evidence this run did not retain:</p><ul>${named.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul><p>Nothing is estimated to fill the gap. Running a simulation that retains the evidence above lets this lens produce findings.</p>`
+    : '<p>The run did not report which evidence was missing, so the shortfall cannot be named exactly here. The retained evidence file for the run is the authoritative record.</p>'
+  return `<section class="analysis-shortfall"><strong>${escapeHtml(headline)}</strong>${because}</section>`
+}
+
 function renderAnalysisFinding(finding) {
   const presentation = analysisFindingPresentation[finding.construct_id] || {title:sentence(finding.construct_id), description:'Derived from the retained evidence linked below.'}
   const primary = finding.construct_id === 'coordination_pattern_summary'
@@ -3391,7 +3462,12 @@ function renderResultAnalysisLenses(result) {
       }
       const title = lensTitles[spec.profile] || sentence(spec.profile)
       const coverage = analysis?.coverage_status === 'supported' ? 'Evidence available' : sentence(analysis?.coverage_status || 'attached')
-      return `<article class="analysis-lens"><header><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(coverage)}</span></div><p>${escapeHtml(spec.purpose)}</p></header>${orderedFindings.length ? `<section class="analysis-findings">${orderedFindings.map(renderAnalysisFinding).join('')}</section>` : '<p>No supported findings were produced.</p>'}<details class="analysis-lens-method"><summary>Method, uncertainty, and scope</summary><p><strong>Aggregation</strong>${escapeHtml(spec.aggregation)}</p><p><strong>Uncertainty</strong>${escapeHtml(spec.uncertainty)}</p><ul>${(spec.construct_definitions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}${(spec.limitations || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></details><button class="quiet-button" type="button" data-remove-analysis="${escapeHtml(spec.analysis_id)}">Remove lens</button></article>`
+      // The backend already says exactly which evidence a run did not retain,
+      // and the frontend used to reference it nowhere: an analysis that could
+      // not run rendered as "No supported findings were produced" with no
+      // reason and nothing the reader could act on. Name what was missing.
+      const shortfall = renderAnalysisShortfall(analysis)
+      return `<article class="analysis-lens"><header><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(coverage)}</span></div><p>${escapeHtml(spec.purpose)}</p></header>${orderedFindings.length ? `<section class="analysis-findings">${orderedFindings.map(renderAnalysisFinding).join('')}</section>` : ''}${shortfall}<details class="analysis-lens-method"><summary>Method, uncertainty, and scope</summary><p><strong>Aggregation</strong>${escapeHtml(spec.aggregation)}</p><p><strong>Uncertainty</strong>${escapeHtml(spec.uncertainty)}</p><ul>${(spec.construct_definitions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}${(spec.limitations || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></details><button class="quiet-button" type="button" data-remove-analysis="${escapeHtml(spec.analysis_id)}">Remove lens</button></article>`
     }).join('')
     : '<p><strong>No analysis attached.</strong> The retained execution is still available on its own.</p>'
   const profiles = new Set(specs.map((item) => item.profile))
