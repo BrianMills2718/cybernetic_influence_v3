@@ -1445,15 +1445,28 @@ function configureControls() {
   all('[data-case-graph]').forEach((button) => {
     button.onclick = () => { caseGraphMode = button.dataset.caseGraph; renderCaseNetworkGraph() }
   })
+  // The case study's headline block stays fixed above the step controls, so
+  // advancing a step changed only content below the fold: the screen looked
+  // identical after clicking Next, which reads as a button that does nothing
+  // and was the "it never shows the whole thing" complaint. Bring the step
+  // controls to the top so the chapter beneath them is what the reader sees.
+  const revealCaseStep = () => {
+    const anchor = $('#case-walkthrough')
+      || $('#case-walkthrough-progress')?.closest('div')
+      || $('[data-case-chapter]:not([hidden])')
+    if (anchor) anchor.scrollIntoView({block:'start', behavior:'smooth'})
+  }
   $('#case-walkthrough-previous').onclick = () => {
     caseStudyStep = Math.max(0, caseStudyStep - 1)
     renderCaseChapter()
     syncUrl()
+    revealCaseStep()
   }
   $('#case-walkthrough-next').onclick = () => {
     caseStudyStep = Math.min(5, caseStudyStep + 1)
     renderCaseChapter()
     syncUrl()
+    revealCaseStep()
   }
   $('#guide-previous').onclick = () => advanceGuide(-1)
   $('#guide-next').onclick = () => advanceGuide(1)
