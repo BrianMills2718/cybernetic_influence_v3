@@ -6,7 +6,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from cybernetic_influence.analysis.theory_analysis import AnalysisSpecV2
+from cybernetic_influence.analysis.theory_analysis import (
+    RETAINABLE_EVIDENCE_KINDS,
+    AnalysisSpecV2,
+)
 
 from .authoring_models import GeneralSimulationProposalV1
 from .authoring_models import ScheduledMomentProposalV1
@@ -77,6 +80,33 @@ class AuthoredSimulationProposalV2(BaseModel):
     analyses: list[AnalysisSpecV2] = Field(default_factory=list)
     unresolved_questions: list[str] = Field(default_factory=list)
     analyst_question: str | None = None
+
+    @model_validator(mode="after")
+    def reject_analyses_no_run_can_satisfy(self) -> "AuthoredSimulationProposalV2":
+        """Refuse a pre-registered analysis that could never produce a finding.
+
+        An authored analysis asked for boundary_activity, which is a declared
+        EvidenceKind that no execution path emits. Its lens reported itself
+        unsupported on a perfectly good run, which reads to the analyst as their
+        simulation being deficient rather than as a request that was never
+        satisfiable by any run at all.
+
+        Checked here, on the model's proposal, rather than on AnalysisSpecV2:
+        constraining the spec itself made every already-retained draft holding
+        such an analysis fail to parse, so saved work became unopenable. A new
+        invariant governs what may be created, not what is already on disk.
+        """
+        for analysis in self.analyses:
+            unsatisfiable = sorted(
+                set(analysis.required_evidence_kinds) - RETAINABLE_EVIDENCE_KINDS
+            )
+            if unsatisfiable:
+                raise ValueError(
+                    f"analysis {analysis.analysis_id} requires evidence no run can "
+                    "retain: " + ", ".join(unsatisfiable)
+                    + "; it could never produce a finding"
+                )
+        return self
 
 
 class AuthoredSimulationProposalEnvelopeV2(BaseModel):

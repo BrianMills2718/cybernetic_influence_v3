@@ -511,21 +511,28 @@ def test_narrator_prose_cannot_be_measurement_evidence() -> None:
         validate_readout_against_bundle(corrupt, bundle)
 
 
-def test_analysis_cannot_require_evidence_no_run_can_retain() -> None:
-    """An unsatisfiable requirement must fail here, not silently at read time.
+def test_authored_proposal_rejects_analysis_no_run_can_satisfy() -> None:
+    """An unsatisfiable requirement must fail where it is authored.
 
     "boundary_activity" is a declared EvidenceKind that no execution path emits.
     An authored analysis asked for it, so its lens reported itself unsupported
     on a run that was perfectly good -- which reads to the analyst as their
-    simulation being deficient, rather than as a request that could never have
+    simulation being deficient rather than as a request that could never have
     been satisfied by any run at all.
+
+    The check belongs on the model's proposal, not on AnalysisSpecV2. Putting it
+    on the spec made every already-retained draft holding such an analysis fail
+    to parse, so saved work became unopenable: a new invariant governs what may
+    be created, never what is already on disk. Both halves are asserted here.
     """
     from cybernetic_influence.analysis.theory_analysis import (
         RETAINABLE_EVIDENCE_KINDS,
         AnalysisSpecV2,
     )
 
-    base = {
+    assert "boundary_activity" not in RETAINABLE_EVIDENCE_KINDS
+
+    spec_fields = {
         "analysis_id": "probe_analysis",
         "profile": "waltzman_coordination_v1",
         "purpose": "purpose",
@@ -536,16 +543,9 @@ def test_analysis_cannot_require_evidence_no_run_can_retain() -> None:
         "limitations": ["limitation"],
     }
 
-    accepted = AnalysisSpecV2(
-        required_evidence_kinds=["configuration", "terminal_state"],
-        **cast(Any, base),
+    # Retained data keeps loading: the spec itself accepts the historical value.
+    retained = AnalysisSpecV2(
+        required_evidence_kinds=["configuration", "boundary_activity"],
+        **cast(Any, spec_fields),
     )
-    assert accepted.required_evidence_kinds == ["configuration", "terminal_state"]
-
-    with pytest.raises(ValidationError, match="never produce a finding"):
-        AnalysisSpecV2(
-            required_evidence_kinds=["configuration", "boundary_activity"],
-            **cast(Any, base),
-        )
-
-    assert "boundary_activity" not in RETAINABLE_EVIDENCE_KINDS
+    assert "boundary_activity" in retained.required_evidence_kinds

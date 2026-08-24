@@ -53,6 +53,12 @@ EvidenceKind: TypeAlias = Literal[
 # analysis that asked for it produced a lens that reported itself unsupported
 # forever, which reads to the analyst as their run being deficient rather than
 # as a request that was never satisfiable.
+#
+# This is deliberately NOT enforced by AnalysisSpecV2 itself. Doing so made
+# every already-retained draft containing such an analysis fail to parse, so
+# saved work became unopenable -- a new invariant must not invalidate data that
+# is already on disk. It is checked where an authored proposal is accepted, so
+# new proposals cannot introduce one while old ones still load.
 RETAINABLE_EVIDENCE_KINDS: frozenset[str] = frozenset(
     {
         "configuration",
@@ -290,15 +296,6 @@ class AnalysisSpecV2(_ProducedModel):
         ):
             if len(values) != len(set(values)):
                 raise ValueError(f"{label} must be unique")
-        unsatisfiable = sorted(
-            set(self.required_evidence_kinds) - RETAINABLE_EVIDENCE_KINDS
-        )
-        if unsatisfiable:
-            raise ValueError(
-                "required evidence kinds that no run can retain: "
-                + ", ".join(unsatisfiable)
-                + "; an analysis requiring them can never produce a finding"
-            )
         return self
 
     @property

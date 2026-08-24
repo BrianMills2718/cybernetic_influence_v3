@@ -1959,3 +1959,51 @@ def test_experiment_rejects_uncertified_model_before_any_condition_executes(
     assert "bad-model" in response.json()["detail"]
     time.sleep(0.2)
     assert runtime_call.actor_counter == 0, "the valid condition must never start"
+
+
+def test_authored_proposal_rejects_an_analysis_no_run_could_satisfy() -> None:
+    """A pre-registered analysis must be answerable by some run.
+
+    "boundary_activity" is a declared EvidenceKind that no execution path
+    emits. An authored analysis asked for it, so its lens reported itself
+    unsupported on a run that was perfectly good, which reads to the analyst as
+    their simulation being deficient rather than as a request that could never
+    have been satisfied. Rejecting it here sends the authoring retry loop back
+    for a proposal that can actually produce a finding.
+    """
+    import pytest
+    from pydantic import ValidationError
+
+    from cybernetic_influence.analysis.theory_analysis import AnalysisSpecV2
+
+    base = _native_v2_proposal()
+
+    def _proposal_with(kinds: list[str]) -> AuthoredSimulationProposalV2:
+        analysis = AnalysisSpecV2(
+            analysis_id="probe_analysis",
+            profile="exact_outcome_v1",
+            purpose="purpose",
+            construct_definitions=["construct"],
+            required_evidence_kinds=cast(Any, kinds),
+            method_classes=["exact"],
+            aggregation="aggregation",
+            uncertainty="uncertainty",
+            limitations=["limitation"],
+        )
+        return AuthoredSimulationProposalV2(
+            authored_study_id=base.authored_study_id,
+            scenario=base.scenario,
+            default_run=base.default_run,
+            analyses=[analysis],
+            unresolved_questions=base.unresolved_questions,
+            analyst_question=base.analyst_question,
+        )
+
+    accepted = _proposal_with(["configuration", "terminal_state"])
+    assert accepted.analyses[0].required_evidence_kinds == [
+        "configuration",
+        "terminal_state",
+    ]
+
+    with pytest.raises(ValidationError, match="could never produce a finding"):
+        _proposal_with(["configuration", "boundary_activity"])
