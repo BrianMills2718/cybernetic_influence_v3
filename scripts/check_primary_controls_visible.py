@@ -25,7 +25,11 @@ from __future__ import annotations
 import argparse
 import sys
 
-CHROMIUM = "/home/brian/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome"
+# No default browser path. Hard-coding one pinned this check to a single
+# machine: on the deployment host it failed with a Linux path that does not
+# exist there, so the nightly audit reported a failure about itself rather
+# than about the demo. Playwright resolves its own browser; --chromium stays
+# available for a deliberate override.
 
 # Widths that matter, not a sampling of extremes: 1280-1600 is where the Next
 # button was lost, and it is the range most laptops actually report.
@@ -47,7 +51,11 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", required=True)
-    parser.add_argument("--chromium", default=CHROMIUM)
+    parser.add_argument(
+        "--chromium",
+        default=None,
+        help="explicit browser executable; omit to let Playwright resolve it",
+    )
     parser.add_argument("--widths", default=",".join(str(w) for w in WIDTHS))
     args = parser.parse_args()
     widths = [int(w) for w in args.widths.split(",") if w.strip()]
@@ -56,9 +64,13 @@ def main() -> int:
     checked = 0
 
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(
-            headless=True, args=["--no-sandbox"], executable_path=args.chromium
-        )
+        launch_options: dict[str, object] = {
+            "headless": True,
+            "args": ["--no-sandbox"],
+        }
+        if args.chromium:
+            launch_options["executable_path"] = args.chromium
+        browser = pw.chromium.launch(**launch_options)  # type: ignore[arg-type]
         for width in widths:
             page = browser.new_page(viewport={"width": width, "height": 900})
             for view, selectors in SURFACES.items():
