@@ -1451,10 +1451,17 @@ function configureControls() {
   // and was the "it never shows the whole thing" complaint. Bring the step
   // controls to the top so the chapter beneath them is what the reader sees.
   const revealCaseStep = () => {
-    const anchor = $('#case-walkthrough')
-      || $('#case-walkthrough-progress')?.closest('div')
-      || $('[data-case-chapter]:not([hidden])')
-    if (anchor) anchor.scrollIntoView({block:'start', behavior:'smooth'})
+    const bar = $('#case-walkthrough')
+    const chapter = $('[data-case-chapter]:not([hidden])')
+    if (!bar || !chapter) return
+    // The bar is sticky beneath the site header, so scrolling the chapter to
+    // the top of the viewport parks its first lines underneath the bar. Offset
+    // by everything that will still be covering that point after the scroll.
+    const header = document.querySelector('.site-header, header')
+    const covered = bar.getBoundingClientRect().height
+      + (header ? header.getBoundingClientRect().height : 0)
+    const top = window.scrollY + chapter.getBoundingClientRect().top - covered - 16
+    window.scrollTo({top:Math.max(0, top), behavior:'smooth'})
   }
   $('#case-walkthrough-previous').onclick = () => {
     caseStudyStep = Math.max(0, caseStudyStep - 1)
