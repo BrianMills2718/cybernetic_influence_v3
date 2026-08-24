@@ -2540,14 +2540,23 @@ function renderCreateSimulation() {
   $('#create-draft-description').textContent = proposal.description
   const boundaries = proposal.analytical_boundaries || []
   const places = general ? (proposal.spatial_extension?.places || []) : (proposal.places || [])
-  const information = general ? (proposal.information_extension?.representations || []) : (proposal.information || [])
+  // Who can know what is carried by two different structures. Counting only
+  // representations reported "0 Information items" for a generated simulation
+  // whose asymmetry was expressed entirely as sensing rules -- one observer
+  // permitted to read a hidden key, the finding then routed to named
+  // recipients. A reader checking whether their information requirement
+  // survived authoring would read that zero as "it was dropped", which is the
+  // most damaging thing this panel can get wrong.
+  const representations = general ? (proposal.information_extension?.representations || []) : (proposal.information || [])
+  const sensingRules = general ? (proposal.sensing_rules || []) : []
+  const information = [...representations, ...sensingRules]
   const objects = general ? proposal.world_records : (proposal.objects || [])
   $('#create-world-facts').innerHTML = [
     [general ? 'General compiled world' : draftTemplateLabel(workflow.template_id), 'Execution profile'],
     [`${proposal.people?.length || 0}`, 'People'],
     [`${objects.length}`, 'World records'],
     [`${places.length}`, 'Places'],
-    [`${information.length}`, 'Information items'],
+    [`${information.length}`, sensingRules.length && !representations.length ? 'Information rules' : 'Information items'],
     [`${general ? proposal.active_systems.length : boundaries.length}`, general ? 'Active systems' : 'Analytical boundaries'],
   ].map(([value, label]) => `<div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('')
   $('#create-world-groups').innerHTML = general ? [
