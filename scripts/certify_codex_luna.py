@@ -85,6 +85,27 @@ def _messages(schema: type[BaseModel]) -> list[dict[str, str]]:
     ]
 
 
+# The free Codex subscription routes bill nothing, so this ceiling only ever
+# binds on a metered route -- and it was set below what the metered route
+# actually costs. Certifying the 8000-token proposal envelope over Sol came to
+# $0.1608 on 2026-08-26 and raised LLMBudgetExceededError against the $0.10
+# limit, which means the paid fallback in refresh_authoring_certification.py had
+# never once completed: the "a demo going dark costs more than a fraction of a
+# dollar" path was unrunnable from the day it was written, and nothing would
+# have discovered that except the free route failing during a demo.
+# Sized to roughly twice the observed cost of the larger schema.
+_METERED_BUDGET_BY_SCHEMA = {"AuthoredSimulationProposalEnvelopeV2": 0.35}
+_DEFAULT_CERTIFICATION_BUDGET = 0.10
+
+
+def _certification_budget(schema: type[BaseModel], model: str) -> float:
+    if is_codex_subscription_model(model):
+        return _DEFAULT_CERTIFICATION_BUDGET
+    return _METERED_BUDGET_BY_SCHEMA.get(
+        schema.__name__, _DEFAULT_CERTIFICATION_BUDGET
+    )
+
+
 def _certify(
     schema: type[BaseModel],
     *,
@@ -101,7 +122,7 @@ def _certify(
             response_model=schema,
             task="cybernetic_influence_route_certification",
             trace_id=trace_id,
-            max_budget=0.10,
+            max_budget=_certification_budget(schema, model),
             max_tokens=(
                 8000 if schema is AuthoredSimulationProposalEnvelopeV2 else 1000
             ),
