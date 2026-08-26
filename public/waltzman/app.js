@@ -2751,7 +2751,15 @@ let authoringStartedAt = 0
 function authoringProgressText(job) {
   const label = job.phase_label || 'Building the simulation'
   const attempt = Number(job.attempt || 0)
-  const attemptLabel = attempt > 1 ? ` · proposal attempt ${attempt}` : ''
+  // "proposal attempt 3" alone reads like something is going wrong. It is the
+  // normal path: roughly half the retries are this project's own validation
+  // refusing a draft the model produced -- a missing required list, an analysis
+  // that would need evidence no run can retain -- and the draft is rebuilt
+  // rather than accepted broken. Say that, so a reader waiting eleven minutes
+  // knows the wait is a rejected draft and not a stall.
+  const attemptLabel = attempt > 1
+    ? ` · attempt ${attempt}: the previous draft failed a validity check and is being rebuilt`
+    : ''
   const detail = String(job.detail || '').trim()
   let elapsed = ''
   if (authoringStartedAt) {
