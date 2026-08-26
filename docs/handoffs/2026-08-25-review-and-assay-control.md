@@ -12,7 +12,32 @@ The session began as "review `cybernetic_influence_v3` and advise" and turned
 into one substantive defect: the perturbation assay's control condition has
 been failing since 2026-08-03 and nobody knew why.
 
-## The demo is fine and is the thing to send
+## The builder was broken, and is fixed
+
+Found by running it, not by reading that it worked. On 2026-08-25 the public
+"Create your own simulation" path authored a draft in 2m14s, accepted an
+approval, and then refused to run it: *"model is not currently advertised for
+simulator execution."* `api/config` advertised two authoring models and **zero**
+execution models.
+
+Authoring and execution are certified separately, and Slice 32 only ever
+automated authoring. The execution certifications had lapsed -- Terra 110 hours
+earlier, Luna 52, Sol six hours before I looked. The nightly demo audit calls
+`check_authoring_route_health.py`, which reads only the three
+`CERT_AUTHORING_*` keys, so it logged "route ok - 5.6 days remaining" and wrote
+a green verdict onto a page whose second call-to-action was dead.
+
+`4619c60` fixes the coverage: the health check now reports both families and is
+governed by the weaker of the two, and the refresh certifies both. The
+deployment was restored through that same script (plist backed up, service
+verified answering on 8621, both families now at 7.00 days).
+
+Verified end to end afterwards, on a world the builder had never seen: draft
+`draft_3137759e4ff1` -> run `run_e003c6d57296`, 4 people, 4 causal moments, 4
+committed transitions, 41 retained model decisions, a 10-step guided replay,
+all four event scenes populating their edges, zero console errors.
+
+## The case study is fine and is the thing to send
 
 Verified in a real browser against the deployment, not inferred:
 
