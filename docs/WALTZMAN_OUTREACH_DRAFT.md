@@ -56,13 +56,28 @@ controls rather than discovered behaviour — I am claiming plausibility, the wa
 a wargame does, not empirical validity. And the trust, risk and readiness
 readings are analyst views over retained evidence, not calibrated measures.
 
-The thing I could not build yet, and the reason I wanted to talk: your section 7.
-Threshold management, temporal fragmentation, segmented targeting, oscillation,
-variable switching. Evasion is invisible in the real world by construction — it
-is built to look like normal variation. In a simulation you can run the same
-pressure twice, once plainly and once below the detection threshold, and watch
-the detect step miss it. That seems to me like the experiment your framework
-implies and nobody can run outside a synthetic environment.
+Then I ran your section 7 against it, and that is the part I most want your
+reaction to. Evasion is invisible in the real world by construction — it is
+built to look like ordinary variation, so you can never hold the detector fixed
+and vary only how the pressure is expressed. In a simulation you can. I ran the
+same four sources at the same coalition with the same detection cell, same
+personas, same thresholds, same trigger, and changed only one thing: every
+signal became a narrow verification request rather than an escalation, and none
+referred to any other.
+
+The same watchers called it degrading rather than blocked, and blamed process
+delay rather than incompatible requirements. They still proposed the same
+compact — but against the wrong reading of what was happening. The coalition
+ended 14 will proceed, 11 only on conditions and 1 deferring, against 26 in the
+overt run. The pressure did not get weaker; by its worst round it went further,
+26 conditional against 6-and-20. It got harder to see, and the response was
+worse for it.
+
+Two retained runs are not a sample, and the evasion is authored rather than
+discovered — a detector missing a pattern I designed is evidence about that
+detector at that threshold and nothing more. But the experiment is now
+runnable, which I think is the useful thing, and the threshold question is
+where I would want your judgement.
 
 If you have twenty minutes, I would rather hear where this is wrong than where
 it is right.
@@ -84,6 +99,18 @@ projected to `public/waltzman/cso-case.json` by
   `cso_stabilization_planner` after `cso_decision_environment_monitor` reported
   readiness blocked and `cso_coordination_diagnostician` identified
   `incompatible_requirements` at `coalition_wide` scope.
+
+Evasion arm: run `run_76dae6d4a9a7`, condition `threshold_managed_evasion`,
+projected to `public/waltzman/evasion-case.json` and shown as step 7 of the
+case study.
+
+- Same coalition, sources, decision gate and detection cell — personas,
+  thresholds and trigger held identical; 89 model calls, as in the overt run.
+- Round decisions: `{support: 24, conditional: 2}` → `{conditional: 26}` →
+  `{support: 14, conditional: 11, defer: 1}`.
+- Detector readings: readiness `degrading` (against `blocked`), mechanism
+  `process_delay` (against `incompatible_requirements`); the proposed action
+  was `cross_domain_compact` in both.
 
 Retained nonclaims carried by the dataset: one retained execution is not a
 statistical sample or an effect estimate; the pressure sources and the

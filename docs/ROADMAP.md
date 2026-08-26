@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-08-19
+updated: 2026-08-25
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -347,11 +347,14 @@ There are five explicit tracks rather than one blended implementation queue:
    historical artifacts and their reader, but remove or quarantine remaining
    V1 new-execution branches once the public V2 consumer checks pass.
 5. **Stakeholder readout — separate retained MVP boundary.** The operator
-   selected the 26-agent resource-fork case as the stakeholder-facing demo on
-   2026-08-19. Review `?view=case` and decide whether its described world,
-   shared checkpoint, four continuations, uniform non-approval, shifted
-   constraint profile, evidence, and limitations are understandable without raw
-   JSON. Retained public run `run_702e57f9accc` remains available as the general
+   selected the 26-agent resource-fork case on 2026-08-19 and **replaced it on
+   2026-08-23** with the CSO stabilization run `run_5010214f2466` (Slice 31),
+   now rendered at `?view=case` as a seven-step walkthrough ending in the
+   threshold-managed evasion pair (Slice 33). The fork case remains retained
+   evidence and is no longer the nominated demo. Review `?view=case` and decide
+   whether its world, three rounds, detect/diagnose/stabilize cell, evasion
+   contrast, evidence, and limitations are understandable without raw JSON.
+   Retained public run `run_702e57f9accc` remains available as the general
    V2 parity exemplar for the same judgment about the authoring path. Neither
    judgment establishes cross-domain generality or decides the generalized
    product architecture.
@@ -390,6 +393,10 @@ calibration, causal attribution, or operational detection.
 | [ADR 014](adr/014-separate-simulation-and-analysis-authority.md) | accepted | Causal execution receives only scenario/run contracts; analysis is a separately attachable read-only authority |
 | [Slice 29](plans/029-separate-simulation-run-analysis.md) | implemented selected path; follow-up active | V2 contracts, public adoption, and authentic isolation proof are complete; V1 retirement, progressive editing, causal-closure verification, and deeper analysis remain explicit follow-up boundaries |
 | [Slice 30](plans/030-unified-frontend-experimentation-and-levin-analysis.md) | Designs A and B implemented and deployed; Design C blocked, pause/resume named-not-specified | RunSpec-level experimentation (`POST /api/authoring/drafts/{draft_id}/experiments`) and a genuine V2 Levin analysis profile (deployed to `public/waltzman/`, verified live) close two gaps found auditing `web/` against `public/waltzman/`; graph-projection/boundary-collapse and pause/resume are explicitly blocked, not silently dropped |
+| [Slice 31](plans/031-cso-stabilization-flagship.md) | implemented; supersedes the resource-fork demo selection | The CSO stabilization run `run_5010214f2466` replaced the four-way resource fork as the stakeholder-facing flagship on 2026-08-23 after two independent reviews; the fork case remains retained evidence, not the nominated demo |
+| [Slice 32](plans/032-authoring-route-stays-certified.md) | implemented and installed | `scripts/refresh_authoring_certification.py` re-certifies, installs the ids into the service plist and restarts, on a nightly 03:30 launchd job; it closes the manual step that repeatedly took the public Create surface dark |
+| [Slice 33](plans/033-evasion-space-case.md) | implemented as one bounded pair; broader evasion space still deferred | Run `run_76dae6d4a9a7` (`threshold_managed_evasion`) holds the coalition, sources and detection cell identical to `run_5010214f2466` and varies only how the pressure is expressed; the same watchers at the same thresholds read `degrading`/`process_delay` instead of `blocked`/`incompatible_requirements`. Two retained runs are not a sample and the evasion is authored, not discovered |
+| [Slice 34](plans/034-demo-quality-system.md) | implemented and running nightly | A claims-versus-evidence check fails the deploy when the page states something the retained runs do not support; the 04:15 launchd audit runs it with asset resolution, control visibility and certification margin, and writes the verdict into the served page. No model calls |
 | [Experiment Slice 27](plans/027-coordination-dynamics-experiment.md) | provider-free mechanism proof technically complete; stakeholder readout pending | Four conditions and eight ordinary retained runs isolate pressure presence, adaptation, and authoritative validation with evidence step-down |
 | [ADR 006](adr/006-boundaries-are-derived-coarse-grainings.md) | keep | Organizations remain execution-inert analytical views |
 | [ADR 012](adr/012-decision-environment-measures-are-derived.md) | amend | Generalizes measurement input from trace-centric evidence to a run-evidence bundle |
@@ -432,8 +439,9 @@ not silently recreate the old runtime as a universal invariant set.
 - The Packet-22A0 contract foundation, Packet-22A1 five-row scripted
   execution/readout, and Packet-22A2 analyst comparison are technically
   satisfied. Stakeholder comprehension is unobserved; live repetitions,
-  robustness claims, evasion, attribution, calibration, and prediction remain
-  deferred.
+  robustness claims, attribution, calibration, and prediction remain deferred.
+  Evasion is no longer wholly deferred: Slice 33 retains one bounded
+  threshold-managed pair, and the remaining section-7 dimensions stay deferred.
 - Slice 27's eight-run provider-free experiment and strict retained readout are
   technically observed. The adaptation contrast is flat on the selected exact
   metrics in the reference batch even though adaptive follow-up events are
@@ -459,13 +467,15 @@ not silently recreate the old runtime as a universal invariant set.
 - **Decision:** reset the foundation to Concordia while retaining the current
   product as parity evidence. Retain useful CI mechanisms and surfaces; replace
   its foundational runtime authority; clear the obsolete Candidate C handoff.
-- **Continue:** use the retained 26-agent resource-fork case
-  (`outbreak_resource_forks_20260810214211`, rendered at `?view=case`) as the
-  stable stakeholder-facing demo, selected by the operator on 2026-08-19. The
-  retained relief-port run `run_702e57f9accc` remains the parity exemplar for
-  the general author→review→run→replay path and its post-run Waltzman
+- **Continue:** use the retained CSO stabilization run `run_5010214f2466`
+  with its `threshold_managed_evasion` counterpart `run_76dae6d4a9a7`
+  (rendered at `?view=case`) as the stable stakeholder-facing demo, selected by
+  the operator on 2026-08-23 in place of the 26-agent resource-fork case
+  (`outbreak_resource_forks_20260810214211`), which remains retained evidence.
+  The retained relief-port run `run_702e57f9accc` remains the parity exemplar
+  for the general author→review→run→replay path and its post-run Waltzman
   attachment, but it is no longer the nominated demo. The remaining decision on
-  the fork case is usefulness, not first execution or defect discovery.
+  the flagship case is usefulness, not first execution or defect discovery.
 - **Reset:** at the earliest of roughly 45 minutes, two consecutive non-outcome
   increments, or user concern about pace, compare the current path with the most
   valuable reversible next move. Reset immediately if configuration requires
@@ -482,7 +492,9 @@ After the provider-free mechanism proof, decide whether its flat adaptation
 contrast justifies richer recipient response semantics before any live or
 stochastic repetition. Later options remain conditional rather than automatic:
 
-- Waltzman's candidate directional invariants and evasion dimensions;
+- Waltzman's candidate directional invariants, and the evasion dimensions
+  beyond the single threshold-managed pair Slice 33 retained — temporal
+  fragmentation, segmented targeting, oscillation, and variable switching;
 - Levin-style perturbation, member replacement, recovery, robustness, and
   persuadability assays;
 - additional component and scenario families beyond the required
