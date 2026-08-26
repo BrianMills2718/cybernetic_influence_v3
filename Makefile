@@ -4,7 +4,7 @@ LLM_CLIENT_ROOT ?= ../active/llm_client
 HOST ?= 127.0.0.1
 PORT ?= 8620
 
-.PHONY: install ui-install ui-build ui-smoke ui-visibility claims-check authoring-route-health authoring-route-refresh test typecheck deploy-check check serve
+.PHONY: install ui-install ui-build ui-sync assets-check ui-smoke ui-visibility claims-check authoring-route-health authoring-route-refresh test typecheck deploy-check check serve
 
 install: ui-install
 	python3 -m venv $(VENV) || virtualenv --clear $(VENV)
@@ -21,6 +21,20 @@ ui-install:
 
 ui-build:
 	npm --prefix frontend run build
+
+# vite writes into web/, which cybernetic_influence.api:app serves locally. The
+# public demo is a different app on a different root (public_waltzman.py), and
+# nothing copied between them -- so ui-build passed for ten days while the demo
+# served a bundle from 2026-08-16. Building and shipping are two acts; this is
+# the second one.
+ui-sync: ui-build
+	cp web/graph-canvas.js web/graph-canvas.css public/waltzman/
+	@echo "copied the built bundle into public/waltzman/"
+
+# Checks the result, not the mechanism: builds the current source into a scratch
+# directory and byte-compares it against what the demo actually serves.
+assets-check:
+	$(PYTHON) scripts/check_served_bundle_matches_source.py
 
 ui-smoke:
 	$(PYTHON) scripts/verify_demo_ui.py --base-url http://$(HOST):$(PORT)
@@ -58,7 +72,7 @@ typecheck:
 deploy-check:
 	bash -n deploy/run-with-provider-secret.sh
 
-check: typecheck test ui-build deploy-check
+check: typecheck test ui-build assets-check deploy-check
 
 serve:
 	$(PYTHON) -m uvicorn cybernetic_influence.api:app --host $(HOST) --port $(PORT)

@@ -52,13 +52,27 @@ and each was written only after a real defect escaped.
    visibility and certification margin, and exits non-zero if any fails.
 4. `scripts/install_demo_audit_job.sh` — schedules that nightly at 04:15.
 5. The deploy refuses to publish when the claims check fails.
+6. `scripts/check_served_bundle_matches_source.py` — builds `frontend/src` into a
+   scratch directory and byte-compares it against what the demo serves. Added
+   2026-08-26 after a cold-start pass found `make ui-build` writing to `web/`
+   (the local app's root) while the public demo serves `public/waltzman/`, with
+   nothing bridging them: the served graph bundle was frozen at its 2026-08-16
+   content for ten days while every build reported success. Deliberately does
+   not compare the two directories to each other, which would pass whenever both
+   are equally stale. `make ui-sync` rebuilds and copies. Verified to fail by
+   reintroducing a stale served bundle. Blocking in the deploy path and in
+   `make check`, both of which run here. Deliberately not in the nightly audit:
+   that runs on the deployment host, which receives the frontend source but not
+   its `node_modules`, so the check could not build there and would fail every
+   night for a reason that has nothing to do with the demo.
 
 Every one of these is offline or read-only. **No model calls, so the audit costs
 nothing and can run as often as is useful.**
 
 ## The review cadence
 
-- **Every deploy:** claims, assets, deployed-commit match. Automatic; blocking.
+- **Every deploy:** claims, assets, served-bundle-matches-source, deployed-commit
+  match. Automatic; blocking.
 - **Nightly:** the full audit, including control visibility across widths and
   the authoring certification margin. Automatic; logged; non-zero on failure;
   and the verdict is written into the demo's card on the project deck, so a

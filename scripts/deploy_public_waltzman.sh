@@ -50,6 +50,17 @@ if ! python3 "$(dirname "$0")/check_page_claims_match_evidence.py"; then
   exit 6
 fi
 
+# Only committed work ships, so a bundle that was never rebuilt-and-copied ships
+# silently: `make ui-build` writes to web/, this app serves public/waltzman/, and
+# nothing bridged them. That is how the demo served a 2026-08-16 graph bundle for
+# ten days while every build reported success. Checked here because this is the
+# step that puts it in front of a reader.
+echo "checking the served bundle is what frontend/src builds..."
+if ! python3 "$(dirname "$0")/check_served_bundle_matches_source.py"; then
+  echo "refusing to deploy: the demo would serve a bundle the source no longer produces" >&2
+  exit 7
+fi
+
 # --- the gate: is anything running that a restart would destroy? -------------
 # The detection logic lives in scripts/host_busy_check.py so the deploy path and
 # the certification-refresh path cannot drift apart; the copy that drifts is the
