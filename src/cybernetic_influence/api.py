@@ -875,6 +875,29 @@ def _general_world_node_overrides(
             return None
         return component if isinstance(component, dict) else None
 
+    def readable_state(record_state: object) -> str:
+        """A record's retained state, in the same shape the resource branch uses.
+
+        This was json.dumps(..., sort_keys=True), so every person node in an
+        authored run displayed its description as {"position": "Clinical lead for
+        Ward A"} -- braces, quotes and all -- on the replay graph. The flagship
+        case study never showed it because its people carry authored descriptions,
+        so the defect only ever appeared in a simulation a reader made themselves.
+        Nothing parses this field; it is display text.
+        """
+        if not isinstance(record_state, dict) or not record_state:
+            return "no retained state"
+        parts: list[str] = []
+        for key in sorted(record_state):
+            value = record_state[key]
+            rendered = (
+                json.dumps(value, sort_keys=True)
+                if isinstance(value, (dict, list))
+                else str(value)
+            )
+            parts.append(f"{key.replace('_', ' ')}: {rendered}")
+        return "; ".join(parts)
+
     def descriptions(state: object) -> list[SimulationReplayNodeOverride]:
         if not isinstance(state, dict):
             return []
@@ -888,10 +911,7 @@ def _general_world_node_overrides(
                 projected.append(
                     SimulationReplayNodeOverride(
                         node_id=record_id,
-                        description=json.dumps(
-                            record_state if isinstance(record_state, dict) else {},
-                            sort_keys=True,
-                        ),
+                        description=readable_state(record_state),
                     )
                 )
         raw_resources = state.get("resources")

@@ -496,8 +496,12 @@ def test_general_world_replay_retains_state_by_revision() -> None:
 
     initial = {item.node_id: item.description for item in revisions[0]}
     final = {item.node_id: item.description for item in revisions[2]}
-    assert initial["inventory"] == '{"quantity": 0}'
-    assert final["inventory"] == '{"quantity": 500}'
+    # Records and resources both render as readable state. These two assertions
+    # used to disagree -- inventory as raw JSON, cargo as prose -- and the JSON
+    # form reached the replay graph, where every person in an authored run showed
+    # {"position": "Clinical lead for Ward A"} as its description.
+    assert initial["inventory"] == "quantity: 0"
+    assert final["inventory"] == "quantity: 500"
     assert initial["cargo"] == "quantity: 0; custodian: operator"
     assert final["cargo"] == "quantity: 500; custodian: operator"
 
