@@ -345,7 +345,17 @@ There are five explicit tracks rather than one blended implementation queue:
    operations in both the replay and readiness trajectory.
 4. **V1 retirement — bounded cleanup after V2 stability.** Preserve immutable
    historical artifacts and their reader, but remove or quarantine remaining
-   V1 new-execution branches once the public V2 consumer checks pass.
+   V1 new-execution branches once the public V2 consumer checks pass. One
+   concrete symptom, diagnosed 2026-08-25: the replay scene builder derives an
+   event scene's visible nodes and edges from `transitions[].transaction.
+   operations` and `operation_attributions`, and runs created through the V1
+   `reviewed-coordination-drafts` scripted path retain no `transitions` at all.
+   Every such event scene renders one node, no edges, and "No change
+   committed.", with all edges appearing only in the final outcome scene, which
+   is why `test_reviewed_coordination_example_runs_reopens_and_isolates_
+   analysis_corruption` is red. Public V2 runs are unaffected: retained
+   `run_012aa6971e69` and `run_702e57f9accc` both populate `visible_edge_ids`
+   on event scenes on the live deployment.
 5. **Stakeholder readout — separate retained MVP boundary.** The operator
    selected the 26-agent resource-fork case on 2026-08-19 and **replaced it on
    2026-08-23** with the CSO stabilization run `run_5010214f2466` (Slice 31),
@@ -383,7 +393,7 @@ calibration, causal attribution, or operational detection.
 | This roadmap | update/active | Owns current direction and first missing boundary |
 | [Slice 17](archive/plans/017-conversational-scenario-authoring.md) | reuse unchanged | Completed authoring foundation |
 | [Slice 21](archive/plans/021-coordination-environment-assay.md) | completed foundation; 21C post-MVP | Runtime and per-run Waltzman work are reused; paid comparison is not active |
-| [Slice 22](plans/022-composite-agency-perturbation-assay.md) | Packets 22A0–22A2 technically complete; stakeholder readout pending | Five zero-cost scripted rows, retained exact readouts, and one comparison/step-down UI are verified; live repetitions remain unauthorized |
+| [Slice 22](plans/022-composite-agency-perturbation-assay.md) | Packets 22A0–22A2 implemented, but the matched control row is currently failing; contrasts are not trustworthy until it is repaired | Five zero-cost scripted rows, retained exact readouts, and one comparison/step-down UI exist, and live repetitions remain unauthorized. As of 2026-08-25 the `matched_control` row reaches its decision at modeled minute 5768 against a 5760 deadline, so it ends `no_decision_by_horizon` with `capability_satisfied` false while `member_replacement` passes. Every constraint other than timing is satisfied. Until the control is repaired, the cross-row contrasts are measured against a baseline that fails, and `test_rows_exercise_distinct_concrete_paths` stays red |
 | [Slice 24](plans/024-configurable-theory-analysis-mvp.md) | active MVP authority | Owns the separate MVP acceptance contract and M7 boundary |
 | [Slice 25](plans/025-typed-component-composition.md) | 25A–25C retained; 25D paused | Useful local composition evidence, but not authority for choosing the generalized product foundation |
 | [Slice 26](plans/026-concordia-foundation-research.md) | research complete; owner disposition recorded | Source audit remains valid; owner revised the invariant premise and selected Candidate A |
