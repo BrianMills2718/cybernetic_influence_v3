@@ -30,7 +30,36 @@ a green verdict onto a page whose second call-to-action was dead.
 `4619c60` fixes the coverage: the health check now reports both families and is
 governed by the weaker of the two, and the refresh certifies both. The
 deployment was restored through that same script (plist backed up, service
-verified answering on 8621, both families now at 7.00 days).
+verified answering on 8621).
+
+**"Both families at 7.00 days" was the best route in each family, not the
+health of either.** A later sweep ran the committed check against the service
+environment and read the whole table rather than its summary line:
+
+```
+authoring:  luna 6d12h | sol 0d4h | openrouter-terra not configured
+execution:  luna 6d12h | codex-terra EXPIRED | sol EXPIRED | openrouter-terra EXPIRED
+```
+
+The check takes the longest-lived route *within* a family and the weakest
+*across* families, so three dead execution routes read as "6.5 days remaining"
+and exit 0. That is the intended gate -- one live route per family is enough to
+demo -- but it hides the shape underneath: once Sol authoring lapses (2026-08-26
+20:18Z), **`codex/gpt-5.6-luna` is the only live route in both families at
+once**, so a single Codex login failure takes authoring and execution dark
+together, and this gate cannot see it coming. The nightly refresh will not
+prevent that either: it re-certifies only when the family summary drops below
+three days, which Luna alone keeps satisfied.
+
+Two things would settle it, and they are separable:
+
+- free, and the smaller one: have the check print live/total per family and
+  fail when one route is the sole survivor of more than one family. It does not
+  change when the gate fires today; it makes the singleton visible before it
+  matters.
+- costs money: re-certify a second *execution* route so Luna is not carrying
+  the demo alone. `refresh_authoring_certification.py --force` covers the paid
+  Sol path. This is a spend decision, not an engineering one.
 
 Verified end to end afterwards, on a world the builder had never seen: draft
 `draft_3137759e4ff1` -> run `run_e003c6d57296`, 4 people, 4 causal moments, 4
