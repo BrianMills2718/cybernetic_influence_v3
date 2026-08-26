@@ -85,6 +85,7 @@ from cybernetic_influence.presentation import (
 from cybernetic_influence.run_store import RunStore, now_iso
 from cybernetic_influence.scenarios.coordination_decision import (
     DECISION_DEADLINE_TIME,
+    MEETING_TIMES,
     MINUTES_PER_DAY,
     PARTNERSHIP_BOUNDARY_ID,
     PERSON_IDS,
@@ -105,8 +106,17 @@ PerturbationRowId = Literal[
     "external_risk",
 ]
 
-PERTURBATION_APPLICATION_TIME = 4 * MINUTES_PER_DAY
-VERIFICATION_FEEDBACK_DELAY = 2 * MINUTES_PER_DAY
+# The assay's timing is derived from the scenario's meeting cadence rather than
+# written as absolute days. These were authored as day 4 and 2 days against the
+# original (0, 3, 6, 9)-day world, and 54394e0 compressed that world to
+# (0, 1, 2, 3) for demo pacing without re-scaling them -- which put every
+# perturbation exactly on the deadline, after the last meeting, and left four of
+# the five rows indistinguishable. Expressed proportionally they reproduce the
+# authored 5760 and 2880 under the original interval of 4320, and follow the
+# world when it is re-paced. See docs/plans/035-restore-the-perturbation-assay-timeline.md.
+_MEETING_INTERVAL = MEETING_TIMES[2] - MEETING_TIMES[1]
+PERTURBATION_APPLICATION_TIME = MEETING_TIMES[1] + _MEETING_INTERVAL // 3
+VERIFICATION_FEEDBACK_DELAY = (_MEETING_INTERVAL * 2) // 3
 REPLACEMENT_PERSON_ID = "technical_validation_lead_replacement"
 
 _COMMON_TECHNICAL_IMPLEMENTATION = "scripted_composite_technical_lead_v1"

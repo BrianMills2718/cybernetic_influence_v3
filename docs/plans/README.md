@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-08-16
+updated: 2026-08-25
 ---
 
 # Implementation Plans
@@ -11,6 +11,15 @@ updated: 2026-08-16
 [the goal](../GOAL.md) defines the accepted MVP outcome.
 
 ## Active execution
+
+[Slice 35: Give the perturbation assay its own timeline](035-restore-the-perturbation-assay-timeline.md)
+repairs an experiment that had been inert for three weeks without anything
+failing. `54394e0` compressed the coordination world for demo pacing; the assay
+reused that scenario but expressed its own timing as absolute day counts, so
+every perturbation landed exactly on the deadline, after the last meeting. Four
+of its five rows became indistinguishable and its control stopped deciding. The
+assay now derives its timing from the scenario's meeting cadence, so re-pacing
+the world re-paces the experiment instead of silently emptying it.
 
 [Slice 34: Keep the demo correct without anyone watching it](034-demo-quality-system.md)
 installs the review system the demo has been missing. Every defect found on
