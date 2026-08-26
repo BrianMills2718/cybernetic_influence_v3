@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
@@ -121,9 +122,47 @@ def _structured_call() -> StructuredCall:
     return cast(StructuredCall, call_llm_structured)
 
 
+_LOGGER = logging.getLogger(__name__)
+
+
+def _log_retry_cause(attempt: int, exc: Exception, delay: float) -> None:
+    """Name the field a rejected draft failed on.
+
+    llm_client keeps only the first error's message when it builds the retry
+    exception -- "4 error(s). First: Input should be a valid string" -- and drops
+    that error's loc. The observability row for a call that eventually succeeds
+    keeps retry_count and discards the causes entirely: 94 rows carry retries,
+    4 carry any detail. So the most common authoring retry on the deployment,
+    27 of 88, named no field in any log or table and could not be fixed.
+
+    The exception itself carries the whole ValidationError. llm_client already
+    offers on_retry on call_llm_structured, so this reads the loc off it at the
+    existing seam instead of changing the dependency.
+    """
+    del delay
+    validation_error = getattr(exc, "validation_error", None)
+    errors = validation_error.errors() if validation_error is not None else []
+    if errors:
+        fields = "; ".join(
+            f"{'.'.join(str(part) for part in error.get('loc', ()))}: {error.get('msg')}"
+            for error in errors[:5]
+        )
+        _LOGGER.warning(
+            "authoring attempt %d rejected on %d field(s): %s",
+            attempt + 1,
+            len(errors),
+            fields,
+        )
+        return
+    _LOGGER.warning(
+        "authoring attempt %d rejected: %s: %s", attempt + 1, type(exc).__name__, exc
+    )
+
+
 def _call_with_deadline(
     call: StructuredCall, *args: Any, **kwargs: Any
 ) -> tuple[Any, Any]:
+    kwargs.setdefault("on_retry", _log_retry_cause)
     pool = ThreadPoolExecutor(max_workers=1)
     future = pool.submit(call, *args, **kwargs)
     try:
