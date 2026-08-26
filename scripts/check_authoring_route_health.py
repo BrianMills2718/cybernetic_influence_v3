@@ -68,10 +68,10 @@ def main() -> int:
     observations = {item.observation_id: item for item in store.observations()}
     now = datetime.now(timezone.utc)
 
-    def family_margin(label: str, env_map: dict[str, str]) -> timedelta | None:
-        """Longest-lived usable certification in one family, or None if dark."""
+    def family_margin(label: str, env_map: dict[str, str]) -> dict[str, timedelta]:
+        """Every live certification in one family, by model. Empty means dark."""
         print(f"\n{label} routes:")
-        best: timedelta | None = None
+        live: dict[str, timedelta] = {}
         for model, env_name in sorted(env_map.items()):
             configured = os.environ.get(env_name, "").strip()
             if not configured:
@@ -99,13 +99,18 @@ def main() -> int:
                 else f"{remaining.days}d {remaining.seconds // 3600}h left"
             )
             print(f"  {model:34s} expires {soonest:%Y-%m-%d %H:%M}Z  ({state})")
-            if remaining.total_seconds() > 0 and (best is None or remaining > best):
-                best = remaining
-        return best
+            if remaining.total_seconds() > 0:
+                live[model] = remaining
+        print(f"  -> {len(live)} of {len(env_map)} routes live")
+        return live
 
-    margins = {
+    live_routes = {
         label: family_margin(label, env_map)
         for label, env_map in ROUTE_FAMILIES.items()
+    }
+    margins = {
+        label: (max(live.values()) if live else None)
+        for label, live in live_routes.items()
     }
     dark = [label for label, margin in margins.items() if margin is None]
     if dark:
@@ -117,6 +122,34 @@ def main() -> int:
             "  .venv/bin/python scripts/refresh_authoring_certification.py --force",
             file=sys.stderr,
         )
+        return 1
+
+    # A family reports its longest-lived route, so a family down to one survivor
+    # reads exactly like a healthy one. On 2026-08-26 that summary said "6.5 days
+    # remaining" over three expired execution routes, and Luna was hours away from
+    # being the only live route in BOTH families -- one Codex login failure would
+    # have taken authoring and execution dark together, with seven days of
+    # apparent margin on the board. Two families sharing their last route are not
+    # two families.
+    sole = {
+        label: next(iter(live))
+        for label, live in live_routes.items()
+        if len(live) == 1
+    }
+    shared: dict[str, list[str]] = {}
+    for label, model in sole.items():
+        shared.setdefault(model, []).append(label)
+    doubled = {model: labels for model, labels in shared.items() if len(labels) > 1}
+    if doubled:
+        for model, labels in sorted(doubled.items()):
+            print(
+                f"\n{model} is the only live route in {' and '.join(sorted(labels))}. "
+                "Those families are not independent: one failure on that route takes "
+                "all of them dark at once, however many days it has left. Certify a "
+                "second route:\n"
+                "  .venv/bin/python scripts/refresh_authoring_certification.py --paid",
+                file=sys.stderr,
+            )
         return 1
 
     # The weakest family governs: a healthy authoring margin says nothing about

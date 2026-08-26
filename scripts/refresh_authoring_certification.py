@@ -206,56 +206,8 @@ def restart() -> None:
     log(f"service is answering on port {port}")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--warn-days", type=float, default=3.0,
-                        help="refresh once the longest-lived route drops below this")
-    parser.add_argument("--paid-fallback-days", type=float, default=2.0,
-                        help="allow the metered route only inside this margin")
-    parser.add_argument("--no-paid-fallback", action="store_true",
-                        help="never spend; fail loudly if the free route cannot certify")
-    parser.add_argument("--force", action="store_true", help="refresh regardless of margin")
-    parser.add_argument("--force-restart", action="store_true",
-                        help="restart even with work in flight, losing it")
-    args = parser.parse_args()
-
-    env = service_env()
-    before = margin_days(env)
-    if before is None:
-        log("a route family has no usable certification: Create is dark right now")
-    else:
-        log(f"weakest route family: {before:.2f} days remaining")
-
-    if not args.force and before is not None and before >= args.warn_days:
-        log(f"above the {args.warn_days:g}-day margin; nothing to do")
-        return 0
-
-    def certify_all(routes: tuple[str, ...]) -> dict[str, str]:
-        """Certify every family's route; a partial refresh is not a refresh."""
-        produced: dict[str, str] = {}
-        for route in routes:
-            produced.update(certify(route, env))
-        return produced
-
-    try:
-        assignments = certify_all(FREE_ROUTES)
-    except Exception as free_error:  # noqa: BLE001 - the fallback decision needs the reason
-        log(f"free route unavailable: {free_error}")
-        if args.no_paid_fallback:
-            print("free route failed and paid fallback is disabled", file=sys.stderr)
-            return 1
-        inside_margin = before is None or before <= args.paid_fallback_days
-        if not inside_margin:
-            print(
-                f"free route failed with {before:.2f} days still in hand; not spending yet. "
-                "It will retry, and fall back to the metered route inside "
-                f"{args.paid_fallback_days:g} days.",
-                file=sys.stderr,
-            )
-            return 1
-        log("inside the paid-fallback margin; certifying over the metered route (this costs money)")
-        assignments = certify_all(PAID_ROUTES)
-
+def finish(assignments: dict[str, str], before: float | None, args) -> int:
+    """Install what was certified, restart, and prove the route came back live."""
     in_flight = busy_reasons(os.path.expanduser(DEFAULT_STORE))
     if in_flight and not args.force_restart:
         # The certification itself is already recorded in the store, so nothing
@@ -278,10 +230,81 @@ def main() -> int:
         print("refresh installed but no usable certification is visible afterwards", file=sys.stderr)
         return 1
     log(f"weakest route family now has {after:.2f} days remaining")
-    if before is not None and after <= before:
+    # A deliberate paid refresh adds a second route to a family that already has
+    # one; the family margin it reports is the LONGEST-lived route, so it can
+    # legitimately not move. Only a margin-driven refresh has to extend it.
+    if not args.paid and before is not None and after <= before:
         print(f"refresh did not extend the margin ({before:.2f} -> {after:.2f} days)", file=sys.stderr)
         return 1
     return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--warn-days", type=float, default=3.0,
+                        help="refresh once the longest-lived route drops below this")
+    parser.add_argument("--paid-fallback-days", type=float, default=2.0,
+                        help="allow the metered route only inside this margin")
+    parser.add_argument("--no-paid-fallback", action="store_true",
+                        help="never spend; fail loudly if the free route cannot certify")
+    parser.add_argument("--force", action="store_true", help="refresh regardless of margin")
+    # Spend was reachable only by falling out of a failure: the paid route ran
+    # when the free one raised, and never because someone decided to pay. That
+    # left no way to execute the one decision the margin cannot make for you --
+    # adding a SECOND route so the free one is not carrying a family alone --
+    # and the check that detects it recommends exactly this flag.
+    parser.add_argument("--paid", action="store_true",
+                        help="certify the metered route deliberately (costs money); implies --force")
+    parser.add_argument("--force-restart", action="store_true",
+                        help="restart even with work in flight, losing it")
+    args = parser.parse_args()
+
+    env = service_env()
+    before = margin_days(env)
+    if before is None:
+        log("a route family has no usable certification: Create is dark right now")
+    else:
+        log(f"weakest route family: {before:.2f} days remaining")
+
+    if not (args.force or args.paid) and before is not None and before >= args.warn_days:
+        log(f"above the {args.warn_days:g}-day margin; nothing to do")
+        return 0
+
+    def certify_all(routes: tuple[str, ...]) -> dict[str, str]:
+        """Certify every family's route; a partial refresh is not a refresh."""
+        produced: dict[str, str] = {}
+        for route in routes:
+            produced.update(certify(route, env))
+        return produced
+
+    if args.paid:
+        if args.no_paid_fallback:
+            print("--paid and --no-paid-fallback contradict each other", file=sys.stderr)
+            return 2
+        log("--paid given; certifying over the metered route (this costs money)")
+        assignments = certify_all(PAID_ROUTES)
+        return finish(assignments, before, args)
+
+    try:
+        assignments = certify_all(FREE_ROUTES)
+    except Exception as free_error:  # noqa: BLE001 - the fallback decision needs the reason
+        log(f"free route unavailable: {free_error}")
+        if args.no_paid_fallback:
+            print("free route failed and paid fallback is disabled", file=sys.stderr)
+            return 1
+        inside_margin = before is None or before <= args.paid_fallback_days
+        if not inside_margin:
+            print(
+                f"free route failed with {before:.2f} days still in hand; not spending yet. "
+                "It will retry, and fall back to the metered route inside "
+                f"{args.paid_fallback_days:g} days.",
+                file=sys.stderr,
+            )
+            return 1
+        log("inside the paid-fallback margin; certifying over the metered route (this costs money)")
+        assignments = certify_all(PAID_ROUTES)
+
+    return finish(assignments, before, args)
 
 
 if __name__ == "__main__":
