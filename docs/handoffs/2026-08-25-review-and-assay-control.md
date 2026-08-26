@@ -159,26 +159,35 @@ Found while measuring the cost of the paid refresh, on the deployment
   of `sqlite:///Users/b/Library/Application Support/LLMClient/llm_observability.db#logical_call_id=...`**
 - that file exists and is **0 bytes**, created 2026-08-03, with no tables
 
-`scripts/certify_codex_luna.py` builds that reference as
-`LLM_CLIENT_DATA_ROOT / "llm_observability.db"`. Two things are wrong with it at
-once: `llm_client` namespaces its store by project *underneath* that root, and on
-this host it writes JSONL rather than sqlite. So the reference names a path that
-is not the store and a format the store does not use. Only the subscription
-branch is affected — OpenRouter certifications record a real generations file,
-which is why the two Sol observations written today resolve and the 102 Luna ones
-do not.
+`scripts/certify_codex_luna.py` built that reference as
+`LLM_CLIENT_DATA_ROOT / "llm_observability.db"` — the wrong variable. Per
+`llm_client/io_log.py`'s own documented interface, `LLM_CLIENT_DATA_ROOT` is the
+root of the *JSONL* logs and gets a project directory appended underneath it,
+while the SQLite mirror an `evidence_ref` points into is addressed by
+`LLM_CLIENT_DB_PATH`, a separate variable with a separate default. On this host
+those resolve to two different files, and the referenced one had never been
+written. Only the subscription branch is affected — OpenRouter certifications
+record a real generations file, which is why today's two Sol observations resolve
+and the 102 Luna ones did not.
 
 **Nothing is lost, and that is a measurement rather than an assumption.** Both
-`logical_call_id`s I spot-checked are present in
-`.../cybernetic_influence_v3/cybernetic_influence_v3_llm_client_data/calls_2026-08-26.jsonl`.
-The evidence is retained; the pointer to it is wrong.
+`logical_call_id`s I spot-checked return exactly one row from `llm_calls` in the
+321MB database at `/Users/b/projects/data/llm_observability.db` — the one the
+correct variable names. The evidence was always retained; only the pointer to it
+was wrong.
 
-Not urgent, and worth knowing why: the certification store's expiry logic never
-dereferences `evidence_ref`, so nothing has read one in 102 observations. That is
-also exactly why this survived — a provenance record nobody follows cannot fail
-loudly. The fix is to ask `llm_client` where it wrote the call rather than
-recomputing the path from a root, and it should be done before any of these
-certifications is ever cited as evidence for a route being sound.
+*(An earlier revision of this section said the evidence lived in the project's
+`calls_*.jsonl`. It is in both, but the sqlite mirror is what an `evidence_ref`
+addresses, and naming the JSONL would have sent the next reader to a file whose
+format the reference cannot express.)*
+
+Worth knowing why it survived: the certification store's expiry logic never
+dereferences `evidence_ref`, so nothing had read one in 102 observations — a
+provenance record nobody follows cannot fail loudly.
+
+Fixed forward in `certify_codex_luna.py`; the 102 existing observations are
+retained evidence and are left as written rather than rewritten. Anyone citing
+one should read it against `LLM_CLIENT_DB_PATH`, not the path the record carries.
 
 ## Certification state as of 2026-08-26 15:43Z
 

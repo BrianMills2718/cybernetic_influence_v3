@@ -106,6 +106,30 @@ def _certification_budget(schema: type[BaseModel], model: str) -> float:
     )
 
 
+def _observability_db() -> Path:
+    """Where llm_client actually writes the call records, per its own contract.
+
+    This used to be built as LLM_CLIENT_DATA_ROOT / "llm_observability.db",
+    which is two different mistakes at once: LLM_CLIENT_DATA_ROOT is the root of
+    the *JSONL* logs (and llm_client namespaces a project directory underneath
+    it), while the SQLite mirror these evidence refs point into is addressed by
+    LLM_CLIENT_DB_PATH, a separate variable with a separate default. On the
+    deployment the two resolve to different files, and the one being referenced
+    was 0 bytes -- so 102 of 220 retained certifications named an evidence store
+    that had never been written. The evidence itself was always fine, in the
+    321MB database the other variable names.
+
+    Env var and default are llm_client/io_log.py's documented interface; the
+    resolver itself (_db_path) is private, so this mirrors the contract rather
+    than importing it.
+    """
+    return Path(
+        os.environ.get(
+            "LLM_CLIENT_DB_PATH", "~/projects/data/llm_observability.db"
+        )
+    ).expanduser()
+
+
 def _certify(
     schema: type[BaseModel],
     *,
@@ -182,9 +206,6 @@ def main() -> None:
     if route in authoring_routes:
         model, authoring_env = authoring_routes[route]
         revision = llm_client_revision()
-        data_root = Path(
-            os.environ.get("LLM_CLIENT_DATA_ROOT", "~/projects/data")
-        ).expanduser()
         certification_root = Path(
             os.environ.get(
                 "LLM_ROUTE_CERTIFICATION_ROOT",
@@ -192,7 +213,7 @@ def main() -> None:
             )
         ).expanduser()
         store = RouteCertificationStore(certification_root / "observations")
-        observability_db = data_root / "llm_observability.db"
+        observability_db = _observability_db()
         ids = [
             _certify(
                 schema,
@@ -242,9 +263,6 @@ def main() -> None:
             "[luna|luna-authoring|terra|openrouter-terra]"
         ) from error
     revision = llm_client_revision()
-    data_root = Path(
-        os.environ.get("LLM_CLIENT_DATA_ROOT", "~/projects/data")
-    ).expanduser()
     certification_root = Path(
         os.environ.get(
             "LLM_ROUTE_CERTIFICATION_ROOT",
@@ -252,7 +270,7 @@ def main() -> None:
         )
     ).expanduser()
     store = RouteCertificationStore(certification_root / "observations")
-    observability_db = data_root / "llm_observability.db"
+    observability_db = _observability_db()
     global_ids = [
         _certify(
             schema,
