@@ -37,7 +37,7 @@ WIDTHS = [390, 768, 1024, 1280, 1366, 1440, 1512, 1600, 1728, 1920]
 
 # view -> controls a human is expected to find without hunting
 SURFACES = {
-    "overview": ["button[data-view='case']", "button:has-text('Start the product walkthrough')"],
+    "overview": ["button[data-view='case']", "button.walkthrough-start"],
     "guide": ["#guide-view button:has-text('Next')", "#guide-view button:has-text('Previous')"],
     "case": ["#case-walkthrough-next", "#case-walkthrough-previous"],
     "simulations": ["button[data-view='case']", "button[data-view='create']"],
@@ -59,9 +59,19 @@ def main() -> int:
     parser.add_argument("--widths", default=",".join(str(w) for w in WIDTHS))
     args = parser.parse_args()
     widths = [int(w) for w in args.widths.split(",") if w.strip()]
+    # The audit passes the shareable URL, which ends in a slash, and this used to
+    # build "{base}/?view=..." from it -- a double slash that matched no view, so
+    # every selector was absent, every absence was skipped, and the run reported
+    # success having examined nothing. The nightly said "controls ok" on that
+    # basis every night.
+    base_url = args.base_url.rstrip("/")
 
     violations: list[str] = []
     checked = 0
+    # A selector that matches nothing everywhere is a check that silently stopped
+    # checking -- usually because a control was renamed. Skipping it per-width is
+    # right; never noticing it is how a guard rots.
+    never_seen = {(view, sel) for view, sels in SURFACES.items() for sel in sels}
 
     with sync_playwright() as pw:
         launch_options: dict[str, object] = {
@@ -75,7 +85,7 @@ def main() -> int:
             page = browser.new_page(viewport={"width": width, "height": 900})
             for view, selectors in SURFACES.items():
                 try:
-                    page.goto(f"{args.base_url}/?view={view}", wait_until="networkidle", timeout=90_000)
+                    page.goto(f"{base_url}/?view={view}", wait_until="networkidle", timeout=90_000)
                     page.wait_for_timeout(2500)
                 except Exception as error:  # noqa: BLE001 - a load failure is a violation
                     violations.append(f"{width}px {view}: page did not load ({type(error).__name__})")
@@ -95,6 +105,7 @@ def main() -> int:
                     if not locator.is_visible():
                         continue  # legitimately hidden in this state
                     checked += 1
+                    never_seen.discard((view, selector))
                     box = locator.bounding_box()
                     if box is None:
                         violations.append(f"{width}px {view}: {selector} reports visible but has no box")
@@ -113,6 +124,18 @@ def main() -> int:
         browser.close()
 
     print(f"checked {checked} control placements across {len(widths)} widths")
+    if checked == 0:
+        print(
+            "\nexamined no controls at all, so this proves nothing about the demo.\n"
+            f"check that {base_url}/?view=overview serves the page.",
+            file=sys.stderr,
+        )
+        return 1
+    for view, selector in sorted(never_seen):
+        violations.append(
+            f"{view}: {selector} was never found visible at any width, so it was "
+            "checked nowhere -- the control was probably renamed"
+        )
     if violations:
         print("\nVIOLATIONS:")
         for item in violations:
