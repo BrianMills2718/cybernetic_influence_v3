@@ -29,6 +29,20 @@ AUTHORING_ENV = {
     "openrouter/openai/gpt-5.6-terra": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_TERRA",
     "openrouter/openai/gpt-5.6-sol": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_SOL",
 }
+# Execution is certified separately from authoring, and only authoring was ever
+# automated. On 2026-08-25 every execution certification had lapsed -- Terra 110
+# hours earlier, Luna 52, Sol 6 -- while this check reported 5.6 healthy days and
+# the nightly audit wrote a green verdict onto the page. Authoring still worked,
+# so the builder composed a draft, accepted an approval, and then refused to run
+# it. A check that covers one of two required families cannot go red for the
+# other, which is the whole failure.
+EXECUTION_ENV = {
+    "codex/gpt-5.6-luna": "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA",
+    "codex/gpt-5.6-terra": "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA",
+    "openrouter/openai/gpt-5.6-terra": "CYBERNETIC_INFLUENCE_CERT_TERRA",
+    "openrouter/openai/gpt-5.6-sol": "CYBERNETIC_INFLUENCE_CERT_SOL",
+}
+ROUTE_FAMILIES = {"authoring": AUTHORING_ENV, "execution": EXECUTION_ENV}
 CERTIFICATION_MAX_AGE = timedelta(days=7)
 
 
@@ -54,50 +68,69 @@ def main() -> int:
     observations = {item.observation_id: item for item in store.observations()}
     now = datetime.now(timezone.utc)
 
-    best_remaining: timedelta | None = None
-    any_configured = False
-
-    for model, env_name in sorted(AUTHORING_ENV.items()):
-        configured = os.environ.get(env_name, "").strip()
-        if not configured:
-            print(f"  {model:34s} not configured")
-            continue
-        any_configured = True
-        expiries = []
-        missing = []
-        for oid in (item.strip() for item in configured.split(",") if item.strip()):
-            item = observations.get(oid)
-            if item is None:
-                missing.append(oid)
+    def family_margin(label: str, env_map: dict[str, str]) -> timedelta | None:
+        """Longest-lived usable certification in one family, or None if dark."""
+        print(f"\n{label} routes:")
+        best: timedelta | None = None
+        for model, env_name in sorted(env_map.items()):
+            configured = os.environ.get(env_name, "").strip()
+            if not configured:
+                print(f"  {model:34s} not configured")
                 continue
-            expiries.append(item.observed_at + CERTIFICATION_MAX_AGE)
-        if missing or not expiries:
-            print(f"  {model:34s} observation(s) missing from the store: {', '.join(missing) or 'none recorded'}")
-            continue
-        soonest = min(expiries)
-        remaining = soonest - now
-        if best_remaining is None or remaining > best_remaining:
-            best_remaining = remaining
-        state = "EXPIRED" if remaining.total_seconds() <= 0 else f"{remaining.days}d {remaining.seconds // 3600}h left"
-        print(f"  {model:34s} expires {soonest:%Y-%m-%d %H:%M}Z  ({state})")
+            expiries = []
+            missing = []
+            for oid in (item.strip() for item in configured.split(",") if item.strip()):
+                item = observations.get(oid)
+                if item is None:
+                    missing.append(oid)
+                    continue
+                expiries.append(item.observed_at + CERTIFICATION_MAX_AGE)
+            if missing or not expiries:
+                print(
+                    f"  {model:34s} observation(s) missing from the store: "
+                    f"{', '.join(missing) or 'none recorded'}"
+                )
+                continue
+            soonest = min(expiries)
+            remaining = soonest - now
+            state = (
+                "EXPIRED"
+                if remaining.total_seconds() <= 0
+                else f"{remaining.days}d {remaining.seconds // 3600}h left"
+            )
+            print(f"  {model:34s} expires {soonest:%Y-%m-%d %H:%M}Z  ({state})")
+            if remaining.total_seconds() > 0 and (best is None or remaining > best):
+                best = remaining
+        return best
 
-    if not any_configured:
-        print("\nNo authoring route is configured at all: Create is already dark.", file=sys.stderr)
-        return 1
-    if best_remaining is None:
-        print("\nEvery configured route has unusable observations: Create is already dark.", file=sys.stderr)
+    margins = {
+        label: family_margin(label, env_map)
+        for label, env_map in ROUTE_FAMILIES.items()
+    }
+    dark = [label for label, margin in margins.items() if margin is None]
+    if dark:
+        print(
+            "\nNo usable certification for: " + ", ".join(sorted(dark))
+            + ". That half of Create is dark now -- authoring and execution are "
+            "certified separately and both are required to author and then run "
+            "a simulation. Re-certify before demoing:\n"
+            "  .venv/bin/python scripts/refresh_authoring_certification.py --force",
+            file=sys.stderr,
+        )
         return 1
 
-    days_left = best_remaining.total_seconds() / 86400
-    print(f"\nlongest-lived authoring route: {days_left:.1f} days remaining")
-    if days_left <= 0:
-        print("Create is dark now. Re-certify before demoing.", file=sys.stderr)
-        return 1
+    # The weakest family governs: a healthy authoring margin says nothing about
+    # whether an authored simulation can actually be run.
+    weakest_label = min(margins, key=lambda label: margins[label].total_seconds())
+    days_left = margins[weakest_label].total_seconds() / 86400
+    for label in sorted(margins):
+        print(f"\nlongest-lived {label} route: {margins[label].total_seconds() / 86400:.1f} days remaining")
     if days_left < args.warn_days:
         print(
-            f"Under the {args.warn_days:g}-day margin. Re-certify now rather than "
-            "discovering it as a disabled button:\n"
-            "  .venv/bin/python scripts/certify_codex_luna.py sol-authoring",
+            f"\nThe {weakest_label} family is under the {args.warn_days:g}-day margin "
+            f"({days_left:.1f} days). Re-certify now rather than discovering it as a "
+            "disabled button or a run that will not start:\n"
+            "  .venv/bin/python scripts/refresh_authoring_certification.py",
             file=sys.stderr,
         )
         return 1

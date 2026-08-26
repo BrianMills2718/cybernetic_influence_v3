@@ -38,14 +38,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from check_authoring_route_health import AUTHORING_ENV, CERTIFICATION_MAX_AGE
+from check_authoring_route_health import CERTIFICATION_MAX_AGE, ROUTE_FAMILIES
 from host_busy_check import DEFAULT_STORE, busy_reasons
 from service_env import SERVICE_LABEL, plist_path, service_env
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VENV_PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
-FREE_ROUTE = "luna-authoring"
-PAID_ROUTE = "sol-authoring"
+# Authoring and execution are certified separately and BOTH are required for
+# the public Create path: authoring composes the draft, execution runs it. Only
+# authoring was automated here, so on 2026-08-25 the builder produced a draft,
+# accepted an approval, and then refused to run it with "model is not currently
+# advertised for simulator execution", while this job reported a healthy margin
+# every night. Refreshing one family and calling the route healthy is the bug.
+FREE_ROUTES = ("luna-authoring", "luna")
+PAID_ROUTES = ("sol-authoring", "sol")
 PLIST_BACKUPS_KEPT = 5
 BOOTOUT_SETTLE_SECONDS = 3
 CERT_LINE = re.compile(r"^(?P<key>CYBERNETIC_INFLUENCE_CERT_[A-Z0-9_]+)=(?P<ids>[\w,]+)$")
@@ -57,7 +63,12 @@ def log(message: str) -> None:
 
 
 def margin_days(env: dict[str, str]) -> float | None:
-    """Days until the longest-lived authoring route expires, or None if dark."""
+    """Days until the weakest route family expires, or None if either is dark.
+
+    The weakest family governs. A healthy authoring margin says nothing about
+    whether an authored simulation can actually be run, and reporting the
+    stronger of the two is what let execution go dark unnoticed for days.
+    """
     from llm_client.route_certification import RouteCertificationStore
 
     root = env.get("LLM_ROUTE_CERTIFICATION_ROOT")
@@ -67,24 +78,30 @@ def margin_days(env: dict[str, str]) -> float | None:
     observations = {item.observation_id: item for item in store.observations()}
     now = datetime.now(timezone.utc)
 
-    best: timedelta | None = None
-    for env_name in AUTHORING_ENV.values():
-        configured = env.get(env_name, "").strip()
-        if not configured:
-            continue
-        expiries = []
-        for oid in (part.strip() for part in configured.split(",") if part.strip()):
-            item = observations.get(oid)
-            if item is None:
-                expiries = []
-                break
-            expiries.append(item.observed_at + CERTIFICATION_MAX_AGE)
-        if not expiries:
-            continue
-        remaining = min(expiries) - now
-        if best is None or remaining > best:
-            best = remaining
-    return None if best is None else best.total_seconds() / 86400
+    family_best: dict[str, timedelta] = {}
+    for label, env_map in ROUTE_FAMILIES.items():
+        for env_name in env_map.values():
+            configured = env.get(env_name, "").strip()
+            if not configured:
+                continue
+            expiries = []
+            for oid in (part.strip() for part in configured.split(",") if part.strip()):
+                item = observations.get(oid)
+                if item is None:
+                    expiries = []
+                    break
+                expiries.append(item.observed_at + CERTIFICATION_MAX_AGE)
+            if not expiries:
+                continue
+            remaining = min(expiries) - now
+            if remaining.total_seconds() <= 0:
+                continue
+            current = family_best.get(label)
+            if current is None or remaining > current:
+                family_best[label] = remaining
+    if set(family_best) != set(ROUTE_FAMILIES):
+        return None
+    return min(item.total_seconds() for item in family_best.values()) / 86400
 
 
 def certify(route: str, env: dict[str, str]) -> dict[str, str]:
@@ -205,16 +222,23 @@ def main() -> int:
     env = service_env()
     before = margin_days(env)
     if before is None:
-        log("no usable authoring certification: Create is dark right now")
+        log("a route family has no usable certification: Create is dark right now")
     else:
-        log(f"longest-lived authoring route: {before:.2f} days remaining")
+        log(f"weakest route family: {before:.2f} days remaining")
 
     if not args.force and before is not None and before >= args.warn_days:
         log(f"above the {args.warn_days:g}-day margin; nothing to do")
         return 0
 
+    def certify_all(routes: tuple[str, ...]) -> dict[str, str]:
+        """Certify every family's route; a partial refresh is not a refresh."""
+        produced: dict[str, str] = {}
+        for route in routes:
+            produced.update(certify(route, env))
+        return produced
+
     try:
-        assignments = certify(FREE_ROUTE, env)
+        assignments = certify_all(FREE_ROUTES)
     except Exception as free_error:  # noqa: BLE001 - the fallback decision needs the reason
         log(f"free route unavailable: {free_error}")
         if args.no_paid_fallback:
@@ -230,7 +254,7 @@ def main() -> int:
             )
             return 1
         log("inside the paid-fallback margin; certifying over the metered route (this costs money)")
-        assignments = certify(PAID_ROUTE, env)
+        assignments = certify_all(PAID_ROUTES)
 
     in_flight = busy_reasons(os.path.expanduser(DEFAULT_STORE))
     if in_flight and not args.force_restart:
@@ -253,7 +277,7 @@ def main() -> int:
     if after is None:
         print("refresh installed but no usable certification is visible afterwards", file=sys.stderr)
         return 1
-    log(f"authoring route now has {after:.2f} days remaining")
+    log(f"weakest route family now has {after:.2f} days remaining")
     if before is not None and after <= before:
         print(f"refresh did not extend the margin ({before:.2f} -> {after:.2f} days)", file=sys.stderr)
         return 1
