@@ -975,7 +975,7 @@ function NodeLabel({ data }: { data: CanvasNodeData }) {
   if (data.aggregateMode === 'expanded') {
     return (
       <div className="cy-boundary-label">
-        <span>analytical composite · executor=false</span>
+        <span>analytical composite · does not act</span>
         <strong>{data.raw.label}</strong>
         <small>{data.memberCount} exact visible members · expanded</small>
       </div>
@@ -991,7 +991,7 @@ function NodeLabel({ data }: { data: CanvasNodeData }) {
           {nodeGlyph(data.raw.kind)}
         </i>
         {data.aggregateMode === 'collapsed'
-          ? 'analytical composite · executor=false'
+          ? 'analytical composite · does not act'
           : data.connectivityClass === 'unused'
             ? 'unconnected configured item'
           : data.raw.kind.replaceAll('_', ' ')}

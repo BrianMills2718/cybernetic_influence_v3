@@ -944,10 +944,20 @@ function selectionInspectorHtml({item, relationship = false, nodes = [], edges =
       ['Invariants', state.invariant_ids],
       ['Uses', state.substrate_refs],
     ]
-    const handledStateKeys = new Set(['mode', 'implementation_id', 'input_port_ids', 'output_port_ids', 'observation_target_ids', 'read_fact_ids', 'read_representation_ids', 'read_spatial_link_ids', 'write_fact_ids', 'write_carrier_ids', 'write_placement_entity_ids', 'invariant_ids', 'substrate_refs', 'canonical_id', 'canonical_label', 'canonical_kind'])
+    const handledStateKeys = new Set(['mode', 'implementation_id', 'input_port_ids', 'output_port_ids', 'observation_target_ids', 'read_fact_ids', 'read_representation_ids', 'read_spatial_link_ids', 'write_fact_ids', 'write_carrier_ids', 'write_placement_entity_ids', 'invariant_ids', 'substrate_refs', 'canonical_id', 'canonical_label', 'canonical_kind',
+      // Already shown above: 'description' is the panel header's own subtitle and
+      // 'mechanism_id' repeats Canonical ID verbatim. Both were rendering a second
+      // time through the catch-all below, on step 1 of the case study.
+      'description', 'mechanism_id'])
     for (const [label, value] of preferred) if (value !== undefined && (!Array.isArray(value) || value.length)) rows.push([label, value])
     for (const [key, value] of Object.entries(state)) {
-      if (!handledStateKeys.has(key) && key !== 'fidelity' && value !== undefined) rows.push([sentence(key), value])
+      // inspectorValue() renders null/''/[] as the string "None", so an empty
+      // pass-through field became a row reading "read placement entity ids: None"
+      // rather than being left out. Absent is absent.
+      if (handledStateKeys.has(key) || key === 'fidelity') continue
+      if (value === undefined || value === null || value === '') continue
+      if (Array.isArray(value) && !value.length) continue
+      rows.push([sentence(key), value])
     }
     const connected = edges.filter((edge) => edge.source === identity || edge.target === identity)
     if (connected.length) {
@@ -2746,7 +2756,14 @@ function authoringProgressText(job) {
   let elapsed = ''
   if (authoringStartedAt) {
     const seconds = Math.round((Date.now() - authoringStartedAt) / 1000)
-    elapsed = ` · ${seconds < 90 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`} elapsed, typically 2–3 minutes`
+    // "typically 2-3 minutes" used to be appended at every elapsed value, so a job
+    // sitting at 3m 40s still claimed to be typical. The reassurance turned into a
+    // contradiction exactly when the reader most needed to know whether to keep
+    // waiting. Past the stated range, say so instead of repeating it.
+    const shown = seconds < 90 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+    elapsed = seconds <= 180
+      ? ` · ${shown} elapsed, typically 2–3 minutes`
+      : ` · ${shown} elapsed, longer than the usual 2–3 minutes; still running`
   }
   return `${label}${attemptLabel}${detail ? ` — ${detail}` : ''}${elapsed}`
 }
@@ -2803,6 +2820,15 @@ async function advanceAuthoringDraft(message, mode = 'configure') {
   syncUrl()
 }
 
+function revealAuthoringStatus() {
+  // #create-status sits below the two Describe buttons. At a 900px viewport the
+  // buttons are the last thing above the fold and the status line is ~80px under
+  // it, so clicking Configure and waiting produced a screen that did not visibly
+  // change for the whole multi-minute job -- and a refusal message there would be
+  // just as invisible. Progress and refusal both have to reach the eye that clicked.
+  window.requestAnimationFrame(() => $('#create-status').scrollIntoView({behavior:'smooth', block:'center'}))
+}
+
 function focusAuthoringReview() {
   window.requestAnimationFrame(() => $('#create-review').scrollIntoView({behavior:'smooth', block:'start'}))
 }
@@ -2815,6 +2841,7 @@ async function discussAuthoringDraft() {
   }
   setAuthoringBusy(true)
   $('#create-status').textContent = 'The authoring model is considering what materially needs clarification…'
+  revealAuthoringStatus()
   try {
     await advanceAuthoringDraft(message, 'discuss')
     $('#create-prompt').value = ''
@@ -2829,9 +2856,26 @@ async function discussAuthoringDraft() {
 
 async function configureAuthoringDraft() {
   const typed = $('#create-prompt').value.trim()
+  // The fallback below tells the model to configure "from our retained conversation"
+  // and to assume every unanswered detail. Behind an actual conversation that is the
+  // whole point of this button. With an empty box and no conversation, every detail
+  // is unanswered, so the model invented an entire world -- on 2026-08-26 an empty
+  // click produced "Urgent Oxygen-Cylinder Delivery Across an Inspected Route" after
+  // five minutes and two attempts, and the page stamped it "Compiler check passed"
+  // and "Ready for your decision". A reader cannot tell a fabricated scenario from
+  // their own. discussAuthoringDraft() has always refused an empty box; this one
+  // never learned to.
+  const retained = (authoringDraft?.messages || []).length > 0
+  if (!typed && !retained) {
+    $('#create-status').textContent = 'Describe the situation you want to simulate first. This button builds a world from what you have already told the model, and nothing has been said yet.'
+    revealAuthoringStatus()
+    $('#create-prompt').focus()
+    return
+  }
   const message = typed || 'Configure the simulation now from our retained conversation. Make reasonable assumptions for every unanswered detail, disclose them in fidelity_assumptions, do not invent an analyst research question, and keep actor choices endogenous.'
   setAuthoringBusy(true)
   $('#create-status').textContent = 'The authoring model is making explicit assumptions and compiling the editable simulation…'
+  revealAuthoringStatus()
   try {
     await advanceAuthoringDraft(message, 'configure')
     $('#create-prompt').value = ''
