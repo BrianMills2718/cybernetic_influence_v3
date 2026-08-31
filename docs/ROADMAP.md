@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-08-25
+updated: 2026-08-31
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -70,6 +70,30 @@ The current public candidate for that comprehension judgment is native draft
 `draft_981bec08d29e` and retained run `run_702e57f9accc`: a six-step relief-port
 replay whose exact bridge inspection commits, whose guarded cargo attempt fails
 visibly, and whose detachable Waltzman lens leaves the simulation unchanged.
+
+## Repository Lineage Disposition
+
+The repository lineage is `cybernetic_influence` ->
+`cybernetic_influence_v2` -> this repository. The first repository is an
+archived historical predecessor. The V2 repository is a retained predecessor,
+but its present operational responsibility is unresolved. Existing repository
+instructions say that V2 remains authoritative for unmigrated production paths;
+as of 2026-08-31, that statement has not been confirmed by a fresh deployment
+or usage observation and was not knowingly adopted by the operator as an
+ecosystem organization rule. Do not turn it into a current runtime, dependency,
+or capability-authority claim without new evidence.
+
+Before moving the V2 repository to `~/archive`, establish whether it has any
+current consumers, deployments, unique runtime state, unmerged work, or
+capabilities that this repository still intends to migrate. Then record one
+explicit disposition: retain it as an operational predecessor with a named
+remaining boundary, keep it only as a source/evidence donor, or archive it
+through Project Meta's reviewed migration protocol. Until that decision, V2 is
+not a normal project-picker entry and is not yet declared archive-safe.
+
+Within this repository, labels such as "V1 path" and "public V2 path" name
+internal contract or application generations. They do not by themselves refer
+to the earlier repositories or prove that those repositories are active.
 
 ## Retained Baseline Outcome Probe
 
