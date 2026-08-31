@@ -101,4 +101,3 @@ available.
 - representing every human project in the ecosystem;
 - automatically invoking workspace regeneration from every claim hook; or
 - replacing repository-native planning, instructions, or Git authority.
-
