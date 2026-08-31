@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-08-25
+updated: 2026-08-31
 ---
 
 # Implementation Plans
@@ -11,6 +11,13 @@ updated: 2026-08-25
 [the goal](../GOAL.md) defines the accepted MVP outcome.
 
 ## Active execution
+
+[Slice 36: Open the human project, not a repository maze](036-human-project-picker-pilot.md)
+pilots the canonical Cybernetic project composition and its operator-facing VS
+Code picker. The project-local manifest identifies V3 as the primary
+implementation, `llm_client` as claim-activated support, and V1/V2 as hidden
+lineage. Project Meta validates the pointer and repository identities; Ecosystem
+Ops projects the composition into one generated workspace and Quick Pick.
 
 [Slice 35: Give the perturbation assay its own timeline](035-restore-the-perturbation-assay-timeline.md)
 repairs an experiment that had been inert for three weeks without anything
