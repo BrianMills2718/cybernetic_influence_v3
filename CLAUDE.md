@@ -38,12 +38,9 @@ Concordia foundation. Do not mistake it for the general product architecture.
   remains deferred outside the migrated verticals.
 - ADR-012: trust, risk, coordination, and directional measures are derived,
   evidence-bound analyst views, never hidden causal state.
-- This repository is the sole current product/runtime lineage. Earlier
-  repositories do not own current runtime or capability authority. V2
-  (`cybernetic_influence_v2`) is a retained source/evidence predecessor with
-  unresolved unique branches; preserve it until those branches are reconciled,
-  but do not infer a runtime dependency or route new work there. This
-  repository has no V2 imports.
+- The predecessor repository (`cybernetic_influence_v2`) is an archived
+  source/evidence donor, not a current runtime or capability authority. This
+  repository is the clean product/runtime line with no predecessor imports.
 
 Detailed current capability and status belong in `docs/ROADMAP.md` and
 `docs/GOAL.md`, not this rule file.

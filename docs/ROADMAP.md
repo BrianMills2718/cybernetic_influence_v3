@@ -121,10 +121,12 @@ Repository recovery custody is complete. Every local V2 branch tip is contained
 by a remote ref. The local stash `recovery-stranded-work-20260824` contains 57
 untracked blobs, all byte-identical to the same paths on
 `origin/recovery/stranded-work-20260824`. The substantive feature tip remains at
-`origin/agent/direct-openai-terra-service-desk`. V2 is therefore semantically
-eligible for frozen archival, subject to Project Meta's reviewed migration
-packet and governed physical archive executor. Until that transaction succeeds,
-V2 stays hidden from the project picker and receives no new product work.
+`origin/agent/direct-openai-terra-service-desk`. Project Meta Plan 252 then
+archived the complete clean V2 checkout on 2026-09-01 at
+`/home/brian/archive/cybernetic_influence_v2/20260831_222711/cybernetic_influence_v2`.
+The archive receipt records HEAD `71d3aee0a3498da1b755c2ab75e72fb7ec713e21`
+and the reviewed directory digest. V2 receives no new product work and is not a
+normal project-picker entry.
 
 This repository is the sole current product/runtime lineage. That authority is
 also observed operationally: the Mac mini runs the private application and
