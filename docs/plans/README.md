@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-08-31
+updated: 2026-09-01
 ---
 
 # Implementation Plans
@@ -17,7 +17,10 @@ pilots the canonical Cybernetic project composition and its operator-facing VS
 Code picker. The project-local manifest identifies V3 as the primary
 implementation, `llm_client` as claim-activated support, and V1/V2 as hidden
 lineage. Project Meta validates the pointer and repository identities; Ecosystem
-Ops projects the composition into one generated workspace and Quick Pick.
+Ops projects the composition into one generated workspace and Quick Pick. Its
+installed exact-session hook now adds and removes a real claimed `llm_client`
+worktree automatically; the remaining acceptance observation is the final
+operator-visible Quick Pick selection/open.
 
 [Slice 35: Give the perturbation assay its own timeline](035-restore-the-perturbation-assay-timeline.md)
 repairs an experiment that had been inert for three weeks without anything

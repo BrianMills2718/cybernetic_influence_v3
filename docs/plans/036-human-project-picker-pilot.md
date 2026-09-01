@@ -3,7 +3,7 @@ doc_role: implementation_plan
 authority: bounded_design
 status: active
 created: 2026-08-31
-updated: 2026-08-31
+updated: 2026-09-01
 depends_on:
   - docs/ROADMAP.md
   - project-membership.yaml
@@ -56,9 +56,9 @@ The Cybernetic pilot contains:
 | `cybernetic_influence_v2` | `retained_predecessor` | `hidden` |
 | `cybernetic_influence` | `historical_predecessor` | `hidden` |
 
-The predecessor roles do not claim that V2 is currently deployed or that
-either predecessor is archive-safe. The roadmap owns that unresolved
-disposition.
+The predecessor roles preserve project lineage only. V1 and V2 are archived
+source/evidence donors, not active capability authorities, normal picker
+entries, or workspace folders.
 
 ## Slices
 
@@ -67,9 +67,9 @@ disposition.
 2. **Picker consumption.** Extend the existing Ecosystem Ops workspace helper
    to resolve project records and install a small VS Code extension exposing the
    Quick Pick command.
-3. **Authentic workflow.** Install the extension locally, open the Cybernetic
-   project through the command, inspect the generated workspace, then exercise
-   a same-session supporting-claim fixture and confirm lineage repositories stay
+3. **Authentic workflow.** Install the extension and exact-session hook locally,
+   inspect the generated workspace, then exercise a real same-session supporting
+   claim and confirm automatic add/remove while lineage repositories stay
    hidden.
 
 ## Acceptance
@@ -80,12 +80,25 @@ disposition.
    repository catalog.
 3. Selecting Cybernetic opens one generated workspace with the claimed V3
    worktree when healthy, otherwise its canonical checkout.
-4. A same-session `llm_client` claim adds its worktree; releasing it removes the
-   folder on regeneration.
+4. A same-session `llm_client` claim automatically adds its worktree; releasing
+   it automatically removes the folder without manual VS Code workspace edits.
 5. V1 and V2 never appear as normal picker choices or workspace folders.
 6. The installed VS Code command is exercised from the same extension
    entrypoint the operator will use, with an inspectable generated workspace as
    evidence.
+
+## Evidence
+
+- Ecosystem Ops PR #40 installed the generic Codex hook and focused both-sign
+  checks; all three CI jobs passed before merge at `26b9e7b`.
+- A genuine clean `llm_client` claim changed the generated Cybernetic workspace
+  from one folder to two through the installed hook. Sanctioned claim closeout
+  changed it from two back to one and removed the proof worktree and branch.
+- A fresh Codex TUI process loaded the configuration and recorded trust only for
+  the new `PostToolUse` and `SessionStart` workspace-sync entries.
+- VS Code's extension host records installed-command activation. The final
+  operator-visible Quick Pick selection/open remains the one outstanding
+  acceptance observation.
 
 ## Disproof
 
@@ -97,7 +110,5 @@ available.
 ## Non-goals
 
 - moving or archiving any repository;
-- deciding whether V2 still has operational consumers;
 - representing every human project in the ecosystem;
-- automatically invoking workspace regeneration from every claim hook; or
 - replacing repository-native planning, instructions, or Git authority.
