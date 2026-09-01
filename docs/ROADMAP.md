@@ -83,14 +83,48 @@ project navigation.
 The V2 repository is an inactive retained source/evidence predecessor, not an
 operational or capability authority. Fresh observation on 2026-08-31 found no
 Project Graph consumers, no laptop process or listener, no Mac checkout or
-service, and two deployed Mac services sourced from this V3 lineage. V2 is not
-archive-safe yet: its clean checked-out branch
-`agent/direct-openai-terra-service-desk` is 16 commits ahead of `main` and adds
-substantial service-desk scaffold, model-wire, workbench, and evidence work;
-recovery refs also remain. Reconcile those branches into accepted donor,
-superseded, or recovery-only custody before using Project Meta's archive
-procedure. Until then V2 stays hidden from the project picker and receives no
-new product work.
+service, and two deployed Mac services sourced from this V3 lineage. Its
+preserved feature branch is 17 commits ahead of current V2 `main`: 16
+substantive commits plus the 2026-08-31 merge that added the retained-lineage
+notice. The 16 substantive commits have now been dispositioned; none requires a
+new cherry-pick into V3:
+
+| V2 commit | Disposition | Current custody |
+| --- | --- | --- |
+| `889dab0` | superseded | The provider-specific direct-OpenAI path is replaced by V3's shared `llm_client` boundary; the bounded sample remains historical evidence. |
+| `5b3cd66` | accepted donor | The versioned decision-wire contracts entered V3's initial commit; the core file is byte-identical after the package rename. |
+| `3b1c516` | recovery-only evidence | The completed Terra sample remains immutable run evidence on the preserved V2 branch and is not current route evidence. |
+| `c187bfd` | recovery-only evidence | The report-model binding describes the retained sample; V3 owns current report contracts and evidence. |
+| `2aa3df7` | historical plan | The scaffold-sensitivity plan records why the experiment was run; it owns no current sequencing. |
+| `84faad6` | accepted donor | Closed cognition profiles entered V3's initial service-desk scenario. |
+| `22c0e6c` | superseded | The zero-spend preview informed the experiment, while V3 owns the current preview/API surface. |
+| `4e24930` | accepted donor | Source-recomputed fidelity logic entered V3's initial service-desk fidelity module. |
+| `3fed1aa` | superseded | The V2 scaffold job owner is replaced by V3-native run persistence and API ownership. |
+| `d0b50bd` | superseded | Safe source inspection is provided by V3's current run-store, presentation, and API boundaries. |
+| `13f27e1` | recovery-only evidence | The scaffold audit remains historical evidence; the V2-specific inspection adapter was intentionally not migrated. |
+| `e5e9ee7` | superseded | The V2 one-click workflow is replaced by V3's operator-first application. |
+| `c2f267a` | accepted donor | The scaffold-specific medium-reasoning policy entered the V3 service-desk fixture. |
+| `df736bf` | accepted donor | Positions-as-external-context behavior entered V3's initial service-desk scenario. |
+| `4355994` | accepted design donor | V3 was initialized 33 minutes later with the causal core, active runtime, service-desk scenario, and a new operator-first surface; the old workbench was not copied wholesale. |
+| `a7ebcfa` | partially accepted donor | Active-runtime model justification was reintroduced in V3 the same day; V2-only substrate, spike, and workbench call sites remain historical. |
+
+The preserved branch is not a merge candidate. At `71d3aee`, `make check`
+fails the neutral-core gate because `a7ebcfa` changed `harness.py` and
+`llm_cognition.py` without recapturing the protected baseline; the native test
+suite runs 769 tests with three failures and one skip, including that same
+baseline drift and a stale trace-gate assertion. By contrast, the focused V3
+causal-runtime, presentation, run-store, API, and public-workbench selection ran
+116 tests with 114 passing; the two failures are unrelated static public
+Waltzman copy assertions.
+
+Repository recovery custody is complete. Every local V2 branch tip is contained
+by a remote ref. The local stash `recovery-stranded-work-20260824` contains 57
+untracked blobs, all byte-identical to the same paths on
+`origin/recovery/stranded-work-20260824`. The substantive feature tip remains at
+`origin/agent/direct-openai-terra-service-desk`. V2 is therefore semantically
+eligible for frozen archival, subject to Project Meta's reviewed migration
+packet and governed physical archive executor. Until that transaction succeeds,
+V2 stays hidden from the project picker and receives no new product work.
 
 This repository is the sole current product/runtime lineage. That authority is
 also observed operationally: the Mac mini runs the private application and
