@@ -73,9 +73,10 @@ capacity records only when they are needed for diagnosis.
 
 ## Lineage
 
-- `cybernetic_influence`: original research implementation.
-- `cybernetic_influence_v2`: governed architecture and evidence work.
-- this repository: clean product/runtime line with no V2 imports.
+- `cybernetic_influence`: archived original research implementation.
+- `cybernetic_influence_v2`: inactive retained source/evidence predecessor;
+  unique branches still require disposition before it is archive-safe.
+- this repository: the sole current product/runtime line, with no V2 imports.
 
-The earlier repositories and archived V3 slices are historical sources, not
-runtime dependencies or current instructions.
+The earlier repositories and archived V3 slices are hidden lineage sources,
+not runtime dependencies, project-picker entries, or current instructions.

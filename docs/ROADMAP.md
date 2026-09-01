@@ -75,21 +75,27 @@ visibly, and whose detachable Waltzman lens leaves the simulation unchanged.
 
 The repository lineage is `cybernetic_influence` ->
 `cybernetic_influence_v2` -> this repository. The first repository is an
-archived historical predecessor. The V2 repository is a retained predecessor,
-but its present operational responsibility is unresolved. Existing repository
-instructions say that V2 remains authoritative for unmigrated production paths;
-as of 2026-08-31, that statement has not been confirmed by a fresh deployment
-or usage observation and was not knowingly adopted by the operator as an
-ecosystem organization rule. Do not turn it into a current runtime, dependency,
-or capability-authority claim without new evidence.
+archived historical predecessor. Its declared archive exists on the desktop at
+revision `42a4b3614eee9a741f88f4e349329b1a05cf0a20`; the laptop's clean duplicate
+checkout is eligible for the reviewed archive procedure rather than continued
+project navigation.
 
-Before moving the V2 repository to `~/archive`, establish whether it has any
-current consumers, deployments, unique runtime state, unmerged work, or
-capabilities that this repository still intends to migrate. Then record one
-explicit disposition: retain it as an operational predecessor with a named
-remaining boundary, keep it only as a source/evidence donor, or archive it
-through Project Meta's reviewed migration protocol. Until that decision, V2 is
-not a normal project-picker entry and is not yet declared archive-safe.
+The V2 repository is an inactive retained source/evidence predecessor, not an
+operational or capability authority. Fresh observation on 2026-08-31 found no
+Project Graph consumers, no laptop process or listener, no Mac checkout or
+service, and two deployed Mac services sourced from this V3 lineage. V2 is not
+archive-safe yet: its clean checked-out branch
+`agent/direct-openai-terra-service-desk` is 16 commits ahead of `main` and adds
+substantial service-desk scaffold, model-wire, workbench, and evidence work;
+recovery refs also remain. Reconcile those branches into accepted donor,
+superseded, or recovery-only custody before using Project Meta's archive
+procedure. Until then V2 stays hidden from the project picker and receives no
+new product work.
+
+This repository is the sole current product/runtime lineage. That authority is
+also observed operationally: the Mac mini runs the private application and
+public Waltzman service from V3 paths, and the Project Deck publishes the
+Cybernetic Influence surfaces from those services.
 
 Within this repository, labels such as "V1 path" and "public V2 path" name
 internal contract or application generations. They do not by themselves refer
