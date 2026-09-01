@@ -74,22 +74,16 @@ visibly, and whose detachable Waltzman lens leaves the simulation unchanged.
 ## Repository Lineage Disposition
 
 The repository lineage is `cybernetic_influence` ->
-`cybernetic_influence_v2` -> this repository. The first repository is an
-archived historical predecessor. The V2 repository is a retained predecessor,
-but its present operational responsibility is unresolved. Existing repository
-instructions say that V2 remains authoritative for unmigrated production paths;
-as of 2026-08-31, that statement has not been confirmed by a fresh deployment
-or usage observation and was not knowingly adopted by the operator as an
-ecosystem organization rule. Do not turn it into a current runtime, dependency,
-or capability-authority claim without new evidence.
-
-Before moving the V2 repository to `~/archive`, establish whether it has any
-current consumers, deployments, unique runtime state, unmerged work, or
-capabilities that this repository still intends to migrate. Then record one
-explicit disposition: retain it as an operational predecessor with a named
-remaining boundary, keep it only as a source/evidence donor, or archive it
-through Project Meta's reviewed migration protocol. Until that decision, V2 is
-not a normal project-picker entry and is not yet declared archive-safe.
+`cybernetic_influence_v2` -> this repository. Both predecessors are archived
+historical source/evidence donors; neither is a current runtime, dependency, or
+capability authority. Project Meta Plan 252 audited V2's 16 substantive commits,
+verified branch and stash recovery custody, and archived its complete clean
+checkout on 2026-09-01 at
+`/home/brian/archive/cybernetic_influence_v2/20260831_222711/cybernetic_influence_v2`.
+The archive receipt records HEAD `71d3aee0a3498da1b755c2ab75e72fb7ec713e21`
+and the exact reviewed directory digest. This repository remains the sole
+current Cybernetic implementation and the only normal project-picker lineage
+entry.
 
 Within this repository, labels such as "V1 path" and "public V2 path" name
 internal contract or application generations. They do not by themselves refer
