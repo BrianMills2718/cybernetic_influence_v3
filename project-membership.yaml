@@ -1,13 +1,14 @@
 schema_version: 1.0.0
 project_id: project-cybernetic-influence-v3
 display_name: Cybernetic Influence V3
-context_epoch: 1
+context_epoch: 2
 revision_policy:
   development: moving_checkout
   evidence: exact_revision
 repositories:
   - repository_id: cybernetic_influence_v3
     role: primary
+    function: current_product
     workspace: default
     authority_entrypoints:
       - CLAUDE.md
@@ -16,6 +17,7 @@ repositories:
     contract_seams: []
   - repository_id: llm_client
     role: supporting
+    function: shared_infrastructure
     workspace: on_claim
     authority_entrypoints:
       - CLAUDE.md
@@ -24,6 +26,7 @@ repositories:
       - python-package:llm_client
   - repository_id: cybernetic_influence_v2
     role: retained_predecessor
+    function: predecessor_reference
     workspace: hidden
     authority_entrypoints:
       - CLAUDE.md
@@ -32,6 +35,7 @@ repositories:
     contract_seams: []
   - repository_id: cybernetic_influence
     role: historical_predecessor
+    function: predecessor_reference
     workspace: hidden
     authority_entrypoints:
       - CLAUDE.md
