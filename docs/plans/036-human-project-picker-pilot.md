@@ -3,7 +3,7 @@ doc_role: implementation_plan
 authority: bounded_design
 status: active
 created: 2026-08-31
-updated: 2026-09-01
+updated: 2026-09-02
 depends_on:
   - docs/ROADMAP.md
   - project-membership.yaml
@@ -14,11 +14,12 @@ depends_on:
 ## Outcome
 
 Brian opens VS Code, runs **Projects: Open Project**, selects **Cybernetic
-Influence V3**, and receives one project window whose Explorer initially shows
-only the current V3 implementation. Supporting repository worktrees appear in
-that same workspace only while the exact agent session has a healthy write
-claim for them. Earlier implementation lineages remain discoverable without
-becoming normal picker entries or workspace folders.
+Influence V3**, and receives one project window whose Explorer shows the current
+V3 product and its actionable `llm_client` shared infrastructure, labeled by
+function. If the exact agent session has a healthy write claim for either
+repository, that member's folder path changes to the claimed worktree; its
+visibility does not change. Earlier implementation lineages remain discoverable
+without becoming normal picker entries or workspace folders.
 
 ## Existing seams
 
@@ -39,6 +40,7 @@ revision policy, and a non-empty repository list. Each repository uses an exact
 Project Graph repository ID and declares:
 
 - one project-context role;
+- one human-facing functional role;
 - workspace presentation (`default`, `on_claim`, or `hidden`);
 - repository-native authority entrypoints; and
 - any cross-repository contract seam relevant to this project.
@@ -49,16 +51,20 @@ or a project-record/manifest ID mismatch fail loudly.
 
 The Cybernetic pilot contains:
 
-| Repository | Role | Workspace presentation |
-| --- | --- | --- |
-| `cybernetic_influence_v3` | `primary` | `default` |
-| `llm_client` | `supporting` | `on_claim` |
-| `cybernetic_influence_v2` | `retained_predecessor` | `hidden` |
-| `cybernetic_influence` | `historical_predecessor` | `hidden` |
+| Repository | Role | Function | Workspace presentation |
+| --- | --- | --- | --- |
+| `cybernetic_influence_v3` | `primary` | `current_product` | `default` |
+| `llm_client` | `supporting` | `shared_infrastructure` | `on_claim` |
+| `cybernetic_influence_v2` | `retained_predecessor` | `predecessor_reference` | `hidden` |
+| `cybernetic_influence` | `historical_predecessor` | `predecessor_reference` | `hidden` |
 
 The predecessor roles preserve project lineage only. V1 and V2 are archived
 source/evidence donors, not active capability authorities, normal picker
-entries, or workspace folders.
+entries, or workspace folders. The earlier capability-authority uncertainty is
+resolved: the fresh runtime and Project Graph evidence recorded in
+`docs/ROADMAP.md` establishes V3 as the sole current product/runtime lineage,
+and the disposition of V2's substantive commits identifies no behavior that
+still requires migration.
 
 ## Slices
 
@@ -69,8 +75,8 @@ entries, or workspace folders.
    Quick Pick command.
 3. **Authentic workflow.** Install the extension and exact-session hook locally,
    inspect the generated workspace, then exercise a real same-session supporting
-   claim and confirm automatic add/remove while lineage repositories stay
-   hidden.
+   claim and confirm path substitution and restoration while membership stays
+   stable and lineage repositories remain hidden.
 
 ## Acceptance
 
@@ -78,10 +84,12 @@ entries, or workspace folders.
    rejects missing, malformed, ambiguous, or unknown-repository compositions.
 2. The picker lists active `project` records only; it does not list the active
    repository catalog.
-3. Selecting Cybernetic opens one generated workspace with the claimed V3
-   worktree when healthy, otherwise its canonical checkout.
-4. A same-session `llm_client` claim automatically adds its worktree; releasing
-   it automatically removes the folder without manual VS Code workspace edits.
+3. Selecting Cybernetic opens one generated workspace containing V3 as Current
+   Product and `llm_client` as Shared Infrastructure, using a claimed worktree
+   when healthy and otherwise the repository's canonical checkout.
+4. A same-session `llm_client` claim substitutes its worktree path without
+   adding or removing a folder; releasing it restores the canonical path without
+   manual VS Code workspace edits.
 5. V1 and V2 never appear as normal picker choices or workspace folders.
 6. The installed VS Code command is exercised from the same extension
    entrypoint the operator will use, with an inspectable generated workspace as
@@ -91,9 +99,10 @@ entries, or workspace folders.
 
 - Ecosystem Ops PR #40 installed the generic Codex hook and focused both-sign
   checks; all three CI jobs passed before merge at `26b9e7b`.
-- A genuine clean `llm_client` claim changed the generated Cybernetic workspace
-  from one folder to two through the installed hook. Sanctioned claim closeout
-  changed it from two back to one and removed the proof worktree and branch.
+- A genuine clean `llm_client` claim previously proved the installed hook could
+  project an exact-session worktree and restore the canonical path on sanctioned
+  closeout. The shared renderer now keeps every actionable member visible, so
+  this proof is interpreted as path substitution rather than membership change.
 - A fresh Codex TUI process loaded the configuration and recorded trust only for
   the new `PostToolUse` and `SessionStart` workspace-sync entries.
 - VS Code's extension host records installed-command activation. The final
