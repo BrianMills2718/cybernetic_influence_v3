@@ -41,8 +41,20 @@ surfaces:
       deployment: Deployed to a separate host (Mac Mini) from the local
         operator app; deploy_public_waltzman.sh refuses to deploy over a
         dirty working tree or a run in flight on the host.
-      audience: Public/external, unlike operator-review-app which is
-        local-only.
+      audience: Public/external. Note that operator-review-app is also
+        publicly reachable, at https://brianmills.dev/cybernetic-influence,
+        proxied to 127.0.0.1:8620 by the Mac mini's public-prefix proxy -
+        measured 2026-09-05. Its mutating endpoints return 403 "operator
+        identity is not authorized" to anonymous callers, verified on
+        /api/runs, /api/composite-assays and /api/authoring/drafts, so the
+        exposure is the API surface at /docs and /openapi.json rather than any
+        spend-bearing action. This entry previously described that app as
+        local-only, which had stopped being true.
     provenance:
       - scripts/deploy_public_waltzman.sh
       - docs/ROADMAP.md (Slice 30 Artifact Disposition row)
+    tours:
+      engine: public/waltzman/tour.js
+      steps: inline at the foot of public/waltzman/index.html
+      screens: [waltzman]
+      policy: spotlight-tour-default
