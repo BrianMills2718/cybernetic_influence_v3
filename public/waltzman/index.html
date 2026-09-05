@@ -24,7 +24,25 @@
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology2">
   <link rel="stylesheet" href="assets/styles.css?v=evasion1">
-</head>
+    <style>
+      /* Spotlight tour. Policy: spotlight-tour-default. Engine is assets/tour.js,
+         copied unchanged from forecast-league-mvp/public/tour.js. */
+      #tourLayer{position:fixed;inset:0;z-index:200}
+      #tourSpot{position:fixed;border-radius:10px;box-shadow:0 0 0 9999px rgba(8,12,20,.62);transition:top .16s,left .16s,width .16s,height .16s;pointer-events:none}
+      #tourPop{position:fixed;background:#fff;color:#10131a;border-radius:14px;padding:16px 34px 16px 16px;box-shadow:0 18px 44px rgba(8,12,20,.4);outline:none;max-width:320px;font-family:inherit}
+      #tourPop strong{display:block;font-size:15px;letter-spacing:-.01em}
+      #tourPop p{margin:6px 0 14px;font-size:13.5px;line-height:1.55;color:#5a6472}
+      .tour-step{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#3b6ef5;margin-bottom:6px}
+      .tour-actions{display:flex;justify-content:space-between;align-items:center;gap:10px}
+      .tour-nav{display:flex;gap:8px}
+      #tourPop .btn{min-height:34px;border-radius:10px;border:1px solid #d7dce5;background:#fff;color:#10131a;font-weight:700;padding:0 12px;font-size:13px;cursor:pointer}
+      #tourPop .btn.primary{background:#3b6ef5;border-color:#3b6ef5;color:#fff}
+      #tourPop .btn:disabled{opacity:.5;cursor:not-allowed}
+      .tour-skip{color:#5a6472}
+      .tour-x{position:absolute;top:8px;right:8px;width:26px;height:26px;min-height:0;padding:0;border:0;border-radius:8px;background:transparent;color:#5a6472;font-size:19px;line-height:1;cursor:pointer}
+      .tour-x:hover{background:#eef1f6;color:#10131a}
+    </style>
+  </head>
 <body class="public-shell">
   <header class="topbar">
     <div class="product-identity">
@@ -43,6 +61,7 @@
       <button type="button" class="view-tab-secondary" data-view="method">Methodology</button>
     </nav>
     <span id="runtime-status" class="runtime-status">Connecting to simulator…</span>
+    <button type="button" class="view-tab-secondary" data-tour-start>Show me around</button>
   </header>
 
   <div id="loading" class="loading-state" role="status">Opening Coordination Environment Lab…</div>
@@ -806,5 +825,24 @@
 
   <script src="assets/graph-canvas.js?v=ontology2" defer></script>
   <script src="assets/app.js?v=evasion1" defer></script>
+    <script src="assets/tour.js?v=tour1" defer></script>
+    <script>
+      window.TOURS = {
+        waltzman: [
+          {sel:".view-tabs", title:"Five views of one study", body:"The same coordination case, seen five ways. Start on the left and work right."},
+          {sel:"[data-view=\"overview\"]", title:"Overview", body:"What the study claims and why it matters: influence that changes what a group can decide, not what one person believes."},
+          {sel:"[data-view=\"case\"]", title:"Case study", body:"The worked example. Four national networks face one outbreak and none can act alone."},
+          {sel:"[data-view=\"create\"]", title:"New simulation", body:"Describe a world in prose and it compiles into an editable configuration you can inspect before running."},
+          {sel:"[data-view=\"simulations\"]", title:"Your simulations", body:"Runs you have built, with their trajectory, state and provenance kept for review."},
+          {sel:"[data-view=\"method\"]", title:"Methodology", body:"The commitments behind all of it, and what this explicitly does not claim to predict."},
+          {sel:"#runtime-status", title:"Whether the simulator is reachable", body:"Building and running need a live backend. This says whether one is connected."}
+        ]
+      };
+      window.addEventListener("DOMContentLoaded", function () {
+        var b = document.querySelector("[data-tour-start]");
+        if (b) b.addEventListener("click", function () { startTour("waltzman"); });
+        if (typeof maybeStartTour === "function") maybeStartTour("waltzman");
+      });
+    </script>
 </body>
 </html>
