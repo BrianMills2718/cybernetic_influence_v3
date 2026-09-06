@@ -2274,6 +2274,17 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
             "cybernetic_influence.run_configuration._validated_coordination_certification_basis",
             side_effect=lambda _model, configured: configured or None,
         ),
+        # codex_subscription_available() shells out to the local `codex` CLI and
+        # reads its login status, so without this the test asserts that whoever
+        # runs it is signed in to ChatGPT. It is not: on a machine with no codex
+        # binary the catalog drops codex/gpt-5.6-terra and the run is rejected
+        # with "model is not currently advertised for simulator execution".
+        # What this test is about is the API selecting a certified live route,
+        # not this machine's login state.
+        patch(
+            "cybernetic_influence.run_configuration.codex_subscription_available",
+            return_value=True,
+        ),
         patch("cybernetic_influence.api.run_coordination", side_effect=capture_run),
         patch("cybernetic_influence.api.narrate_live_moments", side_effect=narrate),
     ):
@@ -2394,7 +2405,12 @@ def test_live_measurement_failure_preserves_completed_coordination_run(
         assert started.status_code == 202, started.text
         run_id = started.json()["run_id"]
         retained = None
-        for _ in range(200):
+        # A fixed 200 x 10ms poll is a two-second deadline on a background run
+        # that does real work, so it passed alone and failed inside the full
+        # suite and on CI. Wait on wall-clock time instead; the assertion below
+        # is unchanged.
+        deadline = time.monotonic() + 60.0
+        while time.monotonic() < deadline:
             candidate = api.get(f"/api/runs/{run_id}").json()
             if candidate.get("coordination_measurement_readout", {}).get(
                 "status"
@@ -2403,7 +2419,9 @@ def test_live_measurement_failure_preserves_completed_coordination_run(
                 break
             time.sleep(0.01)
 
-    assert retained is not None
+    assert retained is not None, (
+        "the coordination measurement readout never reached 'invalid' within 60s"
+    )
     assert retained["status"] == "completed"
     assert retained["story"]["headline"]
     assert retained["coordination_measurement_readout"]["status"] == "invalid"
