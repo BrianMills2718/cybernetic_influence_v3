@@ -145,9 +145,15 @@ def main() -> int:
             print(
                 f"\n{model} is the only live route in {' and '.join(sorted(labels))}. "
                 "Those families are not independent: one failure on that route takes "
-                "all of them dark at once, however many days it has left. Certify a "
-                "second route:\n"
-                "  .venv/bin/python scripts/refresh_authoring_certification.py --paid",
+                "all of them dark at once, however many days it has left. A second "
+                "route has to be a DIFFERENT model -- re-certifying this one clears "
+                "nothing.\n"
+                "  free first, on the host that runs the service, if the Codex "
+                "subscription route is what went dark:\n"
+                "    codex login && .venv/bin/python "
+                "scripts/refresh_authoring_certification.py --force\n"
+                "  otherwise certify the metered routes (this bills):\n"
+                "    .venv/bin/python scripts/refresh_authoring_certification.py --paid",
                 file=sys.stderr,
             )
         return 1

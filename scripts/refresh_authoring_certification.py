@@ -51,7 +51,19 @@ VENV_PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
 # advertised for simulator execution", while this job reported a healthy margin
 # every night. Refreshing one family and calling the route healthy is the bug.
 FREE_ROUTES = ("luna-authoring", "luna")
-PAID_ROUTES = ("sol-authoring", "sol")
+# Two distinct metered models, not one. A paid fallback that certifies a single
+# model leaves that model the sole live route in both families, which is exactly
+# what check_authoring_route_health.py refuses to call healthy -- and its printed
+# remedy is this flag, so a one-model PAID_ROUTES made the gate unclearable. On
+# 2026-09-02 the Codex token was revoked, Luna went dark, the fallback certified
+# Sol alone, and the nightly demo audit stamped "do not share" on the published
+# Deck card for four days with no reachable fix.
+PAID_ROUTES = (
+    "sol-authoring",
+    "sol",
+    "openrouter-terra-authoring",
+    "openrouter-terra",
+)
 PLIST_BACKUPS_KEPT = 5
 BOOTOUT_SETTLE_SECONDS = 3
 CERT_LINE = re.compile(r"^(?P<key>CYBERNETIC_INFLUENCE_CERT_[A-Z0-9_]+)=(?P<ids>[\w,]+)$")

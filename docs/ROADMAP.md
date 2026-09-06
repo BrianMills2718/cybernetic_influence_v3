@@ -419,9 +419,22 @@ There are five explicit tracks rather than one blended implementation queue:
    Every such event scene renders one node, no edges, and "No change
    committed.", with all edges appearing only in the final outcome scene, which
    is why `test_reviewed_coordination_example_runs_reopens_and_isolates_
-   analysis_corruption` is red. Public V2 runs are unaffected: retained
+   analysis_corruption` was red. Public V2 runs are unaffected: retained
    `run_012aa6971e69` and `run_702e57f9accc` both populate `visible_edge_ids`
    on event scenes on the live deployment.
+
+   **Corrected 2026-09-06.** Missing `transitions` was not what emptied
+   `visible_edge_ids`. The scene builder expanded a moment into its mechanism
+   neighbours from its *contract* nodes only, so a node that reached the scene
+   through `changed_node_ids` or as a participant pulled in no neighbours, and
+   `induced_edge_ids` — which requires both endpoints visible — had nothing to
+   match. Seeding that expansion from every node the moment touched puts edges
+   back on the coordination example's event scenes without changing V1
+   retention, and the test is green. What does remain attributable to the
+   absent `transitions` is narrower: at least one event scene still resolves to
+   zero visible nodes and renders an empty canvas, and the "No change
+   committed." facts are unchanged. The V1 retirement above is still the fix
+   for that remainder, which is now a residual scene rather than every scene.
 5. **Stakeholder readout — separate retained MVP boundary.** The operator
    selected the 26-agent resource-fork case on 2026-08-19 and **replaced it on
    2026-08-23** with the CSO stabilization run `run_5010214f2466` (Slice 31),

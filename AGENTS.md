@@ -29,7 +29,7 @@ make install
 make serve
 
 # Verification
-make check        # typecheck (mypy --strict) + test (pytest -q tests) + ui-build + deploy-check
+make check        # typecheck (mypy --strict) + test (pytest -q tests) + ui-build + assets-check + deploy-check
 make test          # pytest -q tests
 make typecheck     # mypy --strict
 make ui-smoke       # scripts/verify_demo_ui.py against a running server

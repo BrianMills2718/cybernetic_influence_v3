@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import logging
 import os
 import re
 from collections.abc import Awaitable, Callable, Sequence
@@ -237,6 +238,8 @@ from cybernetic_influence.scenarios.regional_outbreak import (
     outbreak_runtime_config,
     run_outbreak,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class RunRequest(BaseModel):
@@ -1684,28 +1687,39 @@ def _simulation_replay(
                 for item in evidence_refs
                 if isinstance(item, str) and item in node_ids
             ][:6]
+            # Expand from every node the moment actually touched, not only its
+            # contract nodes. A moment whose nodes arrived through changed_node_ids
+            # or as participants pulled in no neighbours at all, so the scene
+            # rendered disconnected dots and induced_edge_ids -- which needs BOTH
+            # endpoints visible -- found nothing. On the coordination example that
+            # left all ten event scenes with an empty visible_edge_ids, and one of
+            # them with no nodes at all.
+            neighbor_seed_ids = {*contract_node_ids, *changed_node_ids, *participants}
             mechanism_neighbor_ids: list[str] = []
             for edge in network_edges:
                 if not isinstance(edge, dict):
                     continue
                 neighbor_source = edge.get("source")
                 neighbor_target = edge.get("target")
-                if neighbor_source in contract_node_ids and isinstance(
+                if neighbor_source in neighbor_seed_ids and isinstance(
                     neighbor_target, str
                 ):
                     mechanism_neighbor_ids.append(neighbor_target)
-                if neighbor_target in contract_node_ids and isinstance(
+                if neighbor_target in neighbor_seed_ids and isinstance(
                     neighbor_source, str
                 ):
                     mechanism_neighbor_ids.append(neighbor_source)
+            # Participants ahead of the neighbour expansion: the 12-node cap below
+            # now has more candidates to choose from, and a scene that drops the
+            # people who acted in order to show their wiring is the wrong trade.
             moment_node_ids = list(
                 dict.fromkeys(
                     [
                         *contract_node_ids,
                         *changed_node_ids,
-                        *mechanism_neighbor_ids,
                         *participants,
                         *evidence_node_ids,
+                        *mechanism_neighbor_ids,
                     ]
                 )
             )
@@ -3534,6 +3548,17 @@ def create_app(
                         "error": str(error),
                     }
                 except Exception:
+                    # The reader gets a stable sentence; the operator needs the
+                    # real one. Without this line the 2026-08-19 JSON-truncation
+                    # failure was only diagnosable from llm_client traces,
+                    # because every provider fault reached the log as the same
+                    # nine words.
+                    logger.exception(
+                        "authoring %s failed for draft %s (job %s)",
+                        body.mode,
+                        draft_id,
+                        job_id,
+                    )
                     result_fields = {
                         "status": "failed",
                         "error": (
