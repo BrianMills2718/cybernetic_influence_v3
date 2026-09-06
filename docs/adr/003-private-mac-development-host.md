@@ -38,3 +38,11 @@ source synchronization.
 This decision is superseded when the host gains read-only repository access or
 when a different deployment surface provides equally inspectable private
 access with less operational state.
+
+## Status note 2026-09-06
+
+The private service this ADR describes (port 8620) was retired on 2026-09-06
+with the owner's approval; see `docs/operations/mac-mini.md`. The host remains
+the deployment host for the public Waltzman workbench on port 8621. The
+decision's constraints on Serve and Funnel handling still apply to that
+service.

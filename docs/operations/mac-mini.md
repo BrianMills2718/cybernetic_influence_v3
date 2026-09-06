@@ -1,16 +1,40 @@
 # Mac Mini Development Host
 
-This is primarily a private development host. The bounded Waltzman workbench
-described below is the one user-approved public surface.
+The one live Cybernetic Influence surface on this host is the public Waltzman
+workbench described in the section below (LaunchAgent
+`com.cybernetic-influence.waltzman-public`, `127.0.0.1:8621`, Funnel path
+`/waltzman`).
 
-- private URL: <https://brian-mac-mini.tail9c321e.ts.net:8620/>
+**The private service on port 8620 was retired on 2026-09-06** with the
+owner's approval. It had served build `859ac6a` (2026-08-04) under the
+`com.cybernetic-influence.v3-recovery` LaunchAgent since 2026-08-14, its run
+store had not received a new run since 2026-08-04, and nothing on the Project
+Deck linked to it. What was done:
+
+- `com.cybernetic-influence.v3-recovery` booted out; its plist and the
+  unloaded `com.cybernetic-influence.v3.plist` moved to
+  `~/Library/LaunchAgents/retired-20260906-private-v3/`;
+- the tailnet-only Tailscale Serve mapping for `:8620` removed (previous
+  `tailscale serve status` saved at `/tmp/serve-status-before-20260906.txt`
+  at the time);
+- the private run store at
+  `~/Library/Application Support/CyberneticInfluenceV3/runs` (105 retained
+  runs, including the Packet 24C/24D/24E evidence runs) left untouched.
+
+Retained private runs remain readable by starting the application locally
+(`make serve` with `CYBERNETIC_INFLUENCE_RUNS_DIR` pointed at that directory)
+against that directory; they are evidence, not a live surface. Everything
+below this line is the dated history of the private service and the public
+workbench, preserved for provenance; the private URL, service, and log paths in
+it no longer describe a running process.
+
+- former private URL: <https://brian-mac-mini.tail9c321e.ts.net:8620/> (retired)
 - checkout: `/Users/b/code/cybernetic_influence_v3`
 - retained runs: `/Users/b/Library/Application Support/CyberneticInfluenceV3/runs`
-- service: `com.cybernetic-influence.v3`
-- logs: `/Users/b/Library/Logs/cybernetic-influence-v3*.log`
+- retired service: `com.cybernetic-influence.v3` / `com.cybernetic-influence.v3-recovery`
+- logs: `/Users/b/Library/Logs/cybernetic-influence-v3*.log` (historical)
 
-The service binds to `127.0.0.1:8620`; Tailscale Serve provides the private
-HTTPS listener. Do not use Funnel or reset unrelated Tailscale Serve settings.
+Do not use Funnel or reset unrelated Tailscale Serve settings.
 
 Current product direction is the [roadmap](../ROADMAP.md) and
 [Slice 24](../plans/024-configurable-theory-analysis-mvp.md). Before treating
