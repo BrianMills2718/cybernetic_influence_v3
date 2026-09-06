@@ -112,6 +112,17 @@ new capability by themselves.
   `llm_client` the suite does not skip gracefully, it fails to collect with 11
   errors. If CI starts erroring during collection, check that key before
   suspecting the tests.
+- A test that exercises a Codex route must patch
+  `cybernetic_influence.run_configuration.codex_subscription_available`. It
+  shells out to the local `codex` CLI and reads its login status, so a test
+  that leaves it real is asserting that whoever runs the suite is signed in to
+  ChatGPT; the model drops out of the catalog otherwise and the run is rejected
+  as "not currently advertised for simulator execution". Most tests here
+  already patch it. Reproduce that environment with `PATH=/usr/bin:/bin`.
+- Wait on wall-clock time, never on an iteration count, when polling for a
+  background run to reach a terminal state. A fixed `for _ in range(200)` with
+  a 10ms sleep is a two-second deadline on real work: it passes alone and fails
+  inside the full suite and on CI.
 - `make test` runs `pytest -q tests` specifically — always scope pytest to
   `tests/` (or use `make test`). Do not run a bare `pytest` from the repo
   root: `worktrees/` can contain other lanes' checkouts with duplicate test
