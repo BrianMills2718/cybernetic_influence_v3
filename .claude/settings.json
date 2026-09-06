@@ -18,6 +18,11 @@
             "type": "command",
             "command": "bash .claude/hooks/notify-coordination-messages.sh",
             "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/reconcile-canonical-locks.sh",
+            "timeout": 10000
           }
         ]
       }
@@ -40,6 +45,21 @@
             "type": "command",
             "command": "bash .claude/hooks/notify-coordination-messages.sh",
             "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/reconcile-canonical-locks.sh",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/worktree-coordination/enforce-make-merge.sh",
+            "timeout": 3000
           }
         ]
       }
@@ -52,6 +72,11 @@
             "type": "command",
             "command": "bash .claude/hooks/notify-coordination-messages.sh",
             "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/reconcile-canonical-locks.sh",
+            "timeout": 10000
           }
         ]
       }

@@ -50,6 +50,17 @@
             "statusMessage": "Checking coordination requests"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/enforce-make-merge.sh\"",
+            "timeout": 3,
+            "statusMessage": "Checking sanctioned merge path"
+          }
+        ]
       }
     ],
     "Stop": [

@@ -9,7 +9,9 @@ status, classifies stronger split-brain-like symptoms, and optionally cleans up
 the failed worktree instead of leaving an ambiguous checkout in circulation.
 
 When strict coordination enforcement is enabled, the wrapper also requires an
-active scoped write claim before the worktree is created.
+active scoped claim with explicit write authority before the worktree is
+created. Narrow ``write`` claims and bounded ``program`` claims with exact
+``write_paths`` both carry that authority.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -25,6 +28,7 @@ from typing import Any
 
 
 DEFAULT_WORKTREE_EXCLUDE = "/worktrees/"
+WRITE_AUTHORIZING_CLAIM_TYPES = frozenset({"write", "program"})
 
 
 @dataclass(frozen=True)
@@ -62,6 +66,7 @@ class WorktreeCreationResult:
     status: WorktreeStatusSummary | None
     coordination_checked: bool
     coordination_message: str | None
+    import_provenance_warning: str | None = None
 
 
 @dataclass(frozen=True)
@@ -107,6 +112,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Require the canonical main checkout to be clean before creating the worktree.",
     )
+    parser.add_argument(
+        "--allow-stale-start-point",
+        action="store_true",
+        help=(
+            "Skip the default check that --start-point is not behind its configured upstream. "
+            "Without this, branching from a stale start point fails loud instead of silently "
+            "producing a branch that cannot fast-forward push later."
+        ),
+    )
     parser.add_argument("--claim-agent", help="Agent name expected on the scoped write claim.")
     parser.add_argument(
         "--claim-project",
@@ -117,6 +131,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="append",
         default=[],
         help="Repo-relative write path required by the scoped claim. Repeat as needed.",
+    )
+    parser.add_argument(
+        "--claim-start-revision",
+        help="Full Git revision the matching plan-bound claim must retain.",
     )
     parser.add_argument(
         "--claims-dir",
@@ -136,6 +154,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--print-canonical-project",
         action="store_true",
         help="Print the canonical main repository directory name and exit.",
+    )
+    parser.add_argument(
+        "--print-fresh-start-revision",
+        action="store_true",
+        help="Fetch the configured upstream for --start-point and print the exact fresh revision.",
     )
     return parser.parse_args(argv)
 
@@ -157,6 +180,76 @@ def branch_exists(repo_root: Path, branch: str) -> bool:
     return result.returncode == 0
 
 
+def resolve_fresh_start_revision(*, repo_root: Path, start_point: str) -> str:
+    """Resolve a start revision after refreshing its configured upstream.
+
+    Branching a new worktree from a start point that is behind its upstream
+    silently produces a branch that cannot fast-forward push once real work is
+    committed on top of it -- the push failure surfaces late, disconnected from
+    its actual cause. This has no effect when start_point has no configured
+    upstream (detached ref, no tracking branch, or a bare commit-ish): there is
+    nothing to compare against, so nothing is flagged.
+    """
+    local = run_git(["rev-parse", "--verify", f"{start_point}^{{commit}}"], cwd=repo_root)
+    local_revision = local.stdout.strip()
+    if local.returncode != 0 or re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", local_revision) is None:
+        raise ValueError(f"Unable to resolve one full Git start revision from {start_point!r}")
+
+    upstream = run_git(
+        ["rev-parse", "--abbrev-ref", "--symbolic-full-name", f"{start_point}@{{upstream}}"],
+        cwd=repo_root,
+    )
+    remotes_result = run_git(["remote"], cwd=repo_root)
+    remotes = set(remotes_result.stdout.split()) if remotes_result.returncode == 0 else set()
+    explicit_remote = start_point.split("/", 1)[0] if "/" in start_point else None
+    remote_name = explicit_remote if explicit_remote in remotes else None
+    upstream_ref = upstream.stdout.strip() if upstream.returncode == 0 else ""
+    if remote_name is None and "/" in upstream_ref:
+        candidate = upstream_ref.split("/", 1)[0]
+        remote_name = candidate if candidate in remotes else None
+    if remote_name is None and start_point == "HEAD":
+        if "origin" in remotes:
+            remote_name = "origin"
+        elif len(remotes) == 1:
+            remote_name = next(iter(remotes))
+        elif len(remotes) > 1:
+            raise ValueError(
+                "Unable to choose a remote default: multiple remotes exist and none is named 'origin'"
+            )
+    if remote_name is None:
+        return local_revision
+    if remote_name:
+        # This updates only remote-tracking refs. A failed fetch must not leave
+        # claim bootstrap silently pinned to a cached revision.
+        fetched = run_git(["fetch", remote_name], cwd=repo_root)
+        if fetched.returncode != 0:
+            detail = (fetched.stderr or fetched.stdout).strip()
+            raise ValueError(f"Unable to refresh upstream {upstream_ref!r}: {detail}")
+    advertised_revision: str | None = None
+    if start_point == "HEAD":
+        advertised = run_git(["ls-remote", "--symref", remote_name, "HEAD"], cwd=repo_root)
+        match = re.search(r"^ref:\s+refs/heads/([^\s]+)\s+HEAD$", advertised.stdout, re.MULTILINE)
+        revisions = re.findall(r"^([0-9a-f]{40}|[0-9a-f]{64})\s+HEAD$", advertised.stdout, re.MULTILINE)
+        if advertised.returncode != 0 or match is None or len(revisions) != 1:
+            detail = (advertised.stderr or advertised.stdout).strip()
+            raise ValueError(f"Unable to resolve remote default for {remote_name!r}: {detail}")
+        upstream_ref = f"{remote_name}/{match.group(1)}"
+        advertised_revision = revisions[0]
+    elif explicit_remote == remote_name:
+        upstream_ref = start_point
+    if not upstream_ref:
+        return local_revision
+    fresh = run_git(["rev-parse", "--verify", f"{upstream_ref}^{{commit}}"], cwd=repo_root)
+    fresh_revision = fresh.stdout.strip()
+    if fresh.returncode != 0 or re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", fresh_revision) is None:
+        raise ValueError(f"Unable to resolve refreshed upstream revision from {upstream_ref!r}")
+    if advertised_revision is not None and fresh_revision != advertised_revision:
+        raise ValueError(
+            f"Refreshed remote-tracking revision {fresh_revision} does not match advertised HEAD {advertised_revision}"
+        )
+    return fresh_revision
+
+
 def resolve_main_repo_root(repo_root: Path) -> Path:
     """Resolve the canonical main repo root from either a root checkout or worktree."""
     result = run_git(
@@ -165,8 +258,7 @@ def resolve_main_repo_root(repo_root: Path) -> Path:
     )
     if result.returncode != 0:
         raise RuntimeError(
-            "Unable to resolve canonical repo root from git common dir:\n"
-            f"{result.stderr or result.stdout}".strip()
+            f"Unable to resolve canonical repo root from git common dir:\n{result.stderr or result.stdout}".strip()
         )
     git_common_dir = Path(result.stdout.strip())
     return git_common_dir.parent
@@ -264,9 +356,7 @@ def parse_status_porcelain(
                 deleted_count += 1
         entries.append(StatusEntry(code=code, path=path))
 
-    split_brain_like = (
-        deleted_count >= split_brain_threshold and untracked_count >= split_brain_threshold
-    )
+    split_brain_like = deleted_count >= split_brain_threshold and untracked_count >= split_brain_threshold
     return WorktreeStatusSummary(
         branch_line=branch_line,
         entries=entries,
@@ -288,10 +378,7 @@ def inspect_worktree_state(
         cwd=worktree_path,
     )
     if result.returncode != 0:
-        raise RuntimeError(
-            "Unable to inspect fresh worktree status:\n"
-            f"{result.stderr or result.stdout}".strip()
-        )
+        raise RuntimeError(f"Unable to inspect fresh worktree status:\n{result.stderr or result.stdout}".strip())
     return parse_status_porcelain(
         result.stdout,
         split_brain_threshold=split_brain_threshold,
@@ -315,10 +402,7 @@ def inspect_checkout_state(checkout_path: Path) -> CheckoutStateSummary:
         cwd=checkout_path,
     )
     if result.returncode != 0:
-        raise RuntimeError(
-            "Unable to inspect checkout status:\n"
-            f"{result.stderr or result.stdout}".strip()
-        )
+        raise RuntimeError(f"Unable to inspect checkout status:\n{result.stderr or result.stdout}".strip())
 
     entries: list[StatusEntry] = []
     modified_count = 0
@@ -358,9 +442,7 @@ def verify_clean_main_root(repo_root: Path) -> tuple[bool, str]:
         return True, f"Canonical main checkout is clean: {main_repo_root}"
 
     classification = "main-root-unmerged" if summary.unmerged else "main-root-dirty"
-    sample_entries = ", ".join(
-        f"{entry.code} {entry.path}" for entry in summary.entries[:8]
-    )
+    sample_entries = ", ".join(f"{entry.code} {entry.path}" for entry in summary.entries[:8])
     return (
         False,
         "Publish worktree creation blocked: canonical main checkout is not clean. "
@@ -397,9 +479,7 @@ def ensure_safe_target_path(worktree_path: Path) -> None:
         return
     if worktree_path.is_dir() and not any(worktree_path.iterdir()):
         return
-    raise ValueError(
-        f"Target worktree path already exists and is not empty: {worktree_path}"
-    )
+    raise ValueError(f"Target worktree path already exists and is not empty: {worktree_path}")
 
 
 def _claim_project(repo_root: Path, explicit_project: str | None) -> str:
@@ -426,18 +506,27 @@ def verify_scoped_write_claim(
     claim_project: str | None,
     claim_write_paths: list[str],
     claims_dir: Path | None,
+    expected_start_revision: str | None = None,
 ) -> tuple[bool, str]:
-    """Require a matching active write claim and reject conflicting claims."""
+    """Require matching explicit write authority and reject conflicting claims."""
     if not claim_agent:
         return False, "Scoped write-claim enforcement requires --claim-agent."
     if not claim_write_paths:
-        return False, "Scoped write-claim enforcement requires at least one --claim-write-path."
+        return False, (
+            "Scoped write-claim enforcement requires at least one --claim-write-path, "
+            "so this lane cannot be created without a declared write boundary.\n"
+            '  Through Make:  SESSION_WRITE_PATHS="path/one path/two"\n'
+            "  Use the narrowest set of paths this lane will actually write; "
+            '"." claims the whole repository and is rarely what you want.'
+        )
 
     claims_module = _load_claims_module()
     if claims_dir is not None:
         claims_module.CLAIMS_DIR = claims_dir.resolve()
 
     project_name = _claim_project(repo_root, claim_project)
+    claims_owner = getattr(claims_module, "_impl", claims_module)
+    native_session_id = claims_owner.resolve_session_id(claim_agent)
     normalized_paths = [claims_module._normalize_repo_path(path) for path in claim_write_paths]
     candidate = claims_module.build_candidate_claim(
         agent=claim_agent,
@@ -455,14 +544,24 @@ def verify_scoped_write_claim(
         claim
         for claim in active_claims
         if claim.agent == claim_agent
-        and claim.claim_type == "write"
+        and claim.claim_type in WRITE_AUTHORIZING_CLAIM_TYPES
         and project_name in claim.projects
+        and (
+            (claim.target_worktree_path or claim.worktree_path) is None
+            or Path(str(claim.target_worktree_path or claim.worktree_path)).expanduser().resolve()
+            == worktree_path.resolve()
+        )
         and _write_paths_are_covered(
             claims_module=claims_module,
             required_paths=normalized_paths,
             claim_paths=claim.write_paths,
         )
         and (claim.branch in (None, branch))
+        and (
+            expected_start_revision is None
+            or not claims_module.requires_work_graph(claim.plan_ref)
+            or claim.start_revision == expected_start_revision
+        )
     ]
     if not matching_claims:
         joined_paths = ", ".join(normalized_paths)
@@ -470,14 +569,59 @@ def verify_scoped_write_claim(
             False,
             "Scoped write-claim enforcement failed: no active matching write claim for "
             f"agent={claim_agent}, project={project_name}, branch={branch}, "
-            f"write_paths=[{joined_paths}]. Create the narrow write claim first.",
+            f"write_paths=[{joined_paths}], "
+            f"start_revision={expected_start_revision or 'not-required'}. "
+            "Create the narrow revision-bound write claim first.",
         )
 
-    weak_matching_claims = [
-        (claim, claims_module.claim_health_issues(claim))
-        for claim in matching_claims
-        if claims_module.claim_health_issues(claim)
-    ]
+    weak_matching_claims = []
+    for claim in matching_claims:
+        issues = claims_module.claim_health_issues(claim)
+        # staged_plan_reservation / staged_unplanned_reservation below tolerate
+        # claim.tracker_path is None as a legitimate mid-bootstrap state, not
+        # a defect. See "tracker_path's three lifecycle states" in
+        # docs/guides/WORKTREE_COORDINATION_OPERATOR_GUIDE.md before touching
+        # this exemption or coordination_claims.py's CREATION_BLOCKING set.
+        staged_plan_reservation = (
+            claim.tracker_path is None
+            and claims_module.requires_work_graph(claim.plan_ref)
+            and claim.schema_version >= 4
+            and claim.start_revision == expected_start_revision
+            and claim.branch == branch
+            and (claim.target_worktree_path or claim.worktree_path) is not None
+            and Path(str(claim.target_worktree_path or claim.worktree_path)).expanduser().resolve()
+            == worktree_path.resolve()
+            and bool(claim.session_id and claim.session_name and claim.broader_goal)
+        )
+        staged_unplanned_reservation = (
+            claim.tracker_path is None
+            and isinstance(claim.plan_ref, str)
+            and claim.plan_ref.strip() == "UNPLANNED"
+            and claim.branch == branch
+            and (claim.target_worktree_path or claim.worktree_path) is not None
+            and Path(str(claim.target_worktree_path or claim.worktree_path)).expanduser().resolve()
+            == worktree_path.resolve()
+            and bool(claim.session_id and claim.session_name and claim.broader_goal)
+        )
+        staged_goal_reservation = (
+            claim.tracker_path is None
+            and claim.schema_version >= 6
+            and isinstance(claim.plan_ref, str)
+            and claim.plan_ref.strip().startswith("goal:")
+            and bool(claim.plan_ref.strip().removeprefix("goal:").strip())
+            and claim.session_id == native_session_id
+            and claim.branch == branch
+            and (claim.target_worktree_path or claim.worktree_path) is not None
+            and Path(str(claim.target_worktree_path or claim.worktree_path)).expanduser().resolve()
+            == worktree_path.resolve()
+            and bool(claim.session_id and claim.session_name and claim.broader_goal)
+        )
+        if staged_plan_reservation or staged_unplanned_reservation or staged_goal_reservation:
+            issues = [issue for issue in issues if issue != "missing_tracker_path"]
+        if claim.broad_scope_mode == "bootstrap":
+            issues = [issue for issue in issues if issue != "bootstrap_broad_claim_requires_narrowing"]
+        if issues:
+            weak_matching_claims.append((claim, issues))
     if weak_matching_claims:
         claim, issues = weak_matching_claims[0]
         return (
@@ -487,7 +631,11 @@ def verify_scoped_write_claim(
             f"issues=[{', '.join(issues)}]. Refresh the claim with explicit live ownership metadata first.",
         )
 
-    check_result = claims_module.evaluate_claim(candidate, active_claims=active_claims)
+    matched_claim = matching_claims[0]
+    check_result = claims_module.evaluate_claim(
+        candidate,
+        active_claims=[claim for claim in active_claims if claim is not matched_claim],
+    )
     hard_conflicts = check_result.hard_conflicts
     if hard_conflicts:
         formatted = "; ".join(
@@ -496,12 +644,14 @@ def verify_scoped_write_claim(
         )
         return (
             False,
-            "Scoped write-claim enforcement failed: conflicting active write claim(s) detected — "
-            f"{formatted}",
+            f"Scoped write-claim enforcement failed: conflicting active write claim(s) detected — {formatted}",
         )
 
-    matched_scope = matching_claims[0].scope
-    return True, f"Scoped write claim verified via {claim_agent}:{project_name}:{matched_scope}."
+    message = (
+        f"Scoped write claim verified via {claim_agent}:{project_name}:{matched_claim.scope} "
+        f"({matched_claim.claim_type} claim)."
+    )
+    return True, message
 
 
 def create_worktree(
@@ -518,10 +668,26 @@ def create_worktree(
     claim_write_paths: list[str] | None = None,
     claims_dir: Path | None = None,
     require_clean_main_root: bool = False,
+    claim_start_revision: str | None = None,
+    allow_stale_start_point: bool = False,
 ) -> WorktreeCreationResult:
     """Create a worktree, inspect it immediately, and fail loud on unsafe state."""
     repo_root = repo_root.resolve()
     worktree_path = worktree_path.resolve()
+    if allow_stale_start_point:
+        resolved_start = run_git(["rev-parse", "--verify", f"{start_point}^{{commit}}"], cwd=repo_root)
+        start_revision = resolved_start.stdout.strip()
+        if resolved_start.returncode != 0 or re.fullmatch(
+            r"(?:[0-9a-f]{40}|[0-9a-f]{64})", start_revision
+        ) is None:
+            raise ValueError(f"Unable to resolve one full Git start revision from {start_point!r}")
+    else:
+        start_revision = resolve_fresh_start_revision(repo_root=repo_root, start_point=start_point)
+    if claim_start_revision is not None and claim_start_revision != start_revision:
+        raise ValueError(
+            "Requested claim custody does not match the resolved worktree start revision: "
+            f"claim={claim_start_revision}, worktree={start_revision}"
+        )
     coordination_checked = require_write_claim
     coordination_message: str | None = None
 
@@ -534,6 +700,7 @@ def create_worktree(
             claim_project=claim_project,
             claim_write_paths=claim_write_paths or [],
             claims_dir=claims_dir,
+            expected_start_revision=start_revision,
         )
         if not claim_ok:
             return WorktreeCreationResult(
@@ -572,18 +739,20 @@ def create_worktree(
     worktree_path.parent.mkdir(parents=True, exist_ok=True)
 
     branch_already_exists = branch_exists(repo_root, branch)
-    if branch_already_exists and start_point != "HEAD":
-        raise ValueError(
-            "Cannot combine --start-point with an existing branch; "
-            f"branch already exists: {branch}"
+    if branch_already_exists:
+        branch_revision = run_git(
+            ["rev-parse", "--verify", f"refs/heads/{branch}^{{commit}}"],
+            cwd=repo_root,
         )
+        if branch_revision.returncode != 0 or branch_revision.stdout.strip() != start_revision:
+            raise ValueError(f"Existing branch {branch!r} does not match requested start revision {start_revision}")
 
     add_args = ["worktree", "add", str(worktree_path)]
     if branch_already_exists:
         add_args.append(branch)
         created_branch = False
     else:
-        add_args.extend(["-b", branch, start_point])
+        add_args.extend(["-b", branch, start_revision])
         created_branch = True
 
     add_result = run_git(add_args, cwd=repo_root)
@@ -597,6 +766,34 @@ def create_worktree(
             classification="git-error",
             cleanup_performed=False,
             message=(add_result.stderr or add_result.stdout).strip(),
+            status=None,
+            coordination_checked=coordination_checked,
+            coordination_message=coordination_message,
+        )
+
+    created_revision = run_git(
+        ["rev-parse", "--verify", "HEAD^{commit}"],
+        cwd=worktree_path,
+    )
+    if created_revision.returncode != 0 or created_revision.stdout.strip() != start_revision:
+        cleanup_performed = False
+        cleanup_note = "failed worktree retained by operator request"
+        if not keep_failed_worktree:
+            cleanup_performed, cleanup_note = cleanup_failed_worktree(
+                repo_root,
+                worktree_path,
+                branch=branch,
+                created_branch=created_branch,
+            )
+        return WorktreeCreationResult(
+            ok=False,
+            repo_root=str(repo_root),
+            worktree_path=str(worktree_path),
+            branch=branch,
+            created_branch=created_branch,
+            classification="revision-mismatch",
+            cleanup_performed=cleanup_performed,
+            message=(f"Created worktree did not retain start revision {start_revision}. Cleanup: {cleanup_note}"),
             status=None,
             coordination_checked=coordination_checked,
             coordination_message=coordination_message,
@@ -620,6 +817,7 @@ def create_worktree(
             status=summary,
             coordination_checked=coordination_checked,
             coordination_message=coordination_message,
+            import_provenance_warning=_import_provenance_warning(worktree_path),
         )
 
     cleanup_performed = False
@@ -635,9 +833,7 @@ def create_worktree(
         if not cleanup_ok and worktree_path.exists():
             cleanup_note = f" Cleanup failed: {cleanup_note}"
 
-    sample_entries = ", ".join(
-        f"{entry.code} {entry.path}" for entry in summary.entries[:8]
-    )
+    sample_entries = ", ".join(f"{entry.code} {entry.path}" for entry in summary.entries[:8])
     return WorktreeCreationResult(
         ok=False,
         repo_root=str(repo_root),
@@ -659,6 +855,37 @@ def create_worktree(
     )
 
 
+
+def _import_provenance_warning(worktree_path: Path) -> str | None:
+    """Report, without blocking, when this worktree's packages resolve elsewhere.
+
+    A clean git status says the checkout is isolated. It says nothing about
+    which code Python will import when tests run here. Those are different
+    isolations, and only the second one decides whether a green suite means
+    anything.
+
+    Measured, not Enforced: at creation the worktree has no environment yet, so
+    a hard failure here would deny a lane for a condition that is not yet true.
+    Enforce it where a repository is about to trust a result.
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from import_provenance import (  # noqa: PLC0415
+            ImportProvenanceError,
+            check_import_provenance,
+            render_warning,
+        )
+    except ImportError:
+        return None
+    try:
+        return render_warning(check_import_provenance(worktree_path))
+    except ImportProvenanceError:
+        # The repository ships no discoverable package, so there is nothing this
+        # check can speak to. Silence here is honest; silence on a real leak is
+        # not, which is why check_import_provenance raises instead of passing.
+        return None
+
+
 def _print_human(result: WorktreeCreationResult) -> None:
     """Print a concise operator summary."""
     state = "OK" if result.ok else "FAIL"
@@ -676,6 +903,73 @@ def _print_human(result: WorktreeCreationResult) -> None:
             f"untracked={result.status.untracked_count} "
             f"entries={len(result.status.entries)}"
         )
+    if result.import_provenance_warning:
+        # stdout is block-buffered when piped; without the flush this warning
+        # lands above the lane summary it qualifies.
+        sys.stdout.flush()
+        print(f"\n{result.import_provenance_warning}", file=sys.stderr)
+
+
+def _canonical_lock_module_path(script_path: Path | None = None) -> Path:
+    """Resolve the helper in both source and installed worktree layouts."""
+
+    current = (script_path or Path(__file__)).resolve()
+    candidates = (
+        current.parent / "canonical_lock.py",
+        current.parents[1] / "canonical_lock.py",
+        current.parents[2] / "worktree-coordination" / "canonical_lock.py",
+    )
+    return next((candidate for candidate in candidates if candidate.is_file()), candidates[0])
+
+
+def _lock_canonical_checkout(repo_root: Path, *, as_json: bool) -> None:
+    """Make the canonical checkout read-only now that a lane exists.
+
+    This is the primary trigger for the canonical lock. It fires here because
+    creating a lane is the moment the canonical checkout stops being a safe
+    place to write, and because this wrapper is the sanctioned entry point that
+    agents already use -- nobody has to remember a separate command.
+
+    A failure to lock is reported loudly and does not fail worktree creation:
+    the lane is already usable, and a missing lock is a weaker state, not a
+    corrupt one. It must never be silent, which is why it prints either way.
+    """
+    module_path = _canonical_lock_module_path()
+    if not module_path.exists():
+        print(
+            f"WARNING: canonical lock unavailable ({module_path} missing); canonical checkout stays writable",
+            file=sys.stderr,
+        )
+        return
+    result = subprocess.run(
+        [sys.executable, str(module_path), "--reconcile", "--repo", str(repo_root), "--json"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        # stderr, never stdout: this wrapper's stdout is parsed as JSON by the
+        # installed make/session machinery, and an extra line there breaks the
+        # caller's rollback path.
+        print(
+            "WARNING: canonical checkout could not be locked; it remains writable and a "
+            f"concurrent write there can still destroy this lane's work.\n{result.stdout}{result.stderr}",
+            file=sys.stderr,
+        )
+        return
+    if not as_json:
+        try:
+            payload = json.loads(result.stdout or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        actions = payload.get("actions") or []
+        locked = [a for a in actions if a.get("action") in {"locked", "already_locked", "relocked"}]
+        if locked:
+            print(f"canonical checkout is now read-only: {repo_root} (lane work belongs in the worktree above)")
+        # A repair is the one case the operator most needs to hear about: the
+        # boundary was reported as holding while it had silently stopped.
+        for repaired in (a for a in actions if a.get("action") == "relocked"):
+            print(f"canonical lock had DECAYED and was repaired: {repaired.get('repo_root')} — {repaired.get('reason', 'drift')}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -695,6 +989,14 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"canonical_project": project_name}, indent=2))
         else:
             print(project_name)
+        return 0
+    if args.print_fresh_start_revision:
+        try:
+            revision = resolve_fresh_start_revision(repo_root=repo_root, start_point=args.start_point)
+        except (RuntimeError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(revision)
         return 0
 
     if not args.path or not args.branch:
@@ -721,6 +1023,8 @@ def main(argv: list[str] | None = None) -> int:
             claim_write_paths=args.claim_write_path,
             claims_dir=claims_dir,
             require_clean_main_root=args.require_clean_main_root,
+            claim_start_revision=args.claim_start_revision,
+            allow_stale_start_point=args.allow_stale_start_point,
         )
     except (RuntimeError, ValueError) as exc:
         error_result = WorktreeCreationResult(
@@ -746,6 +1050,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(asdict(result), indent=2))
     else:
         _print_human(result)
+
+    if result.ok:
+        _lock_canonical_checkout(repo_root, as_json=args.json)
+
     return 0 if result.ok else 1
 
 

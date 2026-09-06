@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import shlex
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
@@ -12,8 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from enforced_planning import coordination_claims, coordination_messages
 
-
 DEFAULT_CODEX_SESSION_INDEX = Path.home() / ".codex" / "session_index.jsonl"
+DEFAULT_CLAUDE_SESSION_REGISTRY = Path.home() / ".claude" / "sessions"
 
 
 class StrictProjection(BaseModel):
@@ -36,7 +36,7 @@ class ClientSessionDisplayV1(StrictProjection):
 
 
 class CoordinationResponseReadoutV1(StrictProjection):
-    """Joined operator view that never upgrades response into work completion."""
+    """Legacy joined operator view retained for strict consumer compatibility."""
 
     schema_version: Literal["1.0.0"] = "1.0.0"
     message_id: str
@@ -58,6 +58,13 @@ class CoordinationResponseReadoutV1(StrictProjection):
     response_ref: str | None = None
     manual_resume_command: str | None = None
     completion_claim: Literal["not_evaluated"] = "not_evaluated"
+
+
+class CoordinationResponseReadoutV2(CoordinationResponseReadoutV1):
+    """Versioned operator view with explicit host delivery capability."""
+
+    schema_version: Literal["1.1.0"] = "1.1.0"
+    operator_host_delivery_capability: coordination_messages.HostDeliveryCapabilityV1
 
 
 ResponseState = Literal[
@@ -88,14 +95,93 @@ def _client_name(session_id: str) -> Literal["codex", "claude-code", "openclaw",
     return "unknown"
 
 
+def _resolve_claude_code_display(
+    session_id: str,
+    *,
+    claude_session_registry: Path,
+) -> ClientSessionDisplayV1:
+    """Resolve one Claude Code session's addressable peer name from its registry.
+
+    Claude Code writes one JSON record per live session under
+    ``~/.claude/sessions/<pid>.json``. Its ``name`` is the identity peers use to
+    address it with the native ``SendMessage`` tool, so resolving it here is what
+    turns a claim's canonical ``session_id`` into something a live agent can
+    actually talk to. Routing identity is unchanged; this is display metadata.
+    """
+
+    raw_session_id = session_id.removeprefix("claude-code:")
+    source = _portable_path(claude_session_registry)
+    registry = claude_session_registry.expanduser()
+    if not registry.is_dir():
+        return ClientSessionDisplayV1(
+            session_id=session_id,
+            client="claude-code",
+            state="source_unavailable",
+            source=source,
+        )
+
+    warnings: list[str] = []
+    matched: ClientSessionDisplayV1 | None = None
+    for record_path in sorted(registry.glob("*.json")):
+        try:
+            record = json.loads(record_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            warnings.append(f"unreadable_record:{record_path.name}")
+            continue
+        if not isinstance(record, dict) or record.get("sessionId") != raw_session_id:
+            continue
+        name = record.get("name")
+        if not isinstance(name, str) or not name.strip():
+            warnings.append(f"matching_record_missing_name:{record_path.name}")
+            continue
+        if matched is not None:
+            warnings.append(f"duplicate_matching_record:{record_path.name}")
+            continue
+        updated_at = record.get("updatedAt")
+        client_updated_at: str | None = None
+        if isinstance(updated_at, (int, float)) and not isinstance(updated_at, bool):
+            client_updated_at = datetime.fromtimestamp(
+                updated_at / 1000, tz=UTC
+            ).isoformat()
+        elif updated_at is not None:
+            warnings.append(f"matching_record_invalid_updated_at:{record_path.name}")
+        matched = ClientSessionDisplayV1(
+            session_id=session_id,
+            client="claude-code",
+            state="resolved",
+            display_name=name.strip(),
+            source=source,
+            client_updated_at=client_updated_at,
+        )
+
+    # Scan every record before returning: a warning about an unreadable peer
+    # record must not depend on whether the match happened to sort first.
+    if matched is not None:
+        return matched.model_copy(update={"warnings": tuple(warnings)})
+
+    return ClientSessionDisplayV1(
+        session_id=session_id,
+        client="claude-code",
+        state="not_found",
+        source=source,
+        warnings=tuple(warnings),
+    )
+
+
 def resolve_client_session_display(
     session_id: str,
     *,
     codex_session_index: Path = DEFAULT_CODEX_SESSION_INDEX,
+    claude_session_registry: Path = DEFAULT_CLAUDE_SESSION_REGISTRY,
 ) -> ClientSessionDisplayV1:
     """Resolve optional human-facing metadata without changing canonical identity."""
 
     client = _client_name(session_id)
+    if client == "claude-code":
+        return _resolve_claude_code_display(
+            session_id,
+            claude_session_registry=claude_session_registry,
+        )
     if client != "codex":
         return ClientSessionDisplayV1(
             session_id=session_id,
@@ -136,7 +222,7 @@ def resolve_client_session_display(
             warnings.append(f"matching_row_missing_updated_at:{line_number}")
             continue
         try:
-            parsed_updated_at = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+            parsed_updated_at = datetime.fromisoformat(updated_at)
         except ValueError:
             warnings.append(f"matching_row_invalid_updated_at:{line_number}")
             continue
@@ -170,7 +256,9 @@ def build_coordination_response_readout(
     *,
     claims: list[coordination_claims.ClaimRecord],
     codex_session_index: Path = DEFAULT_CODEX_SESSION_INDEX,
-) -> CoordinationResponseReadoutV1:
+    codex_config_path: Path | None = None,
+    claude_config_path: Path | None = None,
+) -> CoordinationResponseReadoutV2:
     """Join message lifecycle and display metadata without inferring completion."""
 
     recipient_session_id = status.message.recipient_session_id
@@ -203,7 +291,7 @@ def build_coordination_response_readout(
         )
         manual_resume_command = shlex.join(("codex", "exec", "resume", raw_session_id, prompt))
 
-    return CoordinationResponseReadoutV1(
+    return CoordinationResponseReadoutV2(
         message_id=status.message.message_id,
         recipient_session_id=recipient_session_id,
         client_display=resolve_client_session_display(
@@ -226,6 +314,12 @@ def build_coordination_response_readout(
             sorted({claim.scope for claim in recipient_claims if not claim.is_live()})
         ),
         message_state=status.state,
+        operator_host_delivery_capability=coordination_messages.inspect_host_delivery_capability(
+            recipient_session_id,
+            codex_config_path=codex_config_path,
+            claude_config_path=claude_config_path,
+            scope="operator_host_recipient_client_config",
+        ),
         response_state=response_state,
         acknowledgement_disposition=acknowledgement.disposition if acknowledgement else None,
         acknowledgement_note=acknowledgement.note if acknowledgement else None,

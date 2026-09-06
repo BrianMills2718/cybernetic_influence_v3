@@ -15,6 +15,12 @@ def _find_repo_root() -> Path:
     for parent in current.parents:
         if (parent / "enforced_planning").is_dir():
             return parent
+    import importlib.util
+    if importlib.util.find_spec("enforced_planning") is not None:
+        for _ancestor in Path(__file__).resolve().parents:
+            if (_ancestor / ".git").exists():
+                return _ancestor
+        return Path(__file__).resolve().parents[1]
     raise RuntimeError("Unable to locate repo root containing enforced_planning/")
 
 
@@ -39,6 +45,7 @@ ClaimCheckResult = _impl.ClaimCheckResult
 _claim_filename = _impl._claim_filename
 _normalize_repo_path = _impl._normalize_repo_path
 _paths_overlap = _impl._paths_overlap
+requires_work_graph = _impl.requires_work_graph
 
 
 def _sync_runtime_config() -> None:
@@ -149,10 +156,10 @@ def unregistered_claim_files() -> list[str]:
     return _impl.unregistered_claim_files()
 
 
-def prune_expired() -> int:
+def prune_expired(*args: Any, **kwargs: Any) -> tuple[int, list[str]]:
     """Delegate claim pruning while honoring script-level CLAIMS_DIR overrides."""
     _sync_runtime_config()
-    return _impl.prune_expired()
+    return _impl.prune_expired(*args, **kwargs)
 
 
 def prune_stale(*args: Any, **kwargs: Any) -> tuple[int, list[str]]:
@@ -161,10 +168,10 @@ def prune_stale(*args: Any, **kwargs: Any) -> tuple[int, list[str]]:
     return _impl.prune_stale(*args, **kwargs)
 
 
-def prune_completed() -> tuple[int, list[str]]:
+def prune_completed(*args: Any, **kwargs: Any) -> tuple[int, list[str]]:
     """Delegate completed-claim pruning while honoring script-level CLAIMS_DIR overrides."""
     _sync_runtime_config()
-    return _impl.prune_completed()
+    return _impl.prune_completed(*args, **kwargs)
 
 
 def heartbeat_claims(*args: Any, **kwargs: Any) -> tuple[int, list[str], str, str]:
