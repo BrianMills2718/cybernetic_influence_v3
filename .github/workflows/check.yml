@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # llm_client is a separately versioned private provider boundary, not a
       # pinned dependency in requirements-dev.lock. Without it the suite does
@@ -27,17 +27,17 @@ jobs:
       # read-only deploy key in LLM_CLIENT_DEPLOY_KEY is what makes CI able to
       # run the tests at all.
       - name: Check out llm_client
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: BrianMills2718/llm_client
           path: .llm_client
           ssh-key: ${{ secrets.LLM_CLIENT_DEPLOY_KEY }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
