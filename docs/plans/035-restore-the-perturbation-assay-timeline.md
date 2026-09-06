@@ -1,9 +1,9 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: active
+status: implemented
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-09-06
 depends_on:
   - docs/ROADMAP.md
   - docs/plans/022-composite-agency-perturbation-assay.md

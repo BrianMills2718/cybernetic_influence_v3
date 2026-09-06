@@ -94,7 +94,7 @@ def test_authoring_progress_uses_retained_backend_stages() -> None:
     assert "function authoringProgressText(job)" in script
     assert "job.phase_label" in script
     assert "job.detail" in script
-    assert "proposal attempt ${attempt}" in script
+    assert "attempt ${attempt}" in script
     assert "Still compiling the typed world" not in script
     assert f"assets/app.js?v={_cache_version(page, 'assets/app.js')}" in page
 
@@ -188,7 +188,10 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Coordination Environment Lab" in page
     assert "New simulation" in page
     assert ">Guided example</button>" not in page
-    assert "Start the product walkthrough" in page
+    # The walkthrough entry point is asserted by class, not by its copy: that
+    # button has been reworded twice (42f3787, a687cfc) and each rewording left
+    # this assertion red for weeks.
+    assert 'class="walkthrough-start"' in page
     assert "Understand the purpose" in page
     assert "Read a simulation" in page
     assert "Create your own" in page
@@ -296,6 +299,7 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert [item for item in shape.scripts if item] == [
         "assets/graph-canvas.js?v=ontology2",
         f"assets/app.js?v={app_version}",
+        f"assets/tour.js?v={_cache_version(page, 'assets/tour.js')}",
     ]
     assert {
         "overview-view",

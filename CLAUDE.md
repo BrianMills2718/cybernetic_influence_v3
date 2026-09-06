@@ -92,10 +92,14 @@ new capability by themselves.
 
 ## Testing And Verification
 
-- `make check` runs `typecheck test ui-build deploy-check` in that order —
-  `mypy` (strict, `files = ["src", "tests"]`), then `pytest -q tests`, then the
-  frontend build, then the deploy-script syntax check. Run it before treating
+- `make check` runs `typecheck test ui-build assets-check deploy-check` in that
+  order — `mypy` (strict, `files = ["src", "tests"]`), then `pytest -q tests`,
+  then the frontend build, then the check that the served bundle matches
+  `frontend/src`, then the deploy-script syntax check. Run it before treating
   work as complete; do not report success from a partial subset.
+- Run it from a worktree, not from a canonical checkout left read-only by the
+  workspace guard: only the write stages fail there, so `ui-build` reports a
+  bundler crash whose real cause is `Permission denied` on `web/`.
 - `make test` runs `pytest -q tests` specifically — always scope pytest to
   `tests/` (or use `make test`). Do not run a bare `pytest` from the repo
   root: `worktrees/` can contain other lanes' checkouts with duplicate test
@@ -137,7 +141,7 @@ make install
 make serve
 
 # Verification
-make check        # typecheck (mypy --strict) + test (pytest -q tests) + ui-build + deploy-check
+make check        # typecheck (mypy --strict) + test (pytest -q tests) + ui-build + assets-check + deploy-check
 make test          # pytest -q tests
 make typecheck     # mypy --strict
 make ui-smoke       # scripts/verify_demo_ui.py against a running server

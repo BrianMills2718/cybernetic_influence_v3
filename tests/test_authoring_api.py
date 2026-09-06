@@ -411,11 +411,12 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
         edge["directed"] is True
         for edge in compact["influence_network"]["edges"]
     )
-    assert any(
-        scene["visible_edge_ids"]
+    event_scenes = [
+        scene
         for scene in compact["simulation_replay"]["scenes"]
         if scene["kind"] == "event"
-    )
+    ]
+    assert any(scene["visible_edge_ids"] for scene in event_scenes)
     assert "events" not in compact
     assert "traces" not in compact
 

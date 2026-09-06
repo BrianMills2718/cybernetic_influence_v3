@@ -1,9 +1,9 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: active
+status: implemented
 created: 2026-08-23
-updated: 2026-08-23
+updated: 2026-09-06
 depends_on:
   - docs/ROADMAP.md
   - docs/plans/031-cso-stabilization-flagship.md

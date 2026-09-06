@@ -20,6 +20,12 @@ if [[ ! -d "$REPO" ]]; then
 fi
 mkdir -p "$LOG_DIR" "$HOME/Library/LaunchAgents"
 
+# The Deck has been served from project-launcher/www/ since the 2026-09-01
+# split. Writing the verdict into the parent index.html leaves the audit green
+# and the published card stale, which is how a "do not share" verdict stood
+# unread for four days.
+STATUS_TARGET="$HOME/Sites/project-launcher/www/index.html"
+
 cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -31,7 +37,7 @@ cat > "$PLIST" <<PLIST
     <string>$REPO/.venv/bin/python</string>
     <string>$REPO/scripts/audit_public_demo.py</string>
     <string>--status-target</string>
-    <string>$HOME/Sites/project-launcher/index.html</string>
+    <string>$STATUS_TARGET</string>
   </array>
   <key>WorkingDirectory</key><string>$REPO</string>
   <key>EnvironmentVariables</key>
