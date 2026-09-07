@@ -12,13 +12,14 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import subprocess
 import time
 import uuid
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
-
 
 DEFAULT_CLAIMS_DIR = Path.home() / ".claude" / "coordination" / "claims"
 DEFAULT_PROJECTION_PATH = (
@@ -28,6 +29,18 @@ DEFAULT_RECEIPT_PATH = (
     Path.home() / ".claude" / "coordination" / "prewrite-events-v1.jsonl"
 )
 LIVE_STATUSES = {"active", "blocked", "handoff"}
+# Kept identical to enforced_planning/coordination_claims.py's
+# APPEND_ONLY_WRITE_PREFIXES by design, not imported: this module is
+# intentionally stdlib-only (see module docstring), and coordination_claims.py
+# pulls in yaml and heavier machinery unsuited to a per-tool-call hot path.
+# An append-only store cannot contend with itself, so a session with zero
+# live claim may still write here -- but only here; a mutation touching any
+# non-append-only path still requires the ordinary exact-claim gate below.
+APPEND_ONLY_WRITE_PREFIXES = (
+    "learnings/entries",
+    "learnings/invalid_entries",
+    "policy/proposals",
+)
 PROJECTION_FIELDS = {
     "schema_version",
     "generated_at",
@@ -56,6 +69,63 @@ CLAIM_FIELDS = {
 _CUSTOM_PATCH_PATH = re.compile(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$")
 _CUSTOM_MOVE_PATH = re.compile(r"^\*\*\* Move to: (.+)$")
 _UNIFIED_PATCH_PATH = re.compile(r"^(?:---|\+\+\+) (.+)$")
+_SHELL_CONTROL = frozenset({";", "&", "&&", "|", "||", ">", ">>", "<", "<<", "<<<", "2>", "2>>"})
+_READ_ONLY_SEPARATORS = frozenset({";", "&&", "||", "|"})
+_SIMPLE_READ_ONLY_COMMANDS = frozenset(
+    {
+        ":",
+        "cat",
+        "cd",
+        "date",
+        "echo",
+        "false",
+        "grep",
+        "head",
+        "jq",
+        "ls",
+        "printf",
+        "pwd",
+        "readlink",
+        "realpath",
+        "rg",
+        "sha256sum",
+        "stat",
+        "tail",
+        "test",
+        "true",
+        "type",
+        "wc",
+        "which",
+    }
+)
+_READ_ONLY_GIT_SUBCOMMANDS = frozenset(
+    {
+        "cat-file",
+        "diff",
+        "log",
+        "ls-files",
+        "ls-tree",
+        "rev-parse",
+        "rev-list",
+        "show",
+        "status",
+    }
+)
+_BASENAME_PATH_COMMANDS = frozenset({"mkdir", "rm", "rmdir", "touch", "truncate", "unlink"})
+
+BashBootstrapClassifier = Callable[[str], bool | str]
+
+_SESSION_STATUS_VALUE_OPTIONS = frozenset(
+    {
+        "--project",
+        "--agent",
+        "--scope",
+        "--branch",
+        "--session-id",
+        "--codex-session-index",
+    }
+)
+_SESSION_STATUS_FLAG_OPTIONS = frozenset({"--include-ended", "--json"})
 
 
 class FastPreWriteError(ValueError):
@@ -110,7 +180,785 @@ def _patch_paths(command: str) -> tuple[str, ...]:
     return tuple(dict.fromkeys(path for path in paths if path))
 
 
-def adapt_native_payload(payload: dict[str, Any], *, client: str) -> dict[str, Any]:
+def _shell_commands(command: str) -> tuple[tuple[str, ...], ...] | None:
+    """Return safely separated shell argv groups, or ``None`` when ambiguous.
+
+    Read-only inspection commonly chains commands or pipes output.  Treating
+    every control operator as a possible write made ``pwd && ls`` require a
+    repository claim, including at a non-repository workspace root.  We accept
+    only separators whose every component can be proved read-only; background
+    execution, redirection, substitutions, and malformed groups still fail
+    closed.
+    """
+
+    if not command.strip() or "\r" in command:
+        return None
+    if "`" in command or "$(" in command or "${" in command:
+        return None
+    try:
+        # Keep physical newlines visible to the parser. Native agents commonly
+        # batch independent inspections as one multiline Bash request; treating
+        # the newline as ordinary whitespace would merge adjacent commands,
+        # while rejecting every newline sends harmless observation through the
+        # write-claim path. Newlines embedded in any other token remain
+        # ambiguous and fail closed below.
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|<>\n")
+        lexer.whitespace_split = True
+        lexer.whitespace = " \t"
+        # Shell comments terminate at a physical newline.  Letting shlex
+        # consume comments also consumes that boundary and can merge a later
+        # mutating command into the argv of an allowed read command.
+        lexer.commenters = ""
+        tokens = tuple(lexer)
+    except ValueError:
+        return None
+    if not tokens:
+        return None
+    commands: list[tuple[str, ...]] = []
+    current: list[str] = []
+    for token in tokens:
+        if "\n" in token:
+            if set(token) != {"\n"}:
+                # shlex groups adjacent punctuation, for example ``\n>``.
+                # Such a token contains shell behavior beyond a command
+                # boundary and is not provably read-only.
+                return None
+            if current:
+                commands.append(tuple(current))
+                current = []
+            continue
+        if token in _READ_ONLY_SEPARATORS:
+            if not current:
+                return None
+            commands.append(tuple(current))
+            current = []
+            continue
+        if token in _SHELL_CONTROL or set(token) <= set(";&|<>"):
+            return None
+        current.append(token)
+    if current:
+        commands.append(tuple(current))
+    elif not commands:
+        return None
+    if any("=" in argv[0] and not argv[0].startswith(("/", "./")) for argv in commands):
+        return None
+    return tuple(commands)
+
+
+def _git_command_is_read_only(argv: tuple[str, ...]) -> bool:
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token == "-C":
+            index += 2
+            continue
+        if token in {"--no-pager", "--paginate", "-P", "-p"}:
+            index += 1
+            continue
+        break
+    if index >= len(argv):
+        return False
+    subcommand = argv[index]
+    tail = argv[index + 1 :]
+    if subcommand == "ls-remote":
+        return not any(
+            token in {"--upload-pack", "--exec"}
+            or token.startswith(("--upload-pack=", "--exec="))
+            for token in tail
+        )
+    if subcommand in _READ_ONLY_GIT_SUBCOMMANDS:
+        return not any(
+            token in {"--output", "--output-indicator-new", "--output-indicator-old"} or token.startswith("--output=")
+            for token in tail
+        )
+    if subcommand == "branch":
+        return not tail or all(
+            token in {"--show-current", "--list", "--all", "-a", "-r", "--remotes"} for token in tail
+        )
+    if subcommand == "remote":
+        return not tail or tail[0] in {"-v", "show", "get-url"}
+    if subcommand == "worktree":
+        return bool(tail) and tail[0] == "list"
+    if subcommand == "tag":
+        return not tail or tail[0] in {"--list", "-l"}
+    if subcommand == "config":
+        return bool(tail) and tail[0] in {"--get", "--get-all", "--get-regexp", "--list", "-l"}
+    return False
+
+
+def _gh_command_is_read_only(argv: tuple[str, ...]) -> bool:
+    """Admit only bounded GitHub CLI queries with no write-capable flags."""
+
+    if len(argv) < 2:
+        return False
+    group = argv[1]
+    tail = argv[2:]
+    if group in {"status", "search"}:
+        return True
+    if group == "auth":
+        return bool(tail) and tail[0] == "status"
+    allowed = {
+        "issue": {"list", "status", "view"},
+        "pr": {"checks", "diff", "list", "status", "view"},
+        "release": {"list", "view"},
+        "repo": {"list", "view"},
+        "run": {"list", "view"},
+        "workflow": {"list", "view"},
+    }
+    if group in allowed:
+        return bool(tail) and tail[0] in allowed[group]
+    if group != "api":
+        return False
+    unsafe_api_flags = {
+        "-X",
+        "--method",
+        "-f",
+        "--raw-field",
+        "-F",
+        "--field",
+        "--input",
+    }
+    for index, token in enumerate(tail):
+        if token.startswith(("-f", "-F")) and token not in {"-f", "-F"}:
+            return False
+        if token.startswith("-X") and token != "-X":
+            if token[2:].upper() == "GET":
+                continue
+            return False
+        option = token.split("=", 1)[0]
+        if option in unsafe_api_flags:
+            if option in {"-X", "--method"} and "=" not in token:
+                method = tail[index + 1] if index + 1 < len(tail) else ""
+                if method.upper() == "GET":
+                    continue
+            elif option in {"-X", "--method"} and token.split("=", 1)[1].upper() == "GET":
+                continue
+            return False
+    return bool(tail)
+
+
+def _date_command_is_read_only(argv: tuple[str, ...]) -> bool:
+    """Reject GNU date's clock-setting forms while allowing observation."""
+
+    for token in argv[1:]:
+        option = token.split("=", 1)[0]
+        if option.startswith("--") and option != "--" and "--set".startswith(option):
+            return False
+        if token.startswith("-") and not token.startswith("--") and "s" in token[1:]:
+            return False
+    return True
+
+
+def _sort_command_is_read_only(argv: tuple[str, ...]) -> bool:
+    """Allow formatting-only sort calls while rejecting file-writing options."""
+
+    unsafe_long_options = (
+        "--output",
+        "--temporary-directory",
+        "--compress-program",
+    )
+    for token in argv[1:]:
+        if token.startswith("--"):
+            option = token.split("=", 1)[0]
+            # GNU long options accept unambiguous abbreviations, so reject a
+            # prefix such as ``--out=...`` as well as the full spelling.
+            if any(unsafe.startswith(option) for unsafe in unsafe_long_options):
+                return False
+        elif token.startswith("-") and token != "-":
+            # Short options may be clustered (for example ``-uo result``).
+            # Conservatively reject any option token containing output (-o)
+            # or temp-directory (-T), even if it also contains safe flags.
+            if any(option in token[1:] for option in ("o", "T")):
+                return False
+    return True
+
+
+def classify_bash_command(
+    command: str,
+    *,
+    claim_bootstrap_classifier: BashBootstrapClassifier | None = None,
+) -> str:
+    """Classify Bash without executing it.
+
+    A command bypasses ordinary claim admission only when every shell component
+    is provably read-only, or when the separately validated claim bootstrap
+    escape hatch accepts it.
+    """
+
+    if claim_bootstrap_classifier is not None:
+        try:
+            special = claim_bootstrap_classifier(command)
+            if special is True:
+                return "claim_bootstrap"
+            if special in {
+                "claim_bootstrap",
+                "native_mailbox",
+                "native_closeout",
+                "native_session_narrow",
+                "hook_feedback_report",
+                "read_target_selection",
+                "projection_recovery",
+            }:
+                return str(special)
+        except Exception:  # noqa: BLE001 -- classifier failure must fail closed
+            return "claim_required"
+    commands = _shell_commands(command)
+    if commands is None:
+        return "claim_required"
+
+    if all(_if_control_argv_is_read_only(argv) for argv in commands):
+        return "read_only"
+    return "claim_required"
+
+
+def _if_control_argv_is_read_only(argv: tuple[str, ...]) -> bool:
+    """Admit a flat shell ``if`` only when every contained command is read-only.
+
+    ``_shell_commands`` already rejects substitution, redirection, background
+    execution, malformed separators, and assignment-led commands.  A flat
+    ``if`` therefore arrives as groups beginning with ``if``, ``then``,
+    ``elif``, ``else``, and the terminal ``fi`` marker.  Strip only those
+    reserved words and reuse the existing command allowlist; loops, nesting,
+    shell interpreters, and any mutating condition or branch still fail closed.
+    """
+
+    if argv == ("fi",):
+        return True
+    if argv and argv[0] in {"if", "then", "elif", "else"}:
+        return len(argv) > 1 and _argv_is_read_only(argv[1:])
+    return _argv_is_read_only(argv)
+
+
+def _bash_declared_paths(command: str) -> tuple[str, ...]:
+    """Extract explicit path operands that could redirect a shell mutation.
+
+    Hook payloads do not expose the shell tool's per-command workdir.  A claim
+    can therefore authorize ordinary pathless commands in its worktree, but an
+    explicit absolute or traversal operand must be proved to remain inside the
+    selected worktree.  This intentionally recognizes only path-shaped tokens;
+    ambiguity never creates authority outside the selected worktree.
+    """
+
+    commands = _shell_commands(command)
+    if commands is not None and len(commands) == 1:
+        effective_argv = _bash_effective_argv(commands[0])
+        git_paths = _git_declared_paths(effective_argv)
+        if git_paths is not None:
+            return git_paths
+        lifecycle_paths = _lifecycle_declared_paths(effective_argv)
+        if lifecycle_paths is not None:
+            return lifecycle_paths
+        make_lifecycle_paths = _make_lifecycle_declared_paths(effective_argv)
+        if make_lifecycle_paths is not None:
+            return make_lifecycle_paths
+
+    pytest_node_paths: dict[str, str] = {}
+    if commands is not None:
+        for argv in commands:
+            command_tokens = list(_bash_effective_argv(argv))
+            executable = Path(command_tokens[0]).name if command_tokens else ""
+            tail: list[str] = []
+            if executable in {"pytest", "py.test"}:
+                tail = command_tokens[1:]
+            elif (
+                executable in {"python", "python3", "python3.12"}
+                and len(command_tokens) >= 3
+                and command_tokens[1:3] == ["-m", "pytest"]
+            ):
+                tail = command_tokens[3:]
+            for operand in tail:
+                if not operand.startswith("-") and "::" in operand:
+                    pytest_node_paths[operand] = operand.split("::", 1)[0]
+
+    try:
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|<>")
+        lexer.whitespace_split = True
+        tokens = tuple(lexer)
+    except ValueError:
+        return ()
+    paths: list[str] = []
+    command_start = True
+    env_command = False
+    python_script_pending = False
+    skip_env_cwd = False
+    for token in tokens:
+        if token in _SHELL_CONTROL or set(token) <= set(";&|<>"):
+            command_start = token in {";", "&&", "||", "|", "&"}
+            continue
+        if command_start:
+            command_start = False
+            env_command = token == "/usr/bin/env"
+            if token.startswith(("/usr/bin/", "/bin/")):
+                continue
+        if env_command:
+            if skip_env_cwd:
+                skip_env_cwd = False
+                continue
+            if token in {"-C", "--chdir"}:
+                skip_env_cwd = True
+                continue
+            if token.startswith("--chdir=") or (
+                "=" in token and not token.startswith(("/", "~", "."))
+            ):
+                continue
+            env_command = False
+            python_script_pending = Path(token).name in {"python", "python3", "python3.12"}
+            continue
+        if python_script_pending:
+            if token.startswith("-"):
+                continue
+            python_script_pending = False
+            continue
+        candidate = token.split("=", 1)[1] if token.startswith("-") and "=" in token else token
+        candidate = pytest_node_paths.get(candidate, candidate)
+        if "://" in candidate or candidate in {"-", "."}:
+            continue
+        if "=" in candidate and not candidate.startswith(("/", "~", ".")):
+            candidate = candidate.split("=", 1)[1]
+        if candidate.startswith(("/", "~", "./", "../")) or "/" in candidate:
+            paths.append(candidate)
+    if commands is not None:
+        for argv in commands:
+            command_argv = _bash_effective_argv(argv)
+            if not command_argv:
+                continue
+            executable = Path(command_argv[0]).name
+            if executable not in _BASENAME_PATH_COMMANDS:
+                continue
+            after_options = False
+            for operand in command_argv[1:]:
+                if operand == "--":
+                    after_options = True
+                    continue
+                if not after_options and operand.startswith("-"):
+                    continue
+                if (
+                    operand not in {"", ".", "-"}
+                    and "://" not in operand
+                    and "=" not in operand
+                    and not any(marker in operand for marker in ("$", "`", "*", "?", "["))
+                ):
+                    paths.append(operand)
+    return tuple(dict.fromkeys(paths))
+
+
+def _bash_effective_argv(argv: tuple[str, ...]) -> tuple[str, ...]:
+    """Return the command executed by the supported literal env cwd wrapper."""
+
+    if len(argv) >= 4 and argv[:2] == ("/usr/bin/env", "-C"):
+        return argv[3:]
+    return argv
+
+
+_LIFECYCLE_IDENTIFIER_OPTIONS = {
+    "--agent",
+    "--branch",
+    "--disposition",
+    "--disposition-reason",
+    "--merge-commit",
+    "--note",
+    "--project",
+    "--recovery-ref",
+    "--scope",
+    "--session-id",
+}
+_LIFECYCLE_PATH_OPTIONS = {"--worktree-path"}
+_MAKE_LIFECYCLE_IDENTIFIER_VARIABLES = {
+    "BRANCH",
+    "SESSION_NOTE",
+    "WORKTREE_AGENT",
+    "WORKTREE_DISPOSITION",
+    "WORKTREE_DISPOSITION_REASON",
+    "WORKTREE_MERGE_COMMIT",
+    "WORKTREE_PROJECT",
+    "WORKTREE_RECOVERY_REF",
+}
+
+
+def _path_shaped(value: str) -> bool:
+    return value.startswith(("/", "~", "./", "../")) or "/" in value
+
+
+def _lifecycle_declared_paths(argv: tuple[str, ...]) -> tuple[str, ...] | None:
+    """Return only filesystem operands from a direct lifecycle invocation.
+
+    Branches, scopes, and recovery refs are typed identifiers and commonly
+    contain slashes.  Treating those values as paths makes the canonical
+    closeout command unable to retire exactly the lanes it created.  Unknown
+    path-shaped operands still fail through the ordinary path gate.
+    """
+
+    if len(argv) < 2 or Path(argv[0]).name not in {"python", "python3", "python3.12"}:
+        return None
+    if argv[1] not in {
+        "scripts/session_close.py",
+        "scripts/session_finish.py",
+        "scripts/meta/session_close.py",
+        "scripts/meta/session_finish.py",
+    }:
+        return None
+    paths: list[str] = []
+    index = 2
+    while index < len(argv):
+        token = argv[index]
+        option, separator, inline_value = token.partition("=")
+        if option in _LIFECYCLE_IDENTIFIER_OPTIONS:
+            if not separator and index + 1 >= len(argv):
+                return None
+            index += 1 if separator else 2
+            continue
+        if option in _LIFECYCLE_PATH_OPTIONS:
+            if separator:
+                if inline_value:
+                    paths.append(inline_value)
+                index += 1
+            elif index + 1 < len(argv):
+                paths.append(argv[index + 1])
+                index += 2
+            else:
+                index += 1
+            continue
+        candidate = inline_value if separator and token.startswith("-") else token
+        if _path_shaped(candidate):
+            paths.append(candidate)
+        index += 1
+    return tuple(dict.fromkeys(paths))
+
+
+def _make_lifecycle_declared_paths(argv: tuple[str, ...]) -> tuple[str, ...] | None:
+    """Return path operands for the sanctioned Make lifecycle targets."""
+
+    if not argv or Path(argv[0]).name not in {"make", "gmake"}:
+        return None
+    paths: list[str] = []
+    targets: list[str] = []
+    assignments: list[tuple[str, str]] = []
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token in {"-C", "--directory", "-f", "--file", "--makefile"}:
+            if index + 1 >= len(argv):
+                return None
+            paths.append(argv[index + 1])
+            index += 2
+            continue
+        if token.startswith(("--directory=", "--file=", "--makefile=")):
+            paths.append(token.split("=", 1)[1])
+            index += 1
+            continue
+        if "=" in token and not token.startswith("-"):
+            name, value = token.split("=", 1)
+            assignments.append((name, value))
+            index += 1
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        targets.append(token)
+        index += 1
+    if targets not in [["session-close"], ["session-finish"]]:
+        return None
+    for name, value in assignments:
+        if name in _MAKE_LIFECYCLE_IDENTIFIER_VARIABLES:
+            continue
+        if _path_shaped(value):
+            paths.append(value)
+    return tuple(dict.fromkeys(paths))
+
+
+def _git_declared_paths(argv: tuple[str, ...]) -> tuple[str, ...] | None:
+    """Return actual path operands for bounded Git command shapes.
+
+    Read-only Git operands and a push's remote/ref operands are identifiers,
+    not filesystem paths. Treating ``origin/main`` or ``branch...HEAD`` as a
+    path creates a circular denial at inspection and integration boundaries.
+    Execution-directory and merge-message-file operands remain paths.
+    """
+
+    if not argv or Path(argv[0]).name != "git":
+        return None
+    paths: list[str] = []
+    index = 1
+    while index < len(argv):
+        token = argv[index]
+        if token == "-C":
+            if index + 1 >= len(argv):
+                return None
+            paths.append(argv[index + 1])
+            index += 2
+            continue
+        if token == "-c":
+            if index + 1 >= len(argv):
+                return None
+            index += 2
+            continue
+        if token in {"--no-pager", "--paginate", "-P", "-p"}:
+            index += 1
+            continue
+        break
+    if index >= len(argv):
+        return None
+    subcommand = argv[index]
+    if _git_command_is_read_only(argv):
+        return tuple(dict.fromkeys(paths))
+    if subcommand == "push":
+        tail = argv[index + 1 :]
+        positional = [token for token in tail if not token.startswith("-")]
+        if not positional or positional[0] == "origin":
+            return tuple(dict.fromkeys(paths))
+        return None
+    if subcommand != "merge":
+        return None
+    index += 1
+    while index < len(argv):
+        token = argv[index]
+        if token in {"-F", "--file"}:
+            if index + 1 >= len(argv):
+                return None
+            paths.append(argv[index + 1])
+            index += 2
+            continue
+        if token.startswith("--file="):
+            paths.append(token.split("=", 1)[1])
+        index += 1
+    return tuple(dict.fromkeys(paths))
+
+
+def _bash_target_is_unprovable(command: str) -> bool:
+    """Reject expansions that can conceal a target path from the hook."""
+
+    quote: str | None = None
+    escaped = False
+    index = 0
+    while index < len(command):
+        char = command[index]
+        if escaped:
+            escaped = False
+            index += 1
+            continue
+        if quote == "'":
+            if char == "'":
+                quote = None
+            index += 1
+            continue
+        if char == "\\":
+            escaped = True
+            index += 1
+            continue
+        if char == '"':
+            quote = None if quote == '"' else '"'
+            index += 1
+            continue
+        if quote == '"':
+            if char in {"$", "`"}:
+                return True
+            index += 1
+            continue
+        if char == "'":
+            quote = "'"
+            index += 1
+            continue
+        if char in {"$", "`", "*", "?", "["} or command.startswith((">(", "<("), index):
+            return True
+        index += 1
+    return False
+
+
+def _bash_explicit_worktree(command: str) -> Path | None:
+    """Return one literal runtime cwd attested by a supported Bash form."""
+
+    if _bash_target_is_unprovable(command):
+        return None
+    commands = _shell_commands(command)
+    if commands is None or len(commands) != 1:
+        return None
+    argv = commands[0]
+    if len(argv) >= 4 and argv[:2] == ("/usr/bin/env", "-C"):
+        return Path(argv[2]).expanduser().resolve()
+    executable = Path(argv[0]).name if argv else ""
+    if executable in {"git", "make"} and len(argv) >= 3 and argv[1] == "-C":
+        return Path(argv[2]).expanduser().resolve()
+    return None
+
+
+def _bash_is_explicitly_bound(command: str, worktree: Path) -> bool:
+    """Require a literal runtime cwd when the native payload omits workdir."""
+
+    return _bash_explicit_worktree(command) == worktree
+
+
+def _session_status_command_is_read_only(argv: tuple[str, ...]) -> bool:
+    """Recognize only the canonical Python-backed session-status operation."""
+
+    tokens = list(argv)
+    bound_worktree: Path | None = None
+    if len(tokens) >= 4 and tokens[:2] == ["/usr/bin/env", "-C"]:
+        worktree = Path(tokens[2]).expanduser()
+        if not worktree.is_absolute():
+            return False
+        bound_worktree = worktree.resolve(strict=False)
+        tokens = tokens[3:]
+    if len(tokens) < 2 or tokens[0] != "/usr/bin/python3":
+        return False
+
+    script = Path(tokens[1]).expanduser()
+    if not script.is_absolute():
+        return False
+    resolved_script = script.resolve(strict=False)
+    installed_scripts = {
+        (Path.home() / ".codex/runtime/enforced-planning/scripts/session_status.py").resolve(strict=False),
+        (Path.home() / ".claude/runtime/enforced-planning/scripts/session_status.py").resolve(strict=False),
+    }
+    if resolved_script not in installed_scripts:
+        return False
+
+    seen: set[str] = set()
+    index = 2
+    while index < len(tokens):
+        token = tokens[index]
+        if token in _SESSION_STATUS_FLAG_OPTIONS:
+            if token in seen:
+                return False
+            seen.add(token)
+            index += 1
+            continue
+        option, separator, inline_value = token.partition("=")
+        if option not in _SESSION_STATUS_VALUE_OPTIONS or option in seen:
+            return False
+        seen.add(option)
+        if separator:
+            if not inline_value:
+                return False
+            index += 1
+            continue
+        if index + 1 >= len(tokens) or not tokens[index + 1]:
+            return False
+        index += 2
+    return True
+
+
+def _argv_is_read_only(argv: tuple[str, ...]) -> bool:
+    """Return whether one already-tokenized shell component is read-only."""
+
+    if _session_status_command_is_read_only(argv):
+        return True
+    if _goal_authority_validator_is_read_only(argv):
+        return True
+
+    executable_token = argv[0]
+    if Path(executable_token).name != executable_token:
+        return False
+    executable = executable_token
+    if executable in _SIMPLE_READ_ONLY_COMMANDS:
+        if executable == "date":
+            return _date_command_is_read_only(argv)
+        return not (
+            executable == "rg"
+            and any(
+                token == "--pre" or token.startswith("--pre=")
+                for token in argv[1:]
+            )
+        )
+    if executable == "systemctl":
+        return _systemctl_command_is_read_only(argv)
+    if executable == "sed":
+        tail = argv[1:]
+        if any(
+            (
+                token.startswith("--")
+                and len(token.partition("=")[0]) > 2
+                and "--in-place".startswith(token.partition("=")[0])
+            )
+            or (
+                token.startswith("-")
+                and not token.startswith("--")
+                and "i" in token[1:]
+            )
+            for token in tail
+        ):
+            return False
+        if len(tail) < 2 or tail[0] not in {"-n", "--quiet", "--silent"}:
+            return False
+        return re.fullmatch(r"\d+(?:,\d+)?p", tail[1]) is not None
+    if executable == "find":
+        mutating = {
+            "-delete",
+            "-exec",
+            "-execdir",
+            "-fls",
+            "-fprint",
+            "-fprint0",
+            "-fprintf",
+            "-ok",
+            "-okdir",
+        }
+        return not any(token in mutating for token in argv[1:])
+    if executable == "sort":
+        return _sort_command_is_read_only(argv)
+    if executable == "gh":
+        return _gh_command_is_read_only(argv)
+    return executable == "git" and _git_command_is_read_only(argv)
+
+
+def _goal_authority_validator_is_read_only(argv: tuple[str, ...]) -> bool:
+    """Admit the exact shared goal validator with one read-only document operand."""
+
+    if len(argv) != 3 or argv[0] != "/usr/bin/python3":
+        return False
+    validator = Path(argv[1]).expanduser()
+    if not validator.is_absolute():
+        return False
+    expected = (
+        Path.home()
+        / ".agents"
+        / "skills"
+        / "authoring-goals"
+        / "scripts"
+        / "validate_goal_authority.py"
+    ).resolve(strict=False)
+    return validator.resolve(strict=False) == expected and bool(argv[2])
+
+
+def _systemctl_command_is_read_only(argv: tuple[str, ...]) -> bool:
+    """Admit only bounded systemd queries; lifecycle verbs remain claim-bound."""
+
+    flags = {
+        "--user",
+        "--system",
+        "--no-pager",
+        "--plain",
+        "--quiet",
+        "--no-legend",
+        "--full",
+        "--all",
+        "--value",
+    }
+    value_prefixes = ("--property=", "--type=", "--state=", "--lines=")
+    index = 1
+    while index < len(argv) and (
+        argv[index] in flags or argv[index].startswith(value_prefixes)
+    ):
+        index += 1
+    if index >= len(argv) or argv[index] not in {"is-active", "show"}:
+        return False
+    verb = argv[index]
+    tail = argv[index + 1 :]
+    if verb == "is-active" and not any(not token.startswith("-") for token in tail):
+        return False
+    return all(
+        not token.startswith("-")
+        or token in flags
+        or token.startswith(value_prefixes)
+        for token in tail
+    )
+
+
+def adapt_native_payload(
+    payload: dict[str, Any],
+    *,
+    client: str,
+    claim_bootstrap_classifier: BashBootstrapClassifier | None = None,
+) -> dict[str, Any]:
     """Normalize one supported native event without retaining write contents."""
 
     if not isinstance(payload, dict):
@@ -125,7 +973,19 @@ def adapt_native_payload(payload: dict[str, Any], *, client: str) -> dict[str, A
     if not isinstance(tool_input, dict):
         raise FastPreWriteError("PreToolUse payload requires object field 'tool_input'")
 
-    if client == "codex":
+    bash_classification: str | None = None
+    if tool_name == "Bash":
+        command = tool_input.get("command")
+        if not isinstance(command, str) or not command.strip():
+            raise FastPreWriteError("Bash requires non-empty string tool_input.command")
+        bash_declared_paths = _bash_declared_paths(command)
+        target_paths = bash_declared_paths
+        bash_classification = classify_bash_command(
+            command,
+            claim_bootstrap_classifier=claim_bootstrap_classifier,
+        )
+    elif client == "codex":
+        bash_declared_paths = ()
         if tool_name != "apply_patch":
             raise FastPreWriteError(f"Unsupported Codex pre-write tool: {tool_name!r}")
         command = tool_input.get("command")
@@ -135,15 +995,18 @@ def adapt_native_payload(payload: dict[str, Any], *, client: str) -> dict[str, A
         if not target_paths:
             raise FastPreWriteError("Codex apply_patch payload contains no provable target paths")
     else:
-        if tool_name not in {"Edit", "Write"}:
+        bash_declared_paths = ()
+        if tool_name not in {"Edit", "Write", "NotebookEdit"}:
             raise FastPreWriteError(f"Unsupported Claude pre-write tool: {tool_name!r}")
-        file_path = tool_input.get("file_path")
+        path_field = "notebook_path" if tool_name == "NotebookEdit" else "file_path"
+        file_path = tool_input.get(path_field)
         if not isinstance(file_path, str) or not file_path.strip():
-            raise FastPreWriteError(f"Claude {tool_name} requires string tool_input.file_path")
+            raise FastPreWriteError(f"Claude {tool_name} requires string tool_input.{path_field}")
         target_paths = (file_path.strip(),)
 
-    raw_session = _nonempty(payload, "session_id")
-    session_id = raw_session if raw_session.startswith(f"{client}:") else f"{client}:{raw_session}"
+    from enforced_planning.session_target import effective_session_id
+
+    session_id = effective_session_id(payload, client)
     return {
         "client": client,
         "hook_event_name": "PreToolUse",
@@ -151,6 +1014,13 @@ def adapt_native_payload(payload: dict[str, Any], *, client: str) -> dict[str, A
         "session_id": session_id,
         "cwd": _nonempty(payload, "cwd"),
         "target_paths": target_paths,
+        "bash_classification": bash_classification,
+        "bash_declared_paths": bash_declared_paths,
+        "bash_target_unprovable": _bash_target_is_unprovable(command) if tool_name == "Bash" else False,
+        "bash_command": command if tool_name == "Bash" else None,
+        "session_target_error_code": payload.get("_session_target_error_code"),
+        "session_target_error": payload.get("_session_target_error"),
+        "session_target_rebound": bool(payload.get("_session_target_worktree")),
     }
 
 
@@ -169,10 +1039,16 @@ def _git(path: Path, *args: str, allow_failure: bool = False) -> str | None:
     raise FastPreWriteError(f"git {' '.join(args)} failed: {detail}")
 
 
-def _repository_context(request: dict[str, Any]) -> dict[str, Any]:
-    cwd = Path(str(request["cwd"])).expanduser().resolve()
+def _existing_probe(path: Path) -> Path:
+    probe = path
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    return probe if probe.is_dir() else probe.parent
+
+
+def _git_identity(path: Path) -> tuple[Path, Path, str]:
     identity = _git(
-        cwd,
+        _existing_probe(path),
         "rev-parse",
         "--show-toplevel",
         "--path-format=absolute",
@@ -193,25 +1069,61 @@ def _repository_context(request: dict[str, Any]) -> dict[str, Any]:
     if not branch:
         raise FastPreWriteError("Pre-write enforcement requires a named Git branch")
 
-    normalized: list[str] = []
-    for raw_path in request["target_paths"]:
-        candidate = Path(raw_path).expanduser()
-        if not candidate.is_absolute():
-            candidate = worktree / candidate
-        resolved = candidate.resolve(strict=False)
-        try:
-            relative = resolved.relative_to(worktree)
-        except ValueError as exc:
-            raise FastPreWriteError(f"target path escapes active worktree: {raw_path}") from exc
-        value = relative.as_posix()
-        if value in {"", "."}:
-            raise FastPreWriteError("target path must identify a file below the worktree root")
-        normalized.append(value)
+    return worktree, repo_root, branch
+
+
+def _repository_context(request: dict[str, Any]) -> dict[str, Any]:
+    cwd = Path(str(request["cwd"])).expanduser().resolve()
+    raw_targets = tuple(request["target_paths"])
+    if request.get("tool_name") == "Bash":
+        worktree, repo_root, branch = _git_identity(cwd)
+        normalized: list[str] = []
+        outside: list[str] = []
+        for raw_path in request.get("bash_declared_paths", ()):
+            candidate = Path(raw_path).expanduser()
+            if not candidate.is_absolute():
+                candidate = cwd / candidate
+            resolved = candidate.resolve(strict=False)
+            try:
+                relative = resolved.relative_to(worktree)
+            except ValueError:
+                outside.append(str(resolved))
+                continue
+            value = relative.as_posix()
+            if value not in {"", "."}:
+                normalized.append(value)
+    else:
+        if not raw_targets:
+            raise FastPreWriteError("pre-write request contains no target paths")
+        normalized = []
+        worktree = repo_root = None
+        branch = ""
+        for raw_path in raw_targets:
+            candidate = Path(raw_path).expanduser()
+            if not candidate.is_absolute():
+                candidate = cwd / candidate
+            resolved = candidate.resolve(strict=False)
+            target_worktree, target_repo, target_branch = _git_identity(resolved)
+            if worktree is None:
+                worktree, repo_root, branch = target_worktree, target_repo, target_branch
+            elif (target_worktree, target_repo, target_branch) != (worktree, repo_root, branch):
+                raise FastPreWriteError("all target paths must resolve to the same Git worktree and branch")
+            assert worktree is not None
+            try:
+                relative = resolved.relative_to(worktree)
+            except ValueError as exc:
+                raise FastPreWriteError(f"target path escapes active worktree: {raw_path}") from exc
+            value = relative.as_posix()
+            if value in {"", "."}:
+                raise FastPreWriteError("target path must identify a file below the worktree root")
+            normalized.append(value)
+        assert worktree is not None and repo_root is not None
     return {
         "worktree_path": str(worktree),
         "repo_root": str(repo_root),
         "branch": branch,
         "normalized_target_paths": tuple(dict.fromkeys(normalized)),
+        "bash_paths_outside_worktree": tuple(dict.fromkeys(outside)) if request.get("tool_name") == "Bash" else (),
     }
 
 
@@ -367,7 +1279,15 @@ def _dynamic_claim_issues(claim: dict[str, Any]) -> tuple[str, ...]:
             check=False,
         )
         if merged.returncode == 0:
-            issues.append("merged_active_claim_requires_disposition")
+            worktree_status = _git(
+                Path(worktree_raw).expanduser(),
+                "status",
+                "--porcelain",
+                "--untracked-files=normal",
+                allow_failure=True,
+            )
+            if worktree_status in {None, ""}:
+                issues.append("merged_active_claim_requires_disposition")
     return tuple(dict.fromkeys(issues))
 
 
@@ -376,6 +1296,28 @@ def _path_is_claimed(target: str, claimed_path: str) -> bool:
     if normalized in {"", "."}:
         return True
     return target == normalized or target.startswith(f"{normalized}/")
+
+
+def _is_append_only_path(path: str) -> bool:
+    """Return whether a normalized target path lands only in an append-only store.
+
+    ``path`` is already a clean, worktree-relative POSIX path by the time this
+    is called (see ``_repository_context``'s ``normalized_target_paths``), so
+    no further normalization is needed here.
+    """
+
+    return any(
+        path == prefix or path.startswith(f"{prefix}/") for prefix in APPEND_ONLY_WRITE_PREFIXES
+    )
+
+
+def _claim_covers_targets(claim: dict[str, Any], targets: tuple[str, ...]) -> bool:
+    """Return whether one claim alone authorizes every normalized target."""
+
+    return all(
+        any(_path_is_claimed(target, claimed) for claimed in claim["write_paths"])
+        for target in targets
+    )
 
 
 def _record_receipt(path: Path, decision: dict[str, Any]) -> None:
@@ -438,12 +1380,64 @@ def evaluate_request_fast(
     projection_path: Path | None = None,
     receipt_path: Path = DEFAULT_RECEIPT_PATH,
     cache_hit: bool = True,
+    projection_recovery_command: str | None = None,
 ) -> dict[str, Any]:
     """Evaluate one normalized request and append its durable receipt."""
 
     if mode not in {"off", "observe", "enforce"}:
         raise FastPreWriteError("mode must be one of: off, observe, enforce")
     started = time.perf_counter()
+    bash_classification = request.get("bash_classification")
+    if bash_classification in {
+        "read_only",
+        "claim_bootstrap",
+        "native_mailbox",
+        "native_closeout",
+        "native_session_narrow",
+        "hook_feedback_report",
+        "read_target_selection",
+        "projection_recovery",
+    }:
+        reason_by_classification = {
+            "read_only": "bash_read_only",
+            "claim_bootstrap": "claim_bootstrap_command",
+            "native_mailbox": "native_mailbox_command",
+            "native_closeout": "native_closeout_command",
+            "native_session_narrow": "native_session_narrow_command",
+            "hook_feedback_report": "hook_feedback_report_command",
+            "read_target_selection": "read_target_selection_command",
+            "projection_recovery": "projection_recovery_command",
+        }
+        result = _decision(
+            started=started,
+            request=request,
+            mode=mode,
+            decision="allow",
+            reason_code=reason_by_classification[bash_classification],
+            context=None,
+        )
+        _record_receipt(receipt_path, result)
+        return result
+    target_error_code = request.get("session_target_error_code")
+    target_error = request.get("session_target_error")
+    if isinstance(target_error_code, str) and target_error_code:
+        result = _decision(
+            started=started,
+            request=request,
+            mode=mode,
+            decision="allow" if mode == "off" else ("observe_violation" if mode == "observe" else "deny"),
+            reason_code=target_error_code,
+            context=None,
+            details=(str(target_error),) if target_error else (),
+            recovery=(
+                "Create one healthy claim for this native session with the exact typed maintenance_worktree "
+                "claim-bootstrap transaction, or close duplicate claims before mutating. The raw Bash "
+                "bootstrap form must start with /usr/bin/python3 and the installed canonical "
+                "scripts/claim_bootstrap.py; bare python3 is intentionally not admitted."
+            ),
+        )
+        _record_receipt(receipt_path, result)
+        return result
     try:
         context = _repository_context(request)
     except FastPreWriteError as exc:
@@ -488,9 +1482,64 @@ def evaluate_request_fast(
             context=context,
             details=(projection_error or "projection unavailable",),
             recovery=(
-                "Run python scripts/refresh_prewrite_claim_projection.py "
-                f"--claims-dir {resolved_claims} --projection-path {resolved_projection}"
+                projection_recovery_command
+                or "Refresh the claim authority projection through the installed exact recovery command."
             ),
+        )
+        _record_receipt(receipt_path, result)
+        return result
+
+    outside_bash_paths = tuple(context.get("bash_paths_outside_worktree", ()))
+    if request.get("tool_name") == "Bash" and request.get("session_target_rebound"):
+        raw_command = request.get("bash_command")
+        if not isinstance(raw_command, str) or not _bash_is_explicitly_bound(
+            raw_command,
+            Path(context["worktree_path"]),
+        ):
+            result = _decision(
+                started=started,
+                request=request,
+                mode=mode,
+                decision="observe_violation" if mode == "observe" else "deny",
+                reason_code="bash_runtime_workdir_unattested",
+                context=context,
+                recovery=(
+                    "The native hook omitted the shell workdir. Re-run one literal command through "
+                    f"/usr/bin/env -C {context['worktree_path']} <command>, or use git/make -C with that exact worktree."
+                ),
+            )
+            _record_receipt(receipt_path, result)
+            return result
+    if request.get("session_target_rebound") and request.get("bash_target_unprovable"):
+        result = _decision(
+            started=started,
+            request=request,
+            mode=mode,
+            decision="observe_violation" if mode == "observe" else "deny",
+            reason_code="bash_target_unprovable",
+            context=context,
+            recovery=(
+                "Use literal paths inside the exact claimed worktree; variable, wildcard, and command "
+                "expansions cannot establish mutation authority from a workspace-root hook payload."
+            ),
+        )
+        _record_receipt(receipt_path, result)
+        return result
+    if outside_bash_paths:
+        recovery = (
+            "If this is inspection, split it into simple read-only commands without shell loops, "
+            "substitutions, or redirection. Otherwise run the mutation inside the exact claimed "
+            "worktree or create a separate claimed lane."
+        )
+        result = _decision(
+            started=started,
+            request=request,
+            mode=mode,
+            decision="observe_violation" if mode == "observe" else "deny",
+            reason_code="bash_path_outside_worktree",
+            context=context,
+            details=outside_bash_paths,
+            recovery=recovery,
         )
         _record_receipt(receipt_path, result)
         return result
@@ -509,32 +1558,65 @@ def evaluate_request_fast(
     reason_code = "exact_live_claim"
     details: tuple[str, ...] = ()
     recovery: str | None = None
-    if not candidates:
+    authorizing_candidates = [
+        candidate
+        for candidate in candidates
+        if _claim_covers_targets(candidate, context["normalized_target_paths"])
+    ]
+    if not candidates and context["normalized_target_paths"] and all(
+        _is_append_only_path(path) for path in context["normalized_target_paths"]
+    ):
+        # An append-only store cannot contend with itself (mirrors
+        # coordination_claims.py's APPEND_ONLY_WRITE_PREFIXES conflict
+        # exemption). Every target must be append-only -- a mutation mixing
+        # one append-only path with any ordinary path still requires a claim.
+        authorized = True
+        reason_code = "append_only_exempt"
+    elif not candidates:
         reason_code = "no_exact_claim"
-        recovery = "Create or resume an exact claimed worktree lane for this session before editing."
-    elif len(candidates) > 1:
+        recovery = (
+            "If this is inspection, split it into simple read-only commands without shell control flow. "
+            "Otherwise create or resume an exact claimed worktree lane before editing; from a shared-root "
+            f"session use /usr/bin/make -C {context['repo_root']} maintenance-worktree BRANCH=<safe-branch>."
+        )
+    elif len(authorizing_candidates) > 1:
         reason_code = "ambiguous_exact_claim"
-        details = tuple(sorted(f"{item['projects'][0]}:{item['scope']}" for item in candidates))
-        recovery = "Close or reconcile duplicate live claims before editing."
+        details = tuple(
+            sorted(f"{item['projects'][0]}:{item['scope']}" for item in authorizing_candidates)
+        )
+        recovery = "Close or reconcile overlapping live claims before editing."
+    elif not authorizing_candidates:
+        # Preserve the exact claim on the receipt when only one identity
+        # candidate exists. With parent/child claims, no single claim may
+        # combine disjoint write scopes into authority for one mutation.
+        claim = candidates[0] if len(candidates) == 1 else None
+        if claim is not None:
+            health_issues = tuple(
+                dict.fromkeys([*claim["static_issues"], *_dynamic_claim_issues(claim)])
+            )
+            if health_issues:
+                reason_code = "claim_not_healthy"
+                details = health_issues
+                recovery = "Repair or resume the claim through the sanctioned session workflow."
+            else:
+                reason_code = "path_outside_claim"
+                details = tuple(context["normalized_target_paths"])
+                recovery = "Use a separately claimed lane or update the declared write scope before editing."
+        else:
+            reason_code = "path_outside_claim"
+            details = tuple(context["normalized_target_paths"])
+            recovery = (
+                "Use one claim whose declared write scope covers every target; disjoint claims do not combine authority."
+            )
     else:
-        claim = candidates[0]
+        claim = authorizing_candidates[0]
         health_issues = tuple(dict.fromkeys([*claim["static_issues"], *_dynamic_claim_issues(claim)]))
         if health_issues:
             reason_code = "claim_not_healthy"
             details = health_issues
             recovery = "Repair or resume the claim through the sanctioned session workflow."
         else:
-            outside = tuple(
-                target
-                for target in context["normalized_target_paths"]
-                if not any(_path_is_claimed(target, claimed) for claimed in claim["write_paths"])
-            )
-            if outside:
-                reason_code = "path_outside_claim"
-                details = outside
-                recovery = "Use a separately claimed lane or update the declared write scope before editing."
-            else:
-                authorized = True
+            authorized = True
 
     result = _decision(
         started=started,
@@ -560,16 +1642,23 @@ def evaluate_prewrite_fast(
     claims_dir: Path = DEFAULT_CLAIMS_DIR,
     projection_path: Path | None = None,
     receipt_path: Path = DEFAULT_RECEIPT_PATH,
+    claim_bootstrap_classifier: BashBootstrapClassifier | None = None,
+    projection_recovery_command: str | None = None,
 ) -> dict[str, Any]:
     """Normalize and evaluate one native hook payload."""
 
-    request = adapt_native_payload(payload, client=client)
+    request = adapt_native_payload(
+        payload,
+        client=client,
+        claim_bootstrap_classifier=claim_bootstrap_classifier,
+    )
     return evaluate_request_fast(
         request,
         mode=mode,
         claims_dir=claims_dir,
         projection_path=projection_path,
         receipt_path=receipt_path,
+        projection_recovery_command=projection_recovery_command,
     )
 
 
@@ -579,6 +1668,7 @@ __all__ = [
     "DEFAULT_RECEIPT_PATH",
     "FastPreWriteError",
     "adapt_native_payload",
+    "classify_bash_command",
     "evaluate_prewrite_fast",
     "evaluate_request_fast",
     "projection_path_for",

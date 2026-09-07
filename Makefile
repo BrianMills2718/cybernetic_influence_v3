@@ -88,6 +88,7 @@ WORKTREE_CREATE_SCRIPT := scripts/meta/worktree-coordination/create_worktree.py
 WORKTREE_REMOVE_SCRIPT := scripts/meta/worktree-coordination/safe_worktree_remove.py
 WORKTREE_CLAIMS_SCRIPT := scripts/meta/worktree-coordination/../check_coordination_claims.py
 WORKTREE_SESSION_START_SCRIPT := scripts/meta/worktree-coordination/../session_start.py
+WORKTREE_SESSION_NARROW_SCRIPT := scripts/meta/worktree-coordination/../session_narrow.py
 WORKTREE_SESSION_HEARTBEAT_SCRIPT := scripts/meta/worktree-coordination/../session_heartbeat.py
 WORKTREE_SESSION_STATUS_SCRIPT := scripts/meta/worktree-coordination/../session_status.py
 WORKTREE_SESSION_END_SCRIPT := scripts/meta/worktree-coordination/../session_end.py
@@ -96,11 +97,14 @@ WORKTREE_SESSION_CLOSE_SCRIPT := scripts/meta/worktree-coordination/../session_c
 WORKTREE_REVIEW_CLAIM_SCRIPT := scripts/meta/worktree-coordination/create_review_claim.py
 WORKTREE_RAISE_CONCERN_SCRIPT := scripts/meta/worktree-coordination/raise_concern.py
 WORKTREE_PLAN_READINESS_SCRIPT := scripts/meta/worktree-coordination/../check_plan_readiness.py
+WORKTREE_FINISH_SCRIPT := scripts/meta/worktree-coordination/finish_pr.py
 SURFACE_RUNTIME_SCRIPT := scripts/meta/worktree-coordination/../surface_runtime.py
 WORKTREE_DIR ?= $(shell $(PYTHON) "$(WORKTREE_CREATE_SCRIPT)" --repo-root . --print-default-worktree-dir)
+WORKTREE_REPO_ROOT ?= $(shell git rev-parse --path-format=absolute --git-common-dir 2>/dev/null | sed 's|/\.git$$||')
 WORKTREE_START_POINT ?= HEAD
+WORKTREE_START_REVISION := $(shell git -C "$(WORKTREE_REPO_ROOT)" rev-parse --verify "$(WORKTREE_START_POINT)^{commit}" 2>/dev/null)
 WORKTREE_PROJECT ?= $(shell $(PYTHON) "$(WORKTREE_CREATE_SCRIPT)" --repo-root . --print-canonical-project)
-WORKTREE_AGENT ?= $(shell if [ -n "$$CODEX_THREAD_ID" ]; then printf codex; elif [ -n "$$CLAUDE_SESSION_ID" ] || [ -n "$$CLAUDE_CODE_SSE_PORT" ]; then printf claude-code; elif [ -n "$$OPENCLAW_SESSION_ID" ] || [ -n "$$OPENCLAW_RUN_ID" ]; then printf openclaw; fi)
+WORKTREE_AGENT ?= $(shell if [ -n "$$CODEX_THREAD_ID" ]; then printf codex; elif [ -n "$$CLAUDE_CODE_SESSION_ID" ] || [ -n "$$CLAUDE_SESSION_ID" ] || [ -n "$$CLAUDE_CODE_SSE_PORT" ]; then printf claude-code; elif [ -n "$$OPENCLAW_SESSION_ID" ] || [ -n "$$OPENCLAW_RUN_ID" ]; then printf openclaw; fi)
 SESSION_GOAL ?=
 SESSION_PHASE ?=
 SESSION_NEXT ?=
@@ -112,11 +116,18 @@ ALLOW_UNPLANNED ?=
 PLAN_RESUME ?=
 WORKTREE_EXECUTION_PROFILE ?= coordinated
 PLAN_PROJECT ?= $(WORKTREE_PROJECT)
+PLAN_REPO_ROOT ?=
+PLAN_START_POINT ?=
 PLAN_READINESS_COMMAND ?=
 SESSION_CLAIM_TYPE ?= program
 SESSION_PARENT_SCOPE ?=
 SESSION_WRITE_PATHS ?=
 SESSION_READ_PATHS ?=
+SESSION_WORK_GRAPH ?=
+SESSION_WORK_UNIT_ID ?=
+SESSION_BROAD_SCOPE_MODE ?=
+SESSION_BROAD_SCOPE_REASON ?=
+SESSION_TARGET_WORKTREE_PATH ?=
 WORKTREE_DISPOSITION ?= merged
 WORKTREE_DISPOSITION_REASON ?=
 WORKTREE_RECOVERY_REF ?=
@@ -126,7 +137,7 @@ REVIEW_SCOPE ?=
 REVIEW_NOTES ?=
 RECIPIENT ?=
 
-.PHONY: worktree maintenance-worktree worktree-list worktree-remove session-start session-heartbeat session-status session-end session-finish session-close review-claim raise-concern verification-batch-freeze verification-batch-check verification-batch-thaw surface-up surface-preview surface-status surface-down surface-audit
+.PHONY: worktree goal-worktree maintenance-worktree worktree-list worktree-remove finish session-start session-narrow session-heartbeat session-status session-end session-finish session-close review-claim raise-concern verification-batch-freeze verification-batch-check verification-batch-thaw surface-up surface-preview surface-status surface-down surface-audit
 
 verification-batch-freeze:  ## Freeze clean HEAD for DECISION="..." VERIFY_COMMAND="..."
 	@test -n "$(DECISION)" || (echo "DECISION is required" && exit 1)
@@ -171,9 +182,17 @@ endif
 		echo "Install or sync the sanctioned session lifecycle module before using make worktree."; \
 		exit 1; \
 	fi
+	@test -n "$(WORKTREE_START_REVISION)" || { \
+		echo "Unable to resolve one full Git start revision from $(WORKTREE_START_POINT)"; \
+		exit 1; \
+	}
 	@$(PYTHON) "$(WORKTREE_PLAN_READINESS_SCRIPT)" \
 		$(if $(PLAN),--qualified-plan-id "$(PLAN_PROJECT)#$(PLAN)",) \
 		--execution-profile "$(WORKTREE_EXECUTION_PROFILE)" \
+		--repo-root "$(WORKTREE_REPO_ROOT)" \
+		--start-point "$(WORKTREE_START_REVISION)" \
+		$(if $(PLAN_REPO_ROOT),--plan-repo-root "$(PLAN_REPO_ROOT)",) \
+		$(if $(PLAN_START_POINT),--plan-start-point "$(PLAN_START_POINT)",) \
 		$(if $(PLAN_READINESS_COMMAND),--query-command "$(PLAN_READINESS_COMMAND)",) \
 		--repository "$(WORKTREE_PROJECT)" \
 		--lane-id "$(BRANCH)" \
@@ -190,64 +209,163 @@ endif
 		--scope "$(BRANCH)" \
 		--intent "$(TASK)" \
 		--claim-type "$(SESSION_CLAIM_TYPE)" \
+		--repo-root "$(WORKTREE_REPO_ROOT)" \
 		--branch "$(BRANCH)" \
 		--worktree-path "$(WORKTREE_DIR)/$(BRANCH)" \
+		$(if $(SESSION_BROAD_SCOPE_MODE),--broad-scope-mode "$(SESSION_BROAD_SCOPE_MODE)",) \
+		$(if $(SESSION_BROAD_SCOPE_REASON),--broad-scope-reason "$(SESSION_BROAD_SCOPE_REASON)",) \
+		$(if $(SESSION_TARGET_WORKTREE_PATH),--target-worktree-path "$(SESSION_TARGET_WORKTREE_PATH)",) \
+		--start-point "$(WORKTREE_START_REVISION)" \
+		$(if $(PLAN_REPO_ROOT),--plan-repo-root "$(PLAN_REPO_ROOT)",) \
+		$(if $(PLAN_START_POINT),--plan-start-point "$(PLAN_START_POINT)",) \
+		--require-new \
+		$(if $(PLAN_RESUME),--resume,) \
 		--session-name "$(SESSION_GOAL)" \
+		--broader-goal "$(SESSION_GOAL)" \
 		$(if $(SESSION_PARENT_SCOPE),--parent-scope "$(SESSION_PARENT_SCOPE)",) \
 		$(if $(filter 1 true yes,$(SESSION_ALLOW_PARALLEL)),--allow-parallel,) \
 		$(foreach path,$(SESSION_WRITE_PATHS),--write-path "$(path)") \
 		$(foreach path,$(SESSION_READ_PATHS),--read-path "$(path)") \
-		$(if $(PLAN),--plan "$(PLAN_PROJECT)#$(PLAN)",)
+		$(if $(SESSION_WORK_GRAPH),--work-graph "$(SESSION_WORK_GRAPH)",) \
+		$(if $(SESSION_WORK_UNIT_ID),--work-unit-id "$(SESSION_WORK_UNIT_ID)",) \
+		$(if $(PLAN),--plan "$(PLAN_PROJECT)#$(PLAN)",$(if $(ALLOW_UNPLANNED),--plan UNPLANNED,))
 	@mkdir -p "$(WORKTREE_DIR)"
-	@if ! $(PYTHON) "$(WORKTREE_CREATE_SCRIPT)" --repo-root . --path "$(WORKTREE_DIR)/$(BRANCH)" --branch "$(BRANCH)" --start-point "$(WORKTREE_START_POINT)"; then \
-		$(PYTHON) "$(WORKTREE_CLAIMS_SCRIPT)" --release --agent "$(WORKTREE_AGENT)" --project "$(WORKTREE_PROJECT)" --scope "$(BRANCH)" >/dev/null 2>&1 || true; \
+	@creation_receipt=$$(mktemp "$(WORKTREE_DIR)/.worktree-create.XXXXXX.json"); \
+	trap 'rm -f "$$creation_receipt"' EXIT HUP INT TERM; \
+	if ! $(PYTHON) "$(WORKTREE_CREATE_SCRIPT)" \
+		--repo-root "$(WORKTREE_REPO_ROOT)" \
+		--path "$(WORKTREE_DIR)/$(BRANCH)" \
+		--branch "$(BRANCH)" \
+		--start-point "$(WORKTREE_START_REVISION)" \
+		--require-write-claim \
+		--claim-agent "$(WORKTREE_AGENT)" \
+		--claim-project "$(WORKTREE_PROJECT)" \
+		$(foreach path,$(SESSION_WRITE_PATHS),--claim-write-path "$(path)") \
+		$(if $(PLAN),--claim-start-revision "$(WORKTREE_START_REVISION)",) \
+		--json > "$$creation_receipt"; then \
+		if ! $(PYTHON) -c 'import json, sys; payload=json.load(open(sys.argv[1], encoding="utf-8")); print("Worktree creation failed: " + payload["message"], file=sys.stderr)' "$$creation_receipt"; then \
+			echo "Worktree creation failed and its receipt was unreadable." >&2; \
+		fi; \
+		if ! created_branch=$$($(PYTHON) -c 'import json, sys; print(1 if json.load(open(sys.argv[1], encoding="utf-8"))["created_branch"] else 0)' "$$creation_receipt"); then \
+			echo "Worktree creation failed without a readable ownership receipt; claim retained."; \
+			exit 1; \
+		fi; \
+		unsafe_residue=0; \
+		if [ -e "$(WORKTREE_DIR)/$(BRANCH)" ]; then unsafe_residue=1; fi; \
+		if [ "$$created_branch" -eq 1 ] && git -C "$(WORKTREE_REPO_ROOT)" show-ref --verify --quiet "refs/heads/$(BRANCH)"; then unsafe_residue=1; fi; \
+		if [ "$$unsafe_residue" -eq 0 ]; then \
+			$(PYTHON) "$(WORKTREE_CLAIMS_SCRIPT)" --release \
+				--agent "$(WORKTREE_AGENT)" --project "$(WORKTREE_PROJECT)" --scope "$(BRANCH)" \
+				--require-current-session --rollback-managed-lane \
+				$(if $(PLAN),--expected-start-revision "$(WORKTREE_START_REVISION)",) || exit 1; \
+		else \
+			echo "Worktree creation failed with recoverable branch/worktree residue; claim retained."; \
+		fi; \
 		exit 1; \
-	fi
-	@if ! $(PYTHON) "$(WORKTREE_SESSION_START_SCRIPT)" \
+	fi; \
+	if ! created_branch=$$($(PYTHON) -c 'import json, sys; print(1 if json.load(open(sys.argv[1], encoding="utf-8"))["created_branch"] else 0)' "$$creation_receipt"); then \
+		echo "Worktree was created without a readable ownership receipt; claim retained."; \
+		exit 1; \
+	fi; \
+	if ! $(PYTHON) "$(WORKTREE_SESSION_START_SCRIPT)" \
 		--agent "$(WORKTREE_AGENT)" \
 		--project "$(WORKTREE_PROJECT)" \
 		--scope "$(BRANCH)" \
 		--intent "$(TASK)" \
-		--repo-root "$(CURDIR)" \
+		--repo-root "$(WORKTREE_REPO_ROOT)" \
 		--worktree-path "$(WORKTREE_DIR)/$(BRANCH)" \
 		--branch "$(BRANCH)" \
 		--broader-goal "$(SESSION_GOAL)" \
 		--current-phase "$(SESSION_PHASE)" \
 		--claim-type "$(SESSION_CLAIM_TYPE)" \
+		$(if $(SESSION_BROAD_SCOPE_MODE),--broad-scope-mode "$(SESSION_BROAD_SCOPE_MODE)",) \
+		$(if $(SESSION_BROAD_SCOPE_REASON),--broad-scope-reason "$(SESSION_BROAD_SCOPE_REASON)",) \
+		$(if $(SESSION_TARGET_WORKTREE_PATH),--target-worktree-path "$(SESSION_TARGET_WORKTREE_PATH)",) \
 		$(if $(SESSION_PARENT_SCOPE),--parent-scope "$(SESSION_PARENT_SCOPE)",) \
 		$(if $(filter 1 true yes,$(SESSION_ALLOW_PARALLEL)),--allow-parallel,) \
 		$(foreach path,$(SESSION_WRITE_PATHS),--write-path "$(path)") \
 		$(foreach path,$(SESSION_READ_PATHS),--read-path "$(path)") \
-		$(if $(PLAN),--plan "$(PLAN_PROJECT)#$(PLAN)",) \
+		$(if $(SESSION_WORK_GRAPH),--work-graph "$(SESSION_WORK_GRAPH)",) \
+		$(if $(SESSION_WORK_UNIT_ID),--work-unit-id "$(SESSION_WORK_UNIT_ID)",) \
+		$(if $(PLAN),--plan "$(PLAN_PROJECT)#$(PLAN)",$(if $(ALLOW_UNPLANNED),--plan UNPLANNED,)) \
+		$(if $(PLAN),--start-revision "$(WORKTREE_START_REVISION)",) \
+		$(if $(PLAN_REPO_ROOT),--plan-repo-root "$(PLAN_REPO_ROOT)",) \
+		$(if $(PLAN_START_POINT),--plan-start-point "$(PLAN_START_POINT)",) \
 		$(if $(ALLOW_UNPLANNED),--allow-unplanned,) \
 		$(if $(SESSION_NEXT),--next-phase "$(SESSION_NEXT)",) \
 		$(if $(SESSION_DEPENDS),--depends-on "$(SESSION_DEPENDS)",) \
 		$(if $(SESSION_STOP_CONDITIONS),--stop-condition "$(SESSION_STOP_CONDITIONS)",) \
 		$(if $(SESSION_NOTE),--notes "$(SESSION_NOTE)",); then \
-		git worktree remove --force "$(WORKTREE_DIR)/$(BRANCH)" >/dev/null 2>&1 || true; \
-		git branch -D "$(BRANCH)" >/dev/null 2>&1 || true; \
-		$(PYTHON) "$(WORKTREE_CLAIMS_SCRIPT)" --release --agent "$(WORKTREE_AGENT)" --project "$(WORKTREE_PROJECT)" --scope "$(BRANCH)" >/dev/null 2>&1 || true; \
+		cleanup_ok=1; \
+		git -C "$(WORKTREE_REPO_ROOT)" worktree remove --force "$(WORKTREE_DIR)/$(BRANCH)" || cleanup_ok=0; \
+		if [ "$$created_branch" -eq 1 ]; then \
+			git -C "$(WORKTREE_REPO_ROOT)" branch -D "$(BRANCH)" || cleanup_ok=0; \
+		fi; \
+		if [ "$$cleanup_ok" -eq 1 ]; then \
+			$(PYTHON) "$(WORKTREE_CLAIMS_SCRIPT)" --release \
+				--agent "$(WORKTREE_AGENT)" --project "$(WORKTREE_PROJECT)" --scope "$(BRANCH)" \
+				--require-current-session --rollback-managed-lane \
+				$(if $(PLAN),--expected-start-revision "$(WORKTREE_START_REVISION)",) || exit 1; \
+		else \
+			echo "Session start failed and exact cleanup was incomplete; claim retained."; \
+		fi; \
 		exit 1; \
-	fi
+	fi; \
+	rm -f "$$creation_receipt"; \
+	trap - EXIT HUP INT TERM
 	@echo ""
 	@echo "Worktree created at $(WORKTREE_DIR)/$(BRANCH)"
 	@echo "Claim created for branch $(BRANCH)"
 	@echo "Session contract started for $(SESSION_GOAL)"
 
-maintenance-worktree:  ## Create a claimed light maintenance worktree without a numbered plan
+
+# Defaults that make `make maintenance-worktree BRANCH=<name>` sufficient.
+# The escape hatch this competes with (ALLOW_CANONICAL_CHECKOUT_COMMIT=1) is one
+# variable with zero blanks to fill. Requiring five blanks here is why one
+# session on 2026-08-23 took the hatch six times across two repositories rather
+# than create a single worktree. Every default below stays overridable, and
+# `make worktree` (plan-owned lanes) still requires all of them explicitly --
+# a numbered plan lane should not get its goal invented from a branch name.
+MAINTENANCE_AGENT = $(if $(strip $(WORKTREE_AGENT)),$(WORKTREE_AGENT),claude-code)
+# This is the one deliberately broad bootstrap claim.  A maintenance lane has
+# no declared implementation surface yet, so requiring a caller-supplied path
+# makes the sanctioned entrypoint impossible to use.  The surrounding command
+# still binds it to one repository, branch, worktree, and native session; the
+# lane must narrow its authority before it begins scoped implementation work.
+# Bootstrap claim scope for an unplanned maintenance lane. Defaults to the repo
+# root because the lane may not know its targets yet, but an explicit
+# SESSION_WRITE_PATHS must win: silently discarding it made every maintenance
+# lane conflict with every other active lane by construction, and the operator
+# saw a CONFLICT naming the other lanes rather than their own claim.
+MAINTENANCE_BOOTSTRAP_WRITE_PATHS = $(if $(strip $(SESSION_WRITE_PATHS)),$(SESSION_WRITE_PATHS),.)
+MAINTENANCE_REQUEST_JSON = $(shell $(PYTHON) -c 'import json,sys; print(json.dumps({"schema_version":"1.0","operation":"maintenance_worktree","agent":sys.argv[1],"project":sys.argv[2],"scope":sys.argv[3],"repo_root":sys.argv[4],"branch":sys.argv[3],"claim_type":"program","write_paths":sys.argv[5:]},separators=(",",":")))' "$(MAINTENANCE_AGENT)" "$(WORKTREE_PROJECT)" "$(BRANCH)" "$(WORKTREE_REPO_ROOT)" $(foreach path,$(MAINTENANCE_BOOTSTRAP_WRITE_PATHS),"$(path)"))
+
+GOAL_BOOTSTRAP_WRITE_PATHS = $(if $(strip $(SESSION_WRITE_PATHS)),$(SESSION_WRITE_PATHS),.)
+GOAL_REQUEST_ARG = $(shell $(PYTHON) -c 'import json,shlex,sys; print(shlex.quote(json.dumps({"schema_version":"1.0","operation":"goal_worktree","agent":sys.argv[1],"project":sys.argv[2],"scope":sys.argv[3],"repo_root":sys.argv[4],"branch":sys.argv[3],"claim_type":"program","plan_ref":sys.argv[5],"broader_goal":sys.argv[6],"current_phase":sys.argv[7],"next_action":sys.argv[8] or None,"write_paths":sys.argv[9:]},separators=(",",":"))))' "$(WORKTREE_AGENT)" "$(WORKTREE_PROJECT)" "$(BRANCH)" "$(WORKTREE_REPO_ROOT)" "$(GOAL_REF)" "$(SESSION_GOAL)" "$(SESSION_PHASE)" "$(SESSION_NEXT)" $(foreach path,$(GOAL_BOOTSTRAP_WRITE_PATHS),"$(path)"))
+
+goal-worktree:  ## Atomic goal-bound claim/worktree/tracker; requires BRANCH, GOAL_REF, SESSION_GOAL, SESSION_PHASE
+	@if [ -z "$(strip $(BRANCH))" ] || [ -z "$(strip $(GOAL_REF))" ] || [ -z "$(strip $(SESSION_GOAL))" ] || [ -z "$(strip $(SESSION_PHASE))" ]; then \
+		echo 'Usage: make goal-worktree BRANCH=... GOAL_REF=goal:... SESSION_GOAL="..." SESSION_PHASE="..."'; \
+		exit 2; \
+	fi
+	@if [ -z "$(strip $(WORKTREE_AGENT))" ]; then \
+		echo "Unable to infer agent runtime. Set WORKTREE_AGENT=codex|claude-code|openclaw"; \
+		exit 2; \
+	fi
+	@$(PYTHON) scripts/meta/claim_bootstrap.py --request-json $(GOAL_REQUEST_ARG)
+
+maintenance-worktree:  ## Claimed light maintenance worktree; needs BRANCH (other maintenance metadata has safe defaults)
 	@if [ -n "$(PLAN)" ]; then \
 		echo "maintenance-worktree is only for explicitly unplanned light maintenance; use make worktree PLAN=N for plan-owned work."; \
 		exit 2; \
 	fi
-	@$(MAKE) worktree \
-		BRANCH="$(BRANCH)" TASK="$(TASK)" WORKTREE_AGENT="$(WORKTREE_AGENT)" \
-		SESSION_GOAL="$(SESSION_GOAL)" SESSION_PHASE="$(SESSION_PHASE)" \
-		SESSION_NEXT="$(SESSION_NEXT)" SESSION_DEPENDS="$(SESSION_DEPENDS)" \
-		SESSION_STOP_CONDITIONS="$(SESSION_STOP_CONDITIONS)" SESSION_NOTE="$(SESSION_NOTE)" \
-		SESSION_CLAIM_TYPE="$(SESSION_CLAIM_TYPE)" SESSION_PARENT_SCOPE="$(SESSION_PARENT_SCOPE)" \
-		SESSION_ALLOW_PARALLEL="$(SESSION_ALLOW_PARALLEL)" \
-		SESSION_WRITE_PATHS="$(SESSION_WRITE_PATHS)" SESSION_READ_PATHS="$(SESSION_READ_PATHS)" \
-		WORKTREE_EXECUTION_PROFILE=light ALLOW_UNPLANNED=1
+	@if [ -z "$(strip $(BRANCH))" ]; then \
+		echo "BRANCH is required. Usage: make maintenance-worktree BRANCH=fix-hook-guard"; \
+		echo "Everything else has a default: TASK, SESSION_GOAL, and SESSION_PHASE come"; \
+		echo "from the branch name, and the agent from the runtime. Override any of them."; \
+		exit 2; \
+	fi
+	@$(PYTHON) scripts/meta/claim_bootstrap.py --request-json '$(MAINTENANCE_REQUEST_JSON)'
 
 session-start:  ## Create or refresh the active session contract for BRANCH=name
 ifndef BRANCH
@@ -270,22 +388,45 @@ endif
 		--project "$(WORKTREE_PROJECT)" \
 		--scope "$(BRANCH)" \
 		--intent "$(TASK)" \
-		--repo-root "$(CURDIR)" \
+		--repo-root "$(WORKTREE_REPO_ROOT)" \
 		--worktree-path "$(WORKTREE_DIR)/$(BRANCH)" \
 		--branch "$(BRANCH)" \
 		--broader-goal "$(SESSION_GOAL)" \
 		--current-phase "$(SESSION_PHASE)" \
 		--claim-type "$(SESSION_CLAIM_TYPE)" \
+		$(if $(SESSION_BROAD_SCOPE_MODE),--broad-scope-mode "$(SESSION_BROAD_SCOPE_MODE)",) \
+		$(if $(SESSION_BROAD_SCOPE_REASON),--broad-scope-reason "$(SESSION_BROAD_SCOPE_REASON)",) \
+		$(if $(SESSION_TARGET_WORKTREE_PATH),--target-worktree-path "$(SESSION_TARGET_WORKTREE_PATH)",) \
 		$(if $(SESSION_PARENT_SCOPE),--parent-scope "$(SESSION_PARENT_SCOPE)",) \
 		$(if $(filter 1 true yes,$(SESSION_ALLOW_PARALLEL)),--allow-parallel,) \
 		$(foreach path,$(SESSION_WRITE_PATHS),--write-path "$(path)") \
 		$(foreach path,$(SESSION_READ_PATHS),--read-path "$(path)") \
-		$(if $(PLAN),--plan "Plan #$(PLAN)",) \
+		$(if $(SESSION_WORK_GRAPH),--work-graph "$(SESSION_WORK_GRAPH)",) \
+		$(if $(SESSION_WORK_UNIT_ID),--work-unit-id "$(SESSION_WORK_UNIT_ID)",) \
+		$(if $(PLAN),--plan "$(PLAN_PROJECT)#$(PLAN)",$(if $(ALLOW_UNPLANNED),--plan UNPLANNED,)) \
+		$(if $(PLAN_REPO_ROOT),--plan-repo-root "$(PLAN_REPO_ROOT)",) \
+		$(if $(PLAN_START_POINT),--plan-start-point "$(PLAN_START_POINT)",) \
 		$(if $(ALLOW_UNPLANNED),--allow-unplanned,) \
 		$(if $(SESSION_NEXT),--next-phase "$(SESSION_NEXT)",) \
 		$(if $(SESSION_DEPENDS),--depends-on "$(SESSION_DEPENDS)",) \
 		$(if $(SESSION_STOP_CONDITIONS),--stop-condition "$(SESSION_STOP_CONDITIONS)",) \
 		$(if $(SESSION_NOTE),--notes "$(SESSION_NOTE)",)
+
+session-narrow:  ## Atomically reduce this native session's claim to SESSION_WRITE_PATHS
+ifndef BRANCH
+	$(error BRANCH is required. Usage: make session-narrow BRANCH=lane SESSION_WRITE_PATHS="path/one path/two")
+endif
+ifndef WORKTREE_AGENT
+	$(error Unable to infer agent runtime. Set WORKTREE_AGENT=codex|claude-code|openclaw)
+endif
+ifndef SESSION_WRITE_PATHS
+	$(error SESSION_WRITE_PATHS is required and must be a non-empty strict subset)
+endif
+	@$(PYTHON) "$(WORKTREE_SESSION_NARROW_SCRIPT)" \
+		--agent "$(WORKTREE_AGENT)" \
+		--project "$(WORKTREE_PROJECT)" \
+		--scope "$(BRANCH)" \
+		$(foreach path,$(SESSION_WRITE_PATHS),--write-path "$(path)")
 
 session-heartbeat:  ## Refresh heartbeat and optional phase for BRANCH=name
 ifndef BRANCH
@@ -312,7 +453,7 @@ endif
 		--agent "$(WORKTREE_AGENT)" \
 		$(if $(SESSION_NOTE),--reason "$(SESSION_NOTE)",)
 
-session-finish:  ## Finish the session for BRANCH=name; blocks if the worktree is dirty
+session-finish:  ## Record dirty handoff only; clean managed lanes must use session-close
 ifndef BRANCH
 	$(error BRANCH is required. Usage: make session-finish BRANCH=plan-42-feature)
 endif
@@ -366,6 +507,19 @@ endif
 	@$(MAKE) session-close BRANCH="$(BRANCH)" \
 		$(if $(WORKTREE_MERGE_COMMIT),WORKTREE_MERGE_COMMIT="$(WORKTREE_MERGE_COMMIT)",) \
 		$(if $(SESSION_NOTE),SESSION_NOTE="$(SESSION_NOTE)",)
+
+finish:  ## Review exact PR head, merge it, and close its claimed worktree
+ifndef BRANCH
+	$(error BRANCH is required. Usage: make finish BRANCH=feature PR=42 REVIEW_SPEC=/absolute/review-spec.json)
+endif
+ifndef PR
+	$(error PR is required. Usage: make finish BRANCH=feature PR=42 REVIEW_SPEC=/absolute/review-spec.json)
+endif
+ifndef REVIEW_SPEC
+	$(error REVIEW_SPEC is required and must be an absolute path outside the repository)
+endif
+	@test -f "$(WORKTREE_FINISH_SCRIPT)" || { echo "Missing finish module: $(WORKTREE_FINISH_SCRIPT)"; exit 1; }
+	@$(PYTHON) "$(WORKTREE_FINISH_SCRIPT)" --agent "$(WORKTREE_AGENT)" --project "$(WORKTREE_PROJECT)" --branch "$(BRANCH)" --pr "$(PR)" --review-spec "$(REVIEW_SPEC)"
 
 review-claim:  ## Create a review claim for TARGET_BRANCH=name WRITE_PATHS="a|b" TASK="..."
 ifndef TARGET_BRANCH

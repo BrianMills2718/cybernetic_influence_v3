@@ -9,8 +9,7 @@ from __future__ import annotations
 
 import json
 import subprocess
-from dataclasses import asdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -142,12 +141,16 @@ def _branch_claims(project: str, branch: str) -> list[coordination_claims.ClaimR
 def _healthy_branch_claims(
     claims: list[coordination_claims.ClaimRecord],
 ) -> list[coordination_claims.ClaimRecord]:
-    """Return branch claims with complete, live ownership metadata."""
+    """Return branch claims that still confer live push ownership.
+
+    A stalled progress lease is report-only: it requests advancement or
+    handoff but does not revoke claim ownership.
+    """
 
     return [
         claim
         for claim in claims
-        if coordination_claims.claim_runtime_status(claim) == "healthy"
+        if coordination_claims.claim_runtime_status(claim) in {"healthy", "stalled"}
     ]
 
 
@@ -194,14 +197,68 @@ def _claim_overlap_for_paths(
     changed_paths: list[str],
     claim: coordination_claims.ClaimRecord,
 ) -> list[str]:
-    """Return normalized changed-path overlaps against one active claim."""
+    """Return normalized changed-path overlaps against one active claim.
+
+    Append-only stores are excluded on both sides, exactly as claim-vs-claim
+    evaluation excludes them. Each lane creates its own immutable file there,
+    so publishing one is not contention with a lane that declared the store.
+    Without this the exemption existed at claim creation and vanished at push,
+    which let a lane be created and then refused publication of its own entry.
+    """
 
     overlaps: list[str] = []
     for changed_path in changed_paths:
         for write_path in claim.write_paths:
-            if coordination_claims._paths_overlap(changed_path, write_path):
-                overlaps.append(f"{changed_path} <-> {write_path}")
+            if not coordination_claims._paths_overlap(changed_path, write_path):
+                continue
+            if coordination_claims._is_append_only_path(
+                changed_path
+            ) and coordination_claims._is_append_only_path(write_path):
+                continue
+            overlaps.append(f"{changed_path} <-> {write_path}")
     return sorted(set(overlaps))
+
+
+def _is_same_session_default_integration(
+    repo_root: Path,
+    *,
+    canonical_repo_root: Path,
+    resolved_branch: str,
+    default_branch: str,
+    changed_paths: list[str],
+    claim: coordination_claims.ClaimRecord,
+) -> bool:
+    """Return whether HEAD safely contains one current-session source lane.
+
+    The source claim must remain live until its integration is published.  A
+    default-branch push may therefore overlap that claim only when native
+    runtime identity proves the same owner, the claimed branch is already an
+    ancestor of HEAD, and HEAD has not changed any claimed path after that
+    branch tip.
+    """
+
+    if resolved_branch != default_branch or not claim.branch or not claim.session_id:
+        return False
+    if not claim.repo_root or Path(claim.repo_root).expanduser().resolve() != canonical_repo_root:
+        return False
+    if coordination_claims.resolve_session_id(claim.agent) != claim.session_id:
+        return False
+    claim_ref = f"refs/heads/{claim.branch}"
+    if _run_git(repo_root, ["show-ref", "--verify", claim_ref]).returncode != 0:
+        return False
+    if _run_git(repo_root, ["merge-base", "--is-ancestor", claim_ref, "HEAD"]).returncode != 0:
+        return False
+    claimed_changed_paths = sorted(
+        path
+        for path in changed_paths
+        if any(coordination_claims._paths_overlap(path, write_path) for write_path in claim.write_paths)
+    )
+    if not claimed_changed_paths:
+        return False
+    return (
+        _run_git(repo_root, ["diff", "--quiet", claim_ref, "HEAD", "--", *claimed_changed_paths]).returncode
+        == 0
+    )
 
 
 def evaluate_push_safety(
@@ -268,8 +325,8 @@ def evaluate_push_safety(
             PushCheckFinding(
                 code="no_healthy_branch_claim",
                 message=(
-                    "The current branch has no healthy canonical claim with complete "
-                    "session identity. Resume or recreate the lane before pushing."
+                    "The current branch has no healthy or report-only stalled canonical "
+                    "claim with complete session identity. Resume or recreate the lane before pushing."
                 ),
                 details={
                     "branch": resolved_branch,
@@ -281,6 +338,7 @@ def evaluate_push_safety(
                             "session_name": claim.session_name,
                             "health_issues": coordination_claims.claim_health_issues(claim),
                             "liveness_issues": coordination_claims.claim_liveness_issues(claim),
+                            "progress_issues": coordination_claims.claim_progress_issues(claim),
                         }
                         for claim in branch_claims
                     ],
@@ -344,7 +402,26 @@ def evaluate_push_safety(
                 )
             )
             continue
-        if claim.claim_type == "write":
+        if claim.claim_type in {"write", "program"} and claim.write_paths:
+            if runtime_status in {"healthy", "stalled"} and _is_same_session_default_integration(
+                resolved_repo_root,
+                canonical_repo_root=canonical_repo_root,
+                resolved_branch=resolved_branch,
+                default_branch=default_branch,
+                changed_paths=changed_paths,
+                claim=claim,
+            ):
+                warnings.append(
+                    PushCheckFinding(
+                        code="same_session_integrated_claim",
+                        message=(
+                            "The current native session still owns this source claim, and its branch is "
+                            "integrated without later changes to the claimed paths."
+                        ),
+                        details=claim_details,
+                    )
+                )
+                continue
             live_write_overlap_paths.update(
                 overlap.split(" <-> ", 1)[0] for overlap in overlaps
             )
@@ -353,7 +430,7 @@ def evaluate_push_safety(
                 PushCheckFinding(
                     code="overlapping_write_claim",
                     message=(
-                        "Changed files overlap another live write claim. Publication is "
+                        "Changed files overlap another live claim with write ownership. Publication is "
                         "waiting on those paths; this is not evidence that the whole goal "
                         "is blocked."
                     ),

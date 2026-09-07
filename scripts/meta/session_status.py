@@ -14,6 +14,12 @@ def _find_repo_root() -> Path:
     for parent in current.parents:
         if (parent / "enforced_planning").is_dir():
             return parent
+    import importlib.util
+    if importlib.util.find_spec("enforced_planning") is not None:
+        for _ancestor in Path(__file__).resolve().parents:
+            if (_ancestor / ".git").exists():
+                return _ancestor
+        return Path(__file__).resolve().parents[1]
     raise RuntimeError("Unable to locate repo root containing enforced_planning/")
 
 
@@ -57,10 +63,23 @@ def enrich_client_displays(
         session_id = session.get("session_id")
         if not isinstance(session_id, str) or not session_id:
             raise ValueError("session status entries require session_id")
-        session["client_display"] = client_session_metadata.resolve_client_session_display(
+        display = client_session_metadata.resolve_client_session_display(
             session_id,
             codex_session_index=codex_session_index,
-        ).model_dump(mode="json")
+        )
+        session["client_display"] = display.model_dump(mode="json")
+        if display.client == "codex" and display.state != "resolved":
+            metadata_issue = (
+                "metadata_not_indexed"
+                if display.state == "not_found"
+                else "client_metadata_source_unavailable"
+            )
+            issues = session.get("client_evidence_issues")
+            if not isinstance(issues, list):
+                issues = []
+            if metadata_issue not in issues:
+                issues.append(metadata_issue)
+            session["client_evidence_issues"] = issues
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -99,6 +118,22 @@ def main(argv: list[str] | None = None) -> int:
         )
         if session["health_issues"]:
             print(f"  issues={','.join(session['health_issues'])}")
+        if session.get("client_evidence_issues"):
+            print(f"  client_evidence={','.join(session['client_evidence_issues'])}")
+        if session.get("progress_at"):
+            print(
+                "  progress="
+                f"{session['progress_at']} {session.get('progress_kind') or '<invalid-kind>'}; "
+                f"evidence={session.get('evidence_ref') or '<missing>'}; "
+                f"next={session.get('next_action') or '<missing>'}"
+            )
+        if session.get("expected_quiet_until"):
+            print(
+                f"  quiet_until={session['expected_quiet_until']}; "
+                f"reason={session.get('quiet_reason') or '<missing>'}"
+            )
+        if session.get("progress_issues"):
+            print(f"  progress_issues={','.join(session['progress_issues'])}")
     return 0
 
 
