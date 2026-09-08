@@ -741,6 +741,41 @@ def _atomic_restore_bytes(path: Path, content: bytes) -> None:
             temp_path.unlink()
 
 
+def _renewed_lease_expiry(updated_at: str, current_expires_at: str | None) -> str:
+    """Return the lease expiry a resume attaching at ``updated_at`` should carry.
+
+    Resume takes a lane back into live ownership, so it must renew the lease and
+    not only the heartbeat. Claims carry a 24-hour TTL, and the registry loader
+    drops an expired claim *before* normalization -- so a lane resumed a day or
+    more after it was created came back with ``status: active`` and the caller's
+    own ``session_id``, and was still invisible to every consumer that reads the
+    registry. The pre-push gate then reported ``missing_branch_claim``, naming
+    the wrong problem: not "your claim is expired" but "no claim is attached to
+    this branch", about a file sitting on disk saying otherwise
+    (lrn-20260908T170436862573Z-d2c739d527).
+
+    Renewal only ever extends. A claim may deliberately carry an expiry further
+    out than the default TTL, and a liveness signal must never be the thing that
+    shortens it -- clamping every heartbeat to ``now + TTL`` would quietly pull a
+    long-lived lease back to a day.
+    """
+
+    parsed = datetime.fromisoformat(updated_at)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    renewed = parsed + timedelta(hours=coordination_claims.DEFAULT_TTL_HOURS)
+    if current_expires_at:
+        try:
+            existing = datetime.fromisoformat(current_expires_at)
+        except ValueError:
+            return renewed.isoformat()
+        if existing.tzinfo is None:
+            existing = existing.replace(tzinfo=timezone.utc)
+        if existing > renewed:
+            return current_expires_at
+    return renewed.isoformat()
+
+
 def _apply_legacy_cross_session_resume_transaction(
     *,
     claim: coordination_claims.ClaimRecord,
@@ -781,11 +816,20 @@ def _apply_legacy_cross_session_resume_transaction(
                 raise ValueError(f"claim field {field} changed after cross-session resume preflight")
         if claim.broad_scope_mode == "bootstrap" and claim.target_worktree_path:
             current["worktree_path"] = claim.target_worktree_path
+        elif claim.worktree_path and claim.worktree_path != worktree_path:
+            # Reaching this branch means resume_session()'s own
+            # _validate_worktree_path_repair already confirmed the recorded
+            # path is gone and the provided one is a real linked worktree on
+            # the claimed branch -- the only way worktree_path could differ
+            # here at all is a validated repair, never an unchecked caller
+            # value.
+            current["worktree_path"] = worktree_path
         current.update(
             {
                 "status": "active",
                 "session_id": successor_session_id,
                 "heartbeat_at": updated_at,
+                "expires_at": _renewed_lease_expiry(updated_at, claim.expires_at),
                 "updated_at": updated_at,
                 "notes": note or "session resumed with a fresh runtime attachment",
             }
@@ -1005,6 +1049,7 @@ def _apply_codex_cross_session_resume_transaction(
                     "status": "active",
                     "session_id": successor_session_id,
                     "heartbeat_at": updated_at,
+                    "expires_at": _renewed_lease_expiry(updated_at, claim.expires_at),
                     "updated_at": updated_at,
                     "notes": note or "session resumed with a fresh runtime attachment",
                 }
@@ -1222,6 +1267,7 @@ def _reattach_same_runtime_tracker(
                 "session_id": claim.session_id,
                 "tracker_path": str(tracker_path),
                 "heartbeat_at": updated_at,
+                "expires_at": _renewed_lease_expiry(updated_at, claim.expires_at),
                 "updated_at": updated_at,
                 "notes": note or "session resumed with its exact tracker reattached",
             }
@@ -2163,6 +2209,63 @@ def _is_ancestor(repo_root: Path, ancestor_ref: str, descendant_ref: str) -> boo
     return result.returncode == 0
 
 
+def _validate_worktree_path_repair(
+    *,
+    recorded_worktree_path: str,
+    provided_worktree_path: str,
+    branch: str,
+) -> None:
+    """Fail closed before accepting a corrected ``worktree_path`` on resume.
+
+    A worktree legitimately relocated from a non-standard path to the
+    sanctioned ``<repo>/worktrees/<branch>/`` convention leaves its claim's
+    recorded ``worktree_path`` stale. Nothing before this could repair that
+    pointer: a fresh claim on the same scope refuses because the existing one
+    is not overwritable while non-live, ``session-close`` requires the exact
+    owning runtime, and plain resume requires the caller's path to match the
+    stale record exactly. Observed 2026-09-08:
+    ``open_web_retrieval:case001/tool-adoption`` ended with worktree_path
+    recorded at a non-standard location that no longer existed, while the
+    real worktree -- with the real committed work -- already lived at the
+    correct convention path.
+
+    This mirrors ``session_archive_tracker.py``'s own safety contract rather
+    than inventing a new one: the recorded path must be genuinely gone (not
+    merely different), and the provided replacement must be a real linked
+    worktree actually checked out on the exact claimed branch. Neither
+    condition trusts the caller's say-so.
+    """
+
+    recorded_path = Path(recorded_worktree_path).expanduser()
+    if recorded_path.exists():
+        raise ValueError(
+            f"Refusing to repair worktree_path: the recorded path {recorded_worktree_path} "
+            "still exists on disk. Repair only applies when the recorded worktree is "
+            "genuinely gone; if two worktrees exist, resolve that first."
+        )
+
+    provided_path = Path(provided_worktree_path).expanduser()
+    git_marker = provided_path / ".git"
+    if not git_marker.is_file():
+        raise ValueError(
+            f"Refusing to repair worktree_path: {provided_worktree_path} is not a linked "
+            "git worktree (expected a '.git' file, not a directory or nothing at all)."
+        )
+    result = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=str(provided_path),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    actual_branch = result.stdout.strip()
+    if result.returncode != 0 or actual_branch != branch:
+        raise ValueError(
+            f"Refusing to repair worktree_path: {provided_worktree_path} is checked out on "
+            f"{actual_branch or 'an unresolvable ref'!r}, not the claimed branch {branch!r}."
+        )
+
+
 def _patch_without_blob_identity(patch: bytes) -> bytes:
     """Remove only full-index blob IDs while preserving the complete patch body."""
 
@@ -2642,6 +2745,27 @@ def start_session(
     verified_goal_default_revision: str | None = None,
 ) -> dict[str, Any]:
     """Create or refresh the session contract plus linked tracker artifact."""
+
+    # Claim creation has always enforced SUPPORTED_AGENTS; tracker creation
+    # never did. That asymmetry is what produced 23 permanently stranded
+    # trackers between 2026-07-24 and 2026-08-21, written with legacy per-lane
+    # identities such as 'codex-evidence-reader-wiki' and 'codex-root'. A
+    # tracker naming an agent the claim registry will not accept can never have
+    # a matching claim, so session-close cannot reach it -- it loads the claim
+    # first -- and it becomes residue the moment its worktree is removed.
+    #
+    # Validating here closes the write path. `validate_native_session_binding`
+    # below does not catch this: STRICT_NATIVE_SESSION_ENV_KEYS.get(agent)
+    # returns None for an unknown agent, so it silently no-ops rather than
+    # rejecting the name.
+    if agent not in coordination_claims.SUPPORTED_AGENTS:
+        supported = ", ".join(coordination_claims.SUPPORTED_AGENTS)
+        raise ValueError(
+            f"start_session refuses an unsupported agent {agent!r}: a tracker naming an "
+            f"agent the claim registry will not accept can never be closed through "
+            f"session-close, because that path loads the claim first. Use one of: {supported}. "
+            "A per-lane or per-task identity belongs in scope or session_name, not agent."
+        )
 
     resolved_session_id = coordination_claims.resolve_session_id(agent, session_id)
     if not resolved_session_id:
@@ -4363,6 +4487,8 @@ def resume_session(
     predecessor_process_start_ticks: int | None = None,
     successor_custody_offer: session_continuity.SuccessorCustodyOfferV1 | None = None,
     successor_custody_acceptance: session_continuity.SuccessorCustodyAcceptanceV1 | None = None,
+    repair_worktree_path: bool = False,
+    repair_missing_plan_ref: bool = False,
 ) -> dict[str, Any]:
     """Reattach a new runtime session to an existing plan-bound lane."""
 
@@ -4373,12 +4499,58 @@ def resume_session(
     )
     if claim.status not in coordination_claims.CLOSEABLE_STATUSES:
         raise ValueError(f"Cannot resume lane from lifecycle status {claim.status!r}")
+    if claim.plan_ref and repair_missing_plan_ref:
+        raise ValueError(
+            f"repair_missing_plan_ref refuses a lane that already records plan_ref "
+            f"{claim.plan_ref!r}; it exists only to stamp the explicit UNPLANNED marker "
+            "onto a claim whose plan_ref is absent, never to overwrite a real authority."
+        )
     if not claim.plan_ref:
-        raise ValueError("Cannot resume a lane with no plan_ref")
+        if not repair_missing_plan_ref:
+            raise ValueError(
+                "Cannot resume a lane with no plan_ref. The guide's mandatory rule is that no "
+                "live session lacks one, and bounded maintenance satisfies it with the explicit "
+                "UNPLANNED marker -- but a Makefile call site that passed --allow-unplanned "
+                "without falling back to --plan UNPLANNED wrote a literal null instead, and "
+                "claims created before that fallback landed still carry it. Refusing here left "
+                "such a lane no sanctioned exit at all: it could not be resumed, therefore not "
+                "pushed (the pre-push gate wants a live claim) and therefore not closed (closeout "
+                "wants merge evidence the push would have produced) "
+                "-- lrn-20260825T051949695806Z-29b10f7045. Pass repair_missing_plan_ref "
+                "(--repair-missing-plan-ref) to stamp UNPLANNED first, then resume normally."
+            )
+        # One explicit locked mutation before the resume transaction, rather than
+        # threading a repaired value through all four of its update branches. It
+        # is deliberately durable on its own: if resume then fails for an
+        # unrelated reason, the claim is still compliant with the mandatory rule
+        # and the next attempt no longer needs the flag.
+        _apply_claim_payload_updates(
+            claim=claim,
+            claim_file=claim_file,
+            updates={"plan_ref": session_contracts.UNPLANNED_PLAN_REF},
+            expected_fields={
+                "plan_ref": payload.get("plan_ref"),
+                "session_id": payload.get("session_id"),
+                "status": payload.get("status"),
+            },
+        )
+        claim, payload, claim_file, claim_snapshot_bytes = _claim_snapshot_any_status(
+            agent=agent,
+            project=project,
+            scope=scope,
+        )
+        if not claim.plan_ref:
+            raise ValueError("plan_ref repair did not take effect; refusing to resume")
     if claim.branch and claim.branch != branch:
         raise ValueError(f"Claim branch is {claim.branch}, not {branch}")
     if claim.worktree_path and claim.worktree_path != worktree_path:
-        raise ValueError(f"Claim worktree is {claim.worktree_path}, not {worktree_path}")
+        if not repair_worktree_path:
+            raise ValueError(f"Claim worktree is {claim.worktree_path}, not {worktree_path}")
+        _validate_worktree_path_repair(
+            recorded_worktree_path=claim.worktree_path,
+            provided_worktree_path=worktree_path,
+            branch=branch,
+        )
 
     resolved_session_id = coordination_claims.resolve_session_id(agent, session_id)
     if not resolved_session_id:
@@ -4535,6 +4707,7 @@ def resume_session(
                         "status": "active",
                         "session_id": resolved_session_id,
                         "heartbeat_at": updated_at,
+                        "expires_at": _renewed_lease_expiry(updated_at, claim.expires_at),
                         "updated_at": updated_at,
                         "notes": note or "session resumed with a fresh runtime attachment",
                     },
@@ -4822,17 +4995,77 @@ def _validate_orphaned_tracker_archival(
         raise ValueError(
             f"Session tracker at {resolved_tracker} is missing the agent/project/scope identity archival requires"
         )
-    if agent not in coordination_claims.SUPPORTED_AGENTS:
-        raise ValueError(f"Session tracker at {resolved_tracker} names an unsupported agent {agent!r}")
+    # Deliberately NOT refused on an unsupported agent name.
+    #
+    # SUPPORTED_AGENTS gates who may *act* -- claim a repository, close another
+    # runtime's session. Archiving an orphaned tracker is neither: it moves a
+    # dead bookkeeping file into the archive tree and leaves the branch, the
+    # worktree, and every claim untouched. Asking "is this agent allowed to act
+    # here?" where nobody acts blocked the cleanup and protected nothing.
+    #
+    # The operator guide's own contract for this operation lists the conditions
+    # that make it safe -- the recorded worktree absent from disk, the claim file
+    # gone, the tracker bytes matching the supplied digest, the tracker inside
+    # the canonical tree. All four are enforced above and below. The agent name
+    # is not among them, and never was.
+    #
+    # Measured 2026-09-08: 23 of 74 orphaned trackers were unarchivable for this
+    # reason alone -- legacy per-lane identities such as
+    # 'codex-evidence-reader-wiki' and 'codex-root' written between 2026-07-24
+    # and 2026-08-21. Because claim creation DID enforce SUPPORTED_AGENTS while
+    # start_session did not, these trackers could never have a matching claim,
+    # so session-close could never reach them and archival refused them too.
+    # They were permanent residue by construction. start_session now validates
+    # the agent, so no new tracker can enter that state.
+    #
+    # The name is still reported in the receipt: an unexpected identity stays
+    # visible rather than being silently normalised away.
+    agent_supported = agent in coordination_claims.SUPPORTED_AGENTS
 
     recorded_worktree_text = contract.get("worktree_path")
     if not recorded_worktree_text:
         raise ValueError("Orphaned-tracker archival requires a recorded worktree path")
     recorded_worktree = Path(str(recorded_worktree_text)).expanduser()
+    # Refuse only a genuine LINKED worktree -- a real lane checkout that is
+    # still physically present. A linked worktree has a `.git` FILE containing
+    # a `gitdir:` pointer; a canonical repository root has a `.git` DIRECTORY;
+    # a shared or umbrella directory has no `.git` at all.
+    #
+    # The old check refused on mere existence and told the caller to use
+    # session-close instead. For an orphaned tracker that advice is impossible:
+    # session-close loads the claim first and the claim is, by definition here,
+    # already gone. So every such tracker was unretireable by any path.
+    #
+    # Measured 2026-09-08 across the live residue, of the trackers blocked this
+    # way: 16 recorded a real linked worktree (still correctly refused below),
+    # 11 recorded a canonical repository root, and 12 recorded a directory with
+    # no `.git` at all -- most of them the shared umbrella `~/projects/
+    # inside-success`, which is not a lane checkout and will never be removed.
+    # Those 23 could never satisfy the old condition.
+    #
+    # Refusing a canonical root is also wrong on the operator guide's own terms:
+    # its "Legacy canonical-root claim reconciliation" section states that
+    # ordinary session-close "must never process that record as a removable
+    # linked worktree" and provides a metadata-only path for exactly that shape.
+    # This is the claimless equivalent of that exception.
+    #
+    # Nothing here is removed, and the four conditions that make archival safe
+    # are unchanged: claim gone, tracker digest matching, tracker inside the
+    # canonical tree, and -- for a real lane -- its worktree absent.
+    recorded_worktree_kind = "absent"
     if recorded_worktree.exists():
+        git_marker = recorded_worktree / ".git"
+        if git_marker.is_file():
+            recorded_worktree_kind = "linked_worktree"
+        elif git_marker.is_dir():
+            recorded_worktree_kind = "canonical_repository_root"
+        else:
+            recorded_worktree_kind = "not_a_git_worktree"
+    if recorded_worktree_kind == "linked_worktree":
         raise ValueError(
-            "Orphaned-tracker archival rejects an existing recorded worktree; "
-            "use the ordinary sanctioned session-close flow instead."
+            f"Orphaned-tracker archival rejects {recorded_worktree}: it is still a linked "
+            "worktree on disk, so the lane is physically present. Remove it through the "
+            "sanctioned worktree-removal path first, then archive the tracker."
         )
 
     claim_file = _claim_path(str(agent), str(project), str(scope))
@@ -4885,6 +5118,7 @@ def _validate_orphaned_tracker_archival(
     return {
         "schema_version": "1.0",
         "agent": str(agent),
+        "agent_supported": agent_supported,
         "project": str(project),
         "scope": str(scope),
         "session_id": contract.get("session_id"),
@@ -4904,7 +5138,16 @@ def _validate_orphaned_tracker_archival(
         "branch_comparison_ref": comparison_ref,
         "unique_commits": unique_commits,
         "unique_commits_authorized": bool(unique_commits) and allow_unique_branch_commits,
-        "filesystem_action": "not_attempted_absent_recorded_worktree",
+        # What the recorded worktree_path actually was. `absent` is the ordinary
+        # orphan; `canonical_repository_root` and `not_a_git_worktree` are paths
+        # that were never a removable lane checkout and are retained untouched.
+        # A `linked_worktree` never reaches here -- it is refused above.
+        "recorded_worktree_kind": recorded_worktree_kind,
+        "filesystem_action": (
+            "not_attempted_absent_recorded_worktree"
+            if recorded_worktree_kind == "absent"
+            else f"retained_untouched_{recorded_worktree_kind}"
+        ),
         "branch_action": "untouched",
     }
 
