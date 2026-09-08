@@ -1,9 +1,9 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: implemented
+status: active
 created: 2026-08-23
-updated: 2026-09-06
+updated: 2026-09-07
 depends_on:
   - docs/plans/031-cso-stabilization-flagship.md
   - docs/plans/033-evasion-space-case.md
@@ -85,6 +85,57 @@ nothing and can run as often as is useful.**
   tested, and an agent reviewing its own work is the weakest possible reviewer.
 - **When the flagship changes:** rebuild both projections, then run the claims
   check. It is the specific guard against the failure that happened.
+
+## 2026-09-07 review-triggered usability follow-up
+
+A fresh review used `brianmills-spec/representation-router` to route the flagship
+case as an **explorable simulation** and then ran its browser render-quality gate
+against the actual public page at 1440x1000 and 390x844. This produced four
+specific defects rather than a general request to restyle the page:
+
+1. the default seven-node system map was rendered through the same dense graph
+   canvas as the exact network, so repeated `route` labels overlapped/clipped on
+   desktop and collapsed to roughly 3px on mobile;
+2. the mobile top-level navigation horizontally hid `Your simulations` and
+   `Methodology`, so primary destinations existed but were not visible without an
+   undisclosed sideways scroll;
+3. the retained flagship result was not visible until several walkthrough steps,
+   making a first-time reviewer reconstruct the decision, pressure, trajectory,
+   and nonclaim before knowing the payoff; and
+4. the evasion pair used two independent cards plus a prose paragraph for the
+   core contrast even though the same measures can be aligned directly; and
+5. a direct `?view=case` link auto-started the global product tour, dimming the
+   case and placing a modal over the first frame before the reader could inspect
+   it;
+6. the fixed mobile walkthrough control overlaid the case body and the evasion
+   comparison contract; and
+7. the first mobile comparison-table layout clipped the compared values even
+   though the table technically remained inside the viewport; and
+8. the first semantic-flow layout still required horizontal scrolling at 1024px
+   because its desktop minimum stage widths exceeded the case container.
+
+These are now authorized as a bounded Plan-34 follow-up. The correction must:
+
+- put a compact, evidence-derived **case at a glance** in the first frame without
+  replacing the seven-step evidence walk;
+- render the default system projection as a readable semantic flow while keeping
+  the exact zoomable network available on demand;
+- keep every primary top-level destination visibly reachable at 390px without
+  page-level or tab-strip horizontal scrolling;
+- render the two evasion arms on one aligned comparison table, with round-by-round
+  trajectories available on demand and the failed no-detection endpoint still
+  explicit;
+- keep the product tour available on request but do not auto-start it on a direct
+  case-study deep link;
+- keep walkthrough controls in normal document flow on narrow screens, stack
+  comparison labels above their values, and switch the semantic flow to a tablet
+  composition before its desktop minimum widths can force horizontal scrolling; and
+- pass the representation-router render-quality gate at desktop and mobile for
+  the initial, result, and evasion states, in addition to the existing claims,
+  public-page, and repository checks.
+
+The router is design guidance and QA instrumentation here; it does not become a
+runtime dependency of the simulator.
 
 ## Pass/fail
 

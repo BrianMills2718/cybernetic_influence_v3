@@ -65,7 +65,7 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     script = SCRIPT.read_text(encoding="utf-8")
 
     assert 'id="case-walkthrough-next"' in page
-    assert all(f'data-case-chapter="{index}"' in page for index in range(6))
+    assert all(f'data-case-chapter="{index}"' in page for index in range(7))
     assert "authoredDraftWalkthroughStepCount - 1" in script
     assert "How can “${node.label}” enter the simulation?" in script
     # The configuration walkthrough shows the world that will execute. Analysis
@@ -85,6 +85,28 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     assert "Simulation brief" in script
     assert "what actors attempted, and what the world accepted" not in script
     assert "The replay separates what people received and attempted" in script
+
+
+def test_flagship_case_defaults_to_a_readable_first_frame_and_aligned_comparison() -> None:
+    page = PAGE.read_text(encoding="utf-8")
+    script = SCRIPT.read_text(encoding="utf-8")
+    style = STYLE.read_text(encoding="utf-8")
+
+    assert 'id="case-at-a-glance"' in page
+    assert 'Step 1 of 7' in page
+    assert 'id="case-evasion-contract"' in page
+    assert "function caseSystemFlowHtml(projection)" in script
+    assert "case-system-flow-host" in script
+    assert "Readable overview." in script
+    assert "Response logic" in script
+    assert "Expression-policy test" in script
+    assert "case-comparison-table" in script
+    assert "Held fixed" in script
+    assert "Not established" in script
+    assert "See the round-by-round stance trajectories" in script
+    assert "@media (max-width: 620px)" in style
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in style
+    assert ".case-network-graph.case-system-flow-host" in style
 
 
 def test_authoring_progress_uses_retained_backend_stages() -> None:

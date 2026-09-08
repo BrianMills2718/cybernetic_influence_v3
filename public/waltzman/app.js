@@ -1119,6 +1119,40 @@ function caseSystemProjection(raw) {
   return {nodes:[...exactNodes, ...groups], edges}
 }
 
+function caseSystemFlowHtml(projection) {
+  const nodeById = new Map((projection.nodes || []).map((node) => [node.id, node]))
+  const card = (id, eyebrow) => {
+    const node = nodeById.get(id)
+    if (!node) return ''
+    return `<button type="button" class="case-system-card" data-case-system-node="${escapeHtml(id)}">
+      <span>${escapeHtml(eyebrow)}</span>
+      <strong>${escapeHtml(node.label || sentence(id))}</strong>
+      <small>${escapeHtml(node.description || '')}</small>
+    </button>`
+  }
+  return `<div class="case-system-flow" aria-label="Readable system flow for the retained outbreak case">
+    <div class="case-system-flow-main">
+      ${card('pressure_sources', '1 · local signals')}
+      <i class="case-system-arrow" aria-hidden="true"><b>→</b><small>delivered</small></i>
+      ${card('outbreak_source_delivery', '2 · delivery mechanism')}
+      <i class="case-system-arrow" aria-hidden="true"><b>→</b><small>observed by</small></i>
+      <section class="case-system-network-stage" aria-label="Decision networks">
+        <span>3 · decision networks</span>
+        <div>${card('national_networks', 'National')} ${card('regional_network', 'Regional')}</div>
+        <aside>
+          ${card('regional_allocation_authority', 'Verified resource facts')}
+          <p>Resource facts can enter both networks; this authority cannot choose anyone's stance.</p>
+        </aside>
+      </section>
+      <i class="case-system-arrow" aria-hidden="true"><b>→</b><small>stances</small></i>
+      ${card('outbreak_stance_recorder', '4 · retained positions')}
+      <i class="case-system-arrow" aria-hidden="true"><b>→</b><small>fixed gate</small></i>
+      ${card('outbreak_decision', '5 · group decision')}
+    </div>
+    <p class="case-system-flow-note"><strong>Readable overview.</strong> Select any box for its retained definition. Choose <em>Complete network</em> above for every exact person, source, mechanism, and route.</p>
+  </div>`
+}
+
 function caseExactProjection(raw) {
   return {
     nodes:raw.nodes || [],
@@ -1144,18 +1178,44 @@ function renderCaseNetworkGraph() {
     button.setAttribute('aria-pressed', String(active))
   })
   if (caseNetworkError) {
-    graph.classList.remove('react-canvas-host')
+    window.CyberneticGraph?.clear?.(graph)
+    graph.classList.remove('react-canvas-host', 'case-network-mounted', 'case-system-flow-host')
     graph.innerHTML = `<p class="case-network-unavailable"><strong>Network unavailable.</strong> ${escapeHtml(caseNetworkError)}</p>`
     $('#case-network-status').textContent = 'The completed result remains available below; the network projection failed visibly.'
     return
   }
-  if (!caseNetworkRun || !window.CyberneticGraph) {
-    graph.classList.remove('react-canvas-host')
+  if (!caseNetworkRun) {
+    graph.classList.remove('react-canvas-host', 'case-network-mounted', 'case-system-flow-host')
     graph.innerHTML = '<p>Loading the retained network…</p>'
     return
   }
   const projection = caseGraphMode === 'exact' ? caseExactProjection(caseNetworkRun) : caseSystemProjection(caseNetworkRun)
-  if (!graph.classList.contains('case-network-mounted')) graph.innerHTML = ''
+  if (caseGraphMode === 'system') {
+    window.CyberneticGraph?.clear?.(graph)
+    graph.classList.remove('react-canvas-host', 'case-network-mounted')
+    graph.classList.add('case-system-flow-host')
+    graph.innerHTML = caseSystemFlowHtml(projection)
+    graph.querySelectorAll('[data-case-system-node]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const node = projection.nodes.find((candidate) => candidate.id === button.dataset.caseSystemNode)
+        if (node) {
+          graph.querySelectorAll('[data-case-system-node]').forEach((candidate) => candidate.classList.toggle('active', candidate === button))
+          renderCaseNetworkSelection(node, projection)
+        }
+      })
+    })
+    const firstCard = graph.querySelector('[data-case-system-node]')
+    if (firstCard) firstCard.click()
+    $('#case-network-status').textContent = `${projection.nodes.length} visible groups, sources, and mechanisms · readable analytical projection over ${caseNetworkRun.nodes.length} exact entities and ${caseNetworkRun.edges.length} routes.`
+    return
+  }
+  if (!window.CyberneticGraph) {
+    graph.classList.remove('react-canvas-host', 'case-network-mounted', 'case-system-flow-host')
+    graph.innerHTML = '<p class="case-network-unavailable"><strong>Exact graph unavailable.</strong> The readable system map remains available.</p>'
+    return
+  }
+  graph.classList.remove('case-system-flow-host')
+  graph.innerHTML = ''
   graph.classList.add('react-canvas-host', 'case-network-mounted')
   window.CyberneticGraph.render(graph, {
     nodes:projection.nodes,
@@ -1178,9 +1238,7 @@ function renderCaseNetworkGraph() {
     onSelectEdge:(edge) => renderCaseNetworkSelection(edge, projection, true),
   })
   if (projection.nodes[0]) renderCaseNetworkSelection(projection.nodes[0], projection)
-  $('#case-network-status').textContent = caseGraphMode === 'exact'
-    ? `${projection.nodes.length} exact entities · ${projection.edges.length} exact routes · drag, zoom, or select any item.`
-    : `${projection.nodes.length} visible groups, sources, and mechanisms · analytical grouping over ${caseNetworkRun.nodes.length} exact entities and ${caseNetworkRun.edges.length} routes.`
+  $('#case-network-status').textContent = `${projection.nodes.length} exact entities · ${projection.edges.length} exact routes · drag, zoom, or select any item.`
 }
 
 async function ensureCaseNetwork() {
@@ -1210,8 +1268,8 @@ function renderCaseChapter() {
     {kind:'Pressure and experiment', title:'See what changed and what stayed fixed.'},
     {kind:'Result', title:'Watch the coalition break and come back.'},
     {kind:'Agent reasoning', title:'Read the same officials before and after.'},
-    {kind:'Cognitive Security Operations', title:'See what detected the problem and what fixed it.'},
-    {kind:'Evasion', title:'See the same watchers classify a shaped pattern less severely.'},
+    {kind:'Response logic', title:'See what the observers detected, diagnosed, and proposed.'},
+    {kind:'Expression-policy test', title:'Compare how the same monitoring cell reads the shaped arm.'},
   ]
   caseStudyStep = Math.max(0, Math.min(caseStudyStep, chapters.length - 1))
   const chapter = chapters[caseStudyStep]
@@ -1258,36 +1316,47 @@ function stanceLine(decisions) {
 
 function renderEvasionComparison() {
   const host = $('#case-evasion-compare')
+  const contract = $('#case-evasion-contract')
   if (!host) return
   if (!evasionCase) {
     host.innerHTML = '<p class="case-loading">Loading the retained comparison…</p>'
     return
   }
-  const arms = [
-    {key:'overt', label:'Overt expression policy', data:evasionCase.overt},
-    {key:'evasion', label:'Threshold-managed expression policy', data:evasionCase.evasion},
+  const overt = evasionCase.overt || {}
+  const shaped = evasionCase.evasion || {}
+  const overtDetector = overt.detector || {}
+  const shapedDetector = shaped.detector || {}
+  const overtWorst = worstRound(overt)
+  const shapedWorst = worstRound(shaped)
+  const overtFinal = overt.final_decisions || {}
+  const shapedFinal = shaped.final_decisions || {}
+  if (contract) contract.innerHTML = [
+    ['Held fixed', 'Coalition, source roles, decision gate, and monitoring cell'],
+    ['Changed', 'Source expression policy'],
+    ['Observed', 'Stance trajectory plus the monitor and diagnostician readings'],
+    ['Not established', 'Equal pressure dose, detector failure, or real-world frequency'],
+  ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join('')
+  const rows = [
+    ['Worst round', overtWorst, shapedWorst],
+    ['Monitor called readiness', readable(overtDetector.coordination_readiness), readable(shapedDetector.coordination_readiness)],
+    ['Diagnosed mechanism', readable(overtDetector.mechanism), readable(shapedDetector.mechanism)],
+    ['Proposed response', readable(overtDetector.action_id), readable(shapedDetector.action_id)],
+    ['Final stance distribution', stanceLine(overtFinal), stanceLine(shapedFinal)],
   ]
-  host.innerHTML = arms.map(({key, label, data}) => {
-    const rounds = (data.rounds || []).map((entry) => `<li><span>Round ${entry.round}</span><strong>${escapeHtml(stanceLine(entry.decisions))}</strong></li>`).join('')
-    const d = data.detector || {}
-    return `<article class="case-evasion-arm case-evasion-${escapeHtml(key)}">
-      <header><span>${escapeHtml(label)}</span></header>
-      <ol class="case-evasion-rounds">${rounds}</ol>
-      <dl class="case-evasion-detector">
-        <div><dt>The watchers called readiness</dt><dd class="case-evasion-verdict">${escapeHtml(readable(d.coordination_readiness))}</dd></div>
-        <div><dt>and the cause</dt><dd class="case-evasion-verdict">${escapeHtml(readable(d.mechanism))}</dd></div>
-        <div><dt>then proposed</dt><dd>${escapeHtml(readable(d.action_id))}</dd></div>
-      </dl>
-    </article>`
-  }).join('')
+  host.innerHTML = `<div class="case-comparison-table-wrap">
+    <table class="case-comparison-table">
+      <thead><tr><th scope="col">Measure</th><th scope="col">Overt expression</th><th scope="col">Threshold-managed expression</th></tr></thead>
+      <tbody>${rows.map(([measure, overtValue, shapedValue]) => `<tr><th scope="row">${escapeHtml(measure)}</th><td data-label="Overt expression">${escapeHtml(overtValue)}</td><td data-label="Threshold-managed expression">${escapeHtml(shapedValue)}</td></tr>`).join('')}</tbody>
+    </table>
+  </div>
+  <details class="case-evasion-trajectories">
+    <summary>See the round-by-round stance trajectories</summary>
+    <div>${[['Overt expression', overt], ['Threshold-managed expression', shaped]].map(([label, data]) => `<article><strong>${escapeHtml(label)}</strong><ol>${(data.rounds || []).map((entry) => `<li><span>Round ${entry.round}</span><b>${escapeHtml(stanceLine(entry.decisions))}</b></li>`).join('')}</ol></article>`).join('')}</div>
+  </details>`
 
   const note = $('#case-evasion-reading')
   if (!note) return
-  const overtWorst = worstRound(evasionCase.overt)
-  const evasionWorst = worstRound(evasionCase.evasion)
-  const overtFinal = evasionCase.overt.final_decisions || {}
-  const evasionFinal = evasionCase.evasion.final_decisions || {}
-  note.innerHTML = `<strong>Read the two together.</strong> Under the threshold-managed expression policy the coalition reached a lower outright-support floor &mdash; ${evasionWorst} at its worst against ${overtWorst} &mdash; yet the same watchers called readiness <em>${escapeHtml(readable(evasionCase.evasion.detector.coordination_readiness))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.coordination_readiness))}</em>, and diagnosed <em>${escapeHtml(readable(evasionCase.evasion.detector.mechanism))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.mechanism))}</em>. The intervention still fired, but final recovery was less complete: ${escapeHtml(stanceLine(evasionFinal))} instead of ${escapeHtml(stanceLine(overtFinal))}. This is an under-classification and mechanism-misdiagnosis result, not a detection miss; these runs do not establish equal pressure dose.`
+  note.innerHTML = `<strong>Observed result.</strong> The threshold-managed arm reached a lower outright-support floor &mdash; ${escapeHtml(shapedWorst)} against ${escapeHtml(overtWorst)} &mdash; yet the same monitoring cell classified readiness <em>${escapeHtml(readable(shapedDetector.coordination_readiness))}</em> rather than <em>${escapeHtml(readable(overtDetector.coordination_readiness))}</em> and diagnosed <em>${escapeHtml(readable(shapedDetector.mechanism))}</em> rather than <em>${escapeHtml(readable(overtDetector.mechanism))}</em>. The same response was proposed in both arms. This is under-classification and different mechanism labeling in this authored pair, not a detection miss and not evidence of equal pressure dose.`
 }
 
 function worstRound(arm) {
@@ -1313,6 +1382,16 @@ function renderResearchCase() {
   // shown rather than only the final tally.
   const rounds = csoCase.rounds
   const total = csoCase.agent_count || 26
+  const firstRound = rounds[0]?.decisions || {}
+  const pressuredRound = rounds[1]?.decisions || {}
+  const finalRound = rounds[rounds.length - 1]?.decisions || {}
+  const glance = $('#case-at-a-glance')
+  if (glance) glance.innerHTML = [
+    ['Decision', `${total} autonomous roles across four countries and one regional network decide whether a joint early-warning compact is executable.`],
+    ['Pressure', 'Four differentiated source roles raise locally relevant technical, legal, logistics, and community concerns through separate channels.'],
+    ['Trajectory', `${Number(firstRound.support || 0)} support → ${Number(pressuredRound.support || 0)} support + ${Number(pressuredRound.conditional || 0)} conditional → ${Number(finalRound.support || 0)} support after one coordinated compact.`],
+    ['Boundary', (csoCase.nonclaims || [])[0] || 'One retained synthetic execution is not a real-world effect estimate.'],
+  ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`).join('')
   const roundCaption = {
     1: 'Before any pressure',
     2: 'After four sources raise locally relevant concerns',
