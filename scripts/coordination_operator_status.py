@@ -13,6 +13,12 @@ def _find_repo_root() -> Path:
     for parent in current.parents:
         if (parent / "enforced_planning").is_dir():
             return parent
+    import importlib.util
+    if importlib.util.find_spec("enforced_planning") is not None:
+        for _ancestor in Path(__file__).resolve().parents:
+            if (_ancestor / ".git").exists():
+                return _ancestor
+        return Path(__file__).resolve().parents[1]
     raise RuntimeError("Unable to locate repo root containing enforced_planning/")
 
 
@@ -20,7 +26,7 @@ REPO_ROOT = _find_repo_root()
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from enforced_planning import client_session_metadata, coordination_claims, coordination_messages  # noqa: E402
+from enforced_planning import client_session_metadata, coordination_claims, coordination_messages
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -33,6 +39,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=client_session_metadata.DEFAULT_CODEX_SESSION_INDEX,
     )
+    parser.add_argument("--codex-config", type=Path, default=Path.home() / ".codex" / "config.toml")
+    parser.add_argument("--claude-config", type=Path, default=Path.home() / ".claude" / "settings.json")
     parser.add_argument("--json", action="store_true")
     return parser.parse_args(argv)
 
@@ -54,6 +62,8 @@ def main(argv: list[str] | None = None) -> int:
             include_inactive=True,
         ),
         codex_session_index=args.codex_session_index,
+        codex_config_path=args.codex_config,
+        claude_config_path=args.claude_config,
     )
     if args.json:
         print(readout.model_dump_json(indent=2))
@@ -80,6 +90,19 @@ def main(argv: list[str] | None = None) -> int:
         )
     print(f"Message state: {readout.message_state}")
     print(f"Response state: {readout.response_state}")
+    capability = readout.operator_host_delivery_capability
+    print(f"Delivery mode (operator host config): {capability.delivery_mode}")
+    print(
+        "Mutation enforcement available: "
+        + ("yes" if capability.mutation_enforcement_available else "no")
+    )
+    print(
+        "Stop enforcement available: "
+        + ("yes" if capability.stop_enforcement_available else "no")
+    )
+    print("Observation semantics: exposure only; not stopped; not acknowledged")
+    if capability.delivery_mode != "enforced":
+        print(f"Delivery warning: {capability.operator_message}")
     print("Completion: not evaluated")
     if readout.acknowledgement_disposition:
         print(f"Acknowledgement: {readout.acknowledgement_disposition}")

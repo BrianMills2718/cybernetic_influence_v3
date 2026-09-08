@@ -18,10 +18,21 @@ import yaml  # type: ignore[import-untyped]
 
 
 DEFAULT_EVENTS_PATH = Path.home() / ".claude" / "coordination" / "claim-mutation-events-v1.jsonl"
+DEFAULT_NARROW_EVENTS_PATH = Path.home() / ".claude" / "coordination" / "claim-narrow-events-v1.jsonl"
 DEFAULT_COMPLETED_CLAIM_ARCHIVE_PATH = (
     Path.home() / ".claude" / "coordination" / "completed-claim-archive-v1.jsonl"
 )
 MutationOperation = Literal[
+    "create",
+    "narrow",
+    "session_upsert",
+    "heartbeat",
+    "release",
+    "prune",
+    "session_end",
+    "closeout",
+]
+SharedMutationOperation = Literal[
     "create",
     "session_upsert",
     "heartbeat",
@@ -209,7 +220,7 @@ class ClaimMutationReceiptV1(_StrictModel):
     schema_version: Literal["1.0"] = "1.0"
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     observed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    operation: MutationOperation
+    operation: SharedMutationOperation
     result: MutationResult
     writer_source_path: str
     writer_source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -256,6 +267,34 @@ class ClaimMutationReceiptV1(_StrictModel):
                 "Applied mutation receipts require non-null authority outcome fields: "
                 + ", ".join(missing)
             )
+        return self
+
+
+class NarrowClaimMutationReceiptV1(_StrictModel):
+    """One narrow receipt isolated from the backward-compatible shared v1 ledger."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    observed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    operation: Literal["narrow"] = "narrow"
+    result: MutationResult
+    writer_source_path: str
+    writer_source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    writer_repo_root: str
+    process_id: int = Field(ge=1)
+    session_id: str
+    target_project: str
+    target_scope: str
+    target_claim_path: str
+    registry_digest_before: str = Field(pattern=r"^[0-9a-f]{64}$")
+    registry_digest_after: str = Field(pattern=r"^[0-9a-f]{64}$")
+    projection_digest_after: str = Field(pattern=r"^[0-9a-f]{64}$")
+    projection_current_after: bool
+
+    @model_validator(mode="after")
+    def _require_applied_current_projection(self) -> "NarrowClaimMutationReceiptV1":
+        if self.result != "applied_projection_current" or not self.projection_current_after:
+            raise ValueError("narrow receipts require one applied projection-current transition")
         return self
 
 
@@ -518,6 +557,50 @@ def _parse_completed_claim_archive(
     return receipts
 
 
+def _archive_receipts_matching_id(
+    text: str,
+    *,
+    archive_path: Path,
+    archive_id: str,
+) -> list["CompletedClaimArchiveReceiptV1"]:
+    """Validate only the ledger records that could carry one archive_id.
+
+    The append path needs a single question answered: does this exact
+    ``archive_id`` already exist, and if so is it semantically identical?
+    Answering it by validating the whole ledger is what made pruning
+    quadratic -- every record's validator base64-decodes the embedded claim,
+    re-parses its YAML, and recomputes two SHA-256 digests, so an append cost
+    roughly 1.4s against an 875-record ledger and a full prune of 791 claims
+    spent about 18 minutes re-validating, all while holding the global claim
+    registry lock and stalling every other agent session on the machine.
+
+    A raw-substring pre-filter is exact for this purpose because a record can
+    only match the id if the id appears in its serialized text. Records that
+    survive the filter are still fully validated, and the parsed
+    ``archive_id`` is re-checked so an incidental substring hit elsewhere in
+    the record cannot be mistaken for a match.
+
+    Whole-ledger validation still happens on the read path in
+    ``load_completed_claim_archive_receipts``; it is only removed from the
+    per-append hot loop, where it never answered the question being asked.
+    """
+
+    matches: list[CompletedClaimArchiveReceiptV1] = []
+    for number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip() or archive_id not in line:
+            continue
+        try:
+            receipt = CompletedClaimArchiveReceiptV1.model_validate_json(line)
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid completed-claim archive receipt at {archive_path}:{number}: {exc}"
+            ) from exc
+        if receipt.archive_id != archive_id:
+            continue
+        matches.append(receipt)
+    return matches
+
+
 def append_completed_claim_archive_receipt(
     receipt: CompletedClaimArchiveReceiptV1,
     *,
@@ -537,13 +620,12 @@ def append_completed_claim_archive_receipt(
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         try:
             handle.seek(0)
-            existing_receipts = _parse_completed_claim_archive(
+            existing_receipts = _archive_receipts_matching_id(
                 handle.read(),
                 archive_path=resolved,
+                archive_id=validated.archive_id,
             )
             for existing in existing_receipts:
-                if existing.archive_id != validated.archive_id:
-                    continue
                 if _completed_claim_archive_semantic_payload(
                     existing
                 ) == _completed_claim_archive_semantic_payload(validated):
@@ -664,6 +746,28 @@ def append_receipt(receipt: ClaimMutationReceiptV1, *, events_path: Path | None 
     return resolved
 
 
+def append_narrow_receipt(
+    receipt: NarrowClaimMutationReceiptV1,
+    *,
+    events_path: Path | None = None,
+) -> Path:
+    """Append one typed narrow receipt to its version-isolated ledger."""
+
+    resolved = (events_path or DEFAULT_NARROW_EVENTS_PATH).expanduser().resolve()
+    resolved.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    payload = receipt.model_dump_json() + "\n"
+    with resolved.open("a", encoding="utf-8") as handle:
+        resolved.chmod(0o600)
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    return resolved
+
+
 def load_receipts(*, events_path: Path | None = None) -> list[ClaimMutationReceiptV1]:
     """Load a complete JSONL ledger, rejecting malformed or unknown fields."""
 
@@ -681,6 +785,23 @@ def load_receipts(*, events_path: Path | None = None) -> list[ClaimMutationRecei
     return receipts
 
 
+def load_narrow_receipts(*, events_path: Path | None = None) -> list[NarrowClaimMutationReceiptV1]:
+    """Load the complete narrow ledger without changing the shared v1 reader."""
+
+    resolved = (events_path or DEFAULT_NARROW_EVENTS_PATH).expanduser().resolve()
+    if not resolved.exists():
+        return []
+    receipts: list[NarrowClaimMutationReceiptV1] = []
+    for number, line in enumerate(resolved.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            receipts.append(NarrowClaimMutationReceiptV1.model_validate_json(line))
+        except ValueError as exc:
+            raise ValueError(f"Invalid claim narrow receipt at {resolved}:{number}: {exc}") from exc
+    return receipts
+
+
 __all__ = [
     "CompletedClaimArchiveError",
     "CompletedClaimArchiveReceiptV1",
@@ -689,19 +810,23 @@ __all__ = [
     "CompletedClaimSourceKind",
     "CompletedClaimStatus",
     "ClaimMutationReceiptV1",
+    "NarrowClaimMutationReceiptV1",
     "DEFAULT_COMPLETED_CLAIM_ARCHIVE_PATH",
     "DEFAULT_EVENTS_PATH",
+    "DEFAULT_NARROW_EVENTS_PATH",
     "MutationAuditError",
     "MutationOperation",
     "MutationResult",
     "append_completed_claim_archive_receipt",
     "append_receipt",
+    "append_narrow_receipt",
     "build_completed_claim_archive_receipt",
     "completed_claim_archive_id",
     "completed_claim_archive_receipt_sha256",
     "completed_claim_archive_transaction_id",
     "load_completed_claim_archive_receipts",
     "load_receipts",
+    "load_narrow_receipts",
     "validate_completed_claim_archive_prune_binding",
     "writer_identity",
 ]

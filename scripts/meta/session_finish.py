@@ -17,6 +17,12 @@ def _find_repo_root() -> Path:
     for parent in current.parents:
         if (parent / "enforced_planning").is_dir():
             return parent
+    import importlib.util
+    if importlib.util.find_spec("enforced_planning") is not None:
+        for _ancestor in Path(__file__).resolve().parents:
+            if (_ancestor / ".git").exists():
+                return _ancestor
+        return Path(__file__).resolve().parents[1]
     raise RuntimeError("Unable to locate repo root containing enforced_planning/")
 
 
@@ -32,6 +38,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--agent", required=True)
     parser.add_argument("--project", required=True)
     parser.add_argument("--scope", required=True)
+    parser.add_argument("--session-id")
     parser.add_argument("--worktree-path", required=True)
     parser.add_argument("--note")
     parser.add_argument("--release-claim", action="store_true")
@@ -50,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         note=args.note,
         release_claim=args.release_claim,
         allow_dirty_handoff=args.allow_dirty_handoff,
+        actor_session_id=args.session_id,
     )
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))

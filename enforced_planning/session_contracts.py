@@ -7,17 +7,22 @@ should live in a linked per-session artifact.
 
 from __future__ import annotations
 
+import fcntl
+import hashlib
+import os
 import re
+import tempfile
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-
 DEFAULT_SESSION_TRACKERS_DIR = Path.home() / ".claude" / "coordination" / "sessions"
-SESSION_TRACKER_SCHEMA_VERSION = 1
+SESSION_TRACKER_SCHEMA_VERSION = 3
 UNPLANNED_PLAN_REF = "UNPLANNED"
 
 CLAIM_FIELD_NAMES = (
@@ -33,6 +38,10 @@ CLAIM_FIELD_NAMES = (
     "session_name",
     "broader_goal",
     "tracker_path",
+    "start_revision",
+    "plan_repo_root",
+    "plan_revision",
+    "plan_sha256",
 )
 
 TRACKER_ONLY_FIELD_NAMES = (
@@ -42,6 +51,13 @@ TRACKER_ONLY_FIELD_NAMES = (
     "requires_shared_infra_changes",
     "stop_conditions",
     "notes",
+)
+
+OUTCOME_CUSTODY_TRACKER_FIELDS = (
+    "outcome_selection",
+    "outcome_progress_transitions",
+    "outcome_session_transfers",
+    "outcome_selection_transitions",
 )
 
 
@@ -62,8 +78,7 @@ def normalize_plan_ref(plan_ref: str | None, *, allow_unplanned: bool = False) -
     if allow_unplanned:
         return UNPLANNED_PLAN_REF
     raise ValueError(
-        "plan_ref is required for live sessions. "
-        "Pass a real numbered plan or explicitly allow unplanned work."
+        "plan_ref is required for live sessions. Pass a real numbered plan or explicitly allow unplanned work."
     )
 
 
@@ -97,8 +112,7 @@ def validate_session_name(*, session_name: str, broader_goal: str) -> str:
     normalized = derive_session_name(session_name)
     if normalized != expected:
         raise ValueError(
-            "session_name must match the broader-goal-derived canonical name "
-            f"'{expected}', not local-task wording"
+            f"session_name must match the broader-goal-derived canonical name '{expected}', not local-task wording"
         )
     return expected
 
@@ -119,6 +133,10 @@ class SessionContract:
     session_name: str
     broader_goal: str
     tracker_path: str | None = None
+    start_revision: str | None = None
+    plan_repo_root: str | None = None
+    plan_revision: str | None = None
+    plan_sha256: str | None = None
 
     @classmethod
     def build(
@@ -136,8 +154,12 @@ class SessionContract:
         plan_ref: str | None = None,
         session_name: str | None = None,
         tracker_path: str | None = None,
+        start_revision: str | None = None,
+        plan_repo_root: str | None = None,
+        plan_revision: str | None = None,
+        plan_sha256: str | None = None,
         allow_unplanned: bool = False,
-    ) -> "SessionContract":
+    ) -> SessionContract:
         """Build a validated session contract from bootstrap inputs."""
 
         broader_goal_text = _require_text(broader_goal, field_name="broader_goal")
@@ -149,6 +171,18 @@ class SessionContract:
                 session_name=session_name,
                 broader_goal=broader_goal_text,
             )
+
+        if start_revision is not None and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", start_revision) is None:
+            raise ValueError("start_revision must be one full lowercase Git object ID")
+        plan_binding = (plan_repo_root, plan_revision, plan_sha256)
+        if any(value is not None for value in plan_binding) and not all(
+            isinstance(value, str) and value.strip() for value in plan_binding
+        ):
+            raise ValueError("external plan custody requires plan_repo_root, plan_revision, and plan_sha256 together")
+        if plan_revision is not None and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", plan_revision) is None:
+            raise ValueError("plan_revision must be one full lowercase Git object ID")
+        if plan_sha256 is not None and re.fullmatch(r"[0-9a-f]{64}", plan_sha256) is None:
+            raise ValueError("plan_sha256 must be one lowercase SHA-256 digest")
 
         return cls(
             agent=_require_text(agent, field_name="agent"),
@@ -163,9 +197,13 @@ class SessionContract:
             session_name=session_name_text,
             broader_goal=broader_goal_text,
             tracker_path=tracker_path.strip() if isinstance(tracker_path, str) and tracker_path.strip() else None,
+            start_revision=start_revision,
+            plan_repo_root=(str(Path(plan_repo_root).expanduser().resolve()) if plan_repo_root is not None else None),
+            plan_revision=plan_revision,
+            plan_sha256=plan_sha256,
         )
 
-    def with_tracker_path(self, tracker_path: str) -> "SessionContract":
+    def with_tracker_path(self, tracker_path: str) -> SessionContract:
         """Return the same contract with a concrete tracker path attached."""
 
         return replace(self, tracker_path=_require_text(tracker_path, field_name="tracker_path"))
@@ -173,7 +211,7 @@ class SessionContract:
     def claim_fields(self) -> dict[str, str]:
         """Return only the claim-critical contract fields."""
 
-        return {
+        fields = {
             "agent": self.agent,
             "project": self.project,
             "scope": self.scope,
@@ -187,6 +225,13 @@ class SessionContract:
             "broader_goal": self.broader_goal,
             "tracker_path": self.tracker_path or "",
         }
+        if self.start_revision is not None:
+            fields["start_revision"] = self.start_revision
+        if self.plan_repo_root is not None:
+            fields["plan_repo_root"] = self.plan_repo_root
+            fields["plan_revision"] = self.plan_revision or ""
+            fields["plan_sha256"] = self.plan_sha256 or ""
+        return fields
 
 
 @dataclass(frozen=True)
@@ -252,7 +297,7 @@ def build_session_tracker(
 ) -> SessionTrackerRecord:
     """Build the linked tracker artifact for one active session contract."""
 
-    timestamp = (now or datetime.now(timezone.utc)).isoformat()
+    timestamp = (now or datetime.now(UTC)).isoformat()
     return SessionTrackerRecord(
         contract=contract,
         current_phase=_require_text(current_phase, field_name="current_phase"),
@@ -263,6 +308,11 @@ def build_session_tracker(
         notes=notes.strip() if isinstance(notes, str) and notes.strip() else None,
         created_at=timestamp,
         updated_at=timestamp,
+        schema_version=(
+            SESSION_TRACKER_SCHEMA_VERSION
+            if contract.plan_repo_root is not None
+            else (2 if contract.start_revision is not None else 1)
+        ),
     )
 
 
@@ -274,10 +324,7 @@ def session_tracker_path(
     """Return the canonical tracker path for one session contract."""
 
     safe_session_id = re.sub(r"[^a-zA-Z0-9._-]+", "-", contract.session_id)
-    filename = (
-        f"{contract.agent}__{contract.project}__{safe_session_id}"
-        f"__{contract.session_name}.yaml"
-    )
+    filename = f"{contract.agent}__{contract.project}__{safe_session_id}__{contract.session_name}.yaml"
     return tracker_dir / contract.project / filename
 
 
@@ -310,7 +357,7 @@ def find_session_tracker_path(
         payload = read_session_tracker(path)
         contract = payload.get("claim")
         if not isinstance(contract, dict):
-            raise ValueError(f"Session tracker at {path} is missing claim metadata")
+            raise TypeError(f"Session tracker at {path} is missing claim metadata")
         if (
             contract.get("agent") == agent
             and contract.get("project") == project
@@ -320,9 +367,7 @@ def find_session_tracker_path(
             candidates.append(path)
     if len(candidates) > 1:
         rendered = ", ".join(str(path) for path in candidates)
-        raise ValueError(
-            "Ambiguous exact session trackers after claim metadata refresh: " + rendered
-        )
+        raise ValueError("Ambiguous exact session trackers after claim metadata refresh: " + rendered)
     return candidates[0] if candidates else None
 
 
@@ -331,24 +376,214 @@ def write_session_tracker(
     *,
     tracker_dir: Path = DEFAULT_SESSION_TRACKERS_DIR,
 ) -> Path:
-    """Persist one session tracker artifact and return its concrete path."""
+    """Persist one tracker without erasing selected outcome custody history."""
 
     path = session_tracker_path(record.contract, tracker_dir=tracker_dir)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        yaml.safe_dump(record.to_dict(), default_flow_style=False, sort_keys=False),
-        encoding="utf-8",
-    )
+    with session_tracker_lock(path):
+        next_payload = record.to_dict()
+        if path.is_file():
+            current_payload = read_session_tracker(path)
+            current_tracker = current_payload.get("tracker")
+            if not isinstance(current_tracker, dict):
+                raise TypeError(f"Session tracker at {path} is missing tracker metadata")
+            custody: dict[str, Any] = {}
+            for field in OUTCOME_CUSTODY_TRACKER_FIELDS:
+                value = current_tracker.get(field)
+                if value is None:
+                    continue
+                expected_type = dict if field == "outcome_selection" else list
+                if not isinstance(value, expected_type):
+                    raise TypeError(f"Session tracker at {path} has invalid {field} metadata")
+                custody[field] = value
+            if custody and "outcome_selection" not in custody:
+                raise TypeError(f"Session tracker at {path} has outcome custody history without outcome_selection")
+            if custody:
+                current_claim = current_payload.get("claim")
+                next_claim = next_payload.get("claim")
+                if not isinstance(current_claim, dict) or not isinstance(next_claim, dict):
+                    raise TypeError(f"Session tracker at {path} is missing claim metadata")
+                identity_fields = (
+                    "agent",
+                    "project",
+                    "scope",
+                    "plan_ref",
+                    "repo_root",
+                    "worktree_path",
+                    "branch",
+                    "session_id",
+                    "tracker_path",
+                    "start_revision",
+                    "plan_repo_root",
+                    "plan_revision",
+                    "plan_sha256",
+                )
+                path_identity_fields = {"repo_root", "worktree_path", "tracker_path", "plan_repo_root"}
+
+                def identity_value(claim: dict[str, Any], field: str) -> object:
+                    value = claim.get(field)
+                    if field not in path_identity_fields or not isinstance(value, str) or not value:
+                        return value
+                    return str(Path(value).expanduser().resolve())
+
+                mismatches = [
+                    field
+                    for field in identity_fields
+                    if identity_value(current_claim, field) != identity_value(next_claim, field)
+                ]
+                if mismatches:
+                    raise ValueError(
+                        "A tracker with a selected outcome cannot change exact claim identity: " + ", ".join(mismatches)
+                    )
+                next_tracker = next_payload.get("tracker")
+                if not isinstance(next_tracker, dict):
+                    raise TypeError(f"Session tracker at {path} is missing tracker metadata")
+                next_tracker.update(custody)
+                current_timestamps = current_payload.get("timestamps")
+                next_timestamps = next_payload.get("timestamps")
+                if isinstance(current_timestamps, dict) and isinstance(next_timestamps, dict):
+                    next_timestamps["created_at"] = current_timestamps.get(
+                        "created_at",
+                        next_timestamps["created_at"],
+                    )
+        _atomic_write_session_tracker(path, next_payload)
     return path
 
 
-def read_session_tracker(path: Path) -> dict[str, Any]:
-    """Load one tracker artifact and fail loud if the structure is invalid."""
+def tracker_lock_path(path: Path) -> Path:
+    """Where the mutation lock for one tracker lives.
 
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    NOT beside the tracker. A lock is process coordination, not repository
+    content, and a sibling lock cannot be created when the tracker sits in a
+    canonical checkout that a live lane claim has deliberately made read-only.
+    That is not a hypothetical: closing a project-meta lane was impossible on
+    2026-09-06 because ``learnings.md`` is in that repository's root, so the
+    sibling lock landed inside the read-only tree and every closeout died on
+    ``PermissionError: '.learnings.md.lock'``. The same closeout ran cleanly
+    five times that session against a repository whose tracker was not in a
+    locked root -- the failure was the lock's LOCATION, not the tracker.
+
+    A crashed process also used to leave that sibling behind inside the locked
+    tree, where it could not be cleared without unlocking the checkout again.
+
+    The name is the sha256 of the resolved tracker path, so two different
+    trackers never share a lock and the same tracker always resolves to the
+    same one regardless of which worktree is asking.
+    """
+
+    resolved = path.expanduser().resolve()
+    digest = hashlib.sha256(str(resolved).encode("utf-8")).hexdigest()[:32]
+    root = Path(
+        os.environ.get("ENFORCED_PLANNING_LOCK_DIR")
+        or (Path(os.environ.get("XDG_RUNTIME_DIR") or Path.home() / ".cache")
+            / "enforced-planning" / "tracker-locks")
+    )
+    # PURE. Computing where a lock lives must not create anything: the status
+    # observer calls this only to LOOK for an existing lock, and an earlier
+    # version of this function made the directory as a side effect, so merely
+    # reading status started writing to disk. `session_tracker_lock` creates
+    # the directory when it actually takes the lock.
+    return root / f"{digest}.lock"
+
+
+class TrackerPathNotYAML(TypeError):
+    """A claim's tracker path is not a readable YAML mapping.
+
+    A TypeError subclass so existing handlers that catch TypeError still work.
+    """
+
+
+@contextmanager
+def session_tracker_lock(path: Path) -> Iterator[None]:
+    """Serialize exact-session tracker mutations through one out-of-tree lock."""
+
+    resolved = path.expanduser().resolve()
+    resolved.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    lock_path = tracker_lock_path(resolved)
+    lock_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with lock_path.open("a+", encoding="utf-8") as handle:
+        lock_path.chmod(0o600)
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def _atomic_write_session_tracker(path: Path, payload: dict[str, Any]) -> None:
+    """Replace one tracker without exposing partial YAML to another reader."""
+
+    resolved = path.expanduser().resolve()
+    resolved.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=resolved.parent,
+            prefix=f".{resolved.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temp_path = Path(handle.name)
+            yaml.safe_dump(payload, handle, default_flow_style=False, sort_keys=False)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temp_path.chmod(0o600)
+        os.replace(temp_path, resolved)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
+
+
+def read_session_tracker(path: Path) -> dict[str, Any]:
+    """Load one tracker artifact and fail loud if the structure is invalid.
+
+    A parse failure is reported against the tracker path, not as a raw parser
+    traceback. A claim recorded with a tracker path that is not a YAML mapping
+    -- a Markdown document, say -- used to be accepted silently and then kill
+    the CLOSEOUT with a bare ``yaml.scanner.ScannerError``, stranding a lane
+    whose work was already merged. `check_coordination_claims.py` now refuses
+    such a path when the claim is made; this is the second line of defence for
+    claims recorded before that check existed.
+    """
+
+    text = path.read_text(encoding="utf-8")
+    try:
+        raw = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise TrackerPathNotYAML(
+            f"Session tracker at {path} is not parseable as YAML, so the lane "
+            f"holding it cannot be read or closed. A tracker must be a YAML "
+            f"mapping; this looks like another kind of document. Underlying "
+            f"parser error: {exc}"
+        ) from exc
     if not isinstance(raw, dict):
-        raise ValueError(f"Session tracker at {path} must be a YAML mapping")
+        raise TrackerPathNotYAML(
+            f"Session tracker at {path} parsed as {type(raw).__name__}, not a "
+            "YAML mapping. A Markdown or prose file passed as --tracker-path is "
+            "the usual cause."
+        )
     return raw
+
+
+def mutate_session_tracker(
+    path: Path,
+    mutation: Callable[[dict[str, Any]], None],
+    *,
+    updated_at: str | None = None,
+) -> dict[str, Any]:
+    """Apply one locked tracker transformation and atomically persist it."""
+
+    resolved = path.expanduser().resolve()
+    with session_tracker_lock(resolved):
+        payload = read_session_tracker(resolved)
+        mutation(payload)
+        timestamps = payload.get("timestamps")
+        if not isinstance(timestamps, dict):
+            raise TypeError(f"Session tracker at {resolved} is missing timestamps section")
+        timestamps["updated_at"] = updated_at or datetime.now(UTC).isoformat()
+        _atomic_write_session_tracker(resolved, payload)
+    return payload
 
 
 def update_session_tracker(
@@ -364,28 +599,22 @@ def update_session_tracker(
 ) -> dict[str, Any]:
     """Update one existing tracker artifact in place and return the payload."""
 
-    payload = read_session_tracker(path)
-    tracker = payload.get("tracker")
-    timestamps = payload.get("timestamps")
-    if not isinstance(tracker, dict) or not isinstance(timestamps, dict):
-        raise ValueError(f"Session tracker at {path} is missing tracker/timestamps sections")
+    def apply_updates(payload: dict[str, Any]) -> None:
+        tracker = payload.get("tracker")
+        timestamps = payload.get("timestamps")
+        if not isinstance(tracker, dict) or not isinstance(timestamps, dict):
+            raise TypeError(f"Session tracker at {path} is missing tracker/timestamps sections")
+        if current_phase is not None:
+            tracker["current_phase"] = _require_text(current_phase, field_name="current_phase")
+        if intended_next_phases is not None:
+            tracker["intended_next_phases"] = _clean_string_list(intended_next_phases)
+        if depends_on_repos is not None:
+            tracker["depends_on_repos"] = _clean_string_list(depends_on_repos)
+        if requires_shared_infra_changes is not None:
+            tracker["requires_shared_infra_changes"] = requires_shared_infra_changes
+        if stop_conditions is not None:
+            tracker["stop_conditions"] = _clean_string_list(stop_conditions)
+        if notes is not None:
+            tracker["notes"] = notes.strip()
 
-    if current_phase is not None:
-        tracker["current_phase"] = _require_text(current_phase, field_name="current_phase")
-    if intended_next_phases is not None:
-        tracker["intended_next_phases"] = _clean_string_list(intended_next_phases)
-    if depends_on_repos is not None:
-        tracker["depends_on_repos"] = _clean_string_list(depends_on_repos)
-    if requires_shared_infra_changes is not None:
-        tracker["requires_shared_infra_changes"] = requires_shared_infra_changes
-    if stop_conditions is not None:
-        tracker["stop_conditions"] = _clean_string_list(stop_conditions)
-    if notes is not None:
-        tracker["notes"] = notes.strip()
-
-    timestamps["updated_at"] = updated_at or datetime.now(timezone.utc).isoformat()
-    path.write_text(
-        yaml.safe_dump(payload, default_flow_style=False, sort_keys=False),
-        encoding="utf-8",
-    )
-    return payload
+    return mutate_session_tracker(path, apply_updates, updated_at=updated_at)
