@@ -12,6 +12,7 @@ from typing import Any, cast
 from fastapi.testclient import TestClient
 from llm_client import LLMCapabilityError, LLMQuotaExhaustedError
 from pytest import MonkeyPatch
+from waiting import wait_for, wait_until
 from test_authoring_compiler import _proposal
 from test_authoring_information_campaign import information_campaign_proposal
 from test_authoring_influence_network import influence_network_proposal
@@ -599,13 +600,13 @@ def test_completed_authored_run_resumes_only_missing_narration(
     assert started.json()["narration_resume"]["world_replayed"] is False
     assert narrated.wait(timeout=5)
 
-    for _ in range(200):
-        reopened = api.get(f"/api/runs/{completed['run_id']}").json()
-        if reopened["status"] == "completed":
-            break
-        time.sleep(0.01)
-    else:
-        raise AssertionError("narration-only resume did not complete")
+    reopened = wait_for(
+        lambda: cast(
+            dict[str, Any], api.get(f"/api/runs/{completed['run_id']}").json()
+        ),
+        lambda candidate: candidate["status"] == "completed",
+        description="narration-only resume did not complete",
+    )
 
     assert len(observed_moments) == 1
     assert not any(
@@ -1073,12 +1074,11 @@ def test_failed_authored_live_run_is_retained_with_provider_evidence(
     assert failed.status_code == 202
     run_id = failed.json()["run_id"]
     retained: dict[str, object] | None = None
-    for _ in range(200):
-        candidate = api.get(f"/api/runs/{run_id}").json()
-        if candidate["status"] == "failed":
-            retained = candidate
-            break
-        time.sleep(0.01)
+    retained = wait_for(
+        lambda: cast(dict[str, Any], api.get(f"/api/runs/{run_id}").json()),
+        lambda candidate: candidate["status"] == "failed",
+        description=f"run {run_id} did not reach failed",
+    )
     assert retained is not None
     assert retained["status"] == "failed"
     run = api.get(f"/api/runs/{run_id}").json()
@@ -1146,11 +1146,11 @@ def test_authored_coordination_run_exposes_parallelism_and_stop_control(
         captured.update(kwargs)
         entered.set()
         stop_requested = cast(Any, kwargs["stop_requested"])
-        for _ in range(200):
-            if stop_requested():
-                stop_observed.set()
-                break
-            time.sleep(0.01)
+        wait_until(
+            stop_requested,
+            description="stop was never requested on the running scenario",
+        )
+        stop_observed.set()
         release.wait(2)
         raise RuntimeError("forced completion after stop wiring proof")
 
@@ -1188,11 +1188,11 @@ def test_authored_coordination_run_exposes_parallelism_and_stop_control(
     assert repeated_stop.status_code == 200
     release.set()
 
-    for _ in range(200):
-        retained = api.get(f"/api/runs/{run_id}").json()
-        if retained["status"] == "failed":
-            break
-        time.sleep(0.01)
+    retained = wait_for(
+        lambda: cast(dict[str, Any], api.get(f"/api/runs/{run_id}").json()),
+        lambda candidate: candidate["status"] == "failed",
+        description=f"run {run_id} did not reach failed",
+    )
     assert retained["status"] == "failed"
 
 
