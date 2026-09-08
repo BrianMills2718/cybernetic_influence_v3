@@ -1211,7 +1211,7 @@ function renderCaseChapter() {
     {kind:'Result', title:'Watch the coalition break and come back.'},
     {kind:'Agent reasoning', title:'Read the same officials before and after.'},
     {kind:'Cognitive Security Operations', title:'See what detected the problem and what fixed it.'},
-    {kind:'Evasion', title:'See the same pressure go unread by the same watchers.'},
+    {kind:'Evasion', title:'See the same watchers classify a shaped pattern less severely.'},
   ]
   caseStudyStep = Math.max(0, Math.min(caseStudyStep, chapters.length - 1))
   const chapter = chapters[caseStudyStep]
@@ -1264,8 +1264,8 @@ function renderEvasionComparison() {
     return
   }
   const arms = [
-    {key:'overt', label:'Pressure applied openly', data:evasionCase.overt},
-    {key:'evasion', label:'The same pressure, kept inside ordinary variation', data:evasionCase.evasion},
+    {key:'overt', label:'Overt expression policy', data:evasionCase.overt},
+    {key:'evasion', label:'Threshold-managed expression policy', data:evasionCase.evasion},
   ]
   host.innerHTML = arms.map(({key, label, data}) => {
     const rounds = (data.rounds || []).map((entry) => `<li><span>Round ${entry.round}</span><strong>${escapeHtml(stanceLine(entry.decisions))}</strong></li>`).join('')
@@ -1287,7 +1287,7 @@ function renderEvasionComparison() {
   const evasionWorst = worstRound(evasionCase.evasion)
   const overtFinal = evasionCase.overt.final_decisions || {}
   const evasionFinal = evasionCase.evasion.final_decisions || {}
-  note.innerHTML = `<strong>Read the two together.</strong> Under the shaped pressure the coalition went further &mdash; ${evasionWorst} at its worst against ${overtWorst} &mdash; and the same watchers, at the same thresholds, called it <em>${escapeHtml(readable(evasionCase.evasion.detector.coordination_readiness))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.coordination_readiness))}</em>, and blamed <em>${escapeHtml(readable(evasionCase.evasion.detector.mechanism))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.mechanism))}</em>. The intervention still fired, but against the wrong reading: the coalition ended ${escapeHtml(stanceLine(evasionFinal))} instead of ${escapeHtml(stanceLine(overtFinal))}. The pressure did not become weaker. It became harder to see, and the response was worse for it.`
+  note.innerHTML = `<strong>Read the two together.</strong> Under the threshold-managed expression policy the coalition reached a lower outright-support floor &mdash; ${evasionWorst} at its worst against ${overtWorst} &mdash; yet the same watchers called readiness <em>${escapeHtml(readable(evasionCase.evasion.detector.coordination_readiness))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.coordination_readiness))}</em>, and diagnosed <em>${escapeHtml(readable(evasionCase.evasion.detector.mechanism))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.mechanism))}</em>. The intervention still fired, but final recovery was less complete: ${escapeHtml(stanceLine(evasionFinal))} instead of ${escapeHtml(stanceLine(overtFinal))}. This is an under-classification and mechanism-misdiagnosis result, not a detection miss; these runs do not establish equal pressure dose.`
 }
 
 function worstRound(arm) {
