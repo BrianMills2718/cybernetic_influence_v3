@@ -3,8 +3,9 @@ PYTHON := $(VENV)/bin/python
 LLM_CLIENT_ROOT ?= ../active/llm_client
 HOST ?= 127.0.0.1
 PORT ?= 8620
+PUBLIC_PORT ?= 8621
 
-.PHONY: install ui-install ui-build ui-sync assets-check ui-smoke ui-visibility claims-check authoring-route-health authoring-route-refresh test typecheck deploy-check check serve
+.PHONY: install ui-install ui-build ui-sync assets-check ui-smoke ui-visibility case-ux claims-check authoring-route-health authoring-route-refresh test typecheck deploy-check check serve serve-public
 
 install: ui-install
 	python3 -m venv $(VENV) || virtualenv --clear $(VENV)
@@ -46,6 +47,9 @@ ui-smoke:
 ui-visibility:
 	$(PYTHON) scripts/check_primary_controls_visible.py --base-url http://$(HOST):$(PORT)
 
+case-ux:
+	$(PYTHON) scripts/check_case_study_ux.py --base-url http://$(HOST):$(PUBLIC_PORT)
+
 # Warns before the authoring route's certification lapses. Needs the service
 # environment, so it is normally run on the deployment host.
 # Fails when the page states something the retained runs do not support. The
@@ -76,6 +80,9 @@ check: typecheck test ui-build assets-check deploy-check
 
 serve:
 	$(PYTHON) -m uvicorn cybernetic_influence.api:app --host $(HOST) --port $(PORT)
+
+serve-public:
+	$(PYTHON) -m uvicorn cybernetic_influence.public_waltzman:app --host $(HOST) --port $(PUBLIC_PORT)
 
 PROJECT_STATUS_PYTHON ?= $(if $(strip $(PYTHON)),$(PYTHON),$(if $(wildcard .venv/bin/python),.venv/bin/python,python3))
 PROJECT_STATUS_SCRIPT ?= scripts/meta/project_status.py

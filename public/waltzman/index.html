@@ -23,7 +23,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology2">
-  <link rel="stylesheet" href="assets/styles.css?v=evasion1">
+  <link rel="stylesheet" href="assets/styles.css?v=ux1">
     <style>
       /* Spotlight tour. Policy: spotlight-tour-default. Engine is assets/tour.js,
          copied unchanged from forecast-league-mvp/public/tour.js. */
@@ -193,8 +193,12 @@
           <p>A novel respiratory outbreak is spreading through Alba, Borin, Cyrenia, and Darsia. A proposed compact would share evidence, laboratory capacity, investigation teams, supplies, and transport—but those capabilities remain distributed across national and regional networks.</p>
         </header>
 
+        <section id="case-at-a-glance" class="case-at-a-glance" aria-label="Case at a glance">
+          <p class="case-loading">Loading the retained case summary…</p>
+        </section>
+
         <nav id="case-walkthrough" class="case-walkthrough-controls" aria-label="Case study walkthrough">
-          <div><span id="case-walkthrough-kind">The world</span><strong id="case-walkthrough-progress">Step 1 of 6</strong></div>
+          <div><span id="case-walkthrough-kind">The world</span><strong id="case-walkthrough-progress">Step 1 of 7</strong></div>
           <div><button id="case-walkthrough-previous" type="button">Previous</button><button id="case-walkthrough-next" class="primary-cta" type="button">Next →</button></div>
         </nav>
 
@@ -275,6 +279,7 @@
         <section class="case-evasion" data-case-chapter="6" aria-labelledby="case-evasion-title">
           <div class="case-section-heading"><span>Evasion</span><h3 id="case-evasion-title">The same sources, with a threshold-managed expression policy</h3></div>
           <p class="case-decision-key">A second run. The same four source roles act on the same coalition, but every signal is constrained to a narrow verification need rather than an escalation, and none refers to any other. <strong>The detection cell is unchanged</strong> &mdash; same three watchers, same categories, same trigger. This changes the expression policy; it does not prove equal pressure dose.</p>
+          <div id="case-evasion-contract" class="case-comparison-contract" aria-label="Comparison contract"></div>
           <div id="case-evasion-compare" class="case-evasion-compare"></div>
           <p id="case-evasion-reading" class="case-evasion-reading"></p>
         </section>
@@ -823,7 +828,7 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=ontology2" defer></script>
-  <script src="assets/app.js?v=evasion1" defer></script>
+  <script src="assets/app.js?v=ux1" defer></script>
     <script src="assets/tour.js?v=tour1" defer></script>
     <script>
       window.TOURS = {
@@ -840,7 +845,8 @@
       window.addEventListener("DOMContentLoaded", function () {
         var b = document.querySelector("[data-tour-start]");
         if (b) b.addEventListener("click", function () { startTour("waltzman"); });
-        if (typeof maybeStartTour === "function") maybeStartTour("waltzman");
+        var directView = new URLSearchParams(window.location.search).get("view");
+        if (typeof maybeStartTour === "function" && (!directView || directView === "overview")) maybeStartTour("waltzman");
       });
     </script>
 </body>

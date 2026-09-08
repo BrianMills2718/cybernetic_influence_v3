@@ -39,7 +39,11 @@ experiment the run was not performing, in well-rendered prose, and nothing
 noticed. A claims-versus-evidence check now fails the deploy when the page
 states something the retained runs do not support, and a nightly audit runs it
 alongside asset resolution, control visibility and certification margin. No
-model calls, so the cadence costs nothing to keep.
+model calls, so the cadence costs nothing to keep. A 2026-09-07
+representation-router review reopened a bounded usability follow-up after render
+QA found unreadable default network labels, hidden mobile destinations, a delayed
+first-frame payoff, and a prose-heavy evasion comparison; those concrete defects
+are the only new scope.
 
 [Slice 33: Test threshold-managed under-classification](033-evasion-space-case.md)
 implements one bounded section-7 pair. The planned no-detection endpoint did not

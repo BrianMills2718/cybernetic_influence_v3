@@ -11,6 +11,8 @@ someone remembering to look:
                 (the link was broken for anyone omitting the trailing slash)
   controls      a primary control sits outside the viewport at some width
                 (Next was off-screen between 1280 and 1600)
+  case-ux       the flagship case is unreadable or obscures/clips its evidence
+                (mobile labels, navigation, overlays, and comparison all escaped earlier checks)
   route         the authoring certification is close to lapsing
                 (Create went dark with no warning, twice)
 
@@ -96,6 +98,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--page-url", default=DEFAULT_PAGE_URL)
     parser.add_argument(
+        "--chromium",
+        default=None,
+        help="explicit Chromium executable for browser checks; omit on the deployment host",
+    )
+    parser.add_argument(
         "--status-target",
         type=Path,
         default=None,
@@ -119,6 +126,18 @@ def main() -> int:
                 str(REPO / "scripts" / "check_primary_controls_visible.py"),
                 "--base-url",
                 args.page_url,
+                *(["--chromium", args.chromium] if args.chromium else []),
+            ],
+            None,
+        ),
+        (
+            "case-ux",
+            [
+                python,
+                str(REPO / "scripts" / "check_case_study_ux.py"),
+                "--base-url",
+                args.page_url,
+                *(["--chromium", args.chromium] if args.chromium else []),
             ],
             None,
         ),
