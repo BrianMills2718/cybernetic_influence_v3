@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 from llm_client import installed_llm_client_revision
+from waiting import wait_for
 
 from cybernetic_influence.active_runtime import (
     ActiveRuntimeConfig,
@@ -783,13 +784,13 @@ def test_live_options_are_applied_and_retained(tmp_path: Path) -> None:
         )
         assert response.status_code == 202, response.text
         run_id = response.json()["run_id"]
-        body: dict[str, object] | None = None
-        for _ in range(200):
-            candidate = client(tmp_path).get(f"/api/runs/{run_id}").json()
-            if candidate["status"] in {"completed", "failed"}:
-                body = candidate
-                break
-            time.sleep(0.01)
+        body = wait_for(
+            lambda: cast(
+                dict[str, Any], client(tmp_path).get(f"/api/runs/{run_id}").json()
+            ),
+            lambda candidate: candidate["status"] in {"completed", "failed"},
+            description=f"run {run_id} did not reach a terminal status",
+        )
         assert body is not None
     assert captured_bindings == [
         ("openrouter/deepseek/deepseek-v4-flash", "none")
@@ -1043,10 +1044,11 @@ def test_live_worker_retains_pending_activation_before_commit(tmp_path: Path) ->
         assert progress["records"][0]["participant_ids"] == ["triager"]
         assert progress["records"][0]["event_ids"] == []
         release.set()
-        for _ in range(200):
-            if api.get(f"/api/runs/{run_id}").json()["status"] == "completed":
-                break
-            time.sleep(0.01)
+        wait_for(
+            lambda: cast(dict[str, Any], api.get(f"/api/runs/{run_id}").json()),
+            lambda candidate: candidate["status"] == "completed",
+            description=f"run {run_id} did not complete",
+        )
         assert api.get(f"/api/runs/{run_id}").json()["status"] == "completed"
 
 
@@ -1732,13 +1734,13 @@ def test_live_service_desk_resume_reuses_retained_llm_configuration(
         assert resumed_worker_entered.wait(timeout=5)
         assert api.get("/api/runs/run_feed00000000").json()["status"] == "running"
         release_resumed_worker.set()
-        for _ in range(200):
-            retained = api.get("/api/runs/run_feed00000000").json()
-            if retained["status"] == "completed":
-                break
-            time.sleep(0.01)
-        else:
-            pytest.fail("resumed live run did not complete")
+        retained = wait_for(
+            lambda: cast(
+                dict[str, Any], api.get("/api/runs/run_feed00000000").json()
+            ),
+            lambda candidate: candidate["status"] == "completed",
+            description="resumed live run did not complete",
+        )
     assert captured == [("openrouter/deepseek/deepseek-v4-flash", "none")]
     assert lock_checked is True
     assert retained["status"] == "completed"
@@ -1836,10 +1838,11 @@ def test_only_one_live_run_can_execute_per_process(tmp_path: Path) -> None:
         assert "already active" in second.json()["detail"]
         release.set()
         run_id = first.json()["run_id"]
-        for _ in range(200):
-            if api.get(f"/api/runs/{run_id}").json()["status"] == "completed":
-                break
-            time.sleep(0.01)
+        wait_for(
+            lambda: cast(dict[str, Any], api.get(f"/api/runs/{run_id}").json()),
+            lambda candidate: candidate["status"] == "completed",
+            description=f"run {run_id} did not complete",
+        )
         assert api.get(f"/api/runs/{run_id}").json()["status"] == "completed"
 
 
@@ -1902,10 +1905,11 @@ def test_invalid_live_run_id_does_not_leave_the_live_lock_held(tmp_path: Path) -
         started = api.post("/api/runs", json={"execution": "live"})
         assert started.status_code == 202, started.text
         run_id = started.json()["run_id"]
-        for _ in range(200):
-            if api.get(f"/api/runs/{run_id}").json()["status"] == "completed":
-                break
-            time.sleep(0.01)
+        wait_for(
+            lambda: cast(dict[str, Any], api.get(f"/api/runs/{run_id}").json()),
+            lambda candidate: candidate["status"] == "completed",
+            description=f"run {run_id} did not complete",
+        )
         assert api.get(f"/api/runs/{run_id}").json()["status"] == "completed"
 
 
@@ -2304,19 +2308,16 @@ def test_coordination_live_api_selects_provider_people_and_live_narration(
         )
         assert response.status_code == 202, response.text
         run_id = response.json()["run_id"]
-        retained: dict[str, object] | None = None
-        for _ in range(5_000):
-            candidate = api.get(f"/api/runs/{run_id}").json()
-            if candidate["status"] == "failed" or (
+        retained = wait_for(
+            lambda: cast(dict[str, Any], api.get(f"/api/runs/{run_id}").json()),
+            lambda candidate: candidate["status"] == "failed"
+            or (
                 candidate["status"] == "completed"
-                and candidate.get("coordination_measurement_readout", {}).get(
-                    "status"
-                )
+                and candidate.get("coordination_measurement_readout", {}).get("status")
                 != "measuring"
-            ):
-                retained = candidate
-                break
-            time.sleep(0.01)
+            ),
+            description=f"run {run_id} did not settle its coordination measurement",
+        )
 
     assert retained is not None
     assert retained["status"] == "completed"

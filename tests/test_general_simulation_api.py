@@ -9,6 +9,7 @@ from typing import Any, cast
 
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
+from waiting import wait_for
 
 import cybernetic_influence.api as api_module
 from cybernetic_influence.api import create_app
@@ -68,6 +69,14 @@ def _native_v2_proposal() -> AuthoredSimulationProposalV2:
         analyst_question=bundle.analyst_question,
     )
 
+
+
+def _polled_job(api: TestClient, job_id: str) -> dict[str, Any]:
+    """Fetch one authoring job, asserting the endpoint stayed healthy."""
+
+    polled = api.get(f"/api/authoring/jobs/{job_id}")
+    assert polled.status_code == 200
+    return cast(dict[str, Any], polled.json())
 
 def test_materializes_only_unambiguous_contract_references() -> None:
     scenario_payload = _native_v2_proposal().scenario.model_dump(mode="json")
@@ -1398,15 +1407,11 @@ def test_live_general_authoring_runs_as_pollable_background_job(
     )
     assert discussion_started.status_code == 202
     discussion_job = discussion_started.json()
-    for _ in range(100):
-        polled = api.get(
-            f"/api/authoring/jobs/{discussion_job['job_id']}"
-        )
-        assert polled.status_code == 200
-        discussion_job = polled.json()
-        if discussion_job["status"] != "generating":
-            break
-        time.sleep(0.01)
+    discussion_job = wait_for(
+        lambda: _polled_job(api, str(discussion_job["job_id"])),
+        lambda candidate: candidate["status"] != "generating",
+        description="discussion authoring job stayed generating",
+    )
     assert discussion_job["status"] == "completed", json.dumps(
         discussion_job, indent=2
     )
@@ -1432,13 +1437,11 @@ def test_live_general_authoring_runs_as_pollable_background_job(
     assert job["status"] == "generating"
     assert job["phase"] == "queued"
     assert job["progress"][0]["phase"] == "queued"
-    for _ in range(100):
-        polled = api.get(f"/api/authoring/jobs/{job['job_id']}")
-        assert polled.status_code == 200
-        job = polled.json()
-        if job["status"] != "generating":
-            break
-        time.sleep(0.01)
+    job = wait_for(
+        lambda: _polled_job(api, str(job["job_id"])),
+        lambda candidate: candidate["status"] != "generating",
+        description="authoring job stayed generating",
+    )
     assert job["status"] == "completed"
     assert job["phase"] == "complete"
     phases = [item["phase"] for item in job["progress"]]
@@ -1543,11 +1546,11 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
     )
     assert started.status_code == 202, started.text
     run_id = started.json()["run_id"]
-    for _ in range(200):
-        reopened = api.get(f"/api/runs/{run_id}").json()
-        if reopened["status"] != "running":
-            break
-        time.sleep(0.01)
+    reopened = wait_for(
+        lambda: cast(dict[str, Any], api.get(f"/api/runs/{run_id}").json()),
+        lambda candidate: candidate["status"] != "running",
+        description=f"run {run_id} stayed running",
+    )
     assert reopened["status"] == "completed", reopened
     assert reopened["profile"] == "general_world_v2"
     assert reopened["execution_contract"] == "general_world_v2"
@@ -1792,11 +1795,13 @@ def test_experiment_runs_every_condition_against_the_identical_scenario(
     assert started.json()["job_id"] == experiment_id
 
     experiment: dict[str, object] = {}
-    for _ in range(400):
-        experiment = api.get(f"/api/experiments/{experiment_id}").json()
-        if experiment["status"] != "running":
-            break
-        time.sleep(0.01)
+    experiment = wait_for(
+        lambda: cast(
+            dict[str, Any], api.get(f"/api/experiments/{experiment_id}").json()
+        ),
+        lambda candidate: candidate["status"] != "running",
+        description=f"experiment {experiment_id} stayed running",
+    )
     assert experiment["status"] == "completed", experiment
     conditions = cast(list[dict[str, object]], experiment["conditions"])
     assert len(conditions) == 2

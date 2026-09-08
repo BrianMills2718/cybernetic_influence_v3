@@ -122,7 +122,13 @@ new capability by themselves.
 - Wait on wall-clock time, never on an iteration count, when polling for a
   background run to reach a terminal state. A fixed `for _ in range(200)` with
   a 10ms sleep is a two-second deadline on real work: it passes alone and fails
-  inside the full suite and on CI.
+  inside the full suite and on CI. Use `wait_for` / `wait_until` from
+  `tests/waiting.py`. This rule is enforced by `make test-wait-check`
+  (`scripts/check_test_wait_deadlines.py`), which runs inside `make check` — it
+  became a check on 2026-09-08 because as prose alone it did not hold: it was
+  written on 2026-09-06 alongside a fix for two such tests, and two days later
+  fourteen instances of the exact named pattern were still live across three
+  test files, one of them failing `main`'s own CI.
 - `make test` runs `pytest -q tests` specifically — always scope pytest to
   `tests/` (or use `make test`). Do not run a bare `pytest` from the repo
   root: `worktrees/` can contain other lanes' checkouts with duplicate test
