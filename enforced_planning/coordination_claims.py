@@ -61,7 +61,25 @@ COMPLETED_STATUSES = {"complete", "completed"}
 SESSION_ENDED_STATUS = "session_ended"
 CLOSEABLE_STATUSES = LIVE_STATUSES | {SESSION_ENDED_STATUS}
 CLAIM_TYPES = {"program", "write", "review", "research"}
-SUPPORTED_AGENTS = ("claude-code", "codex", "openclaw")
+# `chatgpt` is the ChatGPT/Codex VS Code extension, admitted 2026-09-08. It is a
+# real, actively used agent here, not a typo: on the day it was added it owned 10
+# live dodaf lanes with trackers and had merged dozens of pull requests that day.
+#
+# It had been creating claims and session trackers through the Python API for
+# some time. That API never validated `agent` -- only the argparse `choices` on
+# the CLI did -- so the value flowed straight through. When `start_session`
+# started validating the agent (PR #403, closing the hole that produced
+# unretireable trackers), that silently blocked this agent from opening any new
+# lane. Admitting it here is the correct repair: the validation is right, and the
+# list it validated against was simply incomplete. Admitting it also makes those
+# existing lanes closeable through ordinary `session-close` for the first time.
+#
+# It has no `STRICT_NATIVE_SESSION_ENV_KEYS` entry, so
+# `validate_native_session_binding` no-ops for it and its `session_id` is a
+# caller-supplied label rather than a native runtime marker. That is unchanged
+# from how these lanes already worked; giving it a native marker would tighten
+# identity further and is a separate improvement, not a prerequisite.
+SUPPORTED_AGENTS = ("claude-code", "codex", "openclaw", "chatgpt")
 STRICT_LIVE_METADATA_CLAIM_TYPES = {"program", "write", "review", "research"}
 CURRENT_CLAIM_SCHEMA_VERSION = 6
 BROAD_SCOPE_MODES = {"bootstrap", "bounded"}
@@ -3439,6 +3457,26 @@ def hydrate_missing_session_ids(
     return len(updated_scopes), sorted(updated_scopes), resolved_session_id
 
 
+def _extended_lease_expiry(
+    current_expires_at: Any,
+    renewed_at: str,
+    ttl_hours: float,
+) -> str:
+    """Return the later of a claim's current lease and one renewed at ``renewed_at``."""
+
+    renewed = datetime.fromisoformat(renewed_at) + timedelta(hours=ttl_hours)
+    if isinstance(current_expires_at, str) and current_expires_at:
+        try:
+            existing = datetime.fromisoformat(current_expires_at)
+        except ValueError:
+            return renewed.isoformat()
+        if existing.tzinfo is None:
+            existing = existing.replace(tzinfo=timezone.utc)
+        if existing > renewed:
+            return current_expires_at
+    return renewed.isoformat()
+
+
 def heartbeat_claims(
     *,
     agent: str,
@@ -3448,8 +3486,9 @@ def heartbeat_claims(
     branch: str | None = None,
     claims_dir: Path | None = None,
     require_exact_session: bool = False,
+    ttl_hours: float = DEFAULT_TTL_HOURS,
 ) -> tuple[int, list[str], str, str]:
-    """Refresh heartbeat metadata for matching live claims owned by one session."""
+    """Refresh heartbeat metadata and the lease for live claims owned by one session."""
 
     resolved_session_id = resolve_session_id(agent, session_id)
     if not resolved_session_id:
@@ -3494,6 +3533,31 @@ def heartbeat_claims(
             data["session_id"] = resolved_session_id
             data["heartbeat_at"] = heartbeat_at
             data["updated_at"] = heartbeat_at
+            # A heartbeat's documented job is to "refresh the lease", and the
+            # lease is expires_at -- the guide contrasts it with session-narrow
+            # precisely by saying narrow renews neither heartbeat nor expiry.
+            # Until 2026-09-08 this wrote only the heartbeat, so a session that
+            # kept heartbeating past its 24-hour TTL expired anyway. That is
+            # worse than a stale timestamp: load_claims() above drops an expired
+            # record *before* normalize_claim(), so the lane stops existing for
+            # every registry consumer -- the push gate reports
+            # missing_branch_claim, "no claim is attached to this branch", about
+            # a file on disk that says status: active with the caller's own
+            # session_id (lrn-20260908T170436862573Z-d2c739d527).
+            #
+            # Renewal cannot keep a dead lane alive, because abandonment is
+            # detected by heartbeat_at ageing rather than by the TTL lapsing: a
+            # session that stops heartbeating stops renewing, and
+            # stale_session_heartbeat still classifies it for --prune-stale.
+            #
+            # Renewal only ever extends. A claim may deliberately carry an
+            # expiry beyond the default TTL, and a liveness signal must never be
+            # what shortens it: clamping every heartbeat to now + TTL would pull
+            # a long-lived lease back to a day. The existing invariant test that
+            # lists expires_at as heartbeat-preserved is what caught that.
+            data["expires_at"] = _extended_lease_expiry(
+                data.get("expires_at"), heartbeat_at, ttl_hours
+            )
             _atomic_write_claim(claim_file, data)
             updated_claims.append((claim_file, claim))
         if updated_claims:
