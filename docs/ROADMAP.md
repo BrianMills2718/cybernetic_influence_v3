@@ -431,10 +431,15 @@ There are five explicit tracks rather than one blended implementation queue:
    match. Seeding that expansion from every node the moment touched puts edges
    back on the coordination example's event scenes without changing V1
    retention, and the test is green. What does remain attributable to the
-   absent `transitions` is narrower: at least one event scene still resolves to
-   zero visible nodes and renders an empty canvas, and the "No change
-   committed." facts are unchanged. The V1 retirement above is still the fix
-   for that remainder, which is now a residual scene rather than every scene.
+   absent `transitions` is narrower still, and now handled: an event moment that
+   names no participants resolved to zero visible nodes and rendered an empty
+   canvas mid-walkthrough. Such a moment now falls back to the orienting set the
+   setup scene uses, with nothing focused, so it claims no change while keeping
+   the stage visible behind its narrative. The "No change committed." facts are
+   unchanged and remain honest for a V1 run. `tests/test_authoring_api.py` now
+   asserts that no event scene is empty. The V1 retirement above is still what
+   would let these scenes show real world changes rather than orienting
+   context.
 5. **Stakeholder readout — separate retained MVP boundary.** The operator
    selected the 26-agent resource-fork case on 2026-08-19 and **replaced it on
    2026-08-23** with the CSO stabilization run `run_5010214f2466` (Slice 31),

@@ -1723,6 +1723,15 @@ def _simulation_replay(
                     ]
                 )
             )
+            if not moment_node_ids:
+                # A V1 scripted run retains no transitions, so contract and
+                # changed nodes are empty by construction; if the moment also
+                # names no participants this resolved to nothing and the scene
+                # rendered a blank canvas mid-walkthrough. Fall back to the same
+                # orienting set the setup scene uses. Nothing is focused, so the
+                # scene claims no change -- it just keeps the stage visible
+                # while the narrative explains the beat.
+                moment_node_ids = list(setup_ids)
             visible_event_nodes = list(dict.fromkeys(moment_node_ids))[:12]
             visible_event_node_set = set(visible_event_nodes)
             induced_edge_ids = [

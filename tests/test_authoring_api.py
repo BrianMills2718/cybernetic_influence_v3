@@ -417,6 +417,10 @@ def test_reviewed_coordination_example_runs_reopens_and_isolates_analysis_corrup
         if scene["kind"] == "event"
     ]
     assert any(scene["visible_edge_ids"] for scene in event_scenes)
+    # An event scene with no nodes renders an empty canvas. On this V1 scripted
+    # run every event moment has empty contract and changed node sets, so a
+    # moment that also names no participants used to resolve to nothing at all.
+    assert all(scene["visible_node_ids"] for scene in event_scenes)
     assert "events" not in compact
     assert "traces" not in compact
 
