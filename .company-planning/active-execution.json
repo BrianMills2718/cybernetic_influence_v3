@@ -1,12 +1,12 @@
 {
   "active_slice": {
     "description": "Create and declare a Cybernetic Influence V3 composing page using only exact fields in the canonical membership manifest.",
-    "next_action": "Add the manifest route and fact-only composing page, then validate both.",
+    "next_action": null,
     "requires_external_action": false,
     "requires_spend": false,
     "slice_id": "P268-COMPOSE-CYBERNETIC-INFLUENCE-V3",
-    "status": "ready",
-    "target_revision": "488c7960c1e466f5c6fc650ed50b9923d09210ae"
+    "status": "accepted",
+    "target_revision": "5c49a77c1a44bf7ec9e8a4b250bd491abaf97891"
   },
   "authority": {
     "external_action_authorized": true,
@@ -22,22 +22,30 @@
     "runtime_integrity_valid": true
   },
   "completion": {
-    "evidence_revision": null,
-    "receipt_ref": null,
-    "remaining_ready_work": 1,
-    "requested": false,
-    "verifier_outcome": null
+    "evidence_revision": "5c49a77c1a44bf7ec9e8a4b250bd491abaf97891",
+    "receipt_ref": "git:5c49a77c1a44bf7ec9e8a4b250bd491abaf97891",
+    "remaining_ready_work": 0,
+    "requested": true,
+    "verifier_outcome": "pass"
   },
   "cursor_id": "plan-268-cybernetic-composing-page",
-  "cursor_revision": 1,
+  "cursor_revision": 2,
   "failure_state": {
     "boundary": null,
     "last_failure_ref": null,
     "same_boundary_failures": 0
   },
   "goal_ref": "project-meta#268-composing-project-coverage",
-  "lifecycle_state": "active",
-  "observations": [],
+  "lifecycle_state": "complete",
+  "observations": [
+    {
+      "boundary": "manifest-to-composing-page",
+      "evidence_ref": "5c49a77c1a44bf7ec9e8a4b250bd491abaf97891; ProjectMembershipManifestV1; exact-field representation; Markdown links; mypy; 471 pytest; UI build; asset comparison; deploy syntax",
+      "kind": "authentic_result",
+      "observation_id": "cybernetic-composing-route-verification",
+      "outcome": "pass"
+    }
+  ],
   "plan_revision": "4934382eccd52a95eab68456385df40b1c22605b",
   "ready_alternatives": [],
   "record_type": "plan_execution_cursor",
