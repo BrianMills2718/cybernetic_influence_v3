@@ -67,9 +67,11 @@ The current application is the pre-migration parity baseline. It shows:
   condition; and
 - scenario assumptions, exact mechanisms, and analyst-safe trace step-down.
 
-For a private Mac development host, use the concise
-[host runbook](docs/operations/mac-mini.md). It links dated deployment and
-capacity records only when they are needed for diagnosis.
+For the stakeholder-facing Waltzman route, use the
+[Cloudflare-native runbook](docs/operations/cloudflare-waltzman.md). The
+[Mac host runbook](docs/operations/mac-mini.md) remains relevant for private
+local development and rollback diagnosis; it is not the target production host
+for `world-substrate-visualization`.
 
 ## Lineage
 

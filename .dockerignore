@@ -1,0 +1,13 @@
+.git
+!.llm_client/.git
+.venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+frontend/node_modules
+node_modules
+artifacts
+worktrees
+.claude

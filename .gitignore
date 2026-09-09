@@ -8,3 +8,6 @@ __pycache__/
 artifacts/
 node_modules/
 .claude/hook_log.jsonl
+.llm_client/
+.route_certification/
+.wrangler/

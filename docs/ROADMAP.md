@@ -80,6 +80,7 @@ default first-screen journey. It explicitly reuses the existing public V2
 authoring/run pipeline rather than rebuilding it inside World Substrate;
 World Substrate supplies the next living-presentation target for retained runs.
 Slice 38 is implemented on this line: `simulation-replay.v1` and the retained influence network now drive a living replay without changing execution.
+Slice 39 is the active deployment boundary: the combined outreach/living-replay surface is being moved to `brianmills.dev/world-substrate-visualization/` through Cloudflare Workers Static Assets plus one Container running the existing public FastAPI/Concordia service. The route-certification gate remains fail-closed; public promotion still requires current certification evidence and one fresh natural-language run.
 
 ## Repository Lineage Disposition
 
@@ -568,15 +569,7 @@ not silently recreate the old runtime as a universal invariant set.
 - **Decision:** reset the foundation to Concordia while retaining the current
   product as parity evidence. Retain useful CI mechanisms and surfaces; replace
   its foundational runtime authority; clear the obsolete Candidate C handoff.
-- **Continue:** use the retained CSO stabilization run `run_5010214f2466`
-  with its `threshold_managed_evasion` counterpart `run_76dae6d4a9a7`
-  (rendered at `?view=case`) as the stable stakeholder-facing demo, selected by
-  the operator on 2026-08-23 in place of the 26-agent resource-fork case
-  (`outbreak_resource_forks_20260810214211`), which remains retained evidence.
-  The retained relief-port run `run_702e57f9accc` remains the parity exemplar
-  for the general author→review→run→replay path and its post-run Waltzman
-  attachment, but it is no longer the nominated demo. The remaining decision on
-  the flagship case is usefulness, not first execution or defect discovery.
+- **Continue:** use the Plan 37 outreach funnel plus Plan 38 generated-run living replay as the nominated Waltzman stakeholder path. The retained CSO stabilization/evasion pair and relief-port run remain valuable case/evidence fixtures, but they no longer define the first interaction. Plan 39 owns public promotion: Cloudflare-native routing, current route-certification evidence, and one fresh natural-language run through review → approval → execution → living replay.
 - **Reset:** at the earliest of roughly 45 minutes, two consecutive non-outcome
   increments, or user concern about pace, compare the current path with the most
   valuable reversible next move. Reset immediately if configuration requires
@@ -602,4 +595,4 @@ stochastic repetition. Later options remain conditional rather than automatic:
   generalization exemplar;
 - empirical calibration, attribution, operational detection, and predictive
   evaluation only when representative real-world evidence exists; and
-- production or public deployment.
+- durable production persistence or broader public deployment beyond the bounded Plan 39 Waltzman route.

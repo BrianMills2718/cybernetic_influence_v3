@@ -1,0 +1,43 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "world-substrate-visualization",
+  "main": "./deploy/cloudflare/worker.js",
+  "compatibility_date": "2026-09-09",
+  "assets": {
+    "directory": "./public/waltzman",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "routes": [
+    {
+      "pattern": "brianmills.dev/world-substrate-visualization*",
+      "zone_name": "brianmills.dev"
+    }
+  ],
+  "vars": {
+    "LLM_CLIENT_REVISION": "590a8ca5ca8f3553bc3b156bcb29c31cefb218bf"
+  },
+  "containers": [
+    {
+      "class_name": "WaltzmanContainer",
+      "image": "./Dockerfile.cloudflare",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WALTZMAN_CONTAINER",
+        "class_name": "WaltzmanContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "waltzman-container-v1",
+      "new_sqlite_classes": [
+        "WaltzmanContainer"
+      ]
+    }
+  ]
+}

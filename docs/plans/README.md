@@ -12,6 +12,12 @@ updated: 2026-09-09
 
 ## Active execution
 
+[Plan 39: Cloudflare-native Waltzman deployment](039-cloudflare-native-waltzman-deployment.md)
+is active. It moves the stakeholder surface off the Mac tunnel without replacing
+the simulator: Workers Static Assets serve the hook/replay UI and one Cloudflare
+Container runs the existing public FastAPI + Concordia service. Public promotion
+still requires current route-certification evidence and one fresh-run smoke test.
+
 [Slice 38: Living replay for generated worlds](038-living-replay-generated-worlds.md)
 is implemented as the next presentation layer. It adapts the existing compact retained-run summary into a
 World-Substrate-style living replay for generated `general_world_v2` simulations while keeping

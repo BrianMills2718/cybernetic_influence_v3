@@ -32,16 +32,19 @@ surfaces:
       local-information-to-collective-action hook, natural-language authoring,
       retained case/replay evidence, detachable analysis, and Experimentation.
     entrypoints:
-      production: https://brian-mac-mini.tail9c321e.ts.net/waltzman/
+      production: https://brianmills.dev/world-substrate-visualization/
+      rollback: https://brian-mac-mini.tail9c321e.ts.net/waltzman/
     run_commands:
-      deploy: scripts/deploy_public_waltzman.sh
+      deploy: npm run cf:deploy
+      deploy_check: npm run cf:check
+      rollback_deploy: scripts/deploy_public_waltzman.sh
       build_dataset: python scripts/build_public_waltzman_dataset.py
       capture: python scripts/capture_waltzman_demo.py
       verify: python scripts/verify_demo_ui.py
     data_boundary:
-      deployment: Deployed to a separate host (Mac Mini) from the local
-        operator app; deploy_public_waltzman.sh refuses to deploy over a
-        dirty working tree or a run in flight on the host.
+      deployment: Cloudflare Workers Static Assets serve the public hook/replay
+        surface and one Container runs the existing public FastAPI/Concordia
+        service. The Mac deployment is rollback-only for this route.
       audience: Public/external. Note that operator-review-app is also
         publicly reachable, at https://brianmills.dev/cybernetic-influence,
         proxied to 127.0.0.1:8620 by the Mac mini's public-prefix proxy -
@@ -52,8 +55,11 @@ surfaces:
         spend-bearing action. This entry previously described that app as
         local-only, which had stopped being true.
     provenance:
-      - scripts/deploy_public_waltzman.sh
-      - docs/ROADMAP.md (Slice 30 Artifact Disposition row)
+      - wrangler.jsonc
+      - deploy/cloudflare/worker.js
+      - docs/operations/cloudflare-waltzman.md
+      - scripts/deploy_public_waltzman.sh (rollback only)
+      - docs/ROADMAP.md
     tours:
       engine: public/waltzman/tour.js
       steps: inline at the foot of public/waltzman/index.html

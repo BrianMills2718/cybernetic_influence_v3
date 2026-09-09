@@ -71,6 +71,8 @@ typecheck:
 
 deploy-check:
 	bash -n deploy/run-with-provider-secret.sh
+	bash -n deploy/cloudflare/prepare-build.sh
+	node --check deploy/cloudflare/worker.js
 
 test-wait-check:
 	$(PYTHON) scripts/check_test_wait_deadlines.py

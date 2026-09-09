@@ -1,0 +1,28 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    CYBERNETIC_INFLUENCE_PUBLIC_ROOT=/app/public/waltzman \
+    CYBERNETIC_INFLUENCE_RUNS_DIR=/data/runs
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git build-essential ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements-dev.lock pyproject.toml README.md ./
+RUN pip install --no-cache-dir -r requirements-dev.lock
+
+COPY .llm_client /app/.llm_client
+RUN pip install --no-cache-dir -e '/app/.llm_client[structured]'
+
+COPY src /app/src
+COPY public /app/public
+COPY web /app/web
+COPY .route_certification /app/route_certification
+RUN pip install --no-cache-dir -e /app --no-deps \
+    && mkdir -p /data/runs /data/llm_client
+
+EXPOSE 8080
+CMD ["python", "-m", "uvicorn", "cybernetic_influence.public_waltzman:app", "--host", "0.0.0.0", "--port", "8080"]

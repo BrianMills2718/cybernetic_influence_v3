@@ -1,0 +1,16 @@
+{
+  "name": "cybernetic-influence-cloudflare-deploy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cf:prepare": "bash deploy/cloudflare/prepare-build.sh",
+    "cf:check": "npm run cf:prepare && wrangler deploy --dry-run --outdir .wrangler/dry-run --var BUILD_COMMIT:dry-run",
+    "cf:deploy": "npm run cf:prepare && wrangler deploy --var BUILD_COMMIT:${WORKERS_CI_COMMIT_SHA:-local}"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.3.7"
+  },
+  "devDependencies": {
+    "wrangler": "4.130.0"
+  }
+}
