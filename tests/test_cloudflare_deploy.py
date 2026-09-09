@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 from pathlib import Path
+import re
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,7 +38,8 @@ def test_cloudflare_route_uses_static_edge_and_one_container_backend() -> None:
 def test_worker_keeps_static_hook_off_container_and_strips_only_public_api_prefix() -> None:
     assert 'const PUBLIC_PREFIX = "/world-substrate-visualization"' in WORKER
     assert 'relative.startsWith("/api/")' in WORKER
-    assert "return env.ASSETS.fetch(staticAssetRequest(request))" in WORKER
+    assert "const assetResponse = await env.ASSETS.fetch(staticAssetRequest(request))" in WORKER
+    assert "return secureStaticResponse(assetResponse, relative)" in WORKER
     assert 'relative.startsWith("/assets/")' in WORKER
     assert 'getContainer(env.WALTZMAN_CONTAINER, BACKEND_INSTANCE)' in WORKER
     assert "startAndWaitForPorts" in WORKER
@@ -68,3 +72,24 @@ def test_runtime_secrets_are_named_but_never_committed_as_values() -> None:
     assert "secrets" not in CONFIG
     assert "sk-or-" not in WORKER
     assert "sk-proj-" not in WORKER
+
+
+def test_worker_static_security_headers_match_public_inline_scripts() -> None:
+    markup = (ROOT / "public/waltzman/index.html").read_text(encoding="utf-8")
+    inline_bodies = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", markup, re.I | re.S)
+    expected_hashes = [
+        base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii")
+        for body in inline_bodies
+        if body.strip()
+    ]
+    assert len(expected_hashes) == 2
+    for digest in expected_hashes:
+        assert f"'sha256-{digest}'" in WORKER
+    for header in (
+        "Content-Security-Policy",
+        "X-Content-Type-Options",
+        "Referrer-Policy",
+        "Permissions-Policy",
+    ):
+        assert header in WORKER
+    assert 'headers.set("Cache-Control", "no-cache")' in WORKER
