@@ -70,6 +70,9 @@ let authoredResult = null
 let authoredResultRoundIndex = 0
 let authoredReplaySceneIndex = 0
 let authoredReplayCognitionIndex = 0
+let livingReplayTimer = null
+let livingSelectedNodeId = null
+const livingLayers = {information:true, world:true, causal:true}
 let authoredDraftWalkthroughStep = 0
 let authoredDraftWalkthroughStepCount = 0
 let retainedRunHistory = []
@@ -3233,6 +3236,194 @@ function renderAuthoredResultRound() {
   })
 }
 
+
+const LIVING_INFORMATION_EDGE_KINDS = new Set([
+  'apparent_source', 'information_delivery', 'issued_information', 'delivered_to',
+  'information_route', 'message_delivery', 'observation',
+])
+const LIVING_CAUSAL_EDGE_KINDS = new Set([
+  'causal_responsibility', 'causal_parent', 'execution_parent', 'mechanism_binding',
+  'contributed_to_decision', 'transition_authority',
+])
+
+function livingEdgeLayer(edge) {
+  const kind = String(edge?.kind || '').toLowerCase()
+  if (LIVING_INFORMATION_EDGE_KINDS.has(kind) || /information|message|deliver|source|signal/.test(kind)) return 'information'
+  if (LIVING_CAUSAL_EDGE_KINDS.has(kind) || /causal|mechanism|transition|decision/.test(kind)) return 'causal'
+  return 'world'
+}
+
+function livingSceneProjection(result, scene) {
+  const projection = result?.influence_network || {nodes:[], edges:[]}
+  const overrides = new Map((scene?.node_overrides || []).map((item) => [item.node_id, item]))
+  const nodes = (projection.nodes || []).map((item) => semanticGraphNode({...item, ...(overrides.get(item.id) || {})}))
+  const edges = semanticGraphEdges(projection.edges || [], nodes)
+  const visibleNodeIds = new Set(scene?.visible_node_ids || nodes.map((item) => item.id))
+  const visibleEdgeIds = new Set(scene?.visible_edge_ids || edges.map((item) => item.id))
+  const visibleNodes = nodes.filter((item) => visibleNodeIds.has(item.id))
+  const nodeSet = new Set(visibleNodes.map((item) => item.id))
+  const visibleEdges = edges.filter((item) => visibleEdgeIds.has(item.id) && nodeSet.has(item.source) && nodeSet.has(item.target))
+  return {nodes:visibleNodes, edges:visibleEdges, allNodes:nodes, allEdges:edges}
+}
+
+function livingNodeLane(node, edges) {
+  if (node.kind === 'person') return 'people'
+  if (['information', 'source'].includes(node.kind)) return 'information'
+  const informationIncident = edges.some((edge) =>
+    livingEdgeLayer(edge) === 'information' && (edge.source === node.id || edge.target === node.id)
+  )
+  return informationIncident ? 'information' : 'world'
+}
+
+function livingNodeVisualKind(node, lane, edges) {
+  if (node.kind === 'person') return 'person'
+  if (lane === 'information') return 'information'
+  if (node.kind === 'resource') return 'resource'
+  if (node.kind === 'place') return 'place'
+  if (node.kind === 'mechanism') return 'mechanism'
+  const causalIncident = edges.some((edge) =>
+    livingEdgeLayer(edge) === 'causal' && (edge.source === node.id || edge.target === node.id)
+  )
+  const actorLike = /(?:^|_)actor$/i.test(String(node.id || '')) || /\bactor\b/i.test(String(node.label || ''))
+  return causalIncident && actorLike ? 'mechanism' : 'thing'
+}
+
+function livingNodeCard(node, lane, edges, scene) {
+  const visualKind = livingNodeVisualKind(node, lane, edges)
+  const focused = (scene?.focus_node_ids || []).includes(node.id)
+  const selected = livingSelectedNodeId === node.id
+  return `<button type="button" class="living-node ${escapeHtml(visualKind)}${focused ? ' focus' : ''}${selected ? ' selected' : ''}" data-living-node-id="${escapeHtml(node.id)}"><span class="living-node-kind">${escapeHtml(sentence(visualKind))}</span><strong>${escapeHtml(node.label)}</strong><small>${escapeHtml(node.description || 'Retained world item.')}</small></button>`
+}
+
+function drawLivingEdges(edges, scene) {
+  const frame = $('#living-world-frame')
+  const svg = $('#living-edge-layer')
+  if (!frame || !svg) return
+  const frameRect = frame.getBoundingClientRect()
+  if (!frameRect.width || !frameRect.height) return
+  svg.setAttribute('viewBox', `0 0 ${frameRect.width} ${frameRect.height}`)
+  svg.replaceChildren()
+  const nodeElements = new Map(all('#living-world-frame [data-living-node-id]').map((element) => [element.dataset.livingNodeId, element]))
+  const focusedEdges = new Set(scene?.focus_edge_ids || [])
+  for (const edge of edges) {
+    const layer = livingEdgeLayer(edge)
+    if (!livingLayers[layer]) continue
+    const source = nodeElements.get(edge.source)
+    const target = nodeElements.get(edge.target)
+    if (!source || !target) continue
+    const sourceRect = source.getBoundingClientRect()
+    const targetRect = target.getBoundingClientRect()
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+    const sourceCenter = {x:sourceRect.left - frameRect.left + sourceRect.width / 2, y:sourceRect.top - frameRect.top + sourceRect.height / 2}
+    const targetCenter = {x:targetRect.left - frameRect.left + targetRect.width / 2, y:targetRect.top - frameRect.top + targetRect.height / 2}
+    const horizontal = Math.abs(targetCenter.x - sourceCenter.x) > Math.abs(targetCenter.y - sourceCenter.y)
+    line.setAttribute('x1', String(horizontal ? (targetCenter.x >= sourceCenter.x ? sourceRect.right - frameRect.left : sourceRect.left - frameRect.left) : sourceCenter.x))
+    line.setAttribute('y1', String(horizontal ? sourceCenter.y : (targetCenter.y >= sourceCenter.y ? sourceRect.bottom - frameRect.top : sourceRect.top - frameRect.top)))
+    line.setAttribute('x2', String(horizontal ? (targetCenter.x >= sourceCenter.x ? targetRect.left - frameRect.left : targetRect.right - frameRect.left) : targetCenter.x))
+    line.setAttribute('y2', String(horizontal ? targetCenter.y : (targetCenter.y >= sourceCenter.y ? targetRect.top - frameRect.top : targetRect.bottom - frameRect.top)))
+    line.setAttribute('class', `living-edge ${layer}${focusedEdges.has(edge.id) ? ' focus' : ''}`)
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
+    title.textContent = `${sentence(edge.kind)}: ${edge.description || ''}`
+    line.append(title)
+    svg.append(line)
+  }
+}
+
+function renderLivingSelection(projection) {
+  const host = $('#living-selection')
+  if (!host) return
+  const node = projection.nodes.find((item) => item.id === livingSelectedNodeId)
+  if (!node) {
+    host.textContent = 'Click a visible person, message, resource, place, or mechanism to inspect its retained meaning.'
+    return
+  }
+  const connected = projection.edges.filter((edge) => edge.source === node.id || edge.target === node.id).slice(0, 8)
+  host.innerHTML = `<strong>${escapeHtml(node.label)}</strong><p>${escapeHtml(node.description || 'No additional retained description.')}</p>${connected.length ? `<ul>${connected.map((edge) => { const outward=edge.source===node.id; const other=projection.nodes.find((item)=>item.id===(outward?edge.target:edge.source)); return `<li><b>${escapeHtml(sentence(livingEdgeLayer(edge)))}</b> · ${escapeHtml(sentence(edge.kind))} ${outward ? '→' : '←'} ${escapeHtml(other?.label || (outward?edge.target:edge.source))}</li>` }).join('')}</ul>` : '<p>No visible relation is attached at this step.</p>'}`
+}
+
+function stopLivingReplayPlayback() {
+  if (livingReplayTimer) window.clearInterval(livingReplayTimer)
+  livingReplayTimer = null
+  const button = $('#living-play')
+  if (button) button.textContent = 'Play'
+}
+
+function setLivingReplayScene(index) {
+  const scenes = authoredResult?.simulation_replay?.scenes || []
+  if (!scenes.length) return
+  authoredReplaySceneIndex = Math.max(0, Math.min(index, scenes.length - 1))
+  authoredReplayCognitionIndex = 0
+  renderAuthoredReplay()
+}
+
+function toggleLivingReplayPlayback() {
+  if (livingReplayTimer) {
+    stopLivingReplayPlayback()
+    return
+  }
+  const scenes = authoredResult?.simulation_replay?.scenes || []
+  if (!scenes.length) return
+  if (authoredReplaySceneIndex >= scenes.length - 1) setLivingReplayScene(0)
+  livingReplayTimer = window.setInterval(() => {
+    if (authoredReplaySceneIndex >= scenes.length - 1) {
+      stopLivingReplayPlayback()
+      return
+    }
+    setLivingReplayScene(authoredReplaySceneIndex + 1)
+  }, 1400)
+  $('#living-play').textContent = 'Pause'
+}
+
+function renderLivingReplay(result, scene) {
+  const surface = $('#living-replay')
+  const supported = result?.execution_contract === 'general_world_v2' && scene
+  if (!surface) return
+  surface.hidden = !supported
+  if (!supported) {
+    stopLivingReplayPlayback()
+    return
+  }
+  const scenes = result.simulation_replay?.scenes || []
+  const projection = livingSceneProjection(result, scene)
+  const lanes = {information:[], people:[], world:[]}
+  for (const node of projection.nodes) lanes[livingNodeLane(node, projection.edges)].push(node)
+  for (const lane of Object.keys(lanes)) lanes[lane].sort((left, right) => String(left.label).localeCompare(String(right.label)))
+  $('#living-information-nodes').innerHTML = lanes.information.map((node) => livingNodeCard(node, 'information', projection.edges, scene)).join('') || '<p class="create-result-no-graph">No information item is visible yet.</p>'
+  $('#living-people-nodes').innerHTML = lanes.people.map((node) => livingNodeCard(node, 'people', projection.edges, scene)).join('') || '<p class="create-result-no-graph">No person is visible yet.</p>'
+  $('#living-world-nodes').innerHTML = lanes.world.map((node) => livingNodeCard(node, 'world', projection.edges, scene)).join('') || '<p class="create-result-no-graph">No world item is visible yet.</p>'
+  $('#living-replay-title').textContent = scene.title
+  $('#living-replay-summary').textContent = scene.summary
+  $('#living-moment-title').textContent = scene.title
+  $('#living-moment-summary').textContent = scene.summary
+  $('#living-moment-facts').innerHTML = (scene.facts || []).map((fact) => `<div><dt>${escapeHtml(fact.label)}</dt><dd>${escapeHtml(fact.value)}</dd></div>`).join('') || '<div><dt>World</dt><dd>No additional fact is retained for this scene.</dd></div>'
+  $('#living-replay-progress').textContent = `Step ${authoredReplaySceneIndex + 1} of ${scenes.length}`
+  const scrub = $('#living-scrub')
+  scrub.max = String(Math.max(0, scenes.length - 1)); scrub.value = String(authoredReplaySceneIndex)
+  $('#living-previous').disabled = authoredReplaySceneIndex === 0
+  $('#living-next').disabled = authoredReplaySceneIndex === scenes.length - 1
+  $('#living-play').textContent = livingReplayTimer ? 'Pause' : 'Play'
+  $('#living-previous').onclick = () => setLivingReplayScene(authoredReplaySceneIndex - 1)
+  $('#living-next').onclick = () => setLivingReplayScene(authoredReplaySceneIndex + 1)
+  $('#living-play').onclick = toggleLivingReplayPlayback
+  scrub.oninput = () => { stopLivingReplayPlayback(); setLivingReplayScene(Number(scrub.value)) }
+  all('[data-living-layer]').forEach((button) => {
+    const layer = button.dataset.livingLayer
+    button.setAttribute('aria-pressed', String(livingLayers[layer]))
+    button.onclick = () => {
+      livingLayers[layer] = !livingLayers[layer]
+      renderLivingReplay(result, scene)
+    }
+  })
+  all('#living-world-frame [data-living-node-id]').forEach((button) => {
+    button.onclick = () => {
+      livingSelectedNodeId = button.dataset.livingNodeId
+      renderLivingReplay(result, scene)
+    }
+  })
+  renderLivingSelection(projection)
+  window.requestAnimationFrame(() => drawLivingEdges(projection.edges, scene))
+}
+
 function renderAuthoredResultNetwork(result, scene = null) {
   const projection = result.influence_network || {nodes:[], edges:[]}
   const nodeOverrides = new Map((scene?.node_overrides || []).map((item) => [item.node_id, item]))
@@ -3333,6 +3524,7 @@ function renderAuthoredReplay() {
     $('#create-replay-previous').disabled = true
     $('#create-replay-next').disabled = true
     renderAuthoredResultNetwork(authoredResult)
+    renderLivingReplay(authoredResult, null)
     return
   }
   authoredReplaySceneIndex = Math.max(0, Math.min(authoredReplaySceneIndex, scenes.length - 1))
@@ -3368,6 +3560,7 @@ function renderAuthoredReplay() {
     renderAuthoredReplay()
   }
   renderAuthoredResultNetwork(authoredResult, scene)
+  renderLivingReplay(authoredResult, scene)
 }
 
 function authoredReplayOutcome(result) {
@@ -3720,7 +3913,17 @@ function renderAuthoredResult(result) {
   authoredResult = result
   rememberCompletedSimulation(result)
   authoredResultRoundIndex = 0
-  authoredReplaySceneIndex = 0
+  if (!sameRunRerender) {
+    stopLivingReplayPlayback()
+    livingSelectedNodeId = null
+    const scenes = result.simulation_replay?.scenes || []
+    let firstWorldScene = 0
+    if (result.execution_contract === 'general_world_v2') {
+      firstWorldScene = scenes.findIndex((scene) => scene.kind === 'event' && (scene.visible_node_ids || []).length > 0)
+      if (firstWorldScene < 0) firstWorldScene = scenes.findIndex((scene) => (scene.visible_node_ids || []).length > 0)
+    }
+    authoredReplaySceneIndex = firstWorldScene >= 0 ? firstWorldScene : 0
+  }
   document.body.classList.add('authored-result')
   all('.view-tabs [data-view]').forEach((button) => {
     const active = button.dataset.view === 'simulations'

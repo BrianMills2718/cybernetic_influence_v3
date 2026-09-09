@@ -2006,3 +2006,61 @@ tbody tr:last-child td { border-bottom: 0; }
   .outreach-proof .hero-result-track { grid-template-columns: 1fr; }
   .outreach-secondary-actions { align-items: stretch; flex-direction: column; }
 }
+
+
+/* Slice 38: readable living replay over the existing retained summary contract. */
+.living-replay { background: linear-gradient(145deg, rgba(125,211,252,.06), rgba(8,19,28,.96)); border:1px solid var(--line-strong); border-radius:16px; display:grid; gap:14px; margin:24px 0; padding:18px; }
+.living-replay-head { align-items:flex-start; display:flex; gap:18px; justify-content:space-between; }
+.living-replay-head > div:first-child { min-width:0; }
+.living-replay-head span, .living-inspector > section > span { color:var(--accent); font-size:.7rem; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+.living-replay-head h4 { font-size:1.35rem; margin:5px 0; }
+.living-replay-head p { color:var(--muted); line-height:1.5; margin:0; max-width:76ch; }
+.living-replay-actions { display:flex; flex:0 0 auto; gap:7px; }
+.living-replay-actions button, .living-layer-toggles button { background:#0b1822; border:1px solid var(--line); border-radius:8px; color:var(--muted); cursor:pointer; font:inherit; font-size:.74rem; font-weight:750; min-height:36px; padding:7px 11px; }
+.living-replay-actions .primary-cta { background:var(--accent); border-color:var(--accent); color:#06101a; }
+.living-replay-actions button:disabled { cursor:default; opacity:.45; }
+.living-replay-toolbar { align-items:center; background:#07121b; border:1px solid var(--line); border-radius:11px; display:grid; gap:12px; grid-template-columns:auto minmax(160px,1fr) auto; padding:9px 11px; }
+.living-layer-toggles { display:flex; flex-wrap:wrap; gap:6px; }
+.living-layer-toggles button[aria-pressed="true"] { border-color:var(--accent); color:var(--text); }
+.living-scrub { align-items:center; color:var(--muted); display:flex; font-size:.7rem; gap:9px; min-width:0; }
+.living-scrub input { accent-color:var(--accent); min-width:100px; width:100%; }
+#living-replay-progress { color:var(--muted); font-size:.72rem; white-space:nowrap; }
+.living-replay-layout { display:grid; gap:12px; grid-template-columns:minmax(0,1.55fr) minmax(260px,.45fr); }
+.living-world-frame { background:radial-gradient(circle at 50% 45%, rgba(35,71,94,.22), rgba(6,16,24,.98) 72%); border:1px solid var(--line); border-radius:13px; min-height:500px; overflow:hidden; padding:12px; position:relative; }
+.living-edge-layer { height:100%; inset:0; overflow:visible; pointer-events:none; position:absolute; width:100%; z-index:1; }
+.living-edge { fill:none; opacity:.56; stroke-width:1.7; }
+.living-edge.information { stroke:#72d5e8; stroke-dasharray:6 5; }
+.living-edge.world { stroke:#86b58b; }
+.living-edge.causal { stroke:#f0a07d; stroke-width:2.3; }
+.living-edge.focus { opacity:1; stroke-width:3.2; }
+.living-lanes { display:grid; gap:10px; grid-template-columns:repeat(3,minmax(0,1fr)); min-height:474px; position:relative; z-index:2; }
+.living-lane { background:rgba(9,21,31,.72); border:1px solid var(--line); border-radius:11px; display:flex; flex-direction:column; min-width:0; padding:9px; }
+.living-lane > header { border-bottom:1px solid var(--line); display:grid; gap:2px; margin-bottom:8px; padding:2px 3px 8px; }
+.living-lane > header span { font-size:.76rem; font-weight:850; }
+.living-lane > header small { color:var(--muted); font-size:.62rem; }
+.living-node-list { align-content:start; display:grid; gap:7px; }
+.living-node { background:#0d1b27; border:1px solid var(--line); border-radius:9px; color:var(--text); cursor:pointer; display:grid; gap:3px; min-width:0; padding:9px 10px; position:relative; text-align:left; }
+.living-node:hover, .living-node.selected { border-color:var(--accent); }
+.living-node.focus { box-shadow:0 0 0 2px rgba(125,211,252,.18); }
+.living-node .living-node-kind { color:var(--muted); font-size:.58rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.living-node strong { font-size:.76rem; line-height:1.25; overflow-wrap:anywhere; }
+.living-node small { color:var(--muted); display:-webkit-box; font-size:.62rem; line-height:1.35; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.living-node.person { border-left:3px solid var(--accent); }
+.living-node.information { border-left:3px solid #72d5e8; }
+.living-node.resource { border-left:3px solid #8dcf91; }
+.living-node.place { border-left:3px solid #d2bc75; }
+.living-node.mechanism { border-left:3px solid #bf91e3; }
+.living-inspector { align-content:start; display:grid; gap:10px; }
+.living-inspector > section { background:#09151f; border:1px solid var(--line); border-radius:11px; display:grid; gap:7px; padding:12px; }
+.living-inspector h5 { font-size:1rem; margin:0; }
+.living-inspector p, #living-selection { color:var(--muted); font-size:.72rem; line-height:1.5; margin:0; }
+#living-moment-facts { display:grid; gap:6px; margin:2px 0 0; }
+#living-moment-facts > div { background:#0d1b27; border-radius:7px; display:grid; gap:2px; padding:7px 8px; }
+#living-moment-facts dt { color:var(--muted); font-size:.58rem; font-weight:800; text-transform:uppercase; }
+#living-moment-facts dd { font-size:.7rem; line-height:1.4; margin:0; }
+#living-selection strong { color:var(--text); display:block; font-size:.82rem; margin-bottom:4px; }
+#living-selection ul { margin:7px 0 0; padding-left:17px; }
+#living-selection li { margin:4px 0; }
+@media (max-width:980px) { .living-replay-layout { grid-template-columns:1fr; } .living-inspector { grid-template-columns:1fr 1fr; } }
+@media (max-width:700px) { .living-replay { padding:12px; } .living-replay-head { display:grid; } .living-replay-actions { display:grid; grid-template-columns:repeat(3,1fr); width:100%; } .living-replay-toolbar { grid-template-columns:1fr; } .living-lanes { grid-template-columns:1fr; min-height:0; } .living-world-frame { min-height:0; } .living-inspector { grid-template-columns:1fr; } .living-node-list { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:430px) { .living-node-list { grid-template-columns:1fr; } }

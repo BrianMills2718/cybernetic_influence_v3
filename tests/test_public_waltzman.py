@@ -106,6 +106,35 @@ def test_outreach_funnel_uses_existing_configure_first_authoring_path() -> None:
     assert "No setup wizard" in page
 
 
+def test_generated_world_result_has_summary_only_living_replay() -> None:
+    page = PAGE.read_text(encoding="utf-8")
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    for element_id in (
+        "living-replay", "living-play", "living-previous", "living-next",
+        "living-scrub", "living-world-frame", "living-edge-layer",
+        "living-information-nodes", "living-people-nodes", "living-world-nodes",
+        "living-moment-title", "living-selection",
+    ):
+        assert f'id="{element_id}"' in page
+    assert 'data-living-layer="information"' in page
+    assert 'data-living-layer="world"' in page
+    assert 'data-living-layer="causal"' in page
+    assert "function renderLivingReplay(result, scene)" in script
+    assert "function livingSceneProjection(result, scene)" in script
+    assert "result?.execution_contract === 'general_world_v2'" in script
+    assert "renderLivingReplay(authoredResult, scene)" in script
+    start = script.index("function livingSceneProjection(result, scene)")
+    end = script.index("function renderAuthoredResultNetwork", start)
+    adapter = script[start:end]
+    assert "result?.influence_network" in adapter
+    assert "scene?.visible_node_ids" in adapter
+    assert "scene?.visible_edge_ids" in adapter
+    assert "scene?.node_overrides" in adapter
+    assert "apiRequest(" not in adapter
+    assert "fetch(" not in adapter
+
+
 def test_authoring_progress_uses_retained_backend_stages() -> None:
     page = PAGE.read_text(encoding="utf-8")
     script = SCRIPT.read_text(encoding="utf-8")

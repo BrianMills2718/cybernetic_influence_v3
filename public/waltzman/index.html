@@ -436,6 +436,30 @@
                 <small>One retained synthetic execution—not a prediction of human or institutional behavior.</small>
               </section>
               <div id="create-result-facts" class="create-result-facts"></div>
+              <section id="living-replay" class="living-replay" aria-labelledby="living-replay-title" hidden>
+                <header class="living-replay-head">
+                  <div><span>Living world replay</span><h4 id="living-replay-title">Watch the retained world change</h4><p id="living-replay-summary"></p></div>
+                  <div class="living-replay-actions"><button id="living-play" type="button">Play</button><button id="living-previous" type="button">Previous</button><button id="living-next" class="primary-cta" type="button">Next</button></div>
+                </header>
+                <div class="living-replay-toolbar">
+                  <div class="living-layer-toggles" aria-label="Living replay layers"><button type="button" data-living-layer="information" aria-pressed="true">Information</button><button type="button" data-living-layer="world" aria-pressed="true">World links</button><button type="button" data-living-layer="causal" aria-pressed="true">Causal</button></div>
+                  <label class="living-scrub" for="living-scrub"><span>Timeline</span><input id="living-scrub" type="range" min="0" max="0" value="0" step="1"></label><strong id="living-replay-progress">Step 1</strong>
+                </div>
+                <div class="living-replay-layout">
+                  <section id="living-world-frame" class="living-world-frame" aria-label="Living simulated world">
+                    <svg id="living-edge-layer" class="living-edge-layer" aria-hidden="true"></svg>
+                    <div class="living-lanes">
+                      <article class="living-lane information"><header><span>Information</span><small>who can receive what</small></header><div id="living-information-nodes" class="living-node-list"></div></article>
+                      <article class="living-lane people"><header><span>People</span><small>what each person can see and attempt</small></header><div id="living-people-nodes" class="living-node-list"></div></article>
+                      <article class="living-lane world"><header><span>World &amp; constraints</span><small>what can actually change</small></header><div id="living-world-nodes" class="living-node-list"></div></article>
+                    </div>
+                  </section>
+                  <aside class="living-inspector">
+                    <section><span>Selected moment</span><h5 id="living-moment-title"></h5><p id="living-moment-summary"></p><dl id="living-moment-facts"></dl></section>
+                    <section><span>Selected item</span><div id="living-selection">Click a visible person, message, resource, place, or mechanism to inspect its retained meaning.</div></section>
+                  </aside>
+                </div>
+              </section>
               <section class="create-replay" aria-labelledby="create-replay-title">
                 <header class="create-replay-controls">
                   <div><span>Guided replay</span><strong id="create-replay-progress">Step 1</strong></div>
