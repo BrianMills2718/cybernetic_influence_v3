@@ -48,6 +48,10 @@ The Worker is routing/deployment infrastructure only.
   model.
 - The Container has outbound internet access only because the existing provider
   client needs HTTPS egress.
+- The Container is explicitly `basic` (1 GiB memory / 4 GB disk). The exact
+  image idled at about 290 MiB locally, above the default `lite` 256 MiB memory
+  ceiling; do not rely on Wrangler's implicit instance type.
+
 - Cloudflare Container disk is ephemeral. For this first stakeholder gate the
   named backend stays active for two hours after activity; current-session files
   remain available while it runs. Durable cross-restart retention is explicitly

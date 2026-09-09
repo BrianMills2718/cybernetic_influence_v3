@@ -58,6 +58,11 @@ service revalidates the corresponding observation records against the installed
 
 ## Storage boundary
 
+The Container is pinned to Cloudflare `basic` (1 GiB memory / 4 GB disk). A
+local boot of the exact image idled at about 290 MiB, already above Cloudflare
+`lite`'s 256 MiB memory limit; leaving the instance type implicit would be an
+invalid production assumption.
+
 The first Container deployment uses the existing filesystem-backed run/draft
 stores. Cloudflare Container disk is ephemeral across container sleep/restart.
 The Worker keeps the one public backend instance active for two hours after

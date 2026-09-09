@@ -31,6 +31,7 @@ const coordinationConcernBindings = [
 
 let dataset = null
 let runtimeConfig = null
+let runtimeConfigChecked = false
 let autonomousProbe = null
 let resourceFork = null
 let csoCase = null
@@ -543,7 +544,9 @@ function renderOutreachAvailability() {
   build.disabled = !author || authoringBusy
   status.textContent = author
     ? 'Ready to build an editable simulation from your description.'
-    : 'Simulation generation is temporarily unavailable; the retained example remains explorable.'
+    : runtimeConfigChecked
+      ? 'Simulation generation is temporarily unavailable; the retained example remains explorable.'
+      : 'Simulation service is connecting in the background. You can start typing now.'
 }
 
 function renderComparison() {
@@ -4359,7 +4362,23 @@ async function ensureRetainedLiveRuns() {
   return retainedLiveRunsLoad
 }
 
+async function applyRuntimeConfig(runtimeRequest) {
+  try {
+    runtimeConfig = await runtimeRequest
+  } catch (error) {
+    console.warn(`live simulator unavailable: ${error.message}`)
+  } finally {
+    runtimeConfigChecked = true
+    configureRuntime()
+    if (state.view === 'create') renderCreateSimulation()
+  }
+}
+
 async function loadWorkbench() {
+  // Start the Container/API warm-up immediately, but never make the first
+  // stakeholder screen wait for it. Static evidence + the composer are enough
+  // to earn attention; Build re-checks the route before spending or generating.
+  const runtimeRequest = apiRequest('api/config')
   try {
     const response = await fetch('assets/data.json', {cache:'no-store'})
     if (!response.ok) throw new Error(`public evidence request failed with ${response.status}`)
@@ -4390,9 +4409,8 @@ async function loadWorkbench() {
       if (resourceFork.schema_version !== 1 || resourceFork.branches?.length !== 4) throw new Error('resource fork contract is invalid')
     } catch (error) { console.warn(`resource fork unavailable: ${error.message}`) }
     state.runId = dataset.runs[0].run_id
-    try { runtimeConfig = await apiRequest('api/config') } catch (error) { console.warn(`live simulator unavailable: ${error.message}`) }
-    configureRuntime()
     readStateFromUrl()
+    configureRuntime()
     const requestedScope = new URLSearchParams(window.location.search).get('runs')
     const needsRetainedRegionalEvidence = state.view === 'compare' ||
       (['compare', 'inspect'].includes(state.view) && Boolean(requestedScope)) ||
@@ -4406,6 +4424,7 @@ async function loadWorkbench() {
     await loadAuthoredRunFromUrl()
     $('#loading').hidden = true
     $('#workbench').hidden = false
+    void applyRuntimeConfig(runtimeRequest)
     void loadRetainedRunHistory()
   } catch (error) {
     $('#loading').hidden = true

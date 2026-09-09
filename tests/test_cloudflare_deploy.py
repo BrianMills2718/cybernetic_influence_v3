@@ -29,6 +29,7 @@ def test_cloudflare_route_uses_static_edge_and_one_container_backend() -> None:
             "class_name": "WaltzmanContainer",
             "image": "./Dockerfile.cloudflare",
             "max_instances": 1,
+            "instance_type": "basic",
         }
     ]
     assert CONFIG["durable_objects"]["bindings"][0]["name"] == "WALTZMAN_CONTAINER"
@@ -93,3 +94,16 @@ def test_worker_static_security_headers_match_public_inline_scripts() -> None:
     ):
         assert header in WORKER
     assert 'headers.set("Cache-Control", "no-cache")' in WORKER
+
+
+def test_outreach_boot_does_not_wait_for_container_config() -> None:
+    script = (ROOT / "public/waltzman/app.js").read_text(encoding="utf-8")
+    start = script.index("async function loadWorkbench()")
+    end = script.index("window.addEventListener('popstate'", start)
+    boot = script[start:end]
+    assert "const runtimeRequest = apiRequest('api/config')" in boot
+    assert "await apiRequest('api/config')" not in boot
+    visible = boot.index("$('#workbench').hidden = false")
+    background = boot.index("void applyRuntimeConfig(runtimeRequest)")
+    assert visible < background
+    assert "Simulation service is connecting in the background" in script
