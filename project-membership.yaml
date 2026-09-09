@@ -1,4 +1,4 @@
-schema_version: 1.0.0
+schema_version: 1.1.0
 project_id: project-cybernetic-influence-v3
 display_name: Cybernetic Influence V3
 context_epoch: 2
@@ -41,3 +41,6 @@ repositories:
       - CLAUDE.md
       - README.md
     contract_seams: []
+wiki:
+  repository_id: cybernetic_influence_v3
+  path: wiki/projects/cybernetic-influence-v3.md
