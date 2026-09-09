@@ -203,6 +203,36 @@ def main() -> None:
             "CYBERNETIC_INFLUENCE_CERT_AUTHORING_SOL",
         ),
     }
+    execution_only_routes = {
+        "sol-execution": (OPENROUTER_SOL_MODEL, "CYBERNETIC_INFLUENCE_CERT_SOL"),
+    }
+    if route in execution_only_routes:
+        model, execution_env = execution_only_routes[route]
+        revision = llm_client_revision()
+        certification_root = Path(
+            os.environ.get(
+                "LLM_ROUTE_CERTIFICATION_ROOT",
+                "~/projects/data/llm_route_certification",
+            )
+        ).expanduser()
+        store = RouteCertificationStore(certification_root / "observations")
+        observability_db = _observability_db()
+        ids = [
+            _certify(
+                schema,
+                model=model,
+                trace_id=(
+                    f"cybernetic-influence/certification/{route}/"
+                    f"{schema.__name__}"
+                ),
+                store=store,
+                evidence_root=observability_db,
+                llm_client_revision_value=revision,
+            )
+            for schema in (LlmDecision, CausalMomentNarration)
+        ]
+        print(f"{execution_env}=" + ",".join(ids))
+        return
     if route in authoring_routes:
         model, authoring_env = authoring_routes[route]
         revision = llm_client_revision()
@@ -260,7 +290,8 @@ def main() -> None:
     except KeyError as error:
         raise SystemExit(
             "usage: certify_codex_luna.py "
-            "[luna|luna-authoring|terra|openrouter-terra]"
+            "[luna|luna-authoring|terra|openrouter-terra|"
+            "openrouter-terra-authoring|sol|sol-authoring|sol-execution]"
         ) from error
     revision = llm_client_revision()
     certification_root = Path(
