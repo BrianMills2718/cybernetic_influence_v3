@@ -529,6 +529,18 @@ function configureRuntime() {
     ? 'One public run at a time. Every participant call and exact mechanism event is retained.'
     : 'Retained evidence remains available, but this deployment cannot start a model run.'
   renderRunSetup()
+  renderOutreachAvailability()
+}
+
+function renderOutreachAvailability() {
+  const build = $('#outreach-build')
+  const status = $('#outreach-status')
+  if (!build || !status) return
+  const author = authoringModel()
+  build.disabled = !author || authoringBusy
+  status.textContent = author
+    ? 'Ready to build an editable simulation from your description.'
+    : 'Simulation generation is temporarily unavailable; the retained example remains explorable.'
 }
 
 function renderComparison() {
@@ -1432,6 +1444,7 @@ function renderView() {
     button.classList.toggle('active', active)
     button.setAttribute('aria-current', active ? 'page' : 'false')
   })
+  if (state.view === 'overview') renderOutreachAvailability()
   if (state.view === 'run') renderRunSetup()
   if (state.view === 'guide') {
     renderGuide()
@@ -1576,6 +1589,18 @@ function configureControls() {
   })
   $('#create-generate').onclick = discussAuthoringDraft
   $('#create-configure-now').onclick = configureAuthoringDraft
+  $('#outreach-build').onclick = beginOutreachSimulation
+  all('[data-outreach-example]').forEach((button) => {
+    button.onclick = () => {
+      const examples = {
+        coordination:"A government organization receives conflicting intelligence about an adversary's intentions. Different offices have different evidence, authorities, and incentives. Explore how uncertainty propagates through the organization and changes what it can decide and do.",
+        port:'Model a storm-damaged relief port containing a dock, an inland depot, one truck, finite fuel, relief cargo, a damaged bridge, communications, and four people responsible for port operations, transport, bridge inspection, and aid allocation. Different people should receive different information about route safety and resource constraints. Explore whether the group can move the cargo before sunset without using unsafe infrastructure.',
+        service:'Model an online service outage involving an incident commander, database engineer, security analyst, and customer liaison. Credentials, service dependencies, status messages, access permissions, and recovery attempts change over time. Different people receive different claims about the cause. The group must restore service without erasing forensic evidence.',
+      }
+      $('#outreach-prompt').value = examples[button.dataset.outreachExample] || ''
+      $('#outreach-prompt').focus()
+    }
+  })
   $('#create-example-prompt').onclick = () => {
     $('#create-prompt').value = 'Model a storm-damaged relief port containing a dock, an inland depot, one truck, finite fuel, relief cargo, a damaged bridge, communications, and four people responsible for port operations, transport, bridge inspection, and aid allocation. A hidden bridge defect should be known initially only to the inspector. At the same scheduled moment, the port operator and transport coordinator should independently propose what to do with the truck. Let an LLM game master adjudicate open-ended actions while exact mechanisms enforce placement, conserved fuel, information access, and valid topology. Explore whether the group can move the cargo before sunset without using unsafe infrastructure.'
     $('#create-prompt').focus()
@@ -1836,7 +1861,7 @@ function generalRunModel() {
 
 function setAuthoringBusy(busy) {
   authoringBusy = busy
-  for (const id of ['create-generate', 'create-configure-now', 'create-revise', 'create-save-person', 'create-save-scenario', 'create-save-network', 'create-save-general', 'create-resolve-questions', 'create-approve', 'create-start-over']) {
+  for (const id of ['outreach-build', 'create-generate', 'create-configure-now', 'create-revise', 'create-save-person', 'create-save-scenario', 'create-save-network', 'create-save-general', 'create-resolve-questions', 'create-approve', 'create-start-over']) {
     const control = $(`#${id}`)
     if (control) control.disabled = busy
   }
@@ -2512,7 +2537,7 @@ function renderCreateHandoff() {
   const element = existing || document.createElement('aside')
   element.id = 'create-handoff'
   element.className = 'create-handoff'
-  element.innerHTML = `<span>${escapeHtml(copy.kicker)}</span><strong>${escapeHtml(copy.title)}</strong><p>${escapeHtml(copy.body)}</p><p class="create-handoff-next">Fastest start: pick one of the worked examples under the message box and press <em>Configure now with assumptions</em>. Or describe your own world and the builder will ask what it still needs to know.</p>`
+  element.innerHTML = `<span>${escapeHtml(copy.kicker)}</span><strong>${escapeHtml(copy.title)}</strong><p>${escapeHtml(copy.body)}</p><p class="create-handoff-next">Fastest start: describe the situation or pick a worked example, then press <em>Build simulation</em>. If you want to refine the setup first, use the optional clarifying-question path.</p>`
   if (!existing) view.prepend(element)
 }
 
@@ -2560,12 +2585,12 @@ function renderCreateSimulation() {
     ? 'Review and run this simulation.'
     : conversationOnly
       ? 'Refine the simulation—or configure it now.'
-      : 'Describe a world. Build an editable simulation.'
+      : 'Describe a situation. Build an editable simulation.'
   $('.create-hero > p').textContent = authoringDraft?.proposal
     ? 'Review the world, the run conditions, and any optional analysis separately. Everything below is retained and editable before the selected model runs the simulation.'
     : conversationOnly
       ? 'Your conversation is retained. Answer the questions below, add another instruction, or ask the model to make explicit assumptions and build the editable configuration.'
-      : 'Tell us what exists, what can change, and what you want to explore. Refine it in conversation or ask the model to make explicit assumptions now.'
+      : 'Tell us what exists, what can change, and what you want to explore. Build from explicit assumptions now, or ask clarifying questions if you want to refine first.'
   $('#create-generate').disabled = !author || authoringBusy
   $('#create-configure-now').disabled = !author || authoringBusy
   renderAuthoringChat()
@@ -2580,7 +2605,7 @@ function renderCreateSimulation() {
     $('.create-hero .case-label').textContent = 'Create a simulation'
     $('#create-review').hidden = true
     $('#create-status').textContent = author
-      ? 'Describe the situation, then choose whether to clarify it or configure it immediately.'
+      ? 'Describe the situation and build an editable simulation. Clarifying questions are optional.'
       : 'The structured authoring route is unavailable. No provider-free fallback will be shown.'
     return
   }
@@ -2839,6 +2864,25 @@ function revealAuthoringStatus() {
 
 function focusAuthoringReview() {
   window.requestAnimationFrame(() => $('#create-review').scrollIntoView({behavior:'smooth', block:'start'}))
+}
+
+async function beginOutreachSimulation() {
+  const message = $('#outreach-prompt').value.trim()
+  if (!message) {
+    $('#outreach-status').textContent = 'Describe a situation first.'
+    $('#outreach-prompt').focus()
+    return
+  }
+  $('#outreach-status').textContent = 'Opening the builder and making the assumptions explicit…'
+  createArrivedFrom = 'overview'
+  resetAuthoringWorkspace()
+  state.view = 'create'
+  renderView()
+  syncUrl()
+  window.scrollTo({top:0, behavior:'auto'})
+  await refreshAuthoringAvailability()
+  $('#create-prompt').value = message
+  await configureAuthoringDraft()
 }
 
 async function discussAuthoringDraft() {

@@ -28,8 +28,9 @@ surfaces:
     lifecycle: canonical
     source_path: public/waltzman
     purpose: >-
-      Separately-deployed public-facing Waltzman-analysis demo: case
-      walkthrough, comprehension-tested narrative, and the Experimentation UI.
+      Public Waltzman outreach and simulation workbench: a first-screen
+      local-information-to-collective-action hook, natural-language authoring,
+      retained case/replay evidence, detachable analysis, and Experimentation.
     entrypoints:
       production: https://brian-mac-mini.tail9c321e.ts.net/waltzman/
     run_commands:

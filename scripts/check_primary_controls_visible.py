@@ -37,12 +37,21 @@ WIDTHS = [390, 768, 1024, 1280, 1366, 1440, 1512, 1600, 1728, 1920]
 
 # view -> controls a human is expected to find without hunting
 SURFACES = {
-    "overview": ["button[data-view='case']", "button.walkthrough-start"],
+    "overview": ["#outreach-prompt", "#outreach-build", "button[data-view='case']", "button.walkthrough-start"],
     "guide": ["#guide-view button:has-text('Next')", "#guide-view button:has-text('Previous')"],
     "case": ["#case-walkthrough-next", "#case-walkthrough-previous"],
     "simulations": ["button[data-view='case']", "button[data-view='create']"],
     "create": ["#create-generate", "#create-configure-now"],
     "method": ["header button[data-view='overview']"],
+}
+
+# Slice 37 acquisition controls are different from ordinary "reachable"
+# controls: their value comes from being visible before the visitor scrolls.
+# Keep this deliberately narrow so deeper workflow controls can remain below
+# the fold without turning the whole workbench into one cramped screen.
+FIRST_VIEWPORT_CONTROLS = {
+    ("overview", "#outreach-prompt"),
+    ("overview", "#outreach-build"),
 }
 
 
@@ -120,6 +129,13 @@ def main() -> int:
                         violations.append(
                             f"{width}px {view}: {selector} starts at x={round(box['x'])}, off the left edge"
                         )
+                    if (view, selector) in FIRST_VIEWPORT_CONTROLS:
+                        bottom = box["y"] + box["height"]
+                        if box["y"] < -1 or bottom > 900 + 1:
+                            violations.append(
+                                f"{width}px {view}: {selector} spans y={round(box['y'])}..{round(bottom)}, "
+                                "outside the first 900px viewport"
+                            )
             page.close()
         browser.close()
 

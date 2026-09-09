@@ -3,7 +3,7 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-08-16
+updated: 2026-09-09
 supersedes: earlier comparison-centered and configurable Waltzman-Levin goals as the active product frontier; retained below as baseline evidence
 ---
 
@@ -143,6 +143,8 @@ post-MVP and remains deferred unless selected for the generalized product.
 | G3 | Exact rules and structured evidence remain selective, question-relative components rather than a second hidden foundation | explicit_user | Component/state/evidence inspection in the parity exemplar |
 | G4 | At least one materially different exemplar reuses the same authoring and execution seams without generated executable code or another scenario-specific runtime | explicit_user | Reviewed compile/run/reopen flow and implementation-diff review |
 | G5 | Every result exposes assumptions and limitations and avoids predictive or real-world-probability claims unsupported by calibration | explicit_user | Human inspection of the rendered run and analysis surfaces |
+| G6 | A first-time Waltzman-like stakeholder can understand the local-information-to-collective-action proposition without prerequisite reading; desktop shows a concrete retained result in the first viewport, while narrow mobile prioritizes the authoring composer and places the same retained proof immediately after it | explicit_user | Desktop/mobile first-screen observation and stakeholder comprehension check |
+| G7 | The same initial journey exposes natural-language authoring and one configure-first action so the visitor can begin using the system within roughly two minutes without choosing a workflow, model, or analysis first | explicit_user | Browser journey from Overview composer into retained V2 authoring job |
 
 ## Retained MVP acceptance evidence
 

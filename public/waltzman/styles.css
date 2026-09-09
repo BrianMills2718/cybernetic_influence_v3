@@ -1908,3 +1908,101 @@ tbody tr:last-child td { border-bottom: 0; }
   border-radius: 0 11px 11px 0;
 }
 .case-evasion-reading em { font-style: normal; font-weight: 700; }
+
+
+/* Slice 37: the first screen has one job -- make the coordination question
+   legible, show one real retained result, and let the visitor start typing
+   immediately. Deep workbench controls stay below/behind the initial choice. */
+.outreach-hero { max-width: 1500px; }
+.outreach-hero-grid {
+  align-items: start;
+  display: grid;
+  gap: clamp(24px, 4vw, 52px);
+  grid-template-areas:
+    "intro composer"
+    "proof composer";
+  grid-template-columns: minmax(0, 1.25fr) minmax(340px, .75fr);
+  margin-top: 18px;
+}
+.outreach-story-intro { grid-area: intro; min-width: 0; }
+.outreach-story-intro > h2 { font-size: clamp(2.45rem, 4.2vw, 4.35rem); margin: 12px 0 16px; max-width: 16ch; }
+.outreach-story-intro > p { color: #aebdc8; font-size: 1.02rem; line-height: 1.65; margin: 0; max-width: 760px; }
+.outreach-proof { grid-area: proof; min-width: 0; }
+.outreach-proof .hero-result { margin-top: 0; }
+.outreach-secondary-actions { margin-top: 16px; }
+.outreach-composer {
+  grid-area: composer;
+  min-width: 0;
+  background: linear-gradient(145deg, rgba(125, 211, 252, .08), rgba(9, 18, 27, .88));
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  display: grid;
+  gap: 12px;
+  padding: clamp(20px, 2.6vw, 30px);
+}
+.outreach-kicker { color: var(--accent); font-size: .74rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.outreach-composer h3 { font-size: clamp(1.55rem, 2.5vw, 2.2rem); letter-spacing: -.03em; line-height: 1.1; margin: 0; }
+.outreach-composer > p { color: var(--muted); line-height: 1.55; margin: 0; }
+.outreach-composer label { color: var(--muted); display: grid; font-size: .76rem; gap: 7px; }
+.outreach-composer textarea {
+  background: #07121b;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  min-height: 168px;
+  padding: 14px;
+  resize: vertical;
+  width: 100%;
+}
+.outreach-composer #outreach-build { justify-self: stretch; min-height: 48px; }
+.outreach-examples { display: flex; flex-wrap: wrap; gap: 8px; }
+.outreach-examples button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: .72rem;
+  padding: 7px 10px;
+}
+.outreach-examples button:hover { border-color: var(--accent); color: var(--text); }
+.outreach-status { color: var(--faint) !important; font-size: .72rem; min-height: 1.2em; }
+
+@media (max-width: 1000px) {
+  .outreach-hero-grid {
+    gap: 18px;
+    grid-template-areas: "intro" "composer" "proof";
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 12px;
+  }
+  .outreach-hero .artifact-type { margin-bottom: 12px; }
+  .outreach-story-intro > h2 { font-size: clamp(2.1rem, 5.6vw, 3rem); margin: 8px 0 10px; max-width: 18ch; }
+  .outreach-story-intro > p { font-size: .9rem; line-height: 1.48; }
+  .outreach-composer { gap: 9px; max-width: 760px; padding: 16px 18px; }
+  .outreach-composer h3 { font-size: 1.7rem; }
+  .outreach-composer > p { display: none; }
+  .outreach-composer textarea { min-height: 118px; }
+}
+@media (max-width: 600px) {
+  body { overflow-x: hidden; }
+  .public-shell .topbar > [data-tour-start] { display: none; }
+  .public-shell .view-tabs { scrollbar-width: none; }
+  .public-shell .view-tabs::-webkit-scrollbar { display: none; }
+  .outreach-hero, .outreach-hero-grid, .outreach-story-intro, .outreach-proof, .outreach-composer { max-width: 100%; min-width: 0; width: 100%; }
+  .outreach-hero .artifact-type { gap: 7px; margin-bottom: 12px; }
+  .outreach-hero .artifact-type strong { font-size: .76rem; max-width: 100%; white-space: normal; }
+  .outreach-hero .artifact-type span { font-size: .78rem; }
+  .outreach-story-intro > h2 { font-size: 2.05rem; line-height: 1.08; margin: 8px 0 12px; max-width: 18ch; }
+  .outreach-story-intro > p { display: none; }
+  .outreach-composer { gap: 9px; padding: 15px 17px; }
+  .outreach-composer h3 { font-size: 1.65rem; }
+  .outreach-composer > p { display: none; }
+  .outreach-composer textarea { height: 112px; min-height: 112px; }
+  .outreach-proof .hero-result { padding: 16px; }
+  .outreach-proof .hero-result-track { grid-template-columns: 1fr; }
+  .outreach-secondary-actions { align-items: stretch; flex-direction: column; }
+}
