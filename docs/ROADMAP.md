@@ -79,6 +79,7 @@ is implemented: the retained flagship result and natural-language composer now f
 default first-screen journey. It explicitly reuses the existing public V2
 authoring/run pipeline rather than rebuilding it inside World Substrate;
 World Substrate supplies the next living-presentation target for retained runs.
+Slice 38 is implemented on this line: `simulation-replay.v1` and the retained influence network now drive a living replay without changing execution.
 
 ## Repository Lineage Disposition
 
