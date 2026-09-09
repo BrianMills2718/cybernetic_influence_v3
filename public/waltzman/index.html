@@ -49,7 +49,7 @@
       <span class="product-mark" aria-hidden="true">CE</span>
       <div>
         <strong>Coordination Environment Lab</strong>
-        <small>AI coordination simulation workbench</small>
+        <small>From local information to collective action</small>
       </div>
     </div>
     <nav class="view-tabs" aria-label="Primary navigation">
@@ -94,34 +94,45 @@
 
     <section class="workspace">
       <section id="overview-view" class="workspace-view" aria-labelledby="overview-title" hidden>
-        <header class="overview-hero">
-          <div class="artifact-type"><strong>Simulation workbench</strong><span>Inspired by From Minds to Coordination</span></div>
-          <h2 id="overview-title">Influence that changes what a group can decide, not what it believes.</h2>
-          <p>Build a world, let autonomous people perceive and act within it, and watch whether the conditions for deciding together hold or come apart &mdash; without anyone saying anything false.</p>
-          <div class="hero-actions">
-            <button class="primary-cta" type="button" data-view="case">Read this run in full</button>
-            <button class="secondary-cta" type="button" data-view="create">Create your own simulation</button>
-            <!-- The walkthrough that explains how to read a simulation was the
-                 last element on a 2,300px page under the label "NEW HERE?", so
-                 the one path written for a first-time reader was the hardest to
-                 find. It belongs where they arrive. -->
-            <button class="quiet-cta" type="button" data-view="guide">First time here? Learn how to read one &rarr;</button>
-          </div>
-          <p class="scope-note">A wargaming and mechanism-exploration tool. It does not predict how real people or social systems will behave.</p>
+        <header class="overview-hero outreach-hero">
+          <div class="artifact-type"><strong>From Minds to Coordination &middot; made executable</strong><span>AI coordination simulation workbench</span></div>
+          <div class="outreach-hero-grid">
+            <div class="outreach-story-intro">
+              <h2 id="overview-title">See how local information changes what a group can decide and do.</h2>
+              <p>Build a sociotechnical world, let people and technical systems receive different information and act under real constraints, then inspect how those local interactions combine into collective coordination.</p>
+            </div>
 
-          <!-- The landing page described a capability and showed no result, so a
-               reader had to take an action on faith before seeing anything this
-               produces. The flagship's trajectory is the shortest honest answer
-               to "what does this actually do", and it fits in one line. -->
-          <aside class="hero-result" aria-label="Result from the flagship case study">
-            <span class="hero-result-kicker">One completed run &middot; 26 officials, four countries, one outbreak compact</span>
-            <ol class="hero-result-track">
-              <li><b>26</b><span>will proceed</span><em>before any pressure</em></li>
-              <li><b>20 of 26</b><span>only on conditions</span><em>after four sources raise locally relevant concerns &mdash; none of them false</em></li>
-              <li><b>26</b><span>will proceed</span><em>after one intervention addressing those conditions together</em></li>
-            </ol>
-            <p>No claim in the run was withdrawn or corrected, because none was false. What changed was whether each participant&rsquo;s requirements could be met at the same time as everyone else&rsquo;s.</p>
-          </aside>
+            <aside class="outreach-composer" aria-labelledby="outreach-prompt-title">
+              <span class="outreach-kicker">Try it with your own situation</span>
+              <h3 id="outreach-prompt-title">What would you like to explore?</h3>
+              <p>Describe a coordination, influence, organizational, or sociotechnical situation in ordinary language. The system will make reasonable assumptions explicit before anything runs.</p>
+              <label for="outreach-prompt"><span>Your situation</span><textarea id="outreach-prompt" rows="7" placeholder="For example: A government organization receives conflicting intelligence about an adversary's intentions. Different offices have different evidence, authorities, and incentives. Explore how uncertainty changes what the organization can decide and do."></textarea></label>
+              <button id="outreach-build" class="primary-cta" type="button">Build this simulation &rarr;</button>
+              <div class="outreach-examples" aria-label="Example simulation prompts">
+                <button type="button" data-outreach-example="coordination">Conflicting intelligence</button>
+                <button type="button" data-outreach-example="port">Relief-port coordination</button>
+                <button type="button" data-outreach-example="service">Service outage</button>
+              </div>
+              <p id="outreach-status" class="outreach-status" aria-live="polite">No setup wizard. Type a situation and build an editable simulation.</p>
+            </aside>
+
+            <div class="outreach-proof">
+              <aside class="hero-result" aria-label="Result from the flagship case study">
+                <span class="hero-result-kicker">One completed run &middot; 26 officials, four countries, one outbreak compact</span>
+                <ol class="hero-result-track">
+                  <li><b>26</b><span>will proceed</span><em>before any pressure</em></li>
+                  <li><b>20 of 26</b><span>only on conditions</span><em>after four sources raise locally relevant concerns &mdash; none of them false</em></li>
+                  <li><b>26</b><span>will proceed</span><em>after one intervention addresses those conditions together</em></li>
+                </ol>
+                <p>No claim was withdrawn or corrected. What changed was whether each participant&rsquo;s local requirements could be satisfied at the same time as everyone else&rsquo;s.</p>
+              </aside>
+              <div class="hero-actions outreach-secondary-actions">
+                <button class="secondary-cta" type="button" data-view="case">See why that happened</button>
+                <button class="quiet-cta" type="button" data-view="guide">Learn how to read a simulation &rarr;</button>
+              </div>
+            </div>
+          </div>
+          <p class="scope-note">Exploratory synthetic simulation, not a prediction of how real people or institutions will behave.</p>
         </header>
 
         <section class="overview-goals" aria-labelledby="overview-goals-title">
@@ -317,17 +328,17 @@
       <section id="create-view" class="workspace-view create-simulation" aria-labelledby="create-title" hidden>
         <header class="create-hero">
           <span class="case-label">New simulation</span>
-          <h2 id="create-title">Describe a world. Build an editable simulation.</h2>
+          <h2 id="create-title">Describe a situation. Build an editable simulation.</h2>
           <p>Tell us what exists, what can change, and what you want to explore. Refine it in conversation or ask the model to make explicit assumptions now.</p>
         </header>
 
         <nav class="create-flow" aria-label="Simulation workflow"><span class="active">1 · Describe</span><span>2 · Review</span><span>3 · Run</span><span>4 · Replay</span></nav>
 
         <section class="create-composer" aria-labelledby="create-prompt-title">
-          <header><span>Simulation builder</span><h3 id="create-prompt-title">What do you want to simulate?</h3><p>Describe it naturally. Clarifying questions come back in about a minute. Configuring a full simulation from assumptions is a much longer job — expect several minutes, and leave the tab open while it runs.</p></header>
-          <div id="create-chat" class="create-chat" aria-live="polite"><article class="assistant"><strong>Simulation builder</strong><p>Describe the situation in your own words. I can ask a few material questions, or configure an editable draft immediately.</p></article></div>
+          <header><span>Simulation builder</span><h3 id="create-prompt-title">What do you want to simulate?</h3><p>Describe it naturally. The fastest path builds an editable simulation immediately from explicit assumptions; ask clarifying questions only when you want to refine the setup first.</p></header>
+          <div id="create-chat" class="create-chat" aria-live="polite"><article class="assistant"><strong>Simulation builder</strong><p>Describe the situation in your own words. I can build an editable configuration now, or ask a few material questions first.</p></article></div>
           <label for="create-prompt"><span>Your message</span><textarea id="create-prompt" rows="4" placeholder="For example: simulate a pencil production and logistics chain from raw materials through delivery to a school."></textarea></label>
-          <div class="create-chat-actions"><button id="create-generate" class="primary-cta" type="button">Ask clarifying questions</button><button id="create-configure-now" class="secondary-cta" type="button">Configure now with assumptions</button></div>
+          <div class="create-chat-actions"><button id="create-configure-now" class="primary-cta" type="button">Build simulation</button><button id="create-generate" class="secondary-cta" type="button">Ask clarifying questions first</button></div>
           <div class="create-example-actions"><button id="create-example-prompt" class="quiet-button" type="button">Use relief-port example</button><button id="create-service-example-prompt" class="quiet-button" type="button">Use service-outage example</button></div>
           <p id="create-status" class="create-status" aria-live="polite">Discuss first, or configure immediately.</p>
         </section>
@@ -830,7 +841,7 @@
       window.TOURS = {
         waltzman: [
           {sel:".view-tabs", title:"Five views of one study", body:"The same coordination case, seen five ways. Start on the left and work right."},
-          {sel:"[data-view=\"overview\"]", title:"Overview", body:"What the study claims and why it matters: influence that changes what a group can decide, not what one person believes."},
+          {sel:"[data-view=\"overview\"]", title:"Overview", body:"See one coordination result immediately, then try the same machinery on a situation of your own."},
           {sel:"[data-view=\"case\"]", title:"Case study", body:"The worked example. Four national networks face one outbreak and none can act alone."},
           {sel:"[data-view=\"create\"]", title:"New simulation", body:"Describe a world in prose and it compiles into an editable configuration you can inspect before running."},
           {sel:"[data-view=\"simulations\"]", title:"Your simulations", body:"Runs you have built, with their trajectory, state and provenance kept for review."},
@@ -841,7 +852,6 @@
       window.addEventListener("DOMContentLoaded", function () {
         var b = document.querySelector("[data-tour-start]");
         if (b) b.addEventListener("click", function () { startTour("waltzman"); });
-        if (typeof maybeStartTour === "function") maybeStartTour("waltzman");
       });
     </script>
 </body>

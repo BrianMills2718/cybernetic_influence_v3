@@ -3,7 +3,7 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-08-31
+updated: 2026-09-09
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
@@ -70,6 +70,15 @@ The current public candidate for that comprehension judgment is native draft
 `draft_981bec08d29e` and retained run `run_702e57f9accc`: a six-step relief-port
 replay whose exact bridge inspection commits, whose guarded cargo attempt fails
 visibly, and whose detachable Waltzman lens leaves the simulation unchanged.
+
+On 2026-09-09 the product owner tightened the stakeholder criterion around the
+actual Waltzman outreach context. The demo must hook an expert on the
+local-information-to-collective-coordination question within roughly 30 seconds
+and have them typing a simulation request within roughly two minutes. Slice 37
+is implemented: the retained flagship result and natural-language composer now form one
+default first-screen journey. It explicitly reuses the existing public V2
+authoring/run pipeline rather than rebuilding it inside World Substrate;
+World Substrate supplies the next living-presentation target for retained runs.
 
 ## Repository Lineage Disposition
 

@@ -87,6 +87,25 @@ def test_public_walkthroughs_progressively_disclose_configuration_and_case() -> 
     assert "The replay separates what people received and attempted" in script
 
 
+def test_outreach_funnel_uses_existing_configure_first_authoring_path() -> None:
+    page = PAGE.read_text(encoding="utf-8")
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    assert 'maybeStartTour("waltzman")' not in page
+    assert 'startTour("waltzman")' in page
+    assert 'id="outreach-prompt"' in page
+    assert 'id="outreach-build"' in page
+    assert "function beginOutreachSimulation()" in script
+    start = script.index("async function beginOutreachSimulation()")
+    end = script.index("async function discussAuthoringDraft()", start)
+    funnel = script[start:end]
+    assert "state.view = 'create'" in funnel
+    assert "await refreshAuthoringAvailability()" in funnel
+    assert "await configureAuthoringDraft()" in funnel
+    assert "discussAuthoringDraft" not in funnel
+    assert "No setup wizard" in page
+
+
 def test_authoring_progress_uses_retained_backend_stages() -> None:
     page = PAGE.read_text(encoding="utf-8")
     script = SCRIPT.read_text(encoding="utf-8")
@@ -205,8 +224,14 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Overview" in page
     assert "Terminal decision gate" in page
     assert "Open method" in page
-    assert "AI coordination simulation workbench" in page
-    assert "Influence that changes what a group can decide, not what it believes" in page
+    assert "From local information to collective action" in page
+    assert "From Minds to Coordination" in page
+    assert "made executable" in page
+    assert "See how local information changes what a group can decide and do" in page
+    assert 'id="outreach-prompt"' in page
+    assert 'id="outreach-build"' in page
+    assert "Build this simulation" in page
+    assert "No setup wizard" in page
     assert "What this workbench is for" in page
     assert "Model people as people—not as role labels" in page
     assert "Let information and action remain local" in page
@@ -242,9 +267,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     assert "Edit one role—or keep the reviewed coalition" in page
     assert "Institutional oughts—not personal commands" in page
     assert "Edit personal character and memory" in page
-    assert "Describe a world. Build an editable simulation." in page
-    assert "Ask clarifying questions" in page
-    assert "Configure now with assumptions" in page
+    assert "Describe a situation. Build an editable simulation." in page
+    assert "Ask clarifying questions first" in page
+    assert "Build simulation" in page
     assert "Save this section and recompile" in page
     assert "Configuration sections" in page
     assert "What exists before the run" in page
@@ -303,6 +328,9 @@ def test_public_page_is_an_executable_evidence_workbench() -> None:
     ]
     assert {
         "overview-view",
+        "outreach-prompt",
+        "outreach-build",
+        "outreach-status",
         "guide-view",
         "guide-graph",
         "guide-visual-mode",

@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-09-01
+updated: 2026-09-09
 ---
 
 # Implementation Plans
@@ -11,6 +11,14 @@ updated: 2026-09-01
 [the goal](../GOAL.md) defines the accepted MVP outcome.
 
 ## Active execution
+
+[Slice 37: Waltzman outreach funnel](037-waltzman-outreach-funnel.md)
+is implemented and turns the already-capable public workbench into a stakeholder acquisition path for
+Rand Waltzman and adjacent experts: a recognizable coordination question and retained
+result in the initial journey, natural-language authoring on that same path,
+and one configure-first action before any deep methodology or configuration burden.
+It reuses the V2 authoring/run pipeline; World Substrate is a living-presentation donor,
+not a new runtime dependency in this slice.
 
 [Slice 36: Open the human project, not a repository maze](036-human-project-picker-pilot.md)
 pilots the canonical Cybernetic project composition and its operator-facing VS
