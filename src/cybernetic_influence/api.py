@@ -2574,6 +2574,40 @@ def _inline_script_csp_hashes(index_html: Path) -> str:
     return "".join(f" 'sha256-{digest}'" for digest in digests)
 
 
+def _inline_script_csp_hashes_with_srcdoc_documents(index_html: Path) -> str:
+    """CSP hashes for a self-contained page plus JSON-embedded srcdoc documents.
+
+    The Living Scene branch player stores its retained branch documents in a
+    ``const DOCS=<json>`` object. ``about:srcdoc`` inherits the embedding CSP,
+    so the child player scripts need exact hashes in the parent policy too.
+    """
+    try:
+        markup = index_html.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    bodies = list(_INLINE_SCRIPT.findall(markup))
+    if bodies:
+        outer = bodies[0]
+        token = "const DOCS="
+        start = outer.find(token)
+        if start >= 0:
+            try:
+                documents, _ = json.JSONDecoder().raw_decode(outer[start + len(token) :])
+            except (json.JSONDecodeError, TypeError):
+                documents = {}
+            if isinstance(documents, dict):
+                for document in documents.values():
+                    if isinstance(document, str):
+                        bodies.extend(_INLINE_SCRIPT.findall(document))
+    digests: list[str] = []
+    for body in bodies:
+        digest = base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode("ascii")
+        source = f" 'sha256-{digest}'"
+        if source not in digests:
+            digests.append(source)
+    return "".join(digests)
+
+
 def create_app(
     web_root: Path | None = None,
     run_root: Path | None = None,
@@ -2589,6 +2623,9 @@ def create_app(
     app = FastAPI(title="Cybernetic Influence Simulator", version=__version__)
     root = web_root or Path(__file__).resolve().parents[2] / "web"
     inline_script_hashes = _inline_script_csp_hashes(root / "index.html")
+    world_substrate_script_hashes = _inline_script_csp_hashes_with_srcdoc_documents(
+        root / "world-substrate.html"
+    )
     configured_run_root = os.getenv("CYBERNETIC_INFLUENCE_RUNS_DIR")
     runs = RunStore(
         run_root
@@ -2973,8 +3010,13 @@ def create_app(
             if allow_inline_styles
             else "style-src 'self'; "
         )
+        script_hashes = (
+            world_substrate_script_hashes
+            if request.url.path.rstrip("/") == "/world-substrate"
+            else inline_script_hashes
+        )
         response.headers["Content-Security-Policy"] = (
-            f"default-src 'self'; script-src 'self'{inline_script_hashes}; " + style_policy +
+            f"default-src 'self'; script-src 'self'{script_hashes}; " + style_policy +
             "connect-src 'self'; img-src 'self' data:; object-src 'none'; "
             "base-uri 'none'; frame-ancestors 'none'"
         )
@@ -6397,6 +6439,19 @@ def create_app(
                 live_lock.release()
 
     app.mount("/assets", StaticFiles(directory=root), name="assets")
+
+    @app.get("/world-substrate")
+    @app.get("/world-substrate/")
+    def world_substrate_living_scene() -> FileResponse:
+        """Serve the pinned World Substrate living-world artifact alongside this workbench."""
+        return FileResponse(root / "world-substrate.html")
+
+    @app.get("/world-substrate/revision.json")
+    def world_substrate_living_scene_revision() -> FileResponse:
+        """Expose the exact retained World Substrate source revision and artifact hash."""
+        return FileResponse(
+            root / "world-substrate-revision.json", media_type="application/json"
+        )
 
     @app.get("/review")
     def review_dossier() -> FileResponse:
