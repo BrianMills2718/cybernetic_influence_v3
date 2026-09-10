@@ -81,6 +81,13 @@ authoring/run pipeline rather than rebuilding it inside World Substrate;
 World Substrate supplies the next living-presentation target for retained runs.
 Slice 38 is implemented on this line: `simulation-replay.v1` and the retained influence network now drive a living replay without changing execution.
 
+The public host now has a bounded side-by-side publication seam: the existing
+Cybernetic workbench remains the `/waltzman/` surface, while
+`/waltzman/world-substrate/` serves a self-contained Living Scene artifact pinned
+to an exact `BrianMills2718/world-substrate` revision and SHA-256. This repository
+owns only that hosting/provenance seam; World Substrate remains the product and
+presentation authority for the living-world artifact.
+
 ## Repository Lineage Disposition
 
 The repository lineage is `cybernetic_influence` ->

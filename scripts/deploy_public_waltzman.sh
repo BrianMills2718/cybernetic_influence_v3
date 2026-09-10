@@ -61,6 +61,13 @@ if ! python3 "$(dirname "$0")/check_served_bundle_matches_source.py"; then
   exit 7
 fi
 
+echo "checking the pinned World Substrate living-world sidecar..."
+if ! python3 "$(dirname "$0")/check_world_substrate_sidecar.py"; then
+  echo "refusing to deploy: the World Substrate sidecar provenance is invalid" >&2
+  exit 8
+fi
+expected_world_substrate_revision="$(python3 -c 'import json; print(json.load(open("public/waltzman/world-substrate-revision.json"))["source_revision"])')"
+
 # --- the gate: is anything running that a restart would destroy? -------------
 # The detection logic lives in scripts/host_busy_check.py so the deploy path and
 # the certification-refresh path cannot drift apart; the copy that drifts is the
@@ -171,5 +178,21 @@ if ! python3 "$(dirname "$0")/check_public_assets.py" "$PAGE_URL"; then
   echo "the shareable URL is serving a broken page" >&2
   exit 5
 fi
+WORLD_SUBSTRATE_URL="${PAGE_URL}world-substrate/"
+echo "checking the side-by-side World Substrate URL..."
+sidecar_body="$(curl -fsS --max-time 10 "$WORLD_SUBSTRATE_URL" 2>/dev/null || true)"
+if [[ "$sidecar_body" != *"Waltzman Coordination Lab"* || "$sidecar_body" != *"World Substrate"* ]]; then
+  echo "the World Substrate sidecar is not serving the expected living-world artifact" >&2
+  exit 9
+fi
+reported_world_substrate_revision="$(curl -fsS --max-time 10 "${WORLD_SUBSTRATE_URL}revision.json" 2>/dev/null \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["source_revision"])' 2>/dev/null || true)"
+if [[ "$reported_world_substrate_revision" != "$expected_world_substrate_revision" ]]; then
+  echo "World Substrate source revision mismatch: service reports '${reported_world_substrate_revision:-<no answer>}', expected '$expected_world_substrate_revision'" >&2
+  exit 10
+fi
+echo "World Substrate sidecar serves $reported_world_substrate_revision"
+
 echo
-echo "share this URL, with the trailing slash: $PAGE_URL"
+echo "Cybernetic version: $PAGE_URL"
+echo "World Substrate version: $WORLD_SUBSTRATE_URL"

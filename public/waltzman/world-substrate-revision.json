@@ -1,0 +1,11 @@
+{
+  "description": "World Substrate Living Scene Waltzman replay, hosted alongside the Cybernetic Influence Waltzman workbench.",
+  "route": "/world-substrate/",
+  "schema_version": "cybernetic-influence-world-substrate-sidecar/v1",
+  "source_manifest_path": "evidence/waltzman/living-replay-manifest-v1.json",
+  "source_manifest_sha256": "4402e3bc61fb53ada5119b89af5a96ec1ae6e654df6360a7339a9454c86b9dcd",
+  "source_path": "evidence/renders/waltzman-living-v1.html",
+  "source_repository": "BrianMills2718/world-substrate",
+  "source_revision": "27164359bd63e5f6c1cd193f0d970c8847ddc9cb",
+  "source_sha256": "d25aabfc23128791b48aa1fe15bef7627edd9c211b44475146c009b750470b0e"
+}
