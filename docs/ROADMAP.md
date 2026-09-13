@@ -88,6 +88,13 @@ to an exact `BrianMills2718/world-substrate` revision and SHA-256. This reposito
 owns only that hosting/provenance seam; World Substrate remains the product and
 presentation authority for the living-world artifact.
 
+On 2026-09-13 the powered-off Mac Mini made the public request path unavailable.
+ADR-015 moves the committed retained-evidence bundle and its World Substrate
+sidecar to Cloudflare Static Assets at `https://brianmills.dev/waltzman/`.
+This recovery restores inspectable retained cases and replay without an origin
+fallback. Live authoring, new execution, and durable run creation remain the
+next stateful-hosting boundary; they are not claimed by the static deployment.
+
 ## Repository Lineage Disposition
 
 The repository lineage is `cybernetic_influence` ->

@@ -1,7 +1,20 @@
 # Mac Mini Development Host
 
-The one live Cybernetic Influence surface on this host is the public Waltzman
-workbench described in the section below (LaunchAgent
+## Current public-host disposition — 2026-09-13
+
+The Mac Mini is no longer the canonical public request path. The committed
+retained-evidence workbench is hosted by Cloudflare at
+<https://brianmills.dev/waltzman/> under ADR-015. Its retained cases, replay,
+review dossier, and World Substrate sidecar are available without this machine.
+Live authoring and new simulation execution are not part of that static
+recovery deployment and remain pending a durable Cloudflare state boundary.
+
+The material below records the former Mac deployment and its evidence. Do not
+use it as a current deployment instruction or restore the Mac as a hidden
+public fallback.
+
+The former public Cybernetic Influence surface on this host was the Waltzman
+workbench described below (LaunchAgent
 `com.cybernetic-influence.waltzman-public`, `127.0.0.1:8621`, Funnel path
 `/waltzman`).
 

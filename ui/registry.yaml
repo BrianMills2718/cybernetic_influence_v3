@@ -32,26 +32,25 @@ surfaces:
       local-information-to-collective-action hook, natural-language authoring,
       retained case/replay evidence, detachable analysis, and Experimentation.
     entrypoints:
-      production: https://brian-mac-mini.tail9c321e.ts.net/waltzman/
+      production: https://brianmills.dev/waltzman/
     run_commands:
-      deploy: scripts/deploy_public_waltzman.sh
+      deploy: npx --yes wrangler@4.131.1 deploy --config deploy/cloudflare/waltzman-static/wrangler.jsonc
       build_dataset: python scripts/build_public_waltzman_dataset.py
       capture: python scripts/capture_waltzman_demo.py
       verify: python scripts/verify_demo_ui.py
     data_boundary:
-      deployment: Deployed to a separate host (Mac Mini) from the local
-        operator app; deploy_public_waltzman.sh refuses to deploy over a
-        dirty working tree or a run in flight on the host.
-      audience: Public/external. Note that operator-review-app is also
-        publicly reachable, at https://brianmills.dev/cybernetic-influence,
-        proxied to 127.0.0.1:8620 by the Mac mini's public-prefix proxy -
-        measured 2026-09-05. Its mutating endpoints return 403 "operator
-        identity is not authorized" to anonymous callers, verified on
-        /api/runs, /api/composite-assays and /api/authoring/drafts, so the
-        exposure is the API surface at /docs and /openapi.json rather than any
-        spend-bearing action. This entry previously described that app as
-        local-only, which had stopped being true.
+      deployment: The retained-evidence bundle is hosted by Cloudflare Static
+        Assets without the Mac Mini in the request path. Live authoring, new
+        execution, and durable run creation remain unavailable until the API
+        moves behind a durable Cloudflare state boundary.
+      audience: Public/external. The separate operator-review app at
+        `/cybernetic-influence/` was deliberately retired on 2026-09-06; it is
+        not an outage-recovery target and must not be republished without a new
+        operator-access decision. The public surface is this bounded Waltzman
+        workbench.
     provenance:
+      - deploy/cloudflare/waltzman-static/wrangler.jsonc
+      - docs/adr/015-cloudflare-public-hosting.md
       - scripts/deploy_public_waltzman.sh
       - docs/ROADMAP.md (Slice 30 Artifact Disposition row)
     tours:
