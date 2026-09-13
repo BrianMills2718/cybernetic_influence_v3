@@ -1,0 +1,30 @@
+{
+  "name": "waltzman-retained-review",
+  "main": "index.js",
+  "compatibility_date": "2026-09-13",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "brianmills.dev/waltzman/*",
+      "zone_name": "brianmills.dev"
+    }
+  ],
+  "assets": {
+    "directory": "../../../public",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  }
+}
