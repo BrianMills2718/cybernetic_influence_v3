@@ -7,6 +7,9 @@ updated: 2026-09-02
 depends_on:
   - docs/ROADMAP.md
   - project-membership.yaml
+plan_id: "cybernetic_influence_v3#36"
+dependencies: []
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 36: open the human project, not a repository maze

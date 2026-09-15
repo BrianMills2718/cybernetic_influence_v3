@@ -9,6 +9,11 @@ depends_on:
   - ../GOAL.md
   - ../adr/014-separate-simulation-and-analysis-authority.md
   - 029-separate-simulation-run-analysis.md
+plan_id: "cybernetic_influence_v3#37"
+dependencies: ["cybernetic_influence_v3#29"]
+dependency_evidence:
+  "cybernetic_influence_v3#29": "- 029-separate-simulation-run-analysis.md"
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 37: Waltzman outreach funnel

@@ -9,6 +9,9 @@ depends_on:
   - docs/adr/013-generalized-simulator-foundation.md
   - docs/handoffs/027-foundation-implementation.md
   - docs/research/027-concordia-architecture-revisit.md
+plan_id: "cybernetic_influence_v3#28"
+dependencies: []
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 28: Natural-language general simulation demo

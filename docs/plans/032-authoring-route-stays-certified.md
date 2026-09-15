@@ -7,6 +7,11 @@ updated: 2026-09-06
 depends_on:
   - docs/ROADMAP.md
   - docs/plans/031-cso-stabilization-flagship.md
+plan_id: "cybernetic_influence_v3#32"
+dependencies: ["cybernetic_influence_v3#31"]
+dependency_evidence:
+  "cybernetic_influence_v3#31": "- docs/plans/031-cso-stabilization-flagship.md"
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 32: the authoring route stays certified without a human

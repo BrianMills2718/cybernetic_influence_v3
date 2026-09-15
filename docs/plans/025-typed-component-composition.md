@@ -4,6 +4,11 @@ authority: bounded_design
 status: paused
 created: 2026-07-31
 updated: 2026-07-31
+plan_id: "cybernetic_influence_v3#25"
+dependencies: ["cybernetic_influence_v3#26"]
+dependency_evidence:
+  "cybernetic_influence_v3#26": "but further expansion is paused. [Slice 26](026-concordia-foundation-research.md) must first decide whether composition belongs inside the current runtime"
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 25: Typed component composition

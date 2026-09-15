@@ -4,6 +4,9 @@ authority: bounded_design
 status: technically_complete
 created: 2026-08-03
 updated: 2026-08-03
+plan_id: "cybernetic_influence_v3#27"
+dependencies: []
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 27: Four-condition coordination dynamics experiment

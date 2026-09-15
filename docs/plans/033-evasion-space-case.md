@@ -7,6 +7,11 @@ updated: 2026-08-23
 depends_on:
   - docs/plans/031-cso-stabilization-flagship.md
   - docs/research/001-from-minds-to-coordination.md
+plan_id: "cybernetic_influence_v3#33"
+dependencies: ["cybernetic_influence_v3#31"]
+dependency_evidence:
+  "cybernetic_influence_v3#31": "- docs/plans/031-cso-stabilization-flagship.md"
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 33: show detection failing under evasion

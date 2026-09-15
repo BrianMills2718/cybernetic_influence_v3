@@ -8,6 +8,11 @@ depends_on:
   - ../ROADMAP.md
   - ../GOAL.md
   - 037-waltzman-outreach-funnel.md
+plan_id: "cybernetic_influence_v3#38"
+dependencies: ["cybernetic_influence_v3#37"]
+dependency_evidence:
+  "cybernetic_influence_v3#37": "- 037-waltzman-outreach-funnel.md"
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 38: Living replay for generated worlds
