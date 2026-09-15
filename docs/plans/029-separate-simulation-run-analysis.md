@@ -12,6 +12,9 @@ depends_on:
   - docs/adr/014-separate-simulation-and-analysis-authority.md
 supersedes_in_part:
   - docs/plans/028-natural-language-general-simulation-demo.md
+plan_id: "cybernetic_influence_v3#29"
+dependencies: []
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 29: Separate scenario, run, analysis, and experiment authority

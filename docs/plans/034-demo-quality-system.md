@@ -9,6 +9,12 @@ depends_on:
   - docs/plans/033-evasion-space-case.md
   - docs/handoffs/2026-08-23-waltzman-demo-session.md
   - docs/research/001-from-minds-to-coordination.md
+plan_id: "cybernetic_influence_v3#34"
+dependencies: ["cybernetic_influence_v3#31", "cybernetic_influence_v3#33"]
+dependency_evidence:
+  "cybernetic_influence_v3#31": "- docs/plans/031-cso-stabilization-flagship.md"
+  "cybernetic_influence_v3#33": "- docs/plans/033-evasion-space-case.md"
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 34: keep the demo correct without anyone watching it

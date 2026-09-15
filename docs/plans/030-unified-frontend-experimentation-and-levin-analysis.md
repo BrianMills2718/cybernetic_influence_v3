@@ -11,6 +11,11 @@ depends_on:
   - docs/adr/008-separate-spatial-topology-from-routing-and-permission.md
   - docs/adr/014-separate-simulation-and-analysis-authority.md
   - docs/plans/029-separate-simulation-run-analysis.md
+plan_id: "cybernetic_influence_v3#30"
+dependencies: ["cybernetic_influence_v3#29"]
+dependency_evidence:
+  "cybernetic_influence_v3#29": "- docs/plans/029-separate-simulation-run-analysis.md"
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 30: unify the two frontends, add Experimentation, add a real Levin lens

@@ -8,6 +8,11 @@ depends_on:
   - docs/ROADMAP.md
   - docs/plans/022-composite-agency-perturbation-assay.md
   - docs/handoffs/2026-08-25-review-and-assay-control.md
+plan_id: "cybernetic_influence_v3#35"
+dependencies: ["cybernetic_influence_v3#22"]
+dependency_evidence:
+  "cybernetic_influence_v3#22": "- docs/plans/022-composite-agency-perturbation-assay.md"
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 35: give the perturbation assay its own timeline

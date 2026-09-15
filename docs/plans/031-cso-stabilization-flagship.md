@@ -9,6 +9,9 @@ depends_on:
   - docs/research/001-from-minds-to-coordination.md
   - docs/adr/012-decision-environment-measures-are-derived.md
   - docs/adr/014-separate-simulation-and-analysis-authority.md
+plan_id: "cybernetic_influence_v3#31"
+dependencies: []
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 31: make the flagship case the run that exercises the source framework
