@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted — 2026-09-13.
+Accepted — 2026-09-13. Amended by ADR-016 (2026-09-15): live authoring,
+execution, and durable run state run on the personal VPS behind the Cloudflare
+tunnel instead of a Cloudflare durable service. The rest of this decision
+stands.
 
 ## Context
 

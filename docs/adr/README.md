@@ -27,4 +27,5 @@ plans provide scoped execution and historical evidence.
 | [012](012-decision-environment-measures-are-derived.md) | Trust, risk, coordination, and directional patterns are derived evidence-bound analyst views | accepted |
 | [013](013-generalized-simulator-foundation.md) | Concordia owns the generalized simulation foundation; selected Cybernetic Influence capabilities migrate through public component and projection seams | accepted |
 | [014](014-separate-simulation-and-analysis-authority.md) | Scenario and run contracts own causal execution; analysis remains a separately attachable read-only authority over retained evidence | accepted |
-| [015](015-cloudflare-public-hosting.md) | Cloudflare owns the public request path; retained review ships first and stateful execution requires durable storage | accepted |
+| [015](015-cloudflare-public-hosting.md) | Cloudflare owns the public request path; retained review ships first and stateful execution requires durable storage | accepted; amended by ADR 016 |
+| [016](016-vps-live-execution-backend.md) | Live authoring and execution run on the personal VPS behind the Cloudflare tunnel, bounded by sign-in-free spend controls | accepted |
