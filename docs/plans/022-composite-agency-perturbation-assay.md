@@ -4,6 +4,10 @@ authority: bounded_design
 status: packet_22a2_technical_complete
 created: 2026-07-27
 updated: 2026-07-31
+plan_id: "cybernetic_influence_v3#22"
+dependencies: ["cybernetic_influence_v3#24"]
+dependency_evidence:
+  "cybernetic_influence_v3#24": "Do not implement it until the configurable per-run workflow in [Slice 24](024-configurable-theory-analysis-mvp.md) is complete"
 ---
 
 # Slice 22: Composite-agency perturbation assay
