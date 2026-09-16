@@ -4,6 +4,9 @@ authority: bounded_design
 status: active
 created: 2026-07-30
 updated: 2026-07-30
+plan_id: "cybernetic_influence_v3#24"
+dependencies: []
+dependencies_reviewed: "2026-09-15"
 ---
 
 # Slice 24: Configurable theory-informed simulation MVP
