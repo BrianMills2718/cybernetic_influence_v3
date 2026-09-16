@@ -1,8 +1,7 @@
-# Cloudflare retained-review deployment
+# Cloudflare public Waltzman deployment
 
-This deployment restores the public Waltzman retained-evidence and replay
-surface at <https://brianmills.dev/waltzman/> without the Mac Mini in the
-request path.
+This Worker serves the public Waltzman workbench at
+<https://brianmills.dev/waltzman/> (ADR-015, amended by ADR-016).
 
 ```bash
 npx --yes wrangler@4.131.1 deploy \
@@ -10,13 +9,19 @@ npx --yes wrangler@4.131.1 deploy \
 ```
 
 The asset root is the repository's `public/` directory, so the route prefix
-maps directly to `public/waltzman/`. A small Worker preserves the former
-FastAPI static mapping by rewriting `waltzman/assets/*` to the files retained
-directly under `public/waltzman/`. It also returns an explicit JSON 404 for
-`api/*`; the frontend catches that response and labels the live simulator
-unavailable while retaining the committed case data, replay, methodology,
-review dossier, and World Substrate sidecar.
+maps directly to `public/waltzman/`. The Worker preserves the former FastAPI
+static mapping by rewriting `waltzman/assets/*` to the files retained directly
+under `public/waltzman/`.
 
-This is a recovery surface, not the stateful simulator deployment. Natural-
-language authoring, new runs, and persistent run storage remain unavailable
-until the API moves to a Cloudflare runtime with durable storage.
+`/waltzman/api/*` is proxied to the live simulator at
+`https://waltzman-api.brianmills.dev` (method, query, body, and the visitor's
+`CF-Connecting-IP` preserved). That hostname reaches the container on Brian's
+personal VPS only through the `personal-vps` Cloudflare tunnel; build, deploy,
+spend caps, certification refresh, and backups are documented in
+`BrianMills2718/personal-vps` `apps/waltzman/README.md` and the image is
+`deploy/vps/Dockerfile`.
+
+If the backend is unreachable the Worker returns a JSON 503
+`live_simulator_unavailable`; the page then labels the live simulator
+unavailable while the committed case data, replay, methodology, review dossier,
+and World Substrate sidecar stay inspectable.

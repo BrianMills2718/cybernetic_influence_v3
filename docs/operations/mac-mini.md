@@ -6,8 +6,10 @@ The Mac Mini is no longer the canonical public request path. The committed
 retained-evidence workbench is hosted by Cloudflare at
 <https://brianmills.dev/waltzman/> under ADR-015. Its retained cases, replay,
 review dossier, and World Substrate sidecar are available without this machine.
-Live authoring and new simulation execution are not part of that static
-recovery deployment and remain pending a durable Cloudflare state boundary.
+Since 2026-09-15 (ADR-016), live authoring and new simulation execution run on
+Brian's personal netcup VPS behind the Cloudflare tunnel, reached through the
+same Worker at `/waltzman/api/*`; operations live in `BrianMills2718/personal-vps`
+`apps/waltzman/`. Nothing here is needed for them.
 
 The material below records the former Mac deployment and its evidence. Do not
 use it as a current deployment instruction or restore the Mac as a hidden

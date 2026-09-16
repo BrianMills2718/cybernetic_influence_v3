@@ -92,8 +92,17 @@ On 2026-09-13 the powered-off Mac Mini made the public request path unavailable.
 ADR-015 moves the committed retained-evidence bundle and its World Substrate
 sidecar to Cloudflare Static Assets at `https://brianmills.dev/waltzman/`.
 This recovery restores inspectable retained cases and replay without an origin
-fallback. Live authoring, new execution, and durable run creation remain the
-next stateful-hosting boundary; they are not claimed by the static deployment.
+fallback.
+
+On 2026-09-15, ADR-016 restored live authoring and execution: the simulator runs
+in Docker on Brian's personal netcup VPS with its run store on a durable disk,
+the Cloudflare Worker proxies `/waltzman/api/*` to it through the tunnel, and the
+OpenRouter Sol route is certified on that host. The public demo stays open with
+no sign-in; spend is bounded by `public_spend_controls` (per-visitor hourly
+limits, daily caps on live runs and authoring, the existing per-call budget and
+call-count ceilings, and llm_client's monthly project budget). Deployment,
+certification refresh, and backups live in `BrianMills2718/personal-vps`
+`apps/waltzman/`.
 
 ## Repository Lineage Disposition
 
