@@ -43,7 +43,7 @@ def test_sidecar_revision_pins_exact_world_substrate_artifact(tmp_path: Path) ->
     assert response.status_code == 200
     record = response.json()
     actual = hashlib.sha256(WORLD_SUBSTRATE_PAGE.read_bytes()).hexdigest()
-    assert record["source_revision"] == "27164359bd63e5f6c1cd193f0d970c8847ddc9cb"
+    assert record["source_revision"] == "b094e24d3086b906c1c143b6d60524282012e32e"
     assert record["source_sha256"] == actual
     assert record["route"] == "/world-substrate/"
 
