@@ -19,7 +19,7 @@ story configurable, observable, and falsifiable inside a controlled multi-agent
 simulation.
 
 Research case:
-<https://brian-mac-mini.tail9c321e.ts.net/waltzman/?view=case>
+<https://brianmills.dev/waltzman/?view=case>
 
 ## Demonstration
 

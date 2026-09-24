@@ -206,7 +206,7 @@ select the product foundation.
   theory-neutral retained evidence after execution. Slice 29 is the active
   implementation authority for that refactor.
 - The user-approved public outbreak workbench is deployed at
-  <https://brian-mac-mini.tail9c321e.ts.net/waltzman/>. It remains a retained
+  <https://brianmills.dev/waltzman/>. It remains a retained
   example and capability baseline, not the generalized product architecture. A
   user can edit the shared
   situation plus each role's mandate and private institutional context; choose
