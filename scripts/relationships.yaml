@@ -2,7 +2,7 @@
 
 required_reading:
   defaults:
-    - CLAUDE.md
+    - AGENTS.md
 
 governance: []
 couplings:

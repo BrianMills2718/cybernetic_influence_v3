@@ -1,25 +1,164 @@
 # Cybernetic Influence V3 Repository Rules
 
-<!-- GENERATED FILE: DO NOT EDIT DIRECTLY -->
-<!-- generated_by: scripts/meta/render_agents_md.py -->
-<!-- canonical_claude: CLAUDE.md -->
-<!-- canonical_relationships: scripts/relationships.yaml -->
-<!-- canonical_relationships_sha256: 926e29ad529a -->
-<!-- sync_check: python scripts/meta/check_agents_sync.py --check -->
+`AGENTS.md` is the authored repository instruction source for Claude Code and
+Codex. `scripts/relationships.yaml` separately owns machine-readable coupling.
 
-This file is a generated Codex-oriented projection of repo governance.
-Edit the canonical sources instead of editing this file directly.
+## Product Framing
 
-Canonical governance sources:
-- `CLAUDE.md` — human-readable project rules, workflow, and references
-- `scripts/relationships.yaml` — machine-readable ADR, coupling, and required-reading graph
+This is a general reviewable simulation system: an analyst describes a bounded
+socio-technical world conversationally, reviews and edits the compiled
+configuration, runs interacting LLM and deterministic entities through a
+Concordia-owned simulation lifecycle, and inspects the trajectory, state,
+assumptions, provenance, and selected analyses. Wargaming, economic modeling,
+and organizational analysis are exemplar uses, not the product definition. The
+system explores conditional pathways and sensitivities under declared
+assumptions; it is not a prediction engine.
 
-## Purpose
+The current application (public Waltzman workbench included) is the
+pre-migration capability-parity baseline, not yet migrated to the general
+Concordia foundation. Do not mistake it for the general product architecture.
 
-`AGENTS.md` is a generated Codex-oriented projection of this file plus
-`scripts/relationships.yaml`, rendered by `scripts/meta/render_agents_md.py`.
-Edit this file, not `AGENTS.md` directly; `scripts/meta/check_agents_sync.py
---check` verifies they are in sync.
+## Accepted Working Model
+
+- ADR-013 is the accepted foundation: Concordia owns entity/component
+  lifecycle, actor selection, environment/game-master loop, scheduling, and
+  checkpoint invocation. A project-owned canonical-world component owns typed
+  world truth, transitions, and atomic commit; it must not recreate
+  `CausalSession`/`ActiveRuntimeSession` as a second engine.
+- ADR-014 is accepted: scenario/run execution and analysis are separately
+  owned authorities. Analysis is read-only over retained evidence and must
+  never mutate simulation state or affect model-call count or evidence digest.
+- ADR-006/ADR-008: analytical/organizational boundaries and spatial adjacency
+  are derived and execution-inert, never a hidden executor or an implicit
+  communication/authorization channel.
+- ADR-010/ADR-011: multirate process time and declared representation depth
+  are accepted directions; a general framework for representation depth
+  remains deferred outside the migrated verticals.
+- ADR-012: trust, risk, coordination, and directional measures are derived,
+  evidence-bound analyst views, never hidden causal state.
+- The predecessor repository (`cybernetic_influence_v2`) is an archived
+  source/evidence donor, not a current runtime or capability authority. This
+  repository is the clean product/runtime line with no predecessor imports.
+
+Detailed current capability and status belong in `docs/ROADMAP.md` and
+`docs/GOAL.md`, not this rule file.
+
+## Documentation Authority
+
+- `README.md`: orientation, start-here links, run-locally instructions.
+- `docs/GOAL.md`: accepted outcome, scope, and acceptance criteria
+  (`doc_role: execution_goal`, `authority: continuous_execution`).
+- `docs/ROADMAP.md`: current truth and implementation sequence
+  (`authority: canonical`) — the capability map and what is satisfied vs.
+  pending.
+- `docs/adr/README.md` and `docs/adr/*`: binding architectural decisions.
+- `docs/plans/README.md` and `docs/plans/*`: active and historical
+  implementation plans; runtime/application behavior changes need an active
+  plan or bounded handoff.
+- `docs/handoffs/*`: bounded-design implementation handoffs
+  (`authority: bounded_design`). A handoff's own `status` frontmatter is
+  authoritative for whether it is still gating; if it conflicts with
+  `docs/ROADMAP.md`'s Artifact Dispositions table, treat the roadmap as
+  current truth and fix the handoff's frontmatter rather than trusting either
+  silently.
+- `docs/research/*`: research basis for what a source does and does not
+  support.
+- `docs/operations/*`: host/runbook operational detail (e.g. the Mac Mini
+  runbook), linked from `README.md` rather than duplicated.
+- `docs/archive/README.md` and `docs/archive/*`: completed, superseded, or
+  dated evidence preserved for provenance and recovery, not the current
+  execution path.
+
+Do not rewrite historical evidence, move established evidence paths, or treat
+a completed plan or archived handoff as next-step authority.
+
+## Required Before Implementation
+
+Before runtime, API, UI, scenario, prompt, or evidence behavior changes:
+
+1. identify the governing plan (`docs/plans/`) or bounded handoff
+   (`docs/handoffs/`) that authorizes the change; if none exists, that gap is
+   the first blocker to resolve, not a reason to proceed informally;
+2. add or amend an ADR (`docs/adr/`) if the change affects architecture,
+   authority boundaries, or the Concordia/canonical-world seam;
+3. keep `docs/ROADMAP.md`'s capability map and Artifact Dispositions table
+   truthful as work lands — a slice is not "done" until the roadmap says so.
+
+Documentation-only changes still require identifying which authority surface
+they update. Generated artifacts and formatting-only rewrites do not create a
+new capability by themselves.
+
+## Testing And Verification
+
+- `make check` runs `typecheck test ui-build assets-check deploy-check` in that
+  order — `mypy` (strict, `files = ["src", "tests"]`), then `pytest -q tests`,
+  then the frontend build, then the check that the served bundle matches
+  `frontend/src`, then the deploy-script syntax check. Run it before treating
+  work as complete; do not report success from a partial subset.
+- Run it from a worktree, not from a canonical checkout left read-only by the
+  workspace guard: only the write stages fail there, so `ui-build` reports a
+  bundler crash whose real cause is `Permission denied` on `web/`.
+- `.github/workflows/check.yml` runs the same target on every pull request and
+  on every push to `main`, and `main` requires it to pass before a merge. This
+  exists because between 2026-08-26 and 2026-09-06 three merges each shipped a
+  red assertion and nobody noticed: running `make check` locally was the only
+  thing standing between a broken suite and `main`, and it was skipped. CI does
+  not replace running it yourself — a thirty-minute round trip is a poor
+  substitute for a five-second local run — it only makes skipping it visible.
+- CI checks out `llm_client` with a read-only deploy key held in the
+  `LLM_CLIENT_DEPLOY_KEY` secret. It is not optional there: without
+  `llm_client` the suite does not skip gracefully, it fails to collect with 11
+  errors. If CI starts erroring during collection, check that key before
+  suspecting the tests.
+- A test that exercises a Codex route must patch
+  `cybernetic_influence.run_configuration.codex_subscription_available`. It
+  shells out to the local `codex` CLI and reads its login status, so a test
+  that leaves it real is asserting that whoever runs the suite is signed in to
+  ChatGPT; the model drops out of the catalog otherwise and the run is rejected
+  as "not currently advertised for simulator execution". Most tests here
+  already patch it. Reproduce that environment with `PATH=/usr/bin:/bin`.
+- Wait on wall-clock time, never on an iteration count, when polling for a
+  background run to reach a terminal state. A fixed `for _ in range(200)` with
+  a 10ms sleep is a two-second deadline on real work: it passes alone and fails
+  inside the full suite and on CI. Use `wait_for` / `wait_until` from
+  `tests/waiting.py`. This rule is enforced by `make test-wait-check`
+  (`scripts/check_test_wait_deadlines.py`), which runs inside `make check` — it
+  became a check on 2026-09-08 because as prose alone it did not hold: it was
+  written on 2026-09-06 alongside a fix for two such tests, and two days later
+  fourteen instances of the exact named pattern were still live across three
+  test files, one of them failing `main`'s own CI.
+- `make test` runs `pytest -q tests` specifically — always scope pytest to
+  `tests/` (or use `make test`). Do not run a bare `pytest` from the repo
+  root: `worktrees/` can contain other lanes' checkouts with duplicate test
+  basenames and no path isolation, which produces spurious collection errors
+  unrelated to this repository's own test suite.
+- Live LLM execution requires the shared `llm_client` integration and
+  explicit live authorization; model availability, reasoning options, and
+  observed spend are shown by the running application. Do not infer current
+  route availability from historical documentation.
+- Never turn a failed, partial, or stale check into a passing claim in a plan,
+  handoff, or roadmap update.
+
+## Worktree And Lane Hygiene
+
+This repository uses the standard worktree-per-lane pattern:
+`worktrees/<branch>/`, one bounded mission and plan/handoff per worktree.
+
+- Create lanes with the sanctioned `make worktree` entrypoint once installed;
+  do not improvise `git worktree add` against ad hoc paths.
+- A finished lane needs one disposition (`merged`, `active`, `handoff`,
+  `superseded`, `abandoned`, `archived`, `migrated`) and must be closed with
+  the atomic `session-close` / `make worktree-remove` flow — claim release and
+  worktree/branch cleanup happen together, never as two separate manual steps.
+- Worktree lifetime and branch lifetime are separate: a worktree can be
+  removed while its branch is preserved when a lane's disposition is
+  uncertain, but a stale, no-longer-truthful `active` claim should still be
+  resolved (resume, hand off, or abandon) rather than left indefinitely — see
+  `enforced-planning`'s `docs/guides/WORKTREE_COORDINATION_OPERATOR_GUIDE.md`
+  for the full lifecycle and stale-claim diagnostics.
+- Before trusting `worktrees/` as healthy, check `git worktree list` against
+  the claim registry (`~/.claude/coordination/claims/*.yaml` filtered to this
+  project) rather than assuming every checkout on disk has a live owner.
 
 ## Commands
 
@@ -45,13 +184,13 @@ make session-close BRANCH=...
 make status         # repository authority freshness and branch status
 ```
 
-## Operating Rules
+## Repository Hygiene
 
-This projection keeps the highest-signal rules in always-on Codex context.
-For full project structure, detailed terminology, and any rule omitted here,
-read `CLAUDE.md` directly.
-
-### Principles
+- Preserve unrelated user changes and generated job artifacts.
+- Keep secrets, prompts, private memory, and protected content out of public
+  projections (`public/waltzman/`); retain typed redacted lineage where
+  required.
+## Principles
 
 - Concordia owns entity/component lifecycle and the game-master loop; this
   repository owns typed world truth, transitions, and evidence. Do not
@@ -68,7 +207,7 @@ read `CLAUDE.md` directly.
 - Prefer the documentation authority surface that already owns a fact over
   creating a second place to state it.
 
-### Workflow
+## Workflow
 
 1. Find the governing authority: `docs/ROADMAP.md` for current direction,
    `docs/GOAL.md` for the accepted outcome, `docs/plans/README.md` for the
@@ -81,10 +220,6 @@ read `CLAUDE.md` directly.
 5. Merge/push from a clean root-anchored control session, then close the lane
    with `make worktree-remove BRANCH=...` (or `make session-close`) — never as
    a separate manual worktree deletion after the claim is already released.
-
-## Machine-Readable Governance
-
-`scripts/relationships.yaml` is the source of truth for machine-readable governance in this repo: ADR coupling, required-reading edges, and doc-code linkage. This generated file does not inline that graph; it records the canonical path and sync marker, then points operators and validators back to the source graph. Prefer deterministic validators over prompt-only memory when those scripts are available.
 
 ## References
 
