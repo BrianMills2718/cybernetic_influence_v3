@@ -67,7 +67,7 @@
 
 - `src/example.py:45-89` - existing implementation
 - `docs/architecture/current/example.md` - current design
-- `CLAUDE.md` - project conventions
+- `AGENTS.md` - project conventions
 - Memory context: `agent-memory recall '{topic}' --project {project}` — N findings
 
 ---
