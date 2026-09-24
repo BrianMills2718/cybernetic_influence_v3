@@ -48,7 +48,7 @@ never in what was said.
 You can read the whole thing here, including each official's own words before
 and after, and the retained evidence behind every number:
 
-<https://brian-mac-mini.tail9c321e.ts.net/waltzman/>
+<https://brianmills.dev/waltzman/>
 
 Two honest limits. This is one synthetic trajectory, not a sample or an effect
 estimate, and the pressure sources and the stabilizing action are authored
