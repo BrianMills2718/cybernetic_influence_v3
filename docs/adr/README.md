@@ -2,7 +2,7 @@
 doc_role: navigation
 authority: navigation
 status: active
-updated: 2026-08-14
+updated: 2026-09-30
 ---
 
 # Architectural Decisions
