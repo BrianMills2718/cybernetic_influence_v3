@@ -3,11 +3,35 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-09-09
+updated: 2026-09-30
 supersedes: earlier comparison-centered and configurable Waltzman-Levin goals as the active product frontier; retained below as baseline evidence
 ---
 
 # Generalizable Socio-Technical Simulation System Goal
+
+## Current override — replacement-first platform gate (2026-09-30)
+
+**This is the active execution gate. It supersedes generalized-simulator feature work below without deleting the prior evidence.**
+
+The owner preference is explicit: use an existing mature system whenever it can do the job adequately; novelty and local ownership are not objectives.
+
+Before adding more generalized simulation infrastructure, run the retained regional-outbreak coordination case through **Simudyne Nexus + Agentic Simulation Lab Python SDK**.
+
+Success means Simudyne owns generic execution, scheduling, communication, experiment conditions/repetition, recording/checkpointing, validation/model lifecycle, and deployment while local code is limited to the specific outbreak model and genuinely domain-specific analysis.
+
+If that succeeds, retire/archive overlapping Cybernetic Influence infrastructure rather than porting it.
+
+If it fails, record the concrete failure. Then:
+- keep Concordia as the open-source fallback/foundation;
+- prefer GAMA if LLM-native residents are unnecessary;
+- prefer AnyLogic if conventional commercial multi-method simulation is the better fit.
+
+See [ADR-017](adr/017-replacement-first-simulation-platform.md) and the [replacement review](research/030-replacement-first-simulation-platform-review-2026-09-30.md).
+
+### Exact next action
+
+Obtain authentic Simudyne trial/access and implement the regional-outbreak replacement case without invoking the Cybernetic Influence runtime.
+
 
 ## Mission
 
