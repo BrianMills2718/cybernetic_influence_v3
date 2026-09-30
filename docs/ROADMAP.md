@@ -3,11 +3,26 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-09-09
+updated: 2026-09-30
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
 # Generalizable Simulation System Roadmap
+
+## Current frontier — replacement gate
+
+Do not extend the generalized simulator until the off-the-shelf replacement test is complete.
+
+1. Trial **Simudyne Nexus + Agentic Simulation Lab Python SDK** on the retained regional-outbreak coordination experiment.
+2. Require the external platform to own generic simulation lifecycle, experiment repetition, recording, and model lifecycle.
+3. Preserve only case-specific model logic and domain-specific analysis locally.
+4. If the trial passes, retire overlapping Cybernetic Influence infrastructure instead of migrating it.
+5. If the trial fails, document the concrete blocker before resuming Concordia-first implementation.
+
+[ADR-017](adr/017-replacement-first-simulation-platform.md) is binding for this gate. The detailed same-case review is [here](research/030-replacement-first-simulation-platform-review-2026-09-30.md).
+
+Everything below remains historical/current-state evidence but does not override this gate.
+
 
 ## Outcome
 

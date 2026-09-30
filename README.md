@@ -1,5 +1,8 @@
 # Cybernetic Influence V3
 
+> **Current direction (2026-09-30): replacement-first.** Before more generalized-simulator development, test whether Simudyne Nexus + its Python ABM SDK can replace the platform on the retained regional-outbreak coordination case. If it can, retire overlapping CI infrastructure. See [ADR-017](docs/adr/017-replacement-first-simulation-platform.md).
+
+
 Cybernetic Influence is becoming a generalizable, reviewable simulator for
 bounded socio-technical worlds. Concordia is the adopted simulation foundation;
 the current Cybernetic Influence application is the capability-parity baseline
@@ -16,13 +19,13 @@ foundation and must not be mistaken for its general product architecture.
 
 ## Start here
 
-- [Current goal](docs/GOAL.md) — outcome, scope, and acceptance criteria.
+- [Current goal](docs/GOAL.md) — replacement-first outcome and gate.
+- [Simudyne replacement trial](docs/plans/039-simudyne-replacement-trial.md) — exact same-case acceptance protocol.
 - [Roadmap](docs/ROADMAP.md) — current truth and implementation sequence.
 - [Foundation decision: ADR-013](docs/adr/013-generalized-simulator-foundation.md)
   — accepted Concordia-first authority boundary.
-- [Next bounded design: Slice 27](docs/handoffs/027-foundation-implementation.md)
-  — general Concordia world-transition vertical, awaiting explicit
-  implementation authorization.
+- [Historical Concordia bounded design: Slice 27](docs/handoffs/027-foundation-implementation.md)
+  — retained fallback design; paused by the replacement-first gate in ADR-017.
 - [Retained MVP design: Slice 24](docs/plans/024-configurable-theory-analysis-mvp.md)
   — completed technical baseline with a separate stakeholder readout pending.
 - [Post-MVP perturbation design: Slice 22](docs/plans/022-composite-agency-perturbation-assay.md)
