@@ -19,7 +19,8 @@ foundation and must not be mistaken for its general product architecture.
 
 ## Start here
 
-- [Current goal](docs/GOAL.md) — outcome, scope, and acceptance criteria.
+- [Current goal](docs/GOAL.md) — replacement-first outcome and gate.
+- [Simudyne replacement trial](docs/plans/039-simudyne-replacement-trial.md) — exact same-case acceptance protocol.
 - [Roadmap](docs/ROADMAP.md) — current truth and implementation sequence.
 - [Foundation decision: ADR-013](docs/adr/013-generalized-simulator-foundation.md)
   — accepted Concordia-first authority boundary.
