@@ -1,5 +1,8 @@
 # Cybernetic Influence V3
 
+> **Current direction (2026-09-30): replacement-first.** Before more generalized-simulator development, test whether Simudyne Nexus + its Python ABM SDK can replace the platform on the retained regional-outbreak coordination case. If it can, retire overlapping CI infrastructure. See [ADR-017](docs/adr/017-replacement-first-simulation-platform.md).
+
+
 Cybernetic Influence is becoming a generalizable, reviewable simulator for
 bounded socio-technical worlds. Concordia is the adopted simulation foundation;
 the current Cybernetic Influence application is the capability-parity baseline
