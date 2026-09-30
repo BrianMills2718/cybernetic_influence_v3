@@ -1,0 +1,36 @@
+{
+  "schema": "cybernetic-influence.simudyne-replacement-result.v1",
+  "trial_date": "",
+  "simudyne": {
+    "nexus_version": "",
+    "abm_lab_version": "",
+    "access_mode": "",
+    "environment": "",
+    "license_notes": ""
+  },
+  "nexus_authoring": {
+    "original_research_prompt": "",
+    "retrieved_models_or_templates": [],
+    "selected_template": "",
+    "cms_changes": [],
+    "generated_model_sha256": "",
+    "custom_code_required": []
+  },
+  "runs": [],
+  "platform_ownership": {
+    "agent_execution": false,
+    "scheduling": false,
+    "communication": false,
+    "experiment_repetition": false,
+    "recording": false,
+    "checkpointing": false,
+    "validation": false,
+    "deployment_or_serving": false,
+    "natural_language_model_authoring": false
+  },
+  "local_code_disposition": [],
+  "blockers": [],
+  "verdict": "",
+  "proposed_ci_retirements": [],
+  "notes": ""
+}
