@@ -71,6 +71,14 @@ Run at least two independent executions per condition.
 
 The original historical outcomes are comparison evidence, not required targets. A replacement is allowed to produce different LLM trajectories if its mechanics/inputs differ transparently.
 
+## Access request status
+
+On 2026-09-30, a direct evaluation-access request was sent to `support@simudyne.com` asking for Nexus + current `abm-lab` access and explicitly preferring a non-AWS evaluation route before activating an auto-converting Marketplace trial.
+
+The executable handoff package is retained at:
+
+`replacement_trials/simudyne_regional_outbreak/`
+
 ## Stage 0 — access
 
 Required before implementation:

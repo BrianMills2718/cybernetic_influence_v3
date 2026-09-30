@@ -1,0 +1,160 @@
+{
+  "schema": "cybernetic-influence.simudyne-replacement-case.v1",
+  "case_id": "regional-outbreak-coordination-12p",
+  "source_evidence": {
+    "repository": "BrianMills2718/cybernetic_influence_v3",
+    "documents": [
+      "docs/REGIONAL_OUTBREAK_COORDINATION_PROBE.md",
+      "docs/plans/039-simudyne-replacement-trial.md"
+    ]
+  },
+  "purpose": "Test whether Simudyne can replace generic Cybernetic Influence simulation infrastructure on the retained outbreak coordination experiment.",
+  "participants": [
+    {
+      "id": "alba_epidemiologist",
+      "group": "alba",
+      "role": "epidemiologist"
+    },
+    {
+      "id": "alba_policy_delegate",
+      "group": "alba",
+      "role": "policy_delegate"
+    },
+    {
+      "id": "alba_operations_lead",
+      "group": "alba",
+      "role": "operations_lead"
+    },
+    {
+      "id": "borin_epidemiologist",
+      "group": "borin",
+      "role": "epidemiologist"
+    },
+    {
+      "id": "borin_policy_delegate",
+      "group": "borin",
+      "role": "policy_delegate"
+    },
+    {
+      "id": "borin_operations_lead",
+      "group": "borin",
+      "role": "operations_lead"
+    },
+    {
+      "id": "cyrenia_epidemiologist",
+      "group": "cyrenia",
+      "role": "epidemiologist"
+    },
+    {
+      "id": "cyrenia_policy_delegate",
+      "group": "cyrenia",
+      "role": "policy_delegate"
+    },
+    {
+      "id": "cyrenia_operations_lead",
+      "group": "cyrenia",
+      "role": "operations_lead"
+    },
+    {
+      "id": "regional_coordinator",
+      "group": "regional",
+      "role": "regional_coordinator"
+    },
+    {
+      "id": "regional_scientific_advisor",
+      "group": "regional",
+      "role": "regional_scientific_advisor"
+    },
+    {
+      "id": "regional_logistics_coordinator",
+      "group": "regional",
+      "role": "regional_logistics_coordinator"
+    }
+  ],
+  "rounds": 3,
+  "participant_output": {
+    "decision": [
+      "support",
+      "conditional",
+      "defer",
+      "oppose"
+    ],
+    "primary_risk": [
+      "none",
+      "evidence_quality",
+      "sovereignty",
+      "capacity",
+      "legitimacy"
+    ],
+    "requested_next_step": [
+      "none",
+      "data",
+      "validation",
+      "safeguards",
+      "resources"
+    ],
+    "rationale": "free_text"
+  },
+  "coalition_rule": {
+    "minimum_support": 6,
+    "minimum_support_plus_conditional": 9,
+    "maximum_oppose": 1
+  },
+  "conditions": [
+    {
+      "id": "baseline",
+      "description": "Participants receive the common retained round snapshot only.",
+      "targeted_developments": [],
+      "stabilization": null
+    },
+    {
+      "id": "responsive_capacity_pressure",
+      "description": "Participants receive the common snapshot plus declared country-specific capacity developments after a round.",
+      "targeted_developments": [
+        "Alba laboratory failure forces domestic testing reserve.",
+        "Borin requires outside clinical staff to keep its transport hub open.",
+        "Cyrenia requires visibly reciprocal supplies for field teams.",
+        "Regional roles learn available stocks cannot satisfy all three demands within 48 hours."
+      ],
+      "stabilization": null
+    },
+    {
+      "id": "capacity_pressure_plus_stabilization",
+      "description": "Replay the capacity pressure and then supply a feasible regional allocation package.",
+      "targeted_developments": [
+        "Alba laboratory failure forces domestic testing reserve.",
+        "Borin requires outside clinical staff to keep its transport hub open.",
+        "Cyrenia requires visibly reciprocal supplies for field teams.",
+        "Regional roles learn available stocks cannot satisfy all three demands within 48 hours."
+      ],
+      "stabilization": {
+        "description": "Verified allocation package restores shared laboratory capacity, adds 24 clinicians for Borin, names reciprocal supplies for Cyrenia, activates contingent commitments, and preserves a ten-percent regional reserve.",
+        "may_write_participant_decisions": false
+      }
+    }
+  ],
+  "required_repetitions_per_condition": 2,
+  "required_retained_fields": [
+    "condition_id",
+    "run_id",
+    "seed_or_response_cache_identity",
+    "participant_id",
+    "round",
+    "delivered_information",
+    "decision",
+    "primary_risk",
+    "requested_next_step",
+    "rationale",
+    "coalition_approved",
+    "resource_request_count"
+  ],
+  "replacement_negative_control": {
+    "forbidden_import_prefixes": [
+      "cybernetic_influence.active_runtime",
+      "cybernetic_influence.causal_core",
+      "cybernetic_influence.general_simulation",
+      "cybernetic_influence.authoring"
+    ],
+    "rationale": "The trial must test Simudyne as the generic platform, not hide Cybernetic Influence behind it."
+  }
+}
