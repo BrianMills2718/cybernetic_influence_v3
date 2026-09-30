@@ -29,3 +29,4 @@ plans provide scoped execution and historical evidence.
 | [014](014-separate-simulation-and-analysis-authority.md) | Scenario and run contracts own causal execution; analysis remains a separately attachable read-only authority over retained evidence | accepted |
 | [015](015-cloudflare-public-hosting.md) | Cloudflare owns the public request path; retained review ships first and stateful execution requires durable storage | accepted; amended by ADR 016 |
 | [016](016-vps-live-execution-backend.md) | Live authoring and execution run on the personal VPS behind the Cloudflare tunnel, bounded by sign-in-free spend controls | accepted |
+| [017](017-replacement-first-simulation-platform.md) | Off-the-shelf replacement testing precedes further generalized-simulator implementation; Simudyne is the primary replacement trial | accepted |
