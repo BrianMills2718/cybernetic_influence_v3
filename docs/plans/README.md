@@ -54,14 +54,15 @@ states something the retained runs do not support, and a nightly audit runs it
 alongside asset resolution, control visibility and certification margin. No
 model calls, so the cadence costs nothing to keep.
 
-[Slice 33: Show detection failing under evasion](033-evasion-space-case.md)
-covers the one substantive section of the source paper the demo does not touch.
-Section 7 names six ways influence keeps its directional pressure while changing
-how that pressure appears; a simulator is uniquely able to show this, because
-evasion is unobservable in the field by construction. One paired comparison —
-the same pressure applied overtly and then below the monitor's threshold —
-makes a detector miss a fact rather than an interpretation. Proposed, not
-started; needs authorization for live spend.
+[Slice 33: Test threshold-managed under-classification](033-evasion-space-case.md)
+implements one bounded section-7 pair. The planned no-detection endpoint did not
+occur: the shaped arm was classified `degrading` rather than `blocked`, and
+`process_delay` rather than `incompatible_requirements`, while still reaching a
+lower outright-support floor. The retained result is therefore
+under-classification/misdiagnosis, not a detector miss and not proof of equal
+pressure dose. The next research question is detector calibration against benign
+controls and independently defined coordination impairment; no new live batch is
+authorized by this correction.
 
 [Slice 32: The authoring route stays certified without a human](032-authoring-route-stays-certified.md)
 closes the gap that has repeatedly taken the public Create surface dark.

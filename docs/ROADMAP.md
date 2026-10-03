@@ -532,7 +532,7 @@ calibration, causal attribution, or operational detection.
 | [Slice 30](plans/030-unified-frontend-experimentation-and-levin-analysis.md) | Designs A and B implemented and deployed; Design C blocked, pause/resume named-not-specified | RunSpec-level experimentation (`POST /api/authoring/drafts/{draft_id}/experiments`) and a genuine V2 Levin analysis profile (deployed to `public/waltzman/`, verified live) close two gaps found auditing `web/` against `public/waltzman/`; graph-projection/boundary-collapse and pause/resume are explicitly blocked, not silently dropped |
 | [Slice 31](plans/031-cso-stabilization-flagship.md) | implemented; supersedes the resource-fork demo selection | The CSO stabilization run `run_5010214f2466` replaced the four-way resource fork as the stakeholder-facing flagship on 2026-08-23 after two independent reviews; the fork case remains retained evidence, not the nominated demo |
 | [Slice 32](plans/032-authoring-route-stays-certified.md) | implemented and installed | `scripts/refresh_authoring_certification.py` re-certifies, installs the ids into the service plist and restarts, on a nightly 03:30 launchd job; it closes the manual step that repeatedly took the public Create surface dark |
-| [Slice 33](plans/033-evasion-space-case.md) | implemented as one bounded pair; broader evasion space still deferred | Run `run_76dae6d4a9a7` (`threshold_managed_evasion`) holds the coalition, sources and detection cell identical to `run_5010214f2466` and varies only how the pressure is expressed; the same watchers at the same thresholds read `degrading`/`process_delay` instead of `blocked`/`incompatible_requirements`. Two retained runs are not a sample and the evasion is authored, not discovered |
+| [Slice 33](plans/033-evasion-space-case.md) | implemented as one bounded pair; original no-detection endpoint failed; calibration follow-up deferred | Run `run_76dae6d4a9a7` (`threshold_managed_evasion`) keeps the coalition, source roles and detection cell fixed while changing the source expression policy. The shaped arm was detected, but read less severely and with a different mechanism: `degrading`/`process_delay` instead of `blocked`/`incompatible_requirements`, despite reaching 0 outright support at its worst round versus 6 in the overt arm. This is under-classification/misdiagnosis evidence for this authored pair, not a detector miss or proof of equal pressure dose. Benign controls and an explicit sensitivity/false-positive calibration remain deferred |
 | [Slice 34](plans/034-demo-quality-system.md) | implemented and running nightly | A claims-versus-evidence check fails the deploy when the page states something the retained runs do not support; the 04:15 launchd audit runs it with asset resolution, control visibility and certification margin, and writes the verdict into the served page. No model calls |
 | [Slice 35](plans/035-restore-the-perturbation-assay-timeline.md) | implemented 2026-08-25 | The perturbation assay derives `PERTURBATION_APPLICATION_TIME` and `VERIFICATION_FEEDBACK_DELAY` from the scenario's meeting cadence rather than absolute day counts, so re-pacing the demo world re-paces the assay coherently instead of silently making it inert. Both constants are private to `experiments/composite_agency.py`; the demo, the public V2 path, and the scenario's typed contracts are untouched |
 | [Slice 36](plans/036-human-project-picker-pilot.md) | active; functional workspace and automatic claim lifecycle proven | Project-local membership, Project Graph validation, generated workspace consumption, and the in-VS Code Quick Pick are the bounded pilot. The workspace always contains V3 as Current Product and `llm_client` as Shared Infrastructure; an exact-session claim substitutes only the member path and sanctioned closeout restores it. V1/V2 remain archived hidden reference-only lineage. Brian has opened the project through the installed picker; the remaining acceptance evidence is regeneration and exact inspection of the merged two-folder workspace. |
@@ -580,7 +580,9 @@ not silently recreate the old runtime as a universal invariant set.
   satisfied. Stakeholder comprehension is unobserved; live repetitions,
   robustness claims, attribution, calibration, and prediction remain deferred.
   Evasion is no longer wholly deferred: Slice 33 retains one bounded
-  threshold-managed pair, and the remaining section-7 dimensions stay deferred.
+  threshold-managed under-classification pair. Its original no-detection
+  endpoint failed; detector calibration against benign controls and the
+  remaining section-7 dimensions stay deferred.
 - Slice 27's eight-run provider-free experiment and strict retained readout are
   technically observed. The adaptation contrast is flat on the selected exact
   metrics in the reference batch even though adaptive follow-up events are
@@ -631,9 +633,11 @@ After the provider-free mechanism proof, decide whether its flat adaptation
 contrast justifies richer recipient response semantics before any live or
 stochastic repetition. Later options remain conditional rather than automatic:
 
-- Waltzman's candidate directional invariants, and the evasion dimensions
-  beyond the single threshold-managed pair Slice 33 retained — temporal
-  fragmentation, segmented targeting, oscillation, and variable switching;
+- Waltzman's candidate directional invariants; calibration of the retained
+  threshold-managed pair against benign controls and independently defined
+  coordination impairment; and the evasion dimensions beyond Slice 33 —
+  temporal fragmentation, segmented targeting, oscillation, and variable
+  switching;
 - Levin-style perturbation, member replacement, recovery, robustness, and
   persuadability assays;
 - additional component and scenario families beyond the required
