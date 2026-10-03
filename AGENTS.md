@@ -111,14 +111,15 @@ new capability by themselves.
 - Run it from a worktree, not from a canonical checkout left read-only by the
   workspace guard: only the write stages fail there, so `ui-build` reports a
   bundler crash whose real cause is `Permission denied` on `web/`.
-- `.github/workflows/check.yml` runs the same target on every pull request and
-  on every push to `main`, and `main` requires it to pass before a merge. This
-  exists because between 2026-08-26 and 2026-09-06 three merges each shipped a
-  red assertion and nobody noticed: running `make check` locally was the only
-  thing standing between a broken suite and `main`, and it was skipped. CI does
-  not replace running it yourself — a thirty-minute round trip is a poor
-  substitute for a five-second local run — it only makes skipping it visible.
-- CI checks out `llm_client` with a read-only deploy key held in the
+- **The merge gate is a local `make check`, and the PR says so.** Hosted CI is
+  off: GitHub Actions has not run here since 2026-09-14, and Brian does not want
+  it relied on (2026-10-03: "we need to not rely on github actions because i was
+  running up massive bills"). So before a merge, run `make check` from a
+  worktree and paste its pass/fail counts and exit status into the PR
+  description; do not merge a PR that lacks them. This matters: between
+  2026-08-26 and 2026-09-06 three merges each shipped a red assertion because the
+  local run was skipped. `.github/workflows/check.yml` is kept but does not run.
+- If hosted CI is ever turned back on: it checks out `llm_client` with a read-only deploy key held in the
   `LLM_CLIENT_DEPLOY_KEY` secret. It is not optional there: without
   `llm_client` the suite does not skip gracefully, it fails to collect with 11
   errors. If CI starts erroring during collection, check that key before
