@@ -37,8 +37,9 @@ truth) or `needs_resolution`.
   changes need an ADR; a slice is done only when `docs/ROADMAP.md` says so.
 - **How work lands** (`approved`, `AGENTS.md` "Testing" and "Worktree And Lane
   Hygiene", PR #15): one claimed worktree per lane via `make worktree`, closed
-  with `make worktree-remove`. `make check` (mypy strict, pytest, UI build,
-  bundle check, deploy check) runs locally and on every PR; `main` requires it.
+  with `make worktree-remove`. Run `make check` (mypy strict, pytest, UI build,
+  bundle check, deploy check) before calling work done. The CI copy of that
+  gate is not running now (`needs_resolution`, `state.md` item 5).
   For unplanned docs work, `make worktree` also needs
   `WORKTREE_EXECUTION_PROFILE=light ALLOW_UNPLANNED=1 SESSION_WRITE_PATHS="<files>"`
   (`working`, observed when this brain was seeded, 2026-10-03).

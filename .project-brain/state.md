@@ -54,3 +54,7 @@ Dispositions"), `docs/plans/039-simudyne-replacement-trial.md`. Short version:
    removed it.
 4. `wiki/index.md` claims "no declared roadmap or current-state authority";
    `docs/ROADMAP.md` declares `authority: canonical`.
+5. `AGENTS.md` "Testing" says CI runs `make check` on every PR and `main`
+   requires it. GitHub (checked 2026-10-03): Actions disabled for the repo, no
+   required status checks, last run 2026-09-14, so PRs #32-#42 merged
+   without a CI run. Re-enabling is Brian's call (Actions may cost money).

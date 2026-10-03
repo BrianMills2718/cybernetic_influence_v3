@@ -27,7 +27,8 @@ arrives" in `replacement_trials/simudyne_regional_outbreak/README.md`.
 3. Waltzman outreach email, unsent, needs Brian's approval of the exact text
    (`docs/WALTZMAN_OUTREACH_DRAFT.md`). What the repo says about Waltzman and
    World Substrate: `state.md` "Waltzman in this repo".
-4. The four docs that disagree, listed at the bottom of `state.md`.
+4. The five docs that disagree, listed at the bottom of `state.md`; item 5
+   (CI is off) means merges are not gated.
 
 **Reading tip:** `docs/GOAL.md` "Active Plan" and the README's Slice 27 link
 describe the Concordia track; both sit under the 2026-09-30 override, which
