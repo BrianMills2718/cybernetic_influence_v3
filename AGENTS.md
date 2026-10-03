@@ -3,6 +3,14 @@
 `AGENTS.md` is the authored repository instruction source for Claude Code and
 Codex. `scripts/relationships.yaml` separately owns machine-readable coupling.
 
+## Project brain
+
+Read `.project-brain/now.md` first: where the work stopped and the next step.
+When a change moves where the project stands, update `now.md` (and `state.md`
+if needed) in the same pull request.
+`python3 ~/code/agentic-engineering-system-canonical/scripts/hive/brain_fresh.py .`
+exits 1 when the brain is stale.
+
 ## Product Framing
 
 This is a general reviewable simulation system: an analyst describes a bounded
@@ -20,6 +28,11 @@ Concordia foundation. Do not mistake it for the general product architecture.
 
 ## Accepted Working Model
 
+- ADR-017 (2026-09-30) is the current gate: no further generalized-simulator
+  runtime, authoring, experiment, replay, deployment, or model-lifecycle
+  capability until the Simudyne replacement trial (Slice 39) has been
+  attempted or a concrete access/fit blocker is recorded. ADR-013 below
+  remains the open-source fallback foundation.
 - ADR-013 is the accepted foundation: Concordia owns entity/component
   lifecycle, actor selection, environment/game-master loop, scheduling, and
   checkpoint invocation. A project-owned canonical-world component owns typed
