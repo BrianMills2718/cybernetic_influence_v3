@@ -12,6 +12,10 @@ updated: 2026-09-09
 
 ## Active execution
 
+[Slice 40: System model](040-system-model.md) is implemented: `docs/model/` describes what
+the system stores, which code writes each record, every kind of thing an author can declare
+(with its defining class), and what each view shows; `tests/test_system_model.py` keeps it true.
+
 [Slice 38: Living replay for generated worlds](038-living-replay-generated-worlds.md)
 is implemented as the next presentation layer. It adapts the existing compact retained-run summary into a
 World-Substrate-style living replay for generated `general_world_v2` simulations while keeping
