@@ -42,6 +42,17 @@ foundation and must not be mistaken for its general product architecture.
 
 ## Run locally
 
+`make install` needs these already present; it installs none of them:
+
+- `make` itself — without it the first command below is just
+  `make: command not found`;
+- Python 3.12 or newer (the floor `pyproject.toml` declares) with a working
+  `venv` module. On Debian and Ubuntu `venv` is a separate `python3-venv`
+  package, and without it `python3 -m venv` fails on `ensurepip` and the
+  install dies two lines later on `No module named pip`. `make install` falls
+  back to `virtualenv` if you have that instead;
+- Node 20.19+ or 22.12+ with npm — the floor the pinned Vite build declares.
+
 ```bash
 make install
 make check
