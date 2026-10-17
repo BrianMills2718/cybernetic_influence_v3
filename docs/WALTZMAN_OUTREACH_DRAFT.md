@@ -57,27 +57,24 @@ a wargame does, not empirical validity. And the trust, risk and readiness
 readings are analyst views over retained evidence, not calibrated measures.
 
 Then I ran your section 7 against it, and that is the part I most want your
-reaction to. Evasion is invisible in the real world by construction — it is
-built to look like ordinary variation, so you can never hold the detector fixed
-and vary only how the pressure is expressed. In a simulation you can. I ran the
-same four sources at the same coalition with the same detection cell, same
-personas, same thresholds, same trigger, and changed only one thing: every
+reaction to. In the second run I held the coalition, four source roles and the
+whole detection cell fixed, but changed the source expression policy: every
 signal became a narrow verification request rather than an escalation, and none
-referred to any other.
+referred to any other. I do not call that an equal-dose pressure comparison;
+the simulation has not independently calibrated the two policies that way.
 
-The same watchers called it degrading rather than blocked, and blamed process
-delay rather than incompatible requirements. They still proposed the same
-compact — but against the wrong reading of what was happening. The coalition
-ended 14 will proceed, 11 only on conditions and 1 deferring, against 26 in the
-overt run. The pressure did not get weaker; by its worst round it went further,
-26 conditional against 6-and-20. It got harder to see, and the response was
-worse for it.
+The result surprised me because the detector did not miss the shaped arm. It
+called readiness degrading rather than blocked and diagnosed process delay
+rather than incompatible requirements. It still proposed the same compact. Yet
+at the worst round the shaped arm had zero outright supporters versus six in the
+overt arm, and final recovery was less complete: 14 support, 11 conditional and
+1 defer versus 26 support.
 
-Two retained runs are not a sample, and the evasion is authored rather than
-discovered — a detector missing a pattern I designed is evidence about that
-detector at that threshold and nothing more. But the experiment is now
-runnable, which I think is the useful thing, and the threshold question is
-where I would want your judgement.
+So the result I now think I have is under-classification and mechanism
+misdiagnosis, not non-detection. Does that constitute the kind of evasion your
+framework predicts, or is it better described as detector miscalibration? What
+observable or benign control would distinguish the two? That boundary is the
+next experiment I would build from your answer.
 
 If you have twenty minutes, I would rather hear where this is wrong than where
 it is right.
