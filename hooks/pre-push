@@ -35,17 +35,25 @@ CURRENT_BRANCH=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
 VALIDATED_BRANCH=""
 
 while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
-    if [[ -z "${LOCAL_REF:-}" || "$LOCAL_REF" != refs/heads/* ]]; then
+    # Prefer the remote ref, which is the ref actually being written. Keying
+    # only off the local side skipped validation entirely for `git push origin
+    # HEAD:<branch>` and `<sha>:<branch>`, which publish a governed branch from
+    # a local side that is not refs/heads/*. Still honour a refs/heads/* local
+    # side so `<branch>:refs/tags/<tag>` keeps being validated as before.
+    if [[ "${REMOTE_REF:-}" == refs/heads/* ]]; then
+        BRANCH="${REMOTE_REF#refs/heads/}"
+    elif [[ "${LOCAL_REF:-}" == refs/heads/* ]]; then
+        BRANCH="${LOCAL_REF#refs/heads/}"
+    else
         continue
     fi
     if [[ "${LOCAL_SHA:-}" =~ ^0+$ ]]; then
         continue
     fi
 
-    BRANCH="${LOCAL_REF#refs/heads/}"
     if [[ -z "$CURRENT_BRANCH" || "$BRANCH" != "$CURRENT_BRANCH" ]]; then
         echo "ERROR: governed pre-push validation only supports the checked-out branch." >&2
-        echo "Requested local branch: $BRANCH" >&2
+        echo "Requested branch: $BRANCH" >&2
         echo "Checked-out branch: ${CURRENT_BRANCH:-detached HEAD}" >&2
         echo "Check out the branch in its claimed worktree and push from there." >&2
         exit 1
