@@ -388,7 +388,7 @@ def test_purchase_payment_is_a_closed_inspectable_api_scenario(
             "maximum_live_cost",
         )
     } == {
-        "model": "openrouter/openai/gpt-5.6-terra",
+        "model": "openrouter/openai/gpt-6.1-terra",
         "reasoning_effort": "medium",
         "maximum_live_calls": 8,
         "maximum_live_cost": 0.38,

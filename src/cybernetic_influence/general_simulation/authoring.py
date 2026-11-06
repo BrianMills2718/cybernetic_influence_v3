@@ -71,7 +71,7 @@ GENERAL_AUTHORING_MODELS = {
     CODEX_LUNA_MODEL,
     CODEX_TERRA_MODEL,
     OPENROUTER_TERRA_MODEL,
-    "openrouter/openai/gpt-5.6-sol",
+    "openrouter/openai/gpt-6.1-sol",
 }
 
 

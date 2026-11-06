@@ -265,7 +265,7 @@ def test_influence_network_live_people_receive_only_routed_messages() -> None:
 
     result = compiled.run_live(
         run_id="influence_network_live",
-        model="openrouter/openai/gpt-5.6-luna",
+        model="openrouter/openai/gpt-6-luna",
         reasoning_effort="medium",
         per_call_budget=0.05,
         per_run_budget=0.50,
@@ -324,7 +324,7 @@ def test_influence_network_live_people_must_emit_each_round_stance() -> None:
     with pytest.raises(ParticipantContractError, match="required output exactly once"):
         compiled.run_live(
             run_id="influence_network_missing_required_stance",
-            model="openrouter/openai/gpt-5.6-luna",
+            model="openrouter/openai/gpt-6-luna",
             reasoning_effort="medium",
             per_call_budget=0.05,
             per_run_budget=0.50,

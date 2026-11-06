@@ -53,7 +53,7 @@ from cybernetic_influence.causal_core.models import (
     representation_digest,
 )
 
-PURCHASE_PAYMENT_MODEL = "openrouter/openai/gpt-5.6-terra"
+PURCHASE_PAYMENT_MODEL = "openrouter/openai/gpt-6.1-terra"
 PURCHASE_PAYMENT_REASONING_EFFORT = "medium"
 PURCHASE_PAYMENT_TASK = "cybernetic_influence_v3_purchase_payment_step"
 PURCHASE_PAYMENT_MAX_CAUSAL_MOMENTS = 8

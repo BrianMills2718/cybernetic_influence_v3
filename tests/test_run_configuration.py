@@ -27,10 +27,10 @@ from cybernetic_influence.run_configuration import (
     resolve_live_configuration,
 )
 
-MODEL = "openrouter/openai/gpt-5.6-terra"
-SOL_MODEL = "openrouter/openai/gpt-5.6-sol"
+MODEL = "openrouter/openai/gpt-6.1-terra"
+SOL_MODEL = "openrouter/openai/gpt-6.1-sol"
 CODEX_MODEL = "codex/gpt-5.6-terra"
-CODEX_LUNA_MODEL = "codex/gpt-5.6-luna"
+CODEX_LUNA_MODEL = "codex/gpt-6-luna"
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT_REVISION = installed_llm_client_revision()
 
@@ -413,7 +413,7 @@ def test_server_default_prefers_sol_and_falls_back_when_unavailable(
             "billing_mode": billing_mode,
         }
 
-    luna = choice("codex/gpt-5.6-luna", "subscription_included")
+    luna = choice("codex/gpt-6-luna", "subscription_included")
     sol = choice(SOL_MODEL, "usage_based")
     monkeypatch.setattr(
         "cybernetic_influence.run_configuration.model_catalog",
@@ -426,5 +426,5 @@ def test_server_default_prefers_sol_and_falls_back_when_unavailable(
         "cybernetic_influence.run_configuration.model_catalog",
         lambda: [luna],
     )
-    assert resolve_live_configuration(None).model == "codex/gpt-5.6-luna"
-    assert live_options_contract()["defaults"]["model"] == "codex/gpt-5.6-luna"  # type: ignore[index]
+    assert resolve_live_configuration(None).model == "codex/gpt-6-luna"
+    assert live_options_contract()["defaults"]["model"] == "codex/gpt-6-luna"  # type: ignore[index]

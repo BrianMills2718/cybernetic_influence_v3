@@ -25,9 +25,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 AUTHORING_ENV = {
-    "codex/gpt-5.6-luna": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA",
-    "openrouter/openai/gpt-5.6-terra": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_TERRA",
-    "openrouter/openai/gpt-5.6-sol": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_SOL",
+    "codex/gpt-6-luna": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_CODEX_LUNA",
+    "openrouter/openai/gpt-6.1-terra": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_TERRA",
+    "openrouter/openai/gpt-6.1-sol": "CYBERNETIC_INFLUENCE_CERT_AUTHORING_SOL",
 }
 # Execution is certified separately from authoring, and only authoring was ever
 # automated. On 2026-08-25 every execution certification had lapsed -- Terra 110
@@ -37,10 +37,10 @@ AUTHORING_ENV = {
 # it. A check that covers one of two required families cannot go red for the
 # other, which is the whole failure.
 EXECUTION_ENV = {
-    "codex/gpt-5.6-luna": "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA",
+    "codex/gpt-6-luna": "CYBERNETIC_INFLUENCE_CERT_CODEX_LUNA",
     "codex/gpt-5.6-terra": "CYBERNETIC_INFLUENCE_CERT_CODEX_TERRA",
-    "openrouter/openai/gpt-5.6-terra": "CYBERNETIC_INFLUENCE_CERT_TERRA",
-    "openrouter/openai/gpt-5.6-sol": "CYBERNETIC_INFLUENCE_CERT_SOL",
+    "openrouter/openai/gpt-6.1-terra": "CYBERNETIC_INFLUENCE_CERT_TERRA",
+    "openrouter/openai/gpt-6.1-sol": "CYBERNETIC_INFLUENCE_CERT_SOL",
 }
 ROUTE_FAMILIES = {"authoring": AUTHORING_ENV, "execution": EXECUTION_ENV}
 CERTIFICATION_MAX_AGE = timedelta(days=7)

@@ -153,7 +153,7 @@ def test_live_people_use_reviewed_profiles_and_only_delivered_representations() 
 
     result = compiled.run_live(
         run_id="information_campaign_live_profiles",
-        model="openrouter/openai/gpt-5.6-terra",
+        model="openrouter/openai/gpt-6.1-terra",
         reasoning_effort="medium",
         per_call_budget=0.05,
         per_run_budget=0.20,
@@ -224,7 +224,7 @@ def test_live_person_cannot_use_an_undelivered_representation() -> None:
     ):
         compiled.run_live(
             run_id="information_campaign_live_forgery",
-            model="openrouter/openai/gpt-5.6-terra",
+            model="openrouter/openai/gpt-6.1-terra",
             reasoning_effort="medium",
             per_call_budget=0.05,
             per_run_budget=0.20,
@@ -263,7 +263,7 @@ def test_live_source_cannot_smuggle_content_beside_the_retained_claim() -> None:
     with pytest.raises(ValueError, match="publication payload must be empty"):
         compiled.run_live(
             run_id="information_campaign_payload_smuggling",
-            model="openrouter/openai/gpt-5.6-terra",
+            model="openrouter/openai/gpt-6.1-terra",
             reasoning_effort="medium",
             per_call_budget=0.05,
             per_run_budget=0.20,

@@ -217,7 +217,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--target")
-    parser.add_argument("--model", default="openrouter/openai/gpt-5.6-terra")
+    parser.add_argument("--model", default="openrouter/openai/gpt-6.1-terra")
     parser.add_argument("--reasoning-effort", default="medium")
     args = parser.parse_args()
 

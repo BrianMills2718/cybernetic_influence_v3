@@ -72,7 +72,7 @@ def test_only_adaptive_conditions_expose_feedback_to_source_processes() -> None:
 
 
 def test_live_probe_binds_people_and_adaptive_sources_without_changing_mechanisms() -> None:
-    model = "codex/gpt-5.6-luna"
+    model = "codex/gpt-6-luna"
     fixture = coordination_live_probe_fixture(
         "adaptive_pressure_with_stabilization",
         model=model,
