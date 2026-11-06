@@ -12,6 +12,10 @@ updated: 2026-09-09
 
 ## Active execution
 
+[Slice 40: System model](040-system-model.md) is implemented: `docs/model/` describes what
+the system stores, which code writes each record, every kind of thing an author can declare
+(with its defining class), and what each view shows; `tests/test_system_model.py` keeps it true.
+
 [Slice 38: Living replay for generated worlds](038-living-replay-generated-worlds.md)
 is implemented as the next presentation layer. It adapts the existing compact retained-run summary into a
 World-Substrate-style living replay for generated `general_world_v2` simulations while keeping
@@ -54,14 +58,15 @@ states something the retained runs do not support, and a nightly audit runs it
 alongside asset resolution, control visibility and certification margin. No
 model calls, so the cadence costs nothing to keep.
 
-[Slice 33: Show detection failing under evasion](033-evasion-space-case.md)
-covers the one substantive section of the source paper the demo does not touch.
-Section 7 names six ways influence keeps its directional pressure while changing
-how that pressure appears; a simulator is uniquely able to show this, because
-evasion is unobservable in the field by construction. One paired comparison —
-the same pressure applied overtly and then below the monitor's threshold —
-makes a detector miss a fact rather than an interpretation. Proposed, not
-started; needs authorization for live spend.
+[Slice 33: Test threshold-managed under-classification](033-evasion-space-case.md)
+implements one bounded section-7 pair. The planned no-detection endpoint did not
+occur: the shaped arm was classified `degrading` rather than `blocked`, and
+`process_delay` rather than `incompatible_requirements`, while still reaching a
+lower outright-support floor. The retained result is therefore
+under-classification/misdiagnosis, not a detector miss and not proof of equal
+pressure dose. The next research question is detector calibration against benign
+controls and independently defined coordination impairment; no new live batch is
+authorized by this correction.
 
 [Slice 32: The authoring route stays certified without a human](032-authoring-route-stays-certified.md)
 closes the gap that has repeatedly taken the public Create surface dark.

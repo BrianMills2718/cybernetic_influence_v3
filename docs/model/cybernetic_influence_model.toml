@@ -1,0 +1,1066 @@
+# Machine-readable model of Cybernetic Influence v3 as a SOFTWARE SYSTEM.
+#
+# Level note: this repository simulates worlds (an outbreak, a service outage,
+# a supply chain). This file does not model any of those worlds. It models the
+# system that holds them: the kinds of things an author can declare, what the
+# system stores, the processes that change what it stores, and the records each
+# process writes. Prose: docs/model/ODD.md. Views: docs/model/VIEW_COVERAGE.md.
+#
+# Enforced by tests/test_system_model.py (no model calls, no network), with
+# Python's ast:
+#   - every call that writes a store (AuthoringDraftStore, RunStore,
+#     ExperimentStore) is declared under its record with the same file and
+#     function, and every declared writer still writes it;
+#   - every physical file write in src/ belongs to a declared record;
+#   - API routes in api.py and public_waltzman.py equal the routes declared
+#     under processes;
+#   - every entity's defining class exists; every field of
+#     GeneralSimulationProposalV1 and ScenarioSpecV2 maps to a declared entity,
+#     and every public class in authoring_models.py is named here;
+#   - each vocabulary equals the Literal[...] values of its field;
+#   - processes, records, coverage rows and gaps refer only to declared names.
+# Line numbers are as of commit 16b1791 (2026-10-08). The test enforces file
+# and function, not line.
+
+schema = "cybernetic-influence-system-model/v1"
+system = "Cybernetic Influence v3 (conversational authoring -> compiled, approved general world -> Concordia-run simulation -> retained run and analysis)"
+as_of_commit = "16b1791"
+
+# -------------------------------------------------- authoring schema check --
+# Fields of the two authoring envelopes that are plain text or identifiers
+# rather than kinds of things. Every other field must be claimed by an entity
+# below through proposal_v1_fields / scenario_v2_fields.
+
+[authoring_schema]
+# Public classes in authoring_models.py that are containers or parts of a
+# declared entity rather than kinds of their own.
+supporting_classes = [
+  "GeneralBehavioralProfileDraft",   # part of Person
+  "StateEntryV1",                    # one key/value of public_state, hidden_state, place state or hidden_provenance
+  "SpatialExtensionV1",              # container: places, placements, links
+  "InformationExtensionV1",          # container: representations
+  "ResourceExtensionV1",             # container: stocks
+  "RelationshipExtensionV1",         # container: relationships
+  "ResourceQuantityRequirementV1",   # part of ResourceTransformation
+  "PublicInventoryInputFieldV1",     # part of ResourceTransformation
+  "TransitionPreconditionProposalV1",# part of ResourceTransport and ExactGuardRepairV1
+  "ExactGuardRepairV1",              # part of DependencyReview
+  "MissingDependencyFindingV1",      # part of DependencyReview
+  "DependencyEnforcementItemV1",     # part of CoverageItem
+  "GeneralProposalEnvelopeV1",       # LLM output wrapper around one GeneralSimulationProposalV1
+]
+
+[authoring_schema.proposal_v1]
+class = "GeneralSimulationProposalV1"
+scalar_fields = ["schema_version", "proposal_kind", "simulation_id", "title", "question", "description", "fidelity_assumptions", "declared_invariants", "analysis_requests", "unresolved_questions"]
+
+[authoring_schema.scenario_v2]
+class = "ScenarioSpecV2"
+scalar_fields = ["scenario_spec_version", "scenario_id", "title", "description", "fidelity_assumptions", "declared_invariants"]
+
+
+# ---------------------------------------------------------------- entities ---
+# layer: authoring  - a kind of thing an author declares (the world-definition schema)
+#        compiled   - what the trusted compiler derives from it
+#        runtime    - state and evidence while and after a run executes
+#        stored     - a retained document on disk
+
+[[entities]]
+name = "SimulationProposalV1"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:GeneralSimulationProposalV1"
+what = "Historical single-document world definition (draft target_kind general_world_v1): title, question, description, every kind below, schedule, assumptions, invariants, analysis requests, unresolved questions. Validator unique_ids_and_references enforces unique IDs per collection and that every component request and transition contract is scheduled and owned."
+
+[[entities]]
+name = "AuthoredBundleV2"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/study_models.py:AuthoredSimulationBundleV2"
+what = "Current world definition (draft target_kind general_world_v2, created by POST /api/authoring/drafts): one ScenarioSpecV2, one default RunSpecV2, AnalysisSpecV2 list, unresolved questions, optional analyst question."
+
+[[entities]]
+name = "ScenarioSpec"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/contracts_v2.py:ScenarioSpecV2"
+what = "What exists in the world, separated from how it is run: people, world records, active systems, component requests (ComponentRequestV2), the four extensions, sensing rules, resource transformations and transports, fidelity assumptions, invariants."
+
+[[entities]]
+name = "RunSpec"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/contracts_v2.py:RunSpecV2"
+what = "How one run executes: run_id, scenario digest, execution mode, cognition mode, model, reasoning effort, per-call and per-run budget, starting checkpoint, horizon minutes, scheduled moments, termination conditions, seed status."
+
+[[entities]]
+name = "Person"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:GeneralPersonDraft"
+proposal_v1_fields = ["people"]
+scenario_v2_fields = ["people"]
+runtime_form = "WorldRecord kind=person (state.position public; hidden_state.disposition and hidden_state.behavioral_profile), a Concordia entity built by GeneralPersonPrefab, and starting memories retained by CanonicalWorld.retain_memory"
+what = "A simulated person: entity_id, label, position, disposition, memories (at least one), behavioral_profile (GeneralBehavioralProfileDraft: values, goals, beliefs, decision_tendencies, social_perceptions, current_state, capabilities, limitations)."
+
+[[entities]]
+name = "WorldRecord"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:GeneralWorldRecordProposalV1"
+proposal_v1_fields = ["world_records"]
+scenario_v2_fields = ["world_records"]
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:WorldRecord"
+what = "A thing in the world with an open semantic kind: record_id, kind, label, public_state and hidden_state (lists of StateEntryV1), visible_to_actor_ids (who may read the hidden state; compiled into ActorAccessSpec)."
+
+[[entities]]
+name = "ActiveSystem"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:GeneralActiveSystemProposalV1"
+proposal_v1_fields = ["active_systems"]
+scenario_v2_fields = ["active_systems"]
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:ActiveSystemSpec"
+what = "Something in the world that behaves (a market, a weather system): subject_refs, behavior_summary, representation_strategy (detailed | coarse_surrogate | inert), causal_responsibility_tags."
+
+[[entities]]
+name = "ComponentRequest"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:ComponentRequestV1"
+proposal_v1_fields = ["component_requests"]
+scenario_v2_fields = ["component_requests"]
+v2_class = "src/cybernetic_influence/general_simulation/contracts_v2.py:ComponentRequestV2"
+what = "A behavior the author asks the runtime to execute: subject_refs, behavior_description, required_reads, desired_effects, fidelity_need (exact | bounded | coarse | descriptive), material_to_question (V2: causally_material and fidelity_material), transition_contract_ids. The compiler classifies each one in the CoverageReport."
+
+[[entities]]
+name = "Place"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:GeneralPlaceProposalV1"
+proposal_v1_fields = ["spatial_extension"]
+scenario_v2_fields = ["spatial_extension"]
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:Place"
+what = "A location: place_id, label, state. The runtime Place keeps only place_id and label."
+
+[[entities]]
+name = "Placement"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:GeneralPlacementProposalV1"
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:Placement"
+what = "A world record located at a place: record_id, place_id."
+
+[[entities]]
+name = "SpatialLink"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:GeneralSpatialLinkProposalV1"
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:Route"
+what = "A route between two places: link_id, origin and destination place, operational flag, public_state, hidden_state, visible_to_actor_ids."
+
+[[entities]]
+name = "InformationRepresentation"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:InformationRepresentationProposalV1"
+proposal_v1_fields = ["information_extension"]
+scenario_v2_fields = ["information_extension"]
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:Representation"
+what = "A piece of information as it appears: content, apparent_source, recipient_ids (who may receive it), hidden_provenance (StateEntryV1 list never shown to recipients)."
+
+[[entities]]
+name = "ResourceStock"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:ResourceStockProposalV1"
+proposal_v1_fields = ["resource_extension"]
+scenario_v2_fields = ["resource_extension"]
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:ResourceStock"
+what = "A quantity held by a custodian: resource_id, quantity, custodian_id, conserved."
+
+[[entities]]
+name = "Relationship"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:RelationshipProposalV1"
+proposal_v1_fields = ["relationship_extension"]
+scenario_v2_fields = ["relationship_extension"]
+runtime_form = "none: the compiler (_compile_general_simulation) never reads relationship_extension; relationships reach only the configuration graph (composition_graph.py:74). See ODD 4.3."
+what = "A described tie between two or more participants: relationship_id, participant_refs, description, material_to_question."
+
+[[entities]]
+name = "ScheduledMoment"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:ScheduledMomentProposalV1"
+proposal_v1_fields = ["schedule"]
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:GeneralMomentEvidence"
+what = "One point in time at which the world advances: moment_id, minute, description, external_inject_representation_ids, active_component_request_ids, active_transition_contract_ids. In V2 the schedule lives on RunSpecV2.scheduled_moments."
+
+[[entities]]
+name = "SensingRule"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:SensingRuleProposalV1"
+proposal_v1_fields = ["sensing_rules"]
+scenario_v2_fields = ["sensing_rules"]
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:SensingTransitionContract"
+what = "A transition contract that lets named observers read named hidden keys of one subject and writes the finding to an output record delivered to named recipients."
+
+[[entities]]
+name = "ResourceTransformation"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:ResourceTransformationProposalV1"
+proposal_v1_fields = ["resource_transformations"]
+scenario_v2_fields = ["resource_transformations"]
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:ResourceTransformationContract"
+what = "A transition contract that turns input resource quantities into an output resource, run by named operators, up to maximum_batches, mirrored in a public inventory record."
+
+[[entities]]
+name = "ResourceTransport"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:ResourceTransportProposalV1"
+proposal_v1_fields = ["resource_transports"]
+scenario_v2_fields = ["resource_transports"]
+runtime_class = "src/cybernetic_influence/general_simulation/models.py:ResourceTransportContract"
+what = "A transition contract that moves a quantity between custodians and places along allowed routes, writing arrival keys on an arrival record, with optional preconditions."
+
+[[entities]]
+name = "AnalysisSpec"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:AnalysisSpecV1"
+proposal_v1_fields = ["analysis_spec"]
+v2_class = "src/cybernetic_influence/analysis/theory_analysis.py:AnalysisSpecV2"
+what = "An analysis lens declared before the run (pre-registration). V1 allows only profile waltzman_coordination_v1; V2 AnalysisSpecV2 lives on the bundle's analyses list."
+
+[[entities]]
+name = "CoverageReport"
+layer = "compiled"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:ExecutionCoverageReportV1"
+what = "Compiler output stored on the draft: registry_digest, one CoverageItem per component request, blocking_request_ids. approvable is true only when nothing blocks."
+
+[[entities]]
+name = "CoverageItem"
+layer = "compiled"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:CoverageItemV1"
+what = "How one component request will execute: classification (exact | coarse_llm | descriptive | unsupported), resolved component ref, what can and cannot change, assumptions, blocking, compiler evidence, causal_closure, per-dependency enforcement, unenforced dependency refs."
+
+[[entities]]
+name = "AuthoringDiscussion"
+layer = "authoring"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:GeneralAuthoringDiscussionV1"
+what = "One conversational model reply before a configuration is requested: reply, understood_summary, material_questions. Stored as the draft message's assistant_summary (reply plus numbered questions)."
+
+[[entities]]
+name = "DependencyReview"
+layer = "compiled"
+class = "src/cybernetic_influence/general_simulation/authoring_models.py:DependencyCompletenessReviewV1"
+what = "A second model call that audits exact actions for omitted prerequisites: status complete | repair_required, missing dependencies with a required resolution and optional exact guard repairs."
+
+[[entities]]
+name = "CompiledSimulation"
+layer = "compiled"
+class = "src/cybernetic_influence/general_simulation/compiler.py:CompiledGeneralSimulationV2"
+what = "Trusted compiler output for a V2 bundle: scenario, run spec, their digests, coverage, GeneralWorldSpec, registry digest, resolved components, configuration graph. CompiledGeneralSimulationV1 is the V1 counterpart."
+
+[[entities]]
+name = "WorldSpec"
+layer = "compiled"
+class = "src/cybernetic_influence/general_simulation/models.py:GeneralWorldSpec"
+what = "Initial GeneralWorldState plus active systems, transition authorities, invariants, fidelity assumptions, timing, actor access, and the sensing, transformation and transport contracts."
+
+[[entities]]
+name = "TransitionAuthority"
+layer = "compiled"
+class = "src/cybernetic_influence/general_simulation/models.py:TransitionAuthoritySpec"
+what = "Who may change the world and how: general_deterministic_mechanics (exact entries) and general_semantic_adjudicator (coarse_llm entries), each with a patch grammar, reads, writes and assumptions."
+
+[[entities]]
+name = "ActorAccess"
+layer = "compiled"
+class = "src/cybernetic_influence/general_simulation/models.py:ActorAccessSpec"
+what = "Per actor: which records' hidden state and which routes the actor may see, compiled from visible_to_actor_ids."
+
+[[entities]]
+name = "CanonicalWorld"
+layer = "runtime"
+class = "src/cybernetic_influence/general_simulation/world.py:CanonicalWorld"
+what = "The Concordia game-master component that owns typed world truth: current GeneralWorldState, transition evidence, private memory per actor, outbox. validate_and_commit is the only path that changes state."
+
+[[entities]]
+name = "WorldState"
+layer = "runtime"
+class = "src/cybernetic_influence/general_simulation/models.py:GeneralWorldState"
+what = "revision, records, places, placements, routes, representations, resources, outbox of consequences, delivered consequence ids."
+
+[[entities]]
+name = "ActorContext"
+layer = "runtime"
+class = "src/cybernetic_influence/general_simulation/models.py:ActorContext"
+what = "The bounded view one actor receives at one moment: observations, accessible records and routes, private memory, available transition contracts, phase description."
+
+[[entities]]
+name = "ActionIntent"
+layer = "runtime"
+class = "src/cybernetic_influence/general_simulation/models.py:SemanticActionIntent"
+what = "What an actor says it will do: action, targets, purpose, expected effect, rationale, selected transition contracts and arguments."
+
+[[entities]]
+name = "TransitionEvidence"
+layer = "runtime"
+class = "src/cybernetic_influence/general_simulation/models.py:TransitionEvidence"
+what = "One attempted world transaction and its validation (accepted, base and resulting revision, errors), envelope corrections, resulting state hash, per-operation attribution (exact_contract | coarse_authority | no_op)."
+
+[[entities]]
+name = "ModelCallReceipt"
+layer = "runtime"
+class = "src/cybernetic_influence/general_simulation/models.py:ModelCallReceipt"
+what = "One LLM call: role (actor | adjudicator), provider, model, trace_id, input context, structured output, corrections, decoding, replayability, observed cost and billing mode."
+
+[[entities]]
+name = "MomentEvidence"
+layer = "runtime"
+class = "src/cybernetic_influence/general_simulation/models.py:GeneralMomentEvidence"
+what = "One executed scheduled moment: frozen and resulting revision, actors, intents, checkpoint hash."
+
+[[entities]]
+name = "Checkpoint"
+layer = "runtime"
+class = ""
+what = "Concordia simulation checkpoint (plain dict, no class), validated by runner.py _strict_general_checkpoint, retained per moment in the run document as general_checkpoint and in SimulationResult.checkpoints; resume starts from it."
+
+[[entities]]
+name = "AdoptionReceipt"
+layer = "runtime"
+class = "src/cybernetic_influence/general_simulation/models.py:AdoptionReceipt"
+what = "Proof the run used Concordia: simulation and engine class, actor-selection component, pinned Concordia revision, actor and game-master names, lifecycle events."
+
+[[entities]]
+name = "SimulationResult"
+layer = "runtime"
+class = "src/cybernetic_influence/general_simulation/models.py:GeneralGroupSimulationResultV2"
+what = "Whole-run output: digests, final WorldState, every TransitionEvidence, every ModelCallReceipt, moments, checkpoints, adoption receipt. Retained verbatim in the run document under general_simulation."
+
+[[entities]]
+name = "RunEvidenceBundle"
+layer = "runtime"
+class = "src/cybernetic_influence/analysis/theory_analysis.py:RunEvidenceBundleV2"
+what = "Read-only evidence handed to analysis: run and scenario identity, initial and terminal state digests, evidence records, fidelity assumptions, known omissions, record digest."
+
+[[entities]]
+name = "AnalysisResult"
+layer = "runtime"
+class = "src/cybernetic_influence/analysis/theory_analysis.py:AnalysisResultV2"
+what = "Findings of one analysis spec over one evidence bundle, with coverage_status supported | degraded | unsupported."
+
+[[entities]]
+name = "AuthoringDraft"
+layer = "stored"
+class = "src/cybernetic_influence/authoring/store.py:_DraftDocument"
+what = "One draft file: draft_id, target_kind, revision, status, messages, attempts, authoring summary, proposal, coverage, configuration graph, diagnostics, approval, timestamps. Replaced only by advancing the revision by exactly one."
+
+[[entities]]
+name = "Run"
+layer = "stored"
+class = "src/cybernetic_influence/run_store.py:RunStore"
+what = "One run document (an untyped JSON object; no schema class): status, scenario, profile, execution, model_calls, cost, llm_configuration, authoring identity, live_progress, general_checkpoint, projected nodes/edges/events/traces, general_simulation, run_evidence_bundle, analysis results."
+
+[[entities]]
+name = "Experiment"
+layer = "stored"
+class = "src/cybernetic_influence/experiment_store.py:ExperimentResultV2"
+what = "One experiment over an approved draft: conditions (RunLlmOptions overrides) x repetitions, each a separate retained run, status running | completed."
+
+[[entities]]
+name = "SpendLedger"
+layer = "stored"
+class = "src/cybernetic_influence/public_spend_controls.py:SpendLedger"
+what = "Public demo daily spend counters (durable JSON) and per-address windows (memory only), applied by SpendControlMiddleware."
+
+[[entities]]
+name = "LegacyTemplateDraft"
+layer = "authoring"
+class = "src/cybernetic_influence/authoring/models.py:ScenarioDraftProposal"
+what = "Pre-migration template proposal (target_kind legacy_templates_v1) for the fixed scenarios: people, objects, information, places, workflows. Out of this model's detail; kept as one row so its draft writes are accounted for."
+
+# ------------------------------------------------------------------ stores --
+
+[[stores]]
+class = "AuthoringDraftStore"
+file = "src/cybernetic_influence/authoring/store.py"
+write_methods = ["create", "replace"]
+read_methods = ["get"]
+note = "No list method: drafts are reachable only by id (issue #49, gap G1)."
+
+[[stores]]
+class = "RunStore"
+file = "src/cybernetic_influence/run_store.py"
+write_methods = ["save", "trash", "trash_many", "mark_incomplete_interrupted"]
+read_methods = ["get", "list_runs", "cost_baselines"]
+
+[[stores]]
+class = "ExperimentStore"
+file = "src/cybernetic_influence/experiment_store.py"
+write_methods = ["save"]
+read_methods = ["get"]
+note = "No list method and no list route."
+
+# --------------------------------------------------------------- processes --
+
+[[processes]]
+name = "create_draft"
+what = "Start a draft. POST /api/authoring/drafts creates an empty general_world_v2 draft; the other three create legacy or pre-reviewed template drafts."
+routes = ["POST /api/authoring/drafts", "POST /api/authoring/legacy-drafts", "POST /api/authoring/reviewed-coordination-drafts", "POST /api/authoring/reviewed-component-composition-drafts"]
+changes = ["AuthoringDraft"]
+writes = ["authoring_draft"]
+
+[[processes]]
+name = "converse"
+what = "Send one author message. Runs as a background job; GeneralDraftAuthoringService.discuss replies conversationally, or advance/_advance_v2 asks the model for a full bundle (up to 5 attempts, $0.60 budget each), compiles it, runs the dependency completeness review, and stores proposal, coverage, graph and diagnostics as the next revision."
+routes = ["POST /api/authoring/drafts/{draft_id}/messages", "GET /api/authoring/jobs/{job_id}"]
+changes = ["AuthoringDraft", "AuthoredBundleV2", "CoverageReport", "DependencyReview", "AuthoringDiscussion"]
+writes = ["authoring_draft"]
+
+[[processes]]
+name = "read_draft"
+what = "Read one draft by id, or compile it without saving (preview returns coverage, world spec, configuration graph)."
+routes = ["GET /api/authoring/drafts/{draft_id}", "GET /api/authoring/drafts/{draft_id}/preview"]
+changes = []
+writes = []
+
+[[processes]]
+name = "edit_draft"
+what = "Save a direct edit without a model call; the general proposal edit recompiles and replaces the draft by one revision."
+routes = ["PUT /api/authoring/drafts/{draft_id}/people/{person_id}", "PUT /api/authoring/drafts/{draft_id}/proposal", "PUT /api/authoring/drafts/{draft_id}/general-proposal", "PUT /api/authoring/drafts/{draft_id}/coordination-configuration", "PUT /api/authoring/drafts/{draft_id}/component-composition-configuration"]
+changes = ["AuthoringDraft", "AuthoredBundleV2", "CoverageReport"]
+writes = ["authoring_draft"]
+
+[[processes]]
+name = "approve_draft"
+what = "Approve the current revision: recompile; refuse when diagnostics exist or coverage blocks; store an approval with bundle, scenario, run-spec, registry and world-spec digests."
+routes = ["POST /api/authoring/drafts/{draft_id}/approve"]
+changes = ["AuthoringDraft"]
+writes = ["authoring_draft"]
+
+[[processes]]
+name = "run_approved_draft"
+what = "Execute an approved general draft: approved_compile re-checks every approval digest, one live run at a time, run_general_simulation_v2 drives Concordia moment by moment through CanonicalWorld, then the run is projected, its evidence bundle built and the pre-registered analyses applied."
+routes = ["POST /api/authoring/drafts/{draft_id}/runs"]
+changes = ["CompiledSimulation", "CanonicalWorld", "WorldState", "ActorContext", "ActionIntent", "TransitionEvidence", "ModelCallReceipt", "MomentEvidence", "Checkpoint", "AdoptionReceipt", "SimulationResult", "RunEvidenceBundle", "AnalysisResult", "Run"]
+writes = ["retained_run"]
+
+[[processes]]
+name = "run_experiment"
+what = "Re-run an approved general draft once per condition and repetition (at most 5 repetitions), each as its own retained run, recording each outcome on the experiment."
+routes = ["POST /api/authoring/drafts/{draft_id}/experiments", "GET /api/experiments/{experiment_id}"]
+changes = ["Experiment", "Run"]
+writes = ["experiment_record", "retained_run"]
+
+[[processes]]
+name = "run_fixed_scenario"
+what = "Pre-migration runs of the built-in scenarios (POST /api/runs), their previews and the regional-outbreak comparison readout; includes live coordination measurement retained on the run."
+routes = ["POST /api/runs", "GET /api/scenarios/{scenario}/preview", "GET /api/regional-outbreak-comparison"]
+changes = ["Run"]
+writes = ["retained_run"]
+
+[[processes]]
+name = "control_run"
+what = "Pause, stop or resume a live run; resume restarts from the retained checkpoint or resumes interrupted narration."
+routes = ["POST /api/runs/{run_id}/pause", "POST /api/runs/{run_id}/stop", "POST /api/runs/{run_id}/resume"]
+changes = ["Run", "Checkpoint"]
+writes = ["retained_run"]
+
+[[processes]]
+name = "read_runs"
+what = "List retained runs and read one run, its progress or its summary."
+routes = ["GET /api/runs", "GET /api/runs/{run_id}", "GET /api/runs/{run_id}/progress", "GET /api/runs/{run_id}/summary"]
+changes = []
+writes = []
+
+[[processes]]
+name = "analyze_run"
+what = "Attach or remove an analysis on a finished run. Analysis reads retained evidence only (ADR-014)."
+routes = ["POST /api/runs/{run_id}/analyses", "DELETE /api/runs/{run_id}/analyses/{analysis_id}"]
+changes = ["AnalysisResult", "Run"]
+writes = ["retained_run"]
+
+[[processes]]
+name = "trash_run"
+what = "Move a retained run into the trash folder (recoverable by file move)."
+routes = ["DELETE /api/runs/{run_id}"]
+changes = ["Run"]
+writes = ["retained_run"]
+
+[[processes]]
+name = "scripted_assays"
+what = "Scripted (no model) composite-agency assays and coordination experiments over fixed scenarios; each row is a retained run; deleting one trashes all its runs."
+routes = ["POST /api/composite-assays", "GET /api/composite-assays/{assay_id}", "DELETE /api/composite-assays/{assay_id}", "POST /api/coordination-experiments", "GET /api/coordination-experiments/{experiment_id}", "DELETE /api/coordination-experiments/{experiment_id}"]
+changes = ["Run"]
+writes = ["retained_run"]
+
+[[processes]]
+name = "recover_on_start"
+what = "At app start, RunStore.mark_incomplete_interrupted marks running runs interrupted, finishes narrating runs as completed with narration unavailable, and marks running coordination measurements invalid."
+routes = []
+changes = ["Run"]
+writes = ["retained_run"]
+
+[[processes]]
+name = "public_spend_control"
+what = "Public demo only: SpendControlMiddleware reserves daily and per-address allowance before spend-bearing requests; GET /api/public-limits reports today's usage."
+routes = ["GET /api/public-limits"]
+changes = ["SpendLedger"]
+writes = ["public_spend_ledger"]
+
+[[processes]]
+name = "serve_pages"
+what = "Serve the workbench page, static assets, run configuration catalog, the review dossier and the pinned World Substrate artifact from the app's web root."
+routes = ["GET /", "MOUNT /assets", "GET /api/config", "GET /review", "GET /review/trace", "GET /world-substrate", "GET /world-substrate/", "GET /world-substrate/revision.json"]
+changes = []
+writes = []
+
+[[processes]]
+name = "bridge_port_cli"
+what = "python -m cybernetic_influence.general_simulation --output PATH runs the fixed bridge/port foundation vertical on Concordia (concordia_runtime.run_bridge_port_vertical) and writes its GeneralSimulationResult as JSON; refuses to overwrite without --force."
+routes = []
+changes = ["CanonicalWorld", "WorldState", "TransitionEvidence", "ModelCallReceipt", "AdoptionReceipt"]
+writes = ["bridge_port_result"]
+
+# ----------------------------------------------------------------- records --
+# A record is a document the system writes to disk. writers = logical writers
+# (who calls the store); physical_writers = the functions that touch the file.
+
+[[records]]
+name = "authoring_draft"
+store = "AuthoringDraftStore"
+document = "AuthoringDraft"
+location = "<authoring_root, default <run root parent>/authoring_drafts>/draft_<12 hex>.json (dir 0700, atomic temp file + os.replace + fsync)"
+written_by = ["create_draft", "converse", "edit_draft", "approve_draft"]
+physical_writers = [{ file = "src/cybernetic_influence/authoring/store.py", function = "_write", line = 131 }]
+writers = [
+  { file = "src/cybernetic_influence/api.py", function = "create_draft", line = 3423 },
+  { file = "src/cybernetic_influence/api.py", function = "create_legacy_draft", line = 3430 },
+  { file = "src/cybernetic_influence/authoring/service.py", function = "advance", line = 705 },
+  { file = "src/cybernetic_influence/authoring/service.py", function = "approve", line = 1081 },
+  { file = "src/cybernetic_influence/authoring/service.py", function = "create_reviewed_component_composition_draft", line = 471 },
+  { file = "src/cybernetic_influence/authoring/service.py", function = "create_reviewed_coordination_draft", line = 447 },
+  { file = "src/cybernetic_influence/authoring/service.py", function = "edit_component_composition_configuration", line = 1021 },
+  { file = "src/cybernetic_influence/authoring/service.py", function = "edit_coordination_configuration", line = 949 },
+  { file = "src/cybernetic_influence/authoring/service.py", function = "edit_person", line = 806 },
+  { file = "src/cybernetic_influence/authoring/service.py", function = "edit_proposal", line = 873 },
+  { file = "src/cybernetic_influence/general_simulation/authoring.py", function = "_advance_v2", line = 1193 },
+  { file = "src/cybernetic_influence/general_simulation/authoring.py", function = "advance", line = 787 },
+  { file = "src/cybernetic_influence/general_simulation/authoring.py", function = "approve", line = 1366 },
+  { file = "src/cybernetic_influence/general_simulation/authoring.py", function = "discuss", line = 541 },
+  { file = "src/cybernetic_influence/general_simulation/authoring.py", function = "edit_proposal", line = 1301 },
+]
+
+[[records]]
+name = "retained_run"
+store = "RunStore"
+document = "Run"
+location = "<CYBERNETIC_INFLUENCE_RUNS_DIR or <web root parent>/artifacts/runs>/run_<12 hex>.json; trash: <runs>/.trash/<run_id>.<hex>.json"
+written_by = ["run_approved_draft", "run_experiment", "run_fixed_scenario", "control_run", "analyze_run", "trash_run", "scripted_assays", "recover_on_start"]
+physical_writers = [
+  { file = "src/cybernetic_influence/run_store.py", function = "save", line = 59 },
+  { file = "src/cybernetic_influence/run_store.py", function = "trash", line = 153 },
+  { file = "src/cybernetic_influence/run_store.py", function = "trash_many", line = 177 },
+]
+writers = [
+  { file = "src/cybernetic_influence/analysis/coordination.py", function = "retain_coordination_measurement", line = 444 },
+  { file = "src/cybernetic_influence/api.py", function = "attach_run_analysis", line = 4952 },
+  { file = "src/cybernetic_influence/api.py", function = "create_app", line = 2634 },
+  { file = "src/cybernetic_influence/api.py", function = "delete_run", line = 5136 },
+  { file = "src/cybernetic_influence/api.py", function = "execute_authored_live_worker", line = 4244 },
+  { file = "src/cybernetic_influence/api.py", function = "execute_general_live_worker", line = 4019 },
+  { file = "src/cybernetic_influence/api.py", function = "execute_live_worker", line = 5989 },
+  { file = "src/cybernetic_influence/api.py", function = "execute_narration_resume_worker", line = 5326 },
+  { file = "src/cybernetic_influence/api.py", function = "execute_resume_worker", line = 5461 },
+  { file = "src/cybernetic_influence/api.py", function = "pause_run", line = 5172 },
+  { file = "src/cybernetic_influence/api.py", function = "remove_run_analysis", line = 5010 },
+  { file = "src/cybernetic_influence/api.py", function = "resume_run", line = 5307 },
+  { file = "src/cybernetic_influence/api.py", function = "retain_checkpoint", line = 5510 },
+  { file = "src/cybernetic_influence/api.py", function = "retain_general_progress", line = 4051 },
+  { file = "src/cybernetic_influence/api.py", function = "retain_live_coordination_measurement", line = 2948 },
+  { file = "src/cybernetic_influence/api.py", function = "retain_progress", line = 2875 },
+  { file = "src/cybernetic_influence/api.py", function = "run", line = 5940 },
+  { file = "src/cybernetic_influence/api.py", function = "run_approved_draft", line = 4011 },
+  { file = "src/cybernetic_influence/api.py", function = "stop_run", line = 5212 },
+  { file = "src/cybernetic_influence/api.py", function = "trash_composite_assay", line = 3371 },
+  { file = "src/cybernetic_influence/api.py", function = "trash_coordination_experiment", line = 3414 },
+  { file = "src/cybernetic_influence/experiments/composite_agency.py", function = "run_scripted_composite_assay", line = 322 },
+  { file = "src/cybernetic_influence/experiments/coordination_experiment.py", function = "run_scripted_coordination_experiment", line = 729 },
+]
+
+[[records]]
+name = "experiment_record"
+store = "ExperimentStore"
+document = "Experiment"
+location = "<run root parent>/experiments/experiment_<12 hex>.json"
+written_by = ["run_experiment"]
+physical_writers = [{ file = "src/cybernetic_influence/experiment_store.py", function = "save", line = 126 }]
+writers = [
+  { file = "src/cybernetic_influence/api.py", function = "create_draft_experiment", line = 4579 },
+  { file = "src/cybernetic_influence/api.py", function = "persist", line = 4586 },
+]
+
+[[records]]
+name = "public_spend_ledger"
+document = "SpendLedger"
+location = "<CYBERNETIC_INFLUENCE_RUNS_DIR parent>/spend_controls.json unless SpendControlSettings.from_env overrides it"
+written_by = ["public_spend_control"]
+physical_writers = [{ file = "src/cybernetic_influence/public_spend_controls.py", function = "_save", line = 157 }]
+writers = [{ file = "src/cybernetic_influence/public_spend_controls.py", function = "_save", line = 157 }]
+
+[[records]]
+name = "bridge_port_result"
+document = "SimulationResult"
+location = "--output PATH (GeneralSimulationResult JSON)"
+written_by = ["bridge_port_cli"]
+physical_writers = [{ file = "src/cybernetic_influence/general_simulation/__main__.py", function = "main", line = 20 }]
+writers = [{ file = "src/cybernetic_influence/general_simulation/__main__.py", function = "main", line = 20 }]
+
+# ------------------------------------------------------------- vocabularies --
+# Each must equal the Literal[...] values of the named field.
+
+[[vocabularies]]
+name = "draft_status"
+file = "src/cybernetic_influence/authoring/store.py"
+class = "_DraftDocument"
+field = "status"
+values = ["approved", "draft", "needs_input", "ready_for_review", "repairing"]
+
+[[vocabularies]]
+name = "draft_target_kind"
+file = "src/cybernetic_influence/authoring/store.py"
+class = "_DraftDocument"
+field = "target_kind"
+values = ["general_world_v1", "general_world_v2", "legacy_templates_v1"]
+
+[[vocabularies]]
+name = "draft_message_source"
+file = "src/cybernetic_influence/authoring/store.py"
+class = "_DraftMessage"
+field = "source"
+values = ["conversation", "direct_component_composition_edit", "direct_coordination_edit", "direct_general_proposal_edit", "direct_person_edit", "direct_proposal_edit"]
+
+[[vocabularies]]
+name = "draft_attempt_status"
+file = "src/cybernetic_influence/authoring/store.py"
+class = "_DraftAttempt"
+field = "status"
+values = ["accepted", "needs_input", "provider_error", "repair"]
+
+[[vocabularies]]
+name = "experiment_status"
+file = "src/cybernetic_influence/experiment_store.py"
+class = "ExperimentResultV2"
+field = "status"
+values = ["completed", "running"]
+
+[[vocabularies]]
+name = "experiment_condition_status"
+file = "src/cybernetic_influence/experiment_store.py"
+class = "ExperimentConditionResultV2"
+field = "status"
+values = ["completed", "failed"]
+
+[[vocabularies]]
+name = "coverage_classification"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "CoverageItemV1"
+field = "classification"
+values = ["coarse_llm", "descriptive", "exact", "unsupported"]
+
+[[vocabularies]]
+name = "causal_closure"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "CoverageItemV1"
+field = "causal_closure"
+values = ["coarse", "descriptive", "exact", "partial", "unsupported"]
+
+[[vocabularies]]
+name = "dependency_enforcement"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "DependencyEnforcementItemV1"
+field = "enforcement"
+values = ["coarse_llm", "descriptive", "exact_read", "exact_write_only", "unsupported"]
+
+[[vocabularies]]
+name = "dependency_resolution"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "MissingDependencyFindingV1"
+field = "required_resolution"
+values = ["declare_world_state", "exact_guard", "required_read", "split_or_coarse"]
+
+[[vocabularies]]
+name = "dependency_review_status"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "DependencyCompletenessReviewV1"
+field = "status"
+values = ["complete", "repair_required"]
+
+[[vocabularies]]
+name = "representation_strategy"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "GeneralActiveSystemProposalV1"
+field = "representation_strategy"
+values = ["coarse_surrogate", "detailed", "inert"]
+
+[[vocabularies]]
+name = "fidelity_need"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "ComponentRequestV1"
+field = "fidelity_need"
+values = ["bounded", "coarse", "descriptive", "exact"]
+
+[[vocabularies]]
+name = "precondition_record_type"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "TransitionPreconditionProposalV1"
+field = "record_type"
+values = ["record", "resource", "route"]
+
+[[vocabularies]]
+name = "precondition_comparison"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "TransitionPreconditionProposalV1"
+field = "comparison"
+values = ["equals", "greater_than_or_equal", "less_than_or_equal"]
+
+[[vocabularies]]
+name = "analysis_profile_v1"
+file = "src/cybernetic_influence/general_simulation/authoring_models.py"
+class = "AnalysisSpecV1"
+field = "profile"
+values = ["waltzman_coordination_v1"]
+
+[[vocabularies]]
+name = "patch_operation"
+file = "src/cybernetic_influence/general_simulation/models.py"
+class = "PatchGrammar"
+field = "allowed_operations"
+values = ["create", "rebind", "remove", "replace"]
+
+[[vocabularies]]
+name = "patch_record_type"
+file = "src/cybernetic_influence/general_simulation/models.py"
+class = "PatchGrammar"
+field = "allowed_record_types"
+values = ["place", "placement", "record", "representation", "resource", "route"]
+
+[[vocabularies]]
+name = "operation_attribution"
+file = "src/cybernetic_influence/general_simulation/models.py"
+class = "OperationAttribution"
+field = "classification"
+values = ["coarse_authority", "exact_contract", "no_op"]
+
+[[vocabularies]]
+name = "model_call_role"
+file = "src/cybernetic_influence/general_simulation/models.py"
+class = "ModelCallReceipt"
+field = "role"
+values = ["actor", "adjudicator"]
+
+[[vocabularies]]
+name = "run_execution_mode"
+file = "src/cybernetic_influence/general_simulation/contracts_v2.py"
+class = "RunSpecV2"
+field = "execution_mode"
+values = ["live", "reference", "replay"]
+
+[[vocabularies]]
+name = "run_cognition_mode"
+file = "src/cybernetic_influence/general_simulation/contracts_v2.py"
+class = "RunSpecV2"
+field = "cognition_mode"
+values = ["integrated", "staged"]
+
+[[vocabularies]]
+name = "analysis_coverage_status"
+file = "src/cybernetic_influence/analysis/theory_analysis.py"
+class = "AnalysisResultV2"
+field = "coverage_status"
+values = ["degraded", "supported", "unsupported"]
+
+# -------------------------------------------------------------------- views --
+
+[[views]]
+name = "public_workbench"
+what = "Public Waltzman workbench: retained case study plus Create (converse, review world/people/information/processes/run, coverage, approve, run, experiments)."
+source = "public/waltzman/index.html + public/waltzman/app.js, served by cybernetic_influence.public_waltzman:app (create_app with web_root=public/waltzman)"
+
+[[views]]
+name = "local_workbench"
+what = "Operator workbench served by make serve (create_app default web root web/): fixed-scenario runs, legacy drafts, pause/resume/trash."
+source = "web/index.html + web/app.js"
+
+[[views]]
+name = "api_json"
+what = "The JSON API itself, as read by a script or agent."
+source = "src/cybernetic_influence/api.py create_app routes (+ GET /api/public-limits on the public app)"
+
+[[views]]
+name = "cli"
+what = "python -m cybernetic_influence.general_simulation (bridge/port vertical) output file."
+source = "src/cybernetic_influence/general_simulation/__main__.py"
+
+# ----------------------------------------------------------------- coverage --
+# shown | partial | hidden | missing | n/a. Evidence per cell: VIEW_COVERAGE.md.
+
+[[coverage]]
+element = "SimulationProposalV1"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "AuthoredBundleV2"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "ScenarioSpec"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "RunSpec"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "Person"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "WorldRecord"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "ActiveSystem"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "ComponentRequest"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "Place"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "Placement"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "SpatialLink"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "InformationRepresentation"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "ResourceStock"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "Relationship"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "partial", cli = "n/a" }
+
+[[coverage]]
+element = "ScheduledMoment"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "SensingRule"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "ResourceTransformation"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "ResourceTransport"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "AnalysisSpec"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "CoverageReport"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "CoverageItem"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "AuthoringDiscussion"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "DependencyReview"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "partial", cli = "n/a" }
+
+[[coverage]]
+element = "CompiledSimulation"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "WorldSpec"
+views = { public_workbench = "missing", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "TransitionAuthority"
+views = { public_workbench = "missing", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "ActorAccess"
+views = { public_workbench = "missing", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "CanonicalWorld"
+views = { public_workbench = "hidden", local_workbench = "hidden", api_json = "hidden", cli = "hidden" }
+
+[[coverage]]
+element = "WorldState"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "shown" }
+
+[[coverage]]
+element = "ActorContext"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "shown" }
+
+[[coverage]]
+element = "ActionIntent"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "partial" }
+
+[[coverage]]
+element = "TransitionEvidence"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "shown" }
+
+[[coverage]]
+element = "ModelCallReceipt"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "shown" }
+
+[[coverage]]
+element = "MomentEvidence"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "Checkpoint"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "partial" }
+
+[[coverage]]
+element = "AdoptionReceipt"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "shown" }
+
+[[coverage]]
+element = "SimulationResult"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "partial" }
+
+[[coverage]]
+element = "RunEvidenceBundle"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "AnalysisResult"
+views = { public_workbench = "shown", local_workbench = "missing", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "AuthoringDraft"
+views = { public_workbench = "partial", local_workbench = "partial", api_json = "partial", cli = "n/a" }
+
+[[coverage]]
+element = "Run"
+views = { public_workbench = "shown", local_workbench = "shown", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "Experiment"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "partial", cli = "n/a" }
+
+[[coverage]]
+element = "SpendLedger"
+views = { public_workbench = "missing", local_workbench = "n/a", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "LegacyTemplateDraft"
+views = { public_workbench = "partial", local_workbench = "partial", api_json = "partial", cli = "n/a" }
+
+[[coverage]]
+element = "authoring_draft"
+views = { public_workbench = "partial", local_workbench = "partial", api_json = "partial", cli = "n/a" }
+
+[[coverage]]
+element = "retained_run"
+views = { public_workbench = "shown", local_workbench = "shown", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "experiment_record"
+views = { public_workbench = "partial", local_workbench = "missing", api_json = "partial", cli = "n/a" }
+
+[[coverage]]
+element = "public_spend_ledger"
+views = { public_workbench = "missing", local_workbench = "n/a", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "bridge_port_result"
+views = { public_workbench = "n/a", local_workbench = "n/a", api_json = "n/a", cli = "shown" }
+
+[[coverage]]
+element = "control_run"
+views = { public_workbench = "missing", local_workbench = "shown", api_json = "shown", cli = "n/a" }
+
+[[coverage]]
+element = "serve_pages"
+views = { public_workbench = "shown", local_workbench = "partial", api_json = "n/a", cli = "n/a" }
+
+# --------------------------------------------------------------------- gaps --
+
+[[gaps]]
+id = "G1"
+status = "open"
+
+[[gaps]]
+id = "G2"
+status = "open"
+
+[[gaps]]
+id = "G3"
+status = "open"
+
+[[gaps]]
+id = "G4"
+status = "open"
+
+[[gaps]]
+id = "G5"
+status = "open"
+
+[[gaps]]
+id = "G6"
+status = "open"
+
+[[gaps]]
+id = "G7"
+status = "open"
+
+[[gaps]]
+id = "G8"
+status = "open"
+
+[[gaps]]
+id = "G9"
+status = "open"
+
+[[gaps]]
+id = "G10"
+status = "open"
+
+[[gaps]]
+id = "G11"
+status = "open"
+
+[[gaps]]
+id = "G12"
+status = "open"
+
+[[gaps]]
+id = "G13"
+status = "open"
+
+[[gaps]]
+id = "G14"
+status = "open"
+
+[[gaps]]
+id = "G15"
+status = "open"
+
+[[gaps]]
+id = "G16"
+status = "open"
+

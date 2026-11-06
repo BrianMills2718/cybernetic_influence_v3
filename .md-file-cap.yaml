@@ -1,0 +1,2 @@
+limit: 110
+reason: "The repository sat at exactly 100 tracked Markdown files when Company Planning's system model (2026-10-08) added two required Markdown files (docs/model/ODD.md, VIEW_COVERAGE.md) and its plan; AGENTS.md forbids rewriting or moving historical evidence in docs/archive (25 files), so consolidation there is not available."

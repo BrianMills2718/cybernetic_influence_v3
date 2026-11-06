@@ -18,6 +18,7 @@ Current reviewable simulator for authoring socio-technical worlds, running model
 - [Project overview](../README.md)
 - [Active plan queue](../docs/plans/AGENTS.md)
 - [Architecture decisions](../docs/adr/README.md)
+- [System model](../docs/model/ODD.md): what the system stores, who writes each record, every declarable kind of thing, and [what each view shows](../docs/model/VIEW_COVERAGE.md)
 
 ## Coverage and unknowns
 
