@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """Project the overt and threshold-managed runs into one public comparison.
 
-The source paper's section 7 argues that influence can keep its directional
-pressure while changing how that pressure appears, so that it resembles ordinary
-variation. Evasion is unobservable in the field by construction; the claim that
-a detector missed something is only checkable where the pressure is authored.
+The source paper's section 7 argues that pressure can preserve a directional
+effect while changing how that effect appears. A synthetic world lets the source
+expression policy be authored while the coalition and monitoring system stay
+fixed. In this retained pair the shaped arm was not missed: the monitor recorded
+`degrading`. The inspectable result is a different severity and mechanism
+classification under the changed expression policy.
 
-These two runs differ in exactly one respect: how each source expresses its
-signal. The four sources, the coalition, the decision gate, and the entire
-detection cell -- monitor, diagnostician, planner, their thresholds and their
-trigger -- are shared. So a difference in what the cell reported is a fact about
-the shape of the pressure, not about a changed detector.
+The designed manipulation changes the source expression policy. The source roles,
+coalition, decision gate, and entire detection cell -- monitor, diagnostician,
+planner, their categories, and their trigger -- are shared. Model sampling is not
+seeded, so the realized trajectories are not otherwise token-level-identical
+counterfactuals and the two policies are not independently calibrated to an equal
+pressure dose.
 
 Emits per-round stance distributions for both arms, each arm's retained detector
 reading, and the nonclaims. Retains no prompts.
@@ -105,19 +108,22 @@ def main() -> int:
                 "cso_stabilization_planner",
             ],
             "held_identical": (
-                "The four sources, the coalition, the decision gate, and the whole "
-                "detection cell -- personas, thresholds and trigger -- are the same "
-                "in both runs. Only how each source expresses its signal differs."
+                "The source roles, coalition, decision gate, and whole detection cell "
+                "-- monitor, diagnostician, planner, their categories and trigger -- "
+                "are shared. The designed manipulation changes the source expression "
+                "policy; unseeded sampling means the realized agent text is not "
+                "otherwise identical."
             ),
         },
         "nonclaims": [
             "Two retained executions are not a sample, and one pair cannot establish "
-            "how often a detector would miss this.",
-            "The evasion is authored, not discovered: the sources were instructed to "
-            "keep each signal inside ordinary variation.",
-            "A detector missing an authored pattern is evidence about that detector at "
-            "that threshold, and nothing more. A threshold that caught this one might "
-            "produce false alarms elsewhere; that is not answered here.",
+            "how often this monitor would under-classify or misdiagnose such a pattern.",
+            "The evasion is authored, not discovered: the source expression policy was "
+            "constrained to narrow verification requests, and the two policies are not "
+            "independently calibrated to an equal pressure dose.",
+            "The shaped arm was detected as degrading, so this is not a detector miss. "
+            "A more sensitive decision boundary might also raise false alarms on benign "
+            "variation; that tradeoff is not answered here.",
             "Model sampling is not seeded, so a rerun would not reproduce these exact "
             "stances.",
         ],

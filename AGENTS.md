@@ -103,11 +103,14 @@ new capability by themselves.
 
 ## Testing And Verification
 
-- `make check` runs `typecheck test ui-build assets-check deploy-check` in that
-  order — `mypy` (strict, `files = ["src", "tests"]`), then `pytest -q tests`,
-  then the frontend build, then the check that the served bundle matches
-  `frontend/src`, then the deploy-script syntax check. Run it before treating
-  work as complete; do not report success from a partial subset.
+- `make check` runs six stages — `typecheck test-wait-check test ui-build
+  assets-check deploy-check` in that order: `mypy` (strict,
+  `files = ["src", "tests"]`), then the test-deadline scan described below,
+  then `pytest -q tests`, then the frontend build, then the check that the
+  served bundle matches `frontend/src`, then the deploy-script syntax check.
+  Run it before treating work as complete; do not report success from a
+  partial subset. Count the stages against the `check:` target in the
+  `Makefile` rather than this list if the two ever disagree.
 - Run it from a worktree, not from a canonical checkout left read-only by the
   workspace guard: only the write stages fail there, so `ui-build` reports a
   bundler crash whose real cause is `Permission denied` on `web/`.
@@ -182,7 +185,7 @@ make install
 make serve
 
 # Verification
-make check        # typecheck (mypy --strict) + test (pytest -q tests) + ui-build + assets-check + deploy-check
+make check        # typecheck + test-wait-check + test + ui-build + assets-check + deploy-check
 make test          # pytest -q tests
 make typecheck     # mypy --strict
 make ui-smoke       # scripts/verify_demo_ui.py against a running server
