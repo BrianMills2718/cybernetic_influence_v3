@@ -141,7 +141,7 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert config.status_code == 200
     assert config.json()["version"] == "0.13.0"
     assert config.json()["build_commit"] == "development"
-    assert config.json()["model"] == "openrouter/openai/gpt-5.6-sol"
+    assert config.json()["model"] == "openrouter/openai/gpt-6.1-sol"
     assert config.json()["reasoning_effort"] == "medium"
     assert config.json()["profiles"] == ["position_context", "procedural_control"]
     assert set(config.json()["scenarios"]) == {
@@ -160,9 +160,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert coordination["supports_live"] is True
     assert coordination["live_model_ids"] == [
         "codex/gpt-5.6-terra",
-        "codex/gpt-5.6-luna",
-        "openrouter/openai/gpt-5.6-terra",
-        "openrouter/openai/gpt-5.6-sol",
+        "codex/gpt-6-luna",
+        "openrouter/openai/gpt-6.1-terra",
+        "openrouter/openai/gpt-6.1-sol",
         "openrouter/deepseek/deepseek-v4-flash",
     ]
     assert {item["id"] for item in coordination["arms"]} == {
@@ -193,9 +193,9 @@ def test_config_and_static_ui_are_operator_first(tmp_path: Path) -> None:
     assert controls["default_horizon"] >= 87
     assert [choice["model"] for choice in config.json()["live_options"]["models"]] == [
         "codex/gpt-5.6-terra",
-        "codex/gpt-5.6-luna",
-        "openrouter/openai/gpt-5.6-terra",
-        "openrouter/openai/gpt-5.6-sol",
+        "codex/gpt-6-luna",
+        "openrouter/openai/gpt-6.1-terra",
+        "openrouter/openai/gpt-6.1-sol",
         "openrouter/deepseek/deepseek-v4-flash",
     ]
     terra = config.json()["live_options"]["models"][0]
@@ -435,7 +435,7 @@ def test_history_projects_exact_live_coordination_probe_evidence(
                 "trace_id_prefix": f"coordination-live-probe/{condition}",
                 "total_observed_cost": 0.0,
                 "llm_configuration": {
-                    "model": "codex/gpt-5.6-luna",
+                    "model": "codex/gpt-6-luna",
                     "reasoning_effort": "medium",
                 },
                 "exact_coordination_values": {
@@ -456,7 +456,7 @@ def test_history_projects_exact_live_coordination_probe_evidence(
         "adaptive_heterogeneous_pressure",
         "fixed_heterogeneous_pressure",
     ]
-    assert probes[0]["model"] == "codex/gpt-5.6-luna"
+    assert probes[0]["model"] == "codex/gpt-6-luna"
     assert probes[0]["model_calls"] == 43
     assert probes[0]["metrics"] == {
         "verification_requests": 7,
@@ -675,7 +675,7 @@ def test_scripted_run_rejects_live_options_before_dispatch(tmp_path: Path) -> No
         json={
             "execution": "scripted",
             "llm_options": {
-                "model": "openrouter/openai/gpt-5.6-terra",
+                "model": "openrouter/openai/gpt-6.1-terra",
                 "agent_reasoning_effort": "medium",
                 "max_total_cost": 0.20,
             },

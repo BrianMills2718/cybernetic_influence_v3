@@ -68,9 +68,9 @@ AUTHORING_TASK = "cybernetic_influence_v3_scenario_draft"
 AUTHORING_MAX_BUDGET = 0.10
 AuthoringModel = Literal[
     "codex/gpt-5.6-terra",
-    "codex/gpt-5.6-luna",
-    "openrouter/openai/gpt-5.6-terra",
-    "openrouter/openai/gpt-5.6-sol",
+    "codex/gpt-6-luna",
+    "openrouter/openai/gpt-6.1-terra",
+    "openrouter/openai/gpt-6.1-sol",
 ]
 AuthoringReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
 AUTHORING_MODEL: AuthoringModel = OPENROUTER_SOL_MODEL

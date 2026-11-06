@@ -62,5 +62,5 @@ def test_codex_terra_uses_the_same_isolated_subscription_backend() -> None:
 
 
 def test_non_codex_routes_retain_the_shared_client_defaults() -> None:
-    with structured_backend_options("openrouter/openai/gpt-5.6-terra") as options:
+    with structured_backend_options("openrouter/openai/gpt-6.1-terra") as options:
         assert options == {}

@@ -9,10 +9,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Final
 
-CODEX_LUNA_MODEL: Final = "codex/gpt-5.6-luna"
+CODEX_LUNA_MODEL: Final = "codex/gpt-6-luna"
 CODEX_TERRA_MODEL: Final = "codex/gpt-5.6-terra"
-OPENROUTER_TERRA_MODEL: Final = "openrouter/openai/gpt-5.6-terra"
-OPENROUTER_SOL_MODEL: Final = "openrouter/openai/gpt-5.6-sol"
+OPENROUTER_TERRA_MODEL: Final = "openrouter/openai/gpt-6.1-terra"
+OPENROUTER_SOL_MODEL: Final = "openrouter/openai/gpt-6.1-sol"
 CODEX_SUBSCRIPTION_MODELS: Final[frozenset[str]] = frozenset(
     {CODEX_LUNA_MODEL, CODEX_TERRA_MODEL}
 )

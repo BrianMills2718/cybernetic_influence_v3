@@ -3098,7 +3098,7 @@ def create_app(
                     "label": "Purchase to payment",
                     **_scenario_explanation("purchase_payment"),
                     "profiles": ["position_context"],
-                    "model": "openrouter/openai/gpt-5.6-terra",
+                    "model": "openrouter/openai/gpt-6.1-terra",
                     "reasoning_effort": "medium",
                     "maximum_live_calls": 8,
                     "maximum_live_cost": 0.38,

@@ -297,7 +297,7 @@ def test_model_receipt_retains_metered_provider_and_cost() -> None:
         system="Act.",
         user="{}",
         trace_id="cost_probe",
-        model="openrouter/openai/gpt-5.6-terra",
+        model="openrouter/openai/gpt-6.1-terra",
     )
 
     assert receipt.provider == "openrouter"
@@ -1350,13 +1350,13 @@ def test_general_runner_uses_the_operator_selected_model_and_effort() -> None:
         run_id="run_selected_model_fixture",
         call=selected_model_call,
         max_additional_moments=1,
-        model="openrouter/openai/gpt-5.6-terra",
+        model="openrouter/openai/gpt-6.1-terra",
         reasoning_effort="low",
     )
 
     assert len(result.moments) == 1
     assert observed_calls == [
-        ("openrouter/openai/gpt-5.6-terra", "low")
+        ("openrouter/openai/gpt-6.1-terra", "low")
     ] * (len(proposal.people) + 1)
 
 

@@ -189,7 +189,7 @@ def test_public_authoring_advertises_and_dispatches_only_certified_models(
     monkeypatch.setattr(
         api_module,
         "authoring_model_ids",
-        lambda: ["codex/gpt-5.6-luna"],
+        lambda: ["codex/gpt-6-luna"],
     )
     api = TestClient(
         create_app(
@@ -202,12 +202,12 @@ def test_public_authoring_advertises_and_dispatches_only_certified_models(
 
     authoring = api.get("/api/config").json()["authoring"]
     assert [item["model"] for item in authoring["models"]] == [
-        "codex/gpt-5.6-luna"
+        "codex/gpt-6-luna"
     ]
     assert [
         item["model"] for item in authoring["structured_contract"]["model_options"]
-    ] == ["codex/gpt-5.6-luna"]
-    assert authoring["model"] == "codex/gpt-5.6-luna"
+    ] == ["codex/gpt-6-luna"]
+    assert authoring["model"] == "codex/gpt-6-luna"
 
     draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     rejected = api.post(
@@ -534,7 +534,7 @@ def test_completed_authored_run_resumes_only_missing_narration(
 
     revision = llm_client_revision()
     effective = EffectiveRunLlmConfiguration(
-        model="openrouter/openai/gpt-5.6-terra",
+        model="openrouter/openai/gpt-6.1-terra",
         agent_reasoning_effort="medium",
         narrator_reasoning_effort="low",
         max_total_cost=0.74,
@@ -851,7 +851,7 @@ def test_live_theory_projection_retains_selection_without_analysis_calls() -> No
     theory = build_live_theory_analysis(
         compiled,
         result,
-        model="openrouter/openai/gpt-5.6-terra",
+        model="openrouter/openai/gpt-6.1-terra",
         reasoning_effort="medium",
         per_call_budget=0.05,
         per_run_budget=0.20,
@@ -882,9 +882,9 @@ def test_authoring_and_theory_call_contracts_are_exact_and_provider_free(
         item["model"] for item in authoring["model_options"]
     } == {
         "codex/gpt-5.6-terra",
-        "codex/gpt-5.6-luna",
-        "openrouter/openai/gpt-5.6-terra",
-        "openrouter/openai/gpt-5.6-sol",
+        "codex/gpt-6-luna",
+        "openrouter/openai/gpt-6.1-terra",
+        "openrouter/openai/gpt-6.1-sol",
     }
     system_prompt, _ = _prompt(
         message="Describe one coordination problem.",
@@ -974,7 +974,7 @@ def test_authored_live_run_requires_authorization_and_live_options(
         json={"expected_revision": 1},
     )
     options = {
-        "model": "openrouter/openai/gpt-5.6-terra",
+        "model": "openrouter/openai/gpt-6.1-terra",
         "agent_reasoning_effort": "medium",
         "max_total_cost": 0.20,
     }
@@ -1014,8 +1014,8 @@ def test_failed_authored_live_run_is_retained_with_provider_evidence(
         api_module,
         "model_catalog",
         lambda: [
-            {"model": "codex/gpt-5.6-luna"},
-            {"model": "openrouter/openai/gpt-5.6-terra"},
+            {"model": "codex/gpt-6-luna"},
+            {"model": "openrouter/openai/gpt-6.1-terra"},
             {"model": effective.model},
         ],
     )
@@ -1121,7 +1121,7 @@ def test_authored_coordination_run_exposes_parallelism_and_stop_control(
 ) -> None:
     monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
     effective = EffectiveRunLlmConfiguration(
-        model="codex/gpt-5.6-luna",
+        model="codex/gpt-6-luna",
         agent_reasoning_effort="medium",
         narrator_reasoning_effort="low",
         max_total_cost=0.74,
@@ -1218,10 +1218,10 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
     )
     config = api.get("/api/config").json()["authoring"]
     assert [(item["label"], item["model"]) for item in config["models"]] == [
-        ("Sol · OpenRouter", "openrouter/openai/gpt-5.6-sol"),
-        ("Terra · OpenRouter", "openrouter/openai/gpt-5.6-terra"),
+        ("Sol · OpenRouter", "openrouter/openai/gpt-6.1-sol"),
+        ("Terra · OpenRouter", "openrouter/openai/gpt-6.1-terra"),
         ("Terra · subscription", "codex/gpt-5.6-terra"),
-        ("Luna · subscription", "codex/gpt-5.6-luna"),
+        ("Luna · subscription", "codex/gpt-6-luna"),
     ]
     assert config["reasoning_efforts"] == ["none", "low", "medium", "high", "xhigh", "max"]
     assert config["models"][0]["reasoning_efforts"] == [
@@ -1236,7 +1236,7 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
             "expected_revision": 0,
             "message_id": "m1",
             "message": "Model equipment checkout.",
-            "model": "openrouter/openai/gpt-5.6-terra",
+            "model": "openrouter/openai/gpt-6.1-terra",
             "reasoning_effort": "low",
         },
     ).json()
@@ -1246,21 +1246,21 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
             "expected_revision": first["revision"],
             "message_id": "m2",
             "message": "Make the laptop unavailable.",
-            "model": "openrouter/openai/gpt-5.6-sol",
+            "model": "openrouter/openai/gpt-6.1-sol",
             "reasoning_effort": "high",
         },
     ).json()
 
     assert calls == [
-        ("openrouter/openai/gpt-5.6-terra", "low"),
-        ("openrouter/openai/gpt-5.6-sol", "high"),
+        ("openrouter/openai/gpt-6.1-terra", "low"),
+        ("openrouter/openai/gpt-6.1-sol", "high"),
     ]
     assert [
         (message["model"], message["reasoning_effort"])
         for message in second["messages"]
     ] == [
-        ("openrouter/openai/gpt-5.6-terra", "low"),
-        ("openrouter/openai/gpt-5.6-sol", "high"),
+        ("openrouter/openai/gpt-6.1-terra", "low"),
+        ("openrouter/openai/gpt-6.1-sol", "high"),
     ]
     assert second["messages"][0]["trace_ids"] == [
         f"{draft_id}/revision/1/attempt/1"
@@ -1279,7 +1279,7 @@ def test_each_revision_retains_its_selected_model_reasoning_and_trace(tmp_path: 
             "expected_revision": second["revision"],
             "message_id": "m2",
             "message": "Make the laptop unavailable.",
-            "model": "openrouter/openai/gpt-5.6-terra",
+            "model": "openrouter/openai/gpt-6.1-terra",
             "reasoning_effort": "high",
         },
     )
@@ -1308,7 +1308,7 @@ def test_luna_rejects_unsupported_authoring_effort_before_dispatch(tmp_path: Pat
             "expected_revision": 0,
             "message_id": "m1",
             "message": "Model equipment checkout.",
-            "model": "codex/gpt-5.6-luna",
+            "model": "codex/gpt-6-luna",
             "reasoning_effort": "max",
         },
     )
@@ -1426,7 +1426,7 @@ def test_quota_failure_stops_once_and_explains_that_the_prior_draft_is_safe(
             "expected_revision": 0,
             "message_id": "m1",
             "message": "A request.",
-            "model": "openrouter/openai/gpt-5.6-terra",
+            "model": "openrouter/openai/gpt-6.1-terra",
             "reasoning_effort": "medium",
         },
     ).json()
@@ -1436,7 +1436,7 @@ def test_quota_failure_stops_once_and_explains_that_the_prior_draft_is_safe(
             "expected_revision": ready["revision"],
             "message_id": "m2",
             "message": "Change the request.",
-            "model": "openrouter/openai/gpt-5.6-sol",
+            "model": "openrouter/openai/gpt-6.1-sol",
             "reasoning_effort": "medium",
         },
     ).json()
@@ -1634,7 +1634,7 @@ def test_information_campaign_can_be_drafted_approved_and_run(tmp_path: Path) ->
         )
     )
     config = api.get("/api/config").json()["authoring"]
-    assert config["model"] == "openrouter/openai/gpt-5.6-sol"
+    assert config["model"] == "openrouter/openai/gpt-6.1-sol"
     assert config["reasoning_effort"] == "medium"
     draft_id = api.post("/api/authoring/legacy-drafts").json()["draft_id"]
     drafted = api.post(

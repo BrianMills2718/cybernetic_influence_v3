@@ -255,7 +255,7 @@ def test_live_resource_people_use_the_reviewed_profile_and_exact_gate() -> None:
 
     result = compiled.run_live(
         run_id="equipment_checkout_live_profiles",
-        model="openrouter/openai/gpt-5.6-terra",
+        model="openrouter/openai/gpt-6.1-terra",
         reasoning_effort="medium",
         per_call_budget=0.05,
         per_run_budget=0.20,
@@ -300,7 +300,7 @@ def test_live_authored_coordination_rebinds_specs_and_implementations_together(
 
     result = compiled.run_live(
         run_id="authored_coordination_live_registry",
-        model="openrouter/openai/gpt-5.6-terra",
+        model="openrouter/openai/gpt-6.1-terra",
         reasoning_effort="medium",
         per_call_budget=0.05,
         per_run_budget=0.74,

@@ -795,7 +795,7 @@ class AllocationAuthoritySystem:
 def outbreak_fixture(
     condition: OutbreakCondition,
     *,
-    model: str = "codex/gpt-5.6-luna",
+    model: str = "codex/gpt-6-luna",
     reasoning_effort: str | None = "medium",
     configuration: OutbreakScenarioConfiguration | None = None,
     message_fork_probe: bool = False,

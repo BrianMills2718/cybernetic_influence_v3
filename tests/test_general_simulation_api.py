@@ -1347,7 +1347,7 @@ def test_live_general_authoring_runs_as_pollable_background_job(
     monkeypatch.setattr(
         api_module,
         "authoring_model_ids",
-        lambda: ["codex/gpt-5.6-luna"],
+        lambda: ["codex/gpt-6-luna"],
     )
     proposal = _native_v2_proposal()
     review_calls = 0
@@ -1402,7 +1402,7 @@ def test_live_general_authoring_runs_as_pollable_background_job(
             "message_id": "background_discussion",
             "message": "Help me define relief cargo coordination after a bridge failure.",
             "mode": "discuss",
-            "model": "codex/gpt-5.6-luna",
+            "model": "codex/gpt-6-luna",
         },
     )
     assert discussion_started.status_code == 202
@@ -1428,7 +1428,7 @@ def test_live_general_authoring_runs_as_pollable_background_job(
             "expected_revision": 1,
             "message_id": "background_generation",
             "message": "Model relief cargo coordination after a bridge failure.",
-            "model": "codex/gpt-5.6-luna",
+            "model": "codex/gpt-6-luna",
         },
     )
 
@@ -1493,7 +1493,7 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
 ) -> None:
     monkeypatch.setenv("CYBERNETIC_INFLUENCE_LIVE", "1")
     effective = EffectiveRunLlmConfiguration(
-        model="codex/gpt-5.6-luna",
+        model="codex/gpt-6-luna",
         agent_reasoning_effort="medium",
         narrator_reasoning_effort="none",
         max_total_cost=0.74,
@@ -1538,7 +1538,7 @@ def test_approved_general_draft_runs_and_reopens_without_more_calls(
             "execution": "live",
             "narration": "deterministic",
             "llm_options": {
-                "model": "codex/gpt-5.6-luna",
+                "model": "codex/gpt-6-luna",
                 "agent_reasoning_effort": "medium",
                 "max_total_cost": 0.74,
             },
@@ -1729,7 +1729,7 @@ def _fake_resolve_live_configuration(
     from cybernetic_influence.run_configuration import RunLlmOptions
 
     if not isinstance(options, RunLlmOptions) or options.model not in {
-        "codex/gpt-5.6-luna",
+        "codex/gpt-6-luna",
         "codex/gpt-5.6-terra",
     }:
         model = getattr(options, "model", None)
@@ -1772,7 +1772,7 @@ def test_experiment_runs_every_condition_against_the_identical_scenario(
                     "condition_id": "medium-reasoning",
                     "label": "Medium reasoning",
                     "run_overrides": {
-                        "model": "codex/gpt-5.6-luna",
+                        "model": "codex/gpt-6-luna",
                         "agent_reasoning_effort": "medium",
                         "max_total_cost": 0.74,
                     },
@@ -1781,7 +1781,7 @@ def test_experiment_runs_every_condition_against_the_identical_scenario(
                     "condition_id": "low-reasoning",
                     "label": "Low reasoning",
                     "run_overrides": {
-                        "model": "codex/gpt-5.6-luna",
+                        "model": "codex/gpt-6-luna",
                         "agent_reasoning_effort": "low",
                         "max_total_cost": 0.74,
                     },
@@ -1874,7 +1874,7 @@ def test_experiment_rejects_a_malformed_draft_id(
                     "condition_id": "c1",
                     "label": "C1",
                     "run_overrides": {
-                        "model": "codex/gpt-5.6-luna",
+                        "model": "codex/gpt-6-luna",
                         "agent_reasoning_effort": "medium",
                         "max_total_cost": 0.74,
                     },
@@ -1908,7 +1908,7 @@ def test_experiment_requires_an_approved_draft(tmp_path: Path, monkeypatch: Monk
                     "condition_id": "medium-reasoning",
                     "label": "Medium reasoning",
                     "run_overrides": {
-                        "model": "codex/gpt-5.6-luna",
+                        "model": "codex/gpt-6-luna",
                         "agent_reasoning_effort": "medium",
                         "max_total_cost": 0.74,
                     },
@@ -1947,7 +1947,7 @@ def test_experiment_rejects_uncertified_model_before_any_condition_executes(
                     "condition_id": "valid-condition",
                     "label": "Valid",
                     "run_overrides": {
-                        "model": "codex/gpt-5.6-luna",
+                        "model": "codex/gpt-6-luna",
                         "agent_reasoning_effort": "medium",
                         "max_total_cost": 0.74,
                     },

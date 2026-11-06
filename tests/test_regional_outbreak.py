@@ -325,7 +325,7 @@ def test_reviewed_agent_configuration_reaches_private_memory_and_native_policy()
     bindings = outbreak_bindings(
         fixture,
         trace_id_prefix="configuration_test",
-        model="codex/gpt-5.6-luna",
+        model="codex/gpt-6-luna",
         reasoning_effort="medium",
     )
     policy = cast(RequiredStanceSystem, bindings["alba_epidemiologist"].implementation).inner
