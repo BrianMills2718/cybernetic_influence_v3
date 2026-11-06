@@ -42,6 +42,16 @@ foundation and must not be mistaken for its general product architecture.
 
 ## Run locally
 
+`make install` needs these already present; it installs none of them:
+
+- `make` itself — without it the first command below is just
+  `make: command not found`;
+- [`uv`](https://docs.astral.sh/uv/), which `make install` uses to create
+  `.venv` and install the locked dependencies;
+- Python 3.12 or newer (the floor `pyproject.toml` declares) on `PATH` as
+  `python3`, since `make install` runs `uv venv --python python3`;
+- Node 20.19+ or 22.12+ with npm — the floor the pinned Vite build declares.
+
 ```bash
 make install
 make check
