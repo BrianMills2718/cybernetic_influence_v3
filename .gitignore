@@ -11,3 +11,4 @@ node_modules/
 .wrangler/
 .code2check/
 .import_linter_cache/
+uv.lock
