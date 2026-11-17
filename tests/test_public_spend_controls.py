@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
+import pytest
 from pydantic import BaseModel
 
 from cybernetic_influence.public_spend_controls import (
@@ -61,6 +62,7 @@ def _client(
     return TestClient(SpendControlMiddleware(inner, ledger)), ledger
 
 
+@pytest.mark.req("public-spend-controls/daily-cap-reached", existing=True)
 def test_daily_run_cap_refuses_live_starts_with_plain_message(tmp_path: Path) -> None:
     client, _ = _client(tmp_path, run_cap=2)
     live = {"scenario": "coordination_decision", "execution": "live"}
@@ -94,6 +96,7 @@ def test_refusal_message_reads_naturally_at_a_cap_of_one(tmp_path: Path) -> None
     )
 
 
+@pytest.mark.req("public-spend-controls/validation-error-keeps-capacity", existing=True)
 def test_rejected_request_returns_its_slot(tmp_path: Path) -> None:
     client, ledger = _client(tmp_path, run_cap=1)
     rejected = client.post("/api/runs", json={"scenario": "invalid", "execution": "live"})
@@ -120,6 +123,7 @@ def test_per_visitor_limit_uses_cloudflare_client_address(tmp_path: Path) -> Non
     assert client.post("/api/runs", json=live, headers=visitor_b).status_code == 200
 
 
+@pytest.mark.req("public-spend-controls/count-survives-restart", existing=True)
 def test_daily_count_survives_restart_and_resets_next_utc_day(tmp_path: Path) -> None:
     clock = [1_789_000_000.0]
     client, _ = _client(tmp_path, clock=clock, run_cap=1)

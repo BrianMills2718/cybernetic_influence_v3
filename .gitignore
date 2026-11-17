@@ -9,3 +9,5 @@ artifacts/
 node_modules/
 .claude/hook_log.jsonl
 .wrangler/
+.code2check/
+.import_linter_cache/

@@ -39,3 +39,9 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "concordia.*"
 ignore_missing_imports = true
+
+[tool.lockstep]
+source = ["code2_scope"]
+
+[tool.pytest.ini_options]
+markers = ["req(id, existing=False): ties a test to an OpenSpec scenario (Lockstep)"]

@@ -93,3 +93,5 @@ capacity records only when they are needed for diagnosis.
 
 The earlier repositories and archived V3 slices are hidden lineage sources,
 not runtime dependencies, project-picker entries, or current instructions.
+
+Code2 format entry (scoped to the public spend controls): [docs/index.md](docs/index.md).
