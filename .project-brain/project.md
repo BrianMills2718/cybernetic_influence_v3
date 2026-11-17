@@ -35,12 +35,13 @@ truth) or `needs_resolution`.
   Implementation"): runtime, API, UI, scenario, prompt or evidence changes need
   a governing plan (`docs/plans/`) or handoff (`docs/handoffs/`); architecture
   changes need an ADR; a slice is done only when `docs/ROADMAP.md` says so.
-- **How work lands** (`approved`, `AGENTS.md` "Testing" and "Worktree And Lane
-  Hygiene", PR #15): one claimed worktree per lane via `make worktree`, closed
+- **How work lands** (`approved`, `docs/operations/testing-and-verification.md` and
+  `AGENTS.md` "Worktree And Lane Hygiene", PR #15): one claimed worktree per lane via `make worktree`, closed
   with `make worktree-remove`. Run `make check` (mypy strict, pytest, UI build,
   bundle check, deploy check) before calling work done. That local run, with
   its counts in the PR description, is the merge gate (`approved`, Brian
-  2026-10-03: do not rely on GitHub Actions; `AGENTS.md` "Testing").
+  2026-10-03: do not rely on GitHub Actions;
+  `docs/operations/testing-and-verification.md`).
   For unplanned docs work, `make worktree` also needs
   `WORKTREE_EXECUTION_PROFILE=light ALLOW_UNPLANNED=1 SESSION_WRITE_PATHS="<files>"`
   (`working`, observed when this brain was seeded, 2026-10-03).
@@ -51,7 +52,7 @@ truth) or `needs_resolution`.
   Docker on Brian's personal VPS (operations in `BrianMills2718/personal-vps`
   `apps/waltzman/`).
 - **Related repos** (`approved`, `project-membership.yaml`, `docs/ROADMAP.md`
-  "Repository Lineage Disposition", `AGENTS.md` "Testing"): live LLM runs need
+  "Repository Lineage Disposition", `docs/operations/testing-and-verification.md`): live LLM runs need
   the shared `llm_client`.
   `cybernetic_influence_v2` was archived on 2026-09-01 and is evidence only; no
   V2 imports. `world-substrate` supplies a pinned presentation sidecar (see
