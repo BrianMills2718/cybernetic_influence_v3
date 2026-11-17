@@ -1,0 +1,5 @@
+specification { element component }
+model {
+ scope = component 'Code2 scope re-export' { metadata { python 'code2_scope.public_spend_controls' } }
+}
+views { view index { include * } }

@@ -4,7 +4,7 @@ LLM_CLIENT_ROOT ?= ../active/llm_client
 HOST ?= 127.0.0.1
 PORT ?= 8620
 
-.PHONY: install ui-install ui-build ui-sync assets-check ui-smoke ui-visibility claims-check authoring-route-health authoring-route-refresh test typecheck deploy-check test-wait-check check serve
+.PHONY: full docs-specs install ui-install ui-build ui-sync assets-check ui-smoke ui-visibility claims-check authoring-route-health authoring-route-refresh test typecheck deploy-check test-wait-check check serve
 
 install: ui-install
 	@test -x "$(PYTHON)" || uv venv --python python3 "$(VENV)"
@@ -75,7 +75,23 @@ deploy-check:
 test-wait-check:
 	$(PYTHON) scripts/check_test_wait_deadlines.py
 
-check: typecheck test-wait-check test ui-build assets-check deploy-check
+# The full gate (the repository's check before the code2 format; decision 0001).
+full: typecheck test-wait-check test ui-build assets-check deploy-check
+
+# Scoped code2-format gate (runs lockstep check trace/sources/project/arch): Lockstep, OpenSpec and the spend-controls tests.
+LOCKSTEP_REV := 05ee80c1a9cc77f692954b6de09a81ab0d9bdb0a
+LOCKSTEP = uvx --from "git+https://github.com/BrianMills2718/agentic-engineering-system-canonical@$(LOCKSTEP_REV)" --with pytest --with import-linter --with fastapi --with httpx --with pydantic --with-editable . lockstep
+check: docs-specs
+	$(LOCKSTEP) check trace
+	$(LOCKSTEP) check sources
+	$(LOCKSTEP) check project --check
+	$(LOCKSTEP) check arch check
+	openspec validate --all --strict --no-interactive
+	uvx --with pytest --with fastapi --with httpx --with pydantic --with-editable . pytest -q tests/test_public_spend_controls.py
+
+docs-specs:
+	@mkdir -p docs/specs/public-spend-controls
+	@ln -sfn ../../../openspec/specs/public-spend-controls/spec.md docs/specs/public-spend-controls/spec.md
 
 serve:
 	$(PYTHON) -m uvicorn cybernetic_influence.api:app --host $(HOST) --port $(PORT)
