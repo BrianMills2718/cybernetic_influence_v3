@@ -1,9 +1,9 @@
 ---
 doc_role: implementation_plan
 authority: bounded_design
-status: access_gated
+status: access_failure
 created: 2026-09-30
-updated: 2026-09-30
+updated: 2026-11-19
 plan_id: "cybernetic_influence_v3#39"
 ---
 
@@ -78,6 +78,13 @@ On 2026-09-30, a direct evaluation-access request was sent to `support@simudyne.
 The executable handoff package is retained at:
 
 `replacement_trials/simudyne_regional_outbreak/`
+
+**2026-11-19: recorded as access failure, not semantic failure** (this plan's own rule, "If Simudyne access cannot be
+obtained, record access failure"). The 2026-09-30 request to `support@simudyne.com` had no reply in seven weeks
+(Gmail search `simudyne after:2026/09/25`, 2026-11-19: only the outgoing request). The AWS Marketplace route, an
+auto-converting paid trial, was not taken. Simudyne was never run on the case, so nothing here says it could not
+replace the platform. Per ADR-017 the fallback is Concordia, which world-substrate's World Builder already uses for
+its residents; Waltzman demo work continues there (Brian, 2026-11-19: "go").
 
 ## Stage 0 — access
 
