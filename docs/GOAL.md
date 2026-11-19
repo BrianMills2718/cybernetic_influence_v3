@@ -3,13 +3,19 @@ doc_role: execution_goal
 authority: continuous_execution
 status: active
 created: 2026-07-27
-updated: 2026-09-30
+updated: 2026-11-19
 supersedes: earlier comparison-centered and configurable Waltzman-Levin goals as the active product frontier; retained below as baseline evidence
 ---
 
 # Generalizable Socio-Technical Simulation System Goal
 
 ## Current override — replacement-first platform gate (2026-09-30)
+
+> **2026-11-19: gate closed as access failure; this repository is frozen.** Simudyne never replied to the 2026-09-30
+> access request ([plan 039](plans/039-simudyne-replacement-trial.md)). No new simulator work happens here. The public
+> demo at https://brianmills.dev/waltzman/ (backend `personal-vps/apps/waltzman`) keeps running as the retained
+> example. Waltzman demo work continues in `world-substrate` (World Builder, Waltzman Coordination Lab), which runs
+> on Concordia, the fallback this gate named (Brian, 2026-11-19: "go").
 
 **This is the active execution gate. It supersedes generalized-simulator feature work below without deleting the prior evidence.**
 

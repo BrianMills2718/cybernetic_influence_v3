@@ -1,6 +1,8 @@
 # Cybernetic Influence V3
 
-> **Current direction (2026-09-30): replacement-first.** Before more generalized-simulator development, test whether Simudyne Nexus + its Python ABM SDK can replace the platform on the retained regional-outbreak coordination case. If it can, retire overlapping CI infrastructure. See [ADR-017](docs/adr/017-replacement-first-simulation-platform.md).
+> **Frozen (2026-11-19).** The Simudyne replacement gate closed as access failure (no reply to the access request;
+> [plan 039](docs/plans/039-simudyne-replacement-trial.md)). The public Waltzman demo keeps running; new Waltzman work
+> happens in [world-substrate](https://github.com/BrianMills2718/world-substrate).
 
 
 Cybernetic Influence is becoming a generalizable, reviewable simulator for

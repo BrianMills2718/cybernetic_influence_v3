@@ -3,13 +3,19 @@ doc_role: active_authority
 authority: canonical
 status: active
 created: 2026-07-23
-updated: 2026-09-30
+updated: 2026-11-19
 supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f6ac
 ---
 
 # Generalizable Simulation System Roadmap
 
 ## Current frontier — replacement gate
+
+> **2026-11-19: gate closed as access failure; this repository is frozen.** Simudyne never replied to the 2026-09-30
+> access request ([plan 039](plans/039-simudyne-replacement-trial.md)). No new simulator work happens here. The public
+> demo at https://brianmills.dev/waltzman/ (backend `personal-vps/apps/waltzman`) keeps running as the retained
+> example. Waltzman demo work continues in `world-substrate` (World Builder, Waltzman Coordination Lab), which runs
+> on Concordia, the fallback this gate named (Brian, 2026-11-19: "go").
 
 Do not extend the generalized simulator until the off-the-shelf replacement test is complete.
 
