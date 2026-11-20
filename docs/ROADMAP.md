@@ -17,7 +17,7 @@ supersedes: comparison-centered roadmap at 0c91c418377a47185e40456eef77a67686f1f
 > example. Waltzman demo work continues in `world-substrate` (World Builder, Waltzman Coordination Lab), which runs
 > on Concordia, the fallback this gate named (Brian, 2026-11-19: "go").
 
-Do not extend the generalized simulator until the off-the-shelf replacement test is complete.
+Until 2026-11-19 the rule here was: do not extend the generalized simulator until the off-the-shelf replacement test is complete. The plan below is kept as the record of that gate.
 
 1. Trial **Simudyne Nexus + Agentic Simulation Lab Python SDK** on the retained regional-outbreak coordination experiment.
 2. Require the external platform to own generic simulation lifecycle, experiment repetition, recording, and model lifecycle.
