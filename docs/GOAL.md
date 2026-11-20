@@ -17,7 +17,7 @@ supersedes: earlier comparison-centered and configurable Waltzman-Levin goals as
 > example. Waltzman demo work continues in `world-substrate` (World Builder, Waltzman Coordination Lab), which runs
 > on Concordia, the fallback this gate named (Brian, 2026-11-19: "go").
 
-**This is the active execution gate. It supersedes generalized-simulator feature work below without deleting the prior evidence.**
+**Until 2026-11-19 this was the active execution gate; it superseded generalized-simulator feature work below without deleting the prior evidence.**
 
 The owner preference is explicit: use an existing mature system whenever it can do the job adequately; novelty and local ownership are not objectives.
 
