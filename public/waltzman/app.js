@@ -1230,6 +1230,8 @@ function renderCaseChapter() {
   ]
   caseStudyStep = Math.max(0, Math.min(caseStudyStep, chapters.length - 1))
   const chapter = chapters[caseStudyStep]
+  const discussion = state.view === 'case' && caseStudyStep === 4
+  document.body.classList.toggle('case-discussion', discussion)
   all('[data-case-chapter]').forEach((section) => { section.hidden = Number(section.dataset.caseChapter) !== caseStudyStep })
   $('#case-walkthrough-kind').textContent = chapter.kind
   $('#case-walkthrough-progress').textContent = `Step ${caseStudyStep + 1} of ${chapters.length} · ${chapter.title}`
@@ -1238,7 +1240,7 @@ function renderCaseChapter() {
   $('#case-walkthrough-next').textContent = 'Next →'
   if (caseStudyStep === 0) window.requestAnimationFrame(() => renderCaseNetworkGraph())
   if (caseStudyStep === 6) renderEvasionComparison()
-  window.scrollTo({top:Math.max(0, $('#case-view').offsetTop - 70), behavior:'smooth'})
+  window.scrollTo({top: discussion ? 0 : Math.max(0, $('#case-view').offsetTop - 70), behavior: 'instant'})
 }
 
 let evasionCase = null
@@ -1347,7 +1349,7 @@ function renderResearchCase() {
   const requests = csoCase.final_requests
   const withRequest = Object.entries(requests).reduce((count, [kind, n]) => kind === 'none' ? count : count + n, 0)
   $('#case-requests-summary').textContent =
-    `Outright support went from ${first.support} to ${mid.support} to ${last.support}. In the final round, ${withRequest} of ${total} officials still recorded a request: ${requests.resources} for resources, ${requests.safeguards} for safeguards and ${requests.validation} for validation.`
+    `Outright support across three rounds: ${first.support} → ${mid.support} → ${last.support}. After the compact, ${withRequest} of ${total} still requested resources, safeguards or validation.`
 
   // The three named conditions, as derived readings over retained evidence.
   const pressured = rounds[1] || {}
@@ -1423,6 +1425,7 @@ function renderResearchCase() {
 }
 
 function renderView() {
+  document.body.classList.toggle('case-discussion', state.view === 'case' && caseStudyStep === 4)
   const publicView = ['overview', 'guide', 'case', 'simulations', 'create', 'mechanism', 'method'].includes(state.view)
   document.body.classList.toggle('guided-result', publicView)
   document.body.classList.toggle('public-shell', publicView)
@@ -4352,6 +4355,32 @@ async function ensureRetainedLiveRuns() {
   return retainedLiveRunsLoad
 }
 
+async function loadCaseEvidence() {
+  const response = await fetch('assets/cso-case.json', {cache: 'no-store'})
+  if (!response.ok) throw new Error(`case evidence request failed with ${response.status}`)
+  const evidence = await response.json()
+  if (evidence.schema_version !== 1 || !evidence.rounds?.length) throw new Error('case evidence contract is invalid')
+  csoCase = evidence
+}
+
+async function openDiscussion() {
+  state.view = 'case'
+  caseStudyStep = 4
+  document.body.classList.add('guided-result')
+  renderCaseChapter()
+  $('#case-view').hidden = false
+  $('#loading').hidden = true
+  $('#workbench').hidden = false
+  try {
+    await loadCaseEvidence()
+    renderResearchCase()
+  } catch (error) {
+    $('#case-evidence-records').textContent = 'The recorded statements are temporarily unavailable.'
+    console.warn(error.message)
+  }
+  if (window.location.hash === '#case-statements-title') $('#case-statements-title').scrollIntoView()
+}
+
 async function loadWorkbench() {
   try {
     const response = await fetch('assets/data.json', {cache:'no-store'})
@@ -4371,10 +4400,7 @@ async function loadWorkbench() {
       } catch (error) {
         console.warn(`evasion comparison unavailable: ${error.message}`)
       }
-      const csoResponse = await fetch('assets/cso-case.json', {cache:'no-store'})
-      if (!csoResponse.ok) throw new Error(`cso case request failed with ${csoResponse.status}`)
-      csoCase = await csoResponse.json()
-      if (csoCase.schema_version !== 1 || !Array.isArray(csoCase.rounds)) throw new Error('cso case contract is invalid')
+      await loadCaseEvidence()
     } catch (error) { console.warn(`cso case unavailable: ${error.message}`) }
     try {
       const forkResponse = await fetch('assets/resource-fork.json', {cache:'no-store'})
@@ -4413,4 +4439,9 @@ window.addEventListener('popstate', () => {
   renderView()
 })
 
-void loadWorkbench()
+const entry = new URLSearchParams(window.location.search)
+if (entry.get('view') === 'case' && entry.get('case_step') === '5') {
+  void openDiscussion()
+} else {
+  void loadWorkbench()
+}
