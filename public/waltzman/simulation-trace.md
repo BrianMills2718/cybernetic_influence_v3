@@ -12,7 +12,7 @@
 - Model calls: `89` (78 coalition, 8 source, 3 CSO)
 - Observed cost: `$0.54746685`; fully observable: `true`
 - Runtime revision: `4cd1f20f232c964254df4aa57faabfd7cca10d05`
-- Full uncompressed run: [raw retained API trace](../api/runs/run_a27f8e4082ef)
+- Public evidence: this trace records the three rounds and the observer decisions for the August run named above.
 
 ### Compression rules
 
