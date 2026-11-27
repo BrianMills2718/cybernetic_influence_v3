@@ -536,9 +536,12 @@ def test_external_review_dossier_is_concise_and_auditable() -> None:
     assert "What the evidence supports" in page
     assert "Not established" in page
     assert "run_a27f8e4082ef" in page
-    assert "review/trace" in page
+    assert 'href="assets/simulation-trace.md"' in page
+    assert 'href="assets/cso-case.json"' in page
+    assert 'href="assets/evasion-case.json"' in page
     assert "89 model outputs · exact prompts and inputs" in page
-    assert "api/runs/run_a27f8e4082ef" in page
+    assert 'href="api/runs/' not in page
+    assert 'href="review/trace"' not in page
     assert "tail9c321e" not in page.lower()
     assert shape.stylesheets == ["assets/review.css?v=waltzman-review-v1"]
     assert shape.scripts == []
@@ -548,6 +551,7 @@ def test_external_review_dossier_is_concise_and_auditable() -> None:
 def test_tractable_trace_retains_every_model_output_and_review_input() -> None:
     trace = REVIEW_TRACE.read_text(encoding="utf-8")
 
+    assert "../api/runs/" not in trace
     assert "critique of the simulation itself" in trace
     assert "Shared starting situation" in trace
     assert "Exact representative coalition prompt" in trace

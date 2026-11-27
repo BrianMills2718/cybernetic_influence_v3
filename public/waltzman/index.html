@@ -23,7 +23,7 @@
   <link rel="icon" href="data:,">
   <title>Coordination Environment Lab</title>
   <link rel="stylesheet" href="assets/graph-canvas.css?v=ontology2">
-  <link rel="stylesheet" href="assets/styles.css?v=evasion1">
+  <link rel="stylesheet" href="assets/styles.css?v=discussion2">
     <style>
       /* Spotlight tour. Policy: spotlight-tour-default. Engine is assets/tour.js,
          copied unchanged from forecast-league-mvp/public/tour.js. */
@@ -199,13 +199,13 @@
 
       <section id="case-view" class="workspace-view research-case" aria-labelledby="research-case-title" hidden>
         <header class="case-world-hero">
-          <span class="case-label">Completed simulation · Cross-Border Early Warning Compact</span>
+          <span class="case-label">Synthetic case · Cross-Border Early Warning Compact</span>
           <h2 id="research-case-title">Four national response networks face one outbreak. None can act regionally on its own.</h2>
           <p>A novel respiratory outbreak is spreading through Alba, Borin, Cyrenia, and Darsia. A proposed compact would share evidence, laboratory capacity, investigation teams, supplies, and transport—but those capabilities remain distributed across national and regional networks.</p>
         </header>
 
         <nav id="case-walkthrough" class="case-walkthrough-controls" aria-label="Case study walkthrough">
-          <div><span id="case-walkthrough-kind">The world</span><strong id="case-walkthrough-progress">Step 1 of 6</strong></div>
+          <div><span id="case-walkthrough-kind">The world</span><strong id="case-walkthrough-progress">Step 1 of 7</strong></div>
           <div><button id="case-walkthrough-previous" type="button">Previous</button><button id="case-walkthrough-next" class="primary-cta" type="button">Next →</button></div>
         </nav>
 
@@ -244,8 +244,8 @@
 
         <section class="case-answer" data-case-chapter="3" aria-labelledby="case-answer-title">
           <span>Result</span>
-          <h3 id="case-answer-title">Every official would proceed at the start. After the pressure, twenty would proceed only once their own conditions were met. One compact addressing those conditions together brought all twenty-six back.</h3>
-          <p>Nothing was withdrawn and no false claim was made. What changed was whether each official’s requirements could be satisfied at the same time as everyone else’s.</p>
+          <h3 id="case-answer-title">Every official would proceed at the start. After the pressure, twenty would proceed only once their own conditions were met. After a compact addressed several conditions together, all twenty-six supported launch.</h3>
+          <p>The run records each official’s stance. The officials could support launch and still request safeguards, resources or verification.</p>
         </section>
 
         <section class="case-story" data-case-chapter="2" aria-labelledby="case-story-title">
@@ -270,13 +270,15 @@
         </section>
         <section class="case-evidence" data-case-chapter="4" aria-labelledby="case-evidence-title">
           <div class="case-section-heading"><span>The same officials, before and after</span><h3 id="case-evidence-title">What changed in their own words</h3></div>
-          <p class="case-decision-key">Each pair is one named official&rsquo;s retained reasoning while coordination was blocked, and again after the compact. Nothing was rewritten; these are the words the run retained.</p>
-          <p class="case-invariant-note"><strong>Read what they each ask for.</strong> One wants line-level record custody, one wants reciprocal cost shares, one wants blinded validation, one wants protected cold-chain capacity, one wants a written contact-matching protocol, one wants comparability of case definitions. Six people, six different requirements, expressed in six different vocabularies &mdash; and one direction of movement. The consistency is in the effect, not in what was said.</p>
+          <p class="case-invariant-note"><strong>What would you look for at the next meeting to tell whether the coalition had lost its ability to act together or was using the pause well?</strong></p>
+          <p class="case-decision-key">In round two, the regional legal lead wanted a written custody and audit protocol before cross-border data handling began. The regional scientific adviser supported launch and wanted a comparability check at the 72-hour review. Their recorded statements appear first below.</p>
+          <p id="case-requests-summary" class="case-decision-key"></p>
+          <p class="case-decision-key"><a href="?view=case&amp;case_step=4">See the three rounds</a> · <a href="?view=case&amp;case_step=7">Compare both runs</a> · <a href="assets/cso-case.json">Inspect the flagship evidence (JSON)</a></p>
           <div id="case-evidence-records" class="case-evidence-records"></div>
         </section>
         <section class="case-waltzman" data-case-chapter="5" aria-labelledby="case-cso-title">
           <div class="case-section-heading"><span>Cognitive Security Operations</span><h3 id="case-cso-title">Detect, diagnose, stabilize</h3></div>
-          <p class="case-decision-key">Three watchers ran alongside the coalition. They read retained evidence and proposed one action. They could not vote, change the world, or alter anyone's memory.</p>
+          <p class="case-decision-key">Three simulated observers assessed readiness, assigned a diagnosis and selected a response. The planner chose from six prewritten options. The officials then decided again.</p>
           <div id="case-cso-chain" class="case-cso-chain"></div>
         </section>
         <!-- Chapter 6: the source paper's section 7. This retained pair holds
@@ -284,15 +286,15 @@
              use a different expression policy. It tests how the monitor reads
              that shaped pattern; it does not establish equal pressure dose. -->
         <section class="case-evasion" data-case-chapter="6" aria-labelledby="case-evasion-title">
-          <div class="case-section-heading"><span>Evasion</span><h3 id="case-evasion-title">The same sources, with a threshold-managed expression policy</h3></div>
-          <p class="case-decision-key">A second run. The same four source roles act on the same coalition, but every signal is constrained to a narrow verification need rather than an escalation, and none refers to any other. <strong>The detection cell is unchanged</strong> &mdash; same three watchers, same categories, same trigger. This changes the expression policy; it does not prove equal pressure dose.</p>
+          <div class="case-section-heading"><span>Two synthetic runs</span><h3 id="case-evasion-title">How did the monitors judge readiness?</h3></div>
+          <p class="case-decision-key">The same four source roles, three observer roles and decision rule appear in both runs. The quieter run limited the sources to narrow verification requests. The strength of the pressure was never independently measured.</p>
           <div id="case-evasion-compare" class="case-evasion-compare"></div>
           <p id="case-evasion-reading" class="case-evasion-reading"></p>
         </section>
         <section class="case-boundary" data-case-chapter="6">
-          <strong>What this does not establish</strong><p>Two retained executions are not a sample, and one pair cannot say how often a detector would under-classify this pattern. The shaped arm was detected as degrading, so this is not a detection miss. The evasion is authored, not discovered, and the two policies are not calibrated to an equal pressure dose. A more sensitive boundary might also raise false alarms on benign variation; this pair does not answer that tradeoff.</p>
+          <strong>What the comparison can tell us</strong><p>These are two sampled trajectories. They show which labels the monitors assigned. Determining which diagnosis was justified would require independent evidence about the coalition’s ability to act.</p>
         </section>
-        <div class="case-actions" data-case-chapter="6"><button id="case-open-comparison-2" class="primary-cta" type="button">Read the retained agent reasoning</button><button class="secondary-cta" type="button" data-view="create">Create your own simulation</button></div>
+        <div class="case-actions" data-case-chapter="6"><a href="assets/evasion-case.json">Inspect both runs and monitor judgments (JSON)</a> · <a href="?view=case&amp;case_step=5">Return to the officials’ statements</a></div>
 
         <section class="case-boundary" data-case-chapter="5">
           <strong>What this does not establish</strong><p>This is one controlled AI-agent simulation. It demonstrates a possible coordination mechanism; it does not predict how people or real institutions would behave.</p>
@@ -858,7 +860,7 @@
   </main>
 
   <script src="assets/graph-canvas.js?v=ontology2" defer></script>
-  <script src="assets/app.js?v=evasion1" defer></script>
+  <script src="assets/app.js?v=discussion2" defer></script>
     <script src="assets/tour.js?v=tour1" defer></script>
     <script>
       window.TOURS = {

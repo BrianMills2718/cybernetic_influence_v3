@@ -11,21 +11,21 @@
   <header class="topbar">
     <a class="brand" href="./"><span>CE</span><strong>Coordination Environment Lab</strong></a>
     <nav aria-label="Review links">
-      <a href="./?view=case">Interactive case</a>
+      <a href="./?view=case&amp;case_step=5">Current discussion case</a>
       <a href="./?view=run">Run the simulator</a>
     </nav>
   </header>
 
   <main>
     <header class="hero">
-      <p class="eyebrow">External review dossier · retained synthetic execution</p>
+      <p class="eyebrow">External review dossier · August 2026 · synthetic runs</p>
       <h1>Did we implement Waltzman’s proposed defensive coordination loop faithfully?</h1>
-      <p class="lede">This package assumes familiarity with <em>From Minds to Coordination</em>. It presents the implementation boundary, four retained conditions, the autonomous CSO trace, representative agent decisions, and the limits of what this demonstration establishes.</p>
+      <p class="lede">This earlier experiment assumes familiarity with <em>From Minds to Coordination</em>. Its adaptive run, <code>run_a27f8e4082ef</code>, had two outright supporters in round two. The <a href="./?view=case&amp;case_step=5">current discussion case</a> uses a separate simulated run with six outright supporters in that round.</p>
       <div class="review-question">
         <strong>Question for the reviewer</strong>
         <p>Does this simulation meaningfully instantiate distributed influence on a coalition’s decision environment and a separate detect → diagnose → stabilize capability—without covertly dictating the coalition’s decisions?</p>
       </div>
-      <a class="trace-cta" href="review/trace"><strong>Read the complete tractable simulation trace</strong><span>89 model outputs · exact prompts and inputs · all 26 agents across three rounds · source and CSO decisions</span></a>
+      <a class="trace-cta" href="assets/simulation-trace.md"><strong>Read the August adaptive run trace</strong><span>89 model outputs · exact prompts and inputs · all 26 agents across three rounds · source and CSO decisions</span></a>
     </header>
 
     <section aria-labelledby="orientation-title">
@@ -152,12 +152,14 @@
         <div><dt>Source match</dt><dd>Fixed-package and adaptive-CSO runs share all eight source choices</dd></div>
       </dl>
       <div class="artifacts">
-        <a class="primary" href="review/trace">Read the tractable simulation trace</a>
-        <a href="api/runs/run_a27f8e4082ef">Open raw adaptive-run API record</a>
-        <a href="api/runs/run_ef3763b4d477">Baseline trace</a>
-        <a href="api/runs/run_3303c9302a36">Pressure trace</a>
-        <a href="api/runs/run_e2f31904e10b">Fixed-package trace</a>
-        <a href="./?view=case">Interactive case presentation</a>
+        <a class="primary" href="assets/simulation-trace.md">August adaptive run · trace (Markdown)</a>
+        <a href="#contrast-title">August experiment · four recorded results</a>
+      </div>
+      <h3>Current discussion case</h3>
+      <div class="artifacts">
+        <a href="./?view=case&amp;case_step=5">Read the officials’ statements</a>
+        <a href="assets/cso-case.json">Main case · run_5010214f2466 (JSON)</a>
+        <a href="assets/evasion-case.json">Two-run comparison including run_76dae6d4a9a7 (JSON)</a>
       </div>
     </section>
 

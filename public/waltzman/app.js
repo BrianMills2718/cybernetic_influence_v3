@@ -1223,10 +1223,10 @@ function renderCaseChapter() {
     {kind:'The world', title:'Inspect the simulated response network.'},
     {kind:'The coordination problem', title:'See who depends on whom.'},
     {kind:'Pressure and experiment', title:'See what changed and what stayed fixed.'},
-    {kind:'Result', title:'Watch the coalition break and come back.'},
+    {kind:'Result', title:'See how the officials voted in each round.'},
     {kind:'Agent reasoning', title:'Read the same officials before and after.'},
-    {kind:'Cognitive Security Operations', title:'See what detected the problem and what fixed it.'},
-    {kind:'Evasion', title:'See the same watchers classify a shaped pattern less severely.'},
+    {kind:'Cognitive Security Operations', title:'Inspect the observers’ judgments.'},
+    {kind:'Evasion', title:'Compare the two monitors’ judgments.'},
   ]
   caseStudyStep = Math.max(0, Math.min(caseStudyStep, chapters.length - 1))
   const chapter = chapters[caseStudyStep]
@@ -1298,22 +1298,8 @@ function renderEvasionComparison() {
 
   const note = $('#case-evasion-reading')
   if (!note) return
-  const overtWorst = worstRound(evasionCase.overt)
-  const evasionWorst = worstRound(evasionCase.evasion)
-  const overtFinal = evasionCase.overt.final_decisions || {}
-  const evasionFinal = evasionCase.evasion.final_decisions || {}
-  note.innerHTML = `<strong>Read the two together.</strong> Under the threshold-managed expression policy the coalition reached a lower outright-support floor &mdash; ${evasionWorst} at its worst against ${overtWorst} &mdash; yet the same watchers called readiness <em>${escapeHtml(readable(evasionCase.evasion.detector.coordination_readiness))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.coordination_readiness))}</em>, and diagnosed <em>${escapeHtml(readable(evasionCase.evasion.detector.mechanism))}</em> rather than <em>${escapeHtml(readable(evasionCase.overt.detector.mechanism))}</em>. The intervention still fired, but final recovery was less complete: ${escapeHtml(stanceLine(evasionFinal))} instead of ${escapeHtml(stanceLine(overtFinal))}. This is an under-classification and mechanism-misdiagnosis result, not a detection miss; these runs do not establish equal pressure dose.`
-}
-
-function worstRound(arm) {
-  // The round in which the fewest participants would proceed outright.
-  const rounds = arm.rounds || []
-  let worst = null
-  for (const entry of rounds) {
-    const support = entry.decisions.support || 0
-    if (worst === null || support < worst.support) worst = {support, entry}
-  }
-  return worst ? stanceLine(worst.entry.decisions) : 'no rounds recorded'
+  const {overt, evasion} = evasionCase
+  note.textContent = `At the start, ${overt.rounds[0].decisions.support} officials supported launch outright in the overt run and ${evasion.rounds[0].decisions.support} in the quieter run. The monitors judged readiness “${readable(overt.detector.coordination_readiness)}” and “${readable(evasion.detector.coordination_readiness)},” respectively. Both planners selected the same prewritten compact. Both runs approved launch, with ${overt.final_decisions.support} and ${evasion.final_decisions.support} outright supporters in the final round.`
 }
 
 function renderResearchCase() {
@@ -1358,6 +1344,11 @@ function renderResearchCase() {
     + `${Number(last.support || 0)} would proceed once the compact was in place. `
     + `The run ended ${sentence(csoCase.outcome || '')}. No claim made in this run was false.`
 
+  const requests = csoCase.final_requests
+  const withRequest = Object.entries(requests).reduce((count, [kind, n]) => kind === 'none' ? count : count + n, 0)
+  $('#case-requests-summary').textContent =
+    `Outright support went from ${first.support} to ${mid.support} to ${last.support}. In the final round, ${withRequest} of ${total} officials still recorded a request: ${requests.resources} for resources, ${requests.safeguards} for safeguards and ${requests.validation} for validation.`
+
   // The three named conditions, as derived readings over retained evidence.
   const pressured = rounds[1] || {}
   const recovered = rounds[rounds.length - 1] || {}
@@ -1387,10 +1378,14 @@ function renderResearchCase() {
   </article>`).join('')
 
   // The same official, before and after, in retained words.
-  $('#case-evidence-records').innerHTML = (csoCase.paired_rationales || []).map((pair) => `<article>
+  const featured = ['regional_legal_oversight_lead', 'regional_scientific_advisor']
+  const pairs = csoCase.paired_rationales || []
+  const ordered = [...featured.flatMap(id => pairs.filter(pair => pair.actor_id === id)),
+    ...pairs.filter(pair => !featured.includes(pair.actor_id))]
+  $('#case-evidence-records').innerHTML = ordered.map((pair) => `<article>
     <header><span>${escapeHtml(labelPerson(pair.actor_id))}</span></header>
     <div class="case-pair">
-      <div><span>While coordination was blocked</span>${decisionPill(pair.under_pressure.decision)}<p>${escapeHtml(pair.under_pressure.rationale || '')}</p></div>
+      <div><span>Round two</span>${decisionPill(pair.under_pressure.decision)}<p>${escapeHtml(pair.under_pressure.rationale || '')}</p></div>
       <div><span>After the compact</span>${decisionPill(pair.after_stabilization.decision)}<p>${escapeHtml(pair.after_stabilization.rationale || '')}</p></div>
     </div>
   </article>`).join('') || '<p class="create-stage-empty">No paired reasoning was retained.</p>'
@@ -1420,9 +1415,7 @@ function renderResearchCase() {
     caseStudyStep = 4
     renderCaseChapter()
     syncUrl()
-    window.requestAnimationFrame(() => {
-      all('#case-evidence-records p').forEach(() => {})
-    })
+
   }
   $('#case-download-evidence').onclick = () => {
     window.open('assets/cso-case.json', '_blank', 'noopener')

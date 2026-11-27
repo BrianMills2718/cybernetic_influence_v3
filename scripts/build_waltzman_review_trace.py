@@ -117,7 +117,7 @@ def main() -> None:
     add(f"- Model calls: `{run['model_calls']}` (78 coalition, 8 source, 3 CSO)")
     add(f"- Observed cost: `${run['cost']:.8f}`; fully observable: `{str(run['cost_fully_observable']).lower()}`")
     add("- Runtime revision: `4cd1f20f232c964254df4aa57faabfd7cca10d05`")
-    add("- Full uncompressed run: [raw retained API trace](../api/runs/run_a27f8e4082ef)")
+    add("- Public evidence: this trace records the three rounds and the observer decisions for the August run named above.")
     add("")
     add("### Compression rules")
     add("")
